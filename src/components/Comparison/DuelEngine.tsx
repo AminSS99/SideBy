@@ -1,11 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
 import { mockDB, ComparisonItem, ComparisonCategory, generateSyntheticItem } from "@/data/mockDB";
 import GlassCard from "../GlassCard";
-import { Zap, Shield, Star, Trophy, LayoutList, Share2, Download, CheckCircle2, Info, Search, AlertTriangle, Lock } from "lucide-react";
+import { Zap, Share2, Download, Search, Lock, AlertTriangle } from "lucide-react";
 import LoadingScreen from "./LoadingScreen";
 import AIVerdict from "./AIVerdict";
-import SearchSelector from "./SearchSelector";
 import PreferenceTuner from "./PreferenceTuner";
 import ComparisonRadar from "./ComparisonRadar";
 import ComparisonTable from "./ComparisonTable";
@@ -15,7 +13,6 @@ import PersonaPresets from "./PersonaPresets";
 import ContenderGallery from "./ContenderGallery";
 import LiveActivityTicker from "./LiveActivityTicker";
 import WinConditions from "./WinConditions";
-import DomainIntel from "./DomainIntel";
 import ExpertPanel from "./ExpertPanel";
 import MarketForecast from "./MarketForecast";
 import NeuralNewsFeed from "./NeuralNewsFeed";
@@ -33,7 +30,6 @@ interface DuelEngineProps {
 const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
   const [activeCategory, setActiveCategory] = useState<ComparisonCategory>("tech");
   
-  // Custom Input State
   const [customInputA, setCustomInputA] = useState("");
   const [customInputB, setCustomInputB] = useState("");
   
@@ -54,16 +50,11 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
 
   const [weights, setWeights] = useState<Record<string, number>>(initialWeights);
 
-  // When category changes, reset defaults
   useEffect(() => {
     const defaults = mockDB.filter(i => i.category === activeCategory);
     if (defaults.length >= 2) {
       setItemA(defaults[0]);
       setItemB(defaults[1]);
-      setCustomInputA("");
-      setCustomInputB("");
-    } else {
-      // For categories without presets, keep generic
       setCustomInputA("");
       setCustomInputB("");
     }
@@ -76,7 +67,6 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
       return;
     }
 
-    // Generate data if inputs are custom
     let finalA = itemA;
     let finalB = itemB;
 
@@ -90,7 +80,6 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
     setItemA(finalA);
     setItemB(finalB);
     
-    // Reset weights for new metric keys if they differ
     const keys = Object.keys(finalA.metrics);
     setWeights(keys.reduce((acc, key) => ({ ...acc, [key]: 5 }), {}));
 
@@ -118,7 +107,6 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
     });
   };
 
-  // Calculate winner for Dossier
   const scoreA = Object.values(itemA.metrics).reduce((a, b) => a + b, 0);
   const scoreB = Object.values(itemB.metrics).reduce((a, b) => a + b, 0);
   const winner = scoreA > scoreB ? itemA : itemB;
@@ -151,7 +139,7 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
             onClick={() => setActiveCategory(cat as ComparisonCategory)}
             className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
               activeCategory === cat 
-                ? "bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-600/20" 
+                ? "bg-purple-600 border-purple-500 text-white shadow-xl shadow-purple-600/20" 
                 : "bg-white/5 border-white/10 text-white/40 hover:text-white"
             }`}
           >
@@ -163,18 +151,16 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
       {/* Input Section */}
       {!showResult && !isSearching && (
         <div className="max-w-3xl mx-auto mb-16 relative z-10 animate-in fade-in zoom-in duration-500">
-           <GlassCard className="p-8 border-blue-500/20 bg-blue-500/5">
+           <GlassCard className="p-8 border-purple-500/20 bg-purple-500/5">
              <div className="flex flex-col md:flex-row gap-4 items-center">
                <div className="flex-1 w-full">
                  <label className="text-[10px] font-black uppercase text-white/40 mb-2 block tracking-widest">Contender A</label>
-                 <div className="relative">
-                   <Input 
-                    value={customInputA}
-                    onChange={(e) => setCustomInputA(e.target.value)}
-                    placeholder={itemA.name}
-                    className="h-14 bg-black/40 border-white/10 rounded-xl pl-4 text-lg font-bold"
-                   />
-                 </div>
+                 <Input 
+                  value={customInputA}
+                  onChange={(e) => setCustomInputA(e.target.value)}
+                  placeholder={itemA.name}
+                  className="h-14 bg-black/40 border-white/10 rounded-xl pl-4 text-lg font-bold focus:ring-purple-500"
+                 />
                </div>
                <div className="flex items-center justify-center pt-6">
                  <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-sm italic text-white/20">VS</div>
@@ -185,7 +171,7 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
                     value={customInputB}
                     onChange={(e) => setCustomInputB(e.target.value)}
                     placeholder={itemB.name}
-                    className="h-14 bg-black/40 border-white/10 rounded-xl pl-4 text-lg font-bold"
+                    className="h-14 bg-black/40 border-white/10 rounded-xl pl-4 text-lg font-bold focus:ring-emerald-500"
                    />
                </div>
              </div>
@@ -194,7 +180,7 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
                 {userCredits > 0 ? (
                   <Button 
                     onClick={startDuel}
-                    className="rounded-full bg-blue-600 hover:bg-blue-700 text-white px-12 py-8 text-2xl font-black uppercase italic tracking-tighter shadow-2xl shadow-blue-600/20 transition-all hover:scale-105"
+                    className="rounded-full bg-gradient-to-r from-purple-600 to-emerald-500 hover:opacity-90 text-white px-12 py-8 text-2xl font-black uppercase italic tracking-tighter shadow-2xl shadow-purple-600/20 transition-all hover:scale-105"
                   >
                     <Zap className="w-6 h-6 mr-3 fill-white" />
                     COMPARE NOW
@@ -231,7 +217,7 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
               <Button onClick={() => setIsCompiling(true)} variant="outline" className="rounded-full bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-black uppercase h-10 px-6">
                 <Download className="w-4 h-4 mr-2" /> Dossier
               </Button>
-              <Button onClick={handleShare} variant="outline" className="rounded-full bg-blue-600 hover:bg-blue-700 text-white border-transparent text-[10px] font-black uppercase h-10 px-6">
+              <Button onClick={handleShare} variant="outline" className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white border-transparent text-[10px] font-black uppercase h-10 px-6">
                 <Share2 className="w-4 h-4 mr-2" /> Share
               </Button>
             </div>
@@ -249,8 +235,7 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
             <div className="lg:col-span-3 space-y-8">
                <WinConditions itemA={itemA} itemB={itemB} />
                
-               {/* User Intuition Voting */}
-               <GlassCard className="bg-gradient-to-r from-blue-600/10 to-purple-600/10 border-blue-500/20">
+               <GlassCard className="bg-gradient-to-r from-purple-600/10 to-emerald-600/10 border-purple-500/20">
                   <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                     <div>
                       <h4 className="text-lg font-black italic uppercase tracking-tighter mb-1">Human Intuition Protocol</h4>
@@ -260,7 +245,7 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
                       <Button 
                         onClick={() => setUserVote('A')}
                         className={`rounded-2xl px-6 h-14 flex flex-col items-center justify-center transition-all ${
-                          userVote === 'A' ? 'bg-blue-600 text-white scale-105' : 'bg-white/5 text-white/40 hover:bg-white/10'
+                          userVote === 'A' ? 'bg-purple-600 text-white scale-105' : 'bg-white/5 text-white/40 hover:bg-white/10'
                         }`}
                       >
                         <span className="text-[8px] font-black uppercase">Vote for</span>
@@ -269,7 +254,7 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
                       <Button 
                         onClick={() => setUserVote('B')}
                         className={`rounded-2xl px-6 h-14 flex flex-col items-center justify-center transition-all ${
-                          userVote === 'B' ? 'bg-purple-600 text-white scale-105' : 'bg-white/5 text-white/40 hover:bg-white/10'
+                          userVote === 'B' ? 'bg-emerald-600 text-white scale-105' : 'bg-white/5 text-white/40 hover:bg-white/10'
                         }`}
                       >
                         <span className="text-[8px] font-black uppercase">Vote for</span>
