@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { mockDB, ComparisonItem, ComparisonCategory } from "@/data/mockDB";
 import GlassCard from "../GlassCard";
 import { Zap, Shield, Star, DollarSign, Cpu, Gauge, History as HistoryIcon, Trophy, Globe, Activity, LayoutList } from "lucide-react";
@@ -15,12 +16,25 @@ import ContenderGallery from "./ContenderGallery";
 import LiveActivityTicker from "./LiveActivityTicker";
 import WinConditions from "./WinConditions";
 import DomainIntel from "./DomainIntel";
+import ExpertPanel from "./ExpertPanel";
+import MarketForecast from "./MarketForecast";
 import { Button } from "@/components/ui/button";
 
 const DuelEngine = () => {
-  const [activeCategory, setActiveCategory] = useState<ComparisonCategory>("tech");
-  const [itemA, setItemA] = useState<ComparisonItem>(mockDB.find(i => i.category === "tech")!);
-  const [itemB, setItemB] = useState<ComparisonItem>(mockDB.filter(i => i.category === "tech")[1]!);
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const initialCategory = (searchParams.get("cat") as ComparisonCategory) || "tech";
+  const [activeCategory, setActiveCategory] = useState<ComparisonCategory>(initialCategory);
+  
+  const [itemA, setItemA] = useState<ComparisonItem>(
+    mockDB.find(i => i.id === searchParams.get("a")) || 
+    mockDB.find(i => i.category === initialCategory)!
+  );
+  const [itemB, setItemB] = useState<ComparisonItem>(
+    mockDB.find(i => i.id === searchParams.get("b")) || 
+    mockDB.filter(i => i.category === initialCategory)[1]!
+  );
+
   const [isSearching, setIsSearching] = useState(false);
   const [showResult, setShowResult] = useState(true);
   const [history, setHistory] = useState<any[]>([]);
@@ -33,6 +47,15 @@ const DuelEngine = () => {
   const [weights, setWeights] = useState<Record<string, number>>(initialWeights);
 
   const availableItems = useMemo(() => mockDB.filter(item => item.category === activeCategory), [activeCategory]);
+
+  // Sync URL with State
+  useEffect(() => {
+    setSearchParams({
+      cat: activeCategory,
+      a: itemA.id,
+      b: itemB.id
+    }, { replace: true });
+  }, [activeCategory, itemA, itemB]);
 
   const switchCategory = (cat: ComparisonCategory) => {
     setActiveCategory(cat);
@@ -61,33 +84,6 @@ const DuelEngine = () => {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }, ...prev].slice(0, 10));
   };
-
-  const ItemCard = ({ item, side }: { item: ComparisonItem, side: 'left' | 'right' }) => (
-    <div className="flex flex-col gap-4 w-full group">
-      <SearchSelector 
-        label={`Contender ${side === 'left' ? 'A' : 'B'}`}
-        items={availableItems}
-        selectedItem={item}
-        onSelect={(newItem) => {
-          side === 'left' ? setItemA(newItem) : setItemB(newItem);
-          setShowResult(false);
-        }}
-      />
-      <div className="relative h-64 rounded-3xl overflow-hidden border border-white/10 shadow-2xl transition-all group-hover:border-blue-500/30">
-        <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
-        
-        <div className="absolute inset-0 bg-[linear-gradient(transparent_0%,rgba(59,130,246,0.05)_50%,transparent_100%)] bg-[length:100%_4px] animate-[pulse_2s_infinite] pointer-events-none" />
-        
-        <div className="absolute bottom-4 left-4 flex gap-1">
-          {item.highlights.map(h => (
-            <span key={h} className="bg-black/60 backdrop-blur-md text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded border border-white/10 text-white/80">{h}</span>
-          ))}
-        </div>
-      </div>
-      <DomainIntel item={item} category={activeCategory} />
-    </div>
-  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 relative">
@@ -141,9 +137,16 @@ const DuelEngine = () => {
         <div className="space-y-12 mb-20 animate-in fade-in slide-in-from-top-4 duration-700">
           <AIVerdict itemA={itemA} itemB={itemB} weights={weights} />
           
-          <WinConditions itemA={itemA} itemB={itemB} />
-
-          <SocialPulse itemA={itemA} itemB={itemB} />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-8">
+               <WinConditions itemA={itemA} itemB={itemB} />
+               <ExpertPanel category={activeCategory} itemA={itemA} itemB={itemB} />
+            </div>
+            <div className="space-y-8">
+               <MarketForecast category={activeCategory} itemA={itemA} itemB={itemB} />
+               <SocialPulse itemA={itemA} itemB={itemB} />
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <ComparisonRadar itemA={itemA} itemB={itemB} />
@@ -151,33 +154,31 @@ const DuelEngine = () => {
           </div>
 
           <ContenderGallery itemA={itemA} itemB={itemB} />
-
-          <div className="flex flex-col gap-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30 px-2">Neural Performance Drift</h4>
-            {Object.keys(itemA.metrics).map(metric => (
-              <div key={metric} className="bg-white/5 p-4 rounded-2xl border border-white/5 group hover:border-white/10 transition-colors">
-                <div className="flex justify-between text-[10px] font-bold uppercase mb-2">
-                  <span className="text-blue-400">{itemA.name}: {itemA.metrics[metric]}%</span>
-                  <span className="text-white/40 group-hover:text-white/60 transition-colors">{metric}</span>
-                  <span className="text-purple-400">{itemB.name}: {itemB.metrics[metric]}%</span>
-                </div>
-                <div className="flex gap-1 h-1">
-                  <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${itemA.metrics[metric]}%` }} />
-                  <div className="flex-1 h-full bg-white/5" />
-                  <div className="h-full bg-purple-500 transition-all duration-1000" style={{ width: `${itemB.metrics[metric]}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 
       <div className="flex flex-col lg:flex-row gap-12 items-start opacity-40 hover:opacity-100 transition-all duration-500">
-        <ItemCard item={itemA} side="left" />
+        <div className="flex flex-col gap-4 w-full">
+           <SearchSelector 
+            label="Contender A"
+            items={availableItems}
+            selectedItem={itemA}
+            onSelect={(newItem) => { setItemA(newItem); setShowResult(false); }}
+          />
+          <DomainIntel item={itemA} category={activeCategory} />
+        </div>
         <div className="hidden lg:flex flex-col items-center justify-center pt-24">
           <div className="bg-white/10 px-4 py-2 rounded-full font-black text-xl italic text-white/20 border border-white/5">VS</div>
         </div>
-        <ItemCard item={itemB} side="right" />
+        <div className="flex flex-col gap-4 w-full">
+           <SearchSelector 
+            label="Contender B"
+            items={availableItems}
+            selectedItem={itemB}
+            onSelect={(newItem) => { setItemB(newItem); setShowResult(false); }}
+          />
+          <DomainIntel item={itemB} category={activeCategory} />
+        </div>
       </div>
     </div>
   );
