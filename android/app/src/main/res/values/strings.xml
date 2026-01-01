@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">elegant-puffin-soar</string>
+    <string name="title_activity_main">elegant-puffin-soar</string>
+    <string name="package_name">com.example.elegantpuffinsoar</string>
+    <string name="custom_url_scheme">com.example.elegantpuffinsoar</string>
+</resources>
