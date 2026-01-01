@@ -81,19 +81,48 @@ export const generateSyntheticItem = (name: string, category: ComparisonCategory
     return 70 + ((seed * offset) % 29); 
   };
 
+  // Define metric keys based on category for realistic context
+  let metricKeys: string[] = [];
+  let imageSeed = '';
+
+  switch (category) {
+    case 'groceries':
+      metricKeys = ['nutrition', 'taste', 'price', 'freshness', 'versatility'];
+      imageSeed = '1542838132-92c53300491e'; // Food-like
+      break;
+    case 'gaming':
+      metricKeys = ['graphics', 'story', 'gameplay', 'bugs', 'fun'];
+      imageSeed = '1550751827-4bd374c3f58b'; // Tech/Game-like
+      break;
+    case 'dev-tools':
+      metricKeys = ['dx', 'docs', 'performance', 'community', 'flexibility'];
+      imageSeed = '1461749280624-a40bd68927a6'; // Code-like
+      break;
+    case 'ai-tools':
+      metricKeys = ['accuracy', 'speed', 'reasoning', 'creativity', 'safety'];
+      imageSeed = '1677442136019-21780ecad995'; // AI-like
+      break;
+    case 'living':
+      metricKeys = ['safety', 'cost', 'walkability', 'internet', 'nightlife'];
+      imageSeed = '1480714378408-67cf0d13bc1b'; // City-like
+      break;
+    default:
+      metricKeys = ['quality', 'value', 'popularity', 'innovation', 'reliability'];
+      imageSeed = '1518770660439-4636190af475'; // Generic
+  }
+
+  const metrics = metricKeys.reduce((acc, key, idx) => {
+    acc[key] = pseudoRandom(idx + 1);
+    return acc;
+  }, {} as Record<string, number>);
+
   return {
     id: name.toLowerCase().replace(/\s+/g, '-'),
     category,
     name: name,
     subtext: "Neural Generated Profile",
-    image: `https://images.unsplash.com/photo-${category === 'groceries' ? '1542838132-92c53300491e' : category === 'dev-tools' ? '1461749280624-a40bd68927a6' : '1550751827-4bd374c3f58b'}?auto=format&fit=crop&w=800&q=80`,
-    metrics: {
-      quality: pseudoRandom(2),
-      value: pseudoRandom(3),
-      popularity: pseudoRandom(4),
-      innovation: pseudoRandom(5),
-      reliability: pseudoRandom(6)
-    },
+    image: `https://images.unsplash.com/photo-${imageSeed}?auto=format&fit=crop&w=800&q=80`,
+    metrics,
     highlights: ["AI Analyzed", "Community Verified", "Trending"],
     specs: { "Source": "Global Index", "Confidence": "High", "Data Points": "1.2M", "Status": "Active" },
     sentiment: { 

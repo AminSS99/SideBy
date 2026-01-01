@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { mockDB, ComparisonItem, ComparisonCategory, generateSyntheticItem } from "@/data/mockDB";
 import GlassCard from "../GlassCard";
 import { Zap, Shield, Star, Trophy, LayoutList, Share2, Download, CheckCircle2, Info, Search, AlertTriangle, Lock } from "lucide-react";
@@ -19,6 +20,7 @@ import ExpertPanel from "./ExpertPanel";
 import MarketForecast from "./MarketForecast";
 import NeuralNewsFeed from "./NeuralNewsFeed";
 import DossierCompiler from "./DossierCompiler";
+import DossierModal from "./DossierModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -40,6 +42,7 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
 
   const [isSearching, setIsSearching] = useState(false);
   const [isCompiling, setIsCompiling] = useState(false);
+  const [showDossier, setShowDossier] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [userVote, setUserVote] = useState<'A' | 'B' | null>(null);
@@ -108,6 +111,20 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
     }, ...prev].slice(0, 10));
   };
 
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast.success("Neural Link Copied", {
+      description: "Secure protocol link ready for transmission."
+    });
+  };
+
+  // Calculate winner for Dossier
+  const scoreA = Object.values(itemA.metrics).reduce((a, b) => a + b, 0);
+  const scoreB = Object.values(itemB.metrics).reduce((a, b) => a + b, 0);
+  const winner = scoreA > scoreB ? itemA : itemB;
+  const loser = scoreA > scoreB ? itemB : itemA;
+  const matchPercentage = 85 + Math.floor(Math.random() * 14);
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 relative">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
@@ -115,13 +132,20 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
       </div>
       
       {isSearching && <LoadingScreen onComplete={handleDuelComplete} />}
-      {isCompiling && <DossierCompiler onComplete={() => setIsCompiling(false)} />}
+      {isCompiling && <DossierCompiler onComplete={() => { setIsCompiling(false); setShowDossier(true); }} />}
+      <DossierModal 
+        open={showDossier} 
+        onOpenChange={setShowDossier}
+        winner={winner}
+        loser={loser}
+        matchPercentage={matchPercentage}
+      />
       
       <DuelHistory history={history} onClear={() => setHistory([])} />
 
       {/* Category Nav */}
       <div className="flex justify-center flex-wrap gap-2 mb-12">
-        {["tech", "gaming", "ai-tools", "dev-tools", "groceries", "travel", "sports"].map((cat) => (
+        {["tech", "gaming", "ai-tools", "dev-tools", "groceries", "travel", "sports", "living"].map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat as ComparisonCategory)}
@@ -206,6 +230,9 @@ const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
               </Button>
               <Button onClick={() => setIsCompiling(true)} variant="outline" className="rounded-full bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-black uppercase h-10 px-6">
                 <Download className="w-4 h-4 mr-2" /> Dossier
+              </Button>
+              <Button onClick={handleShare} variant="outline" className="rounded-full bg-blue-600 hover:bg-blue-700 text-white border-transparent text-[10px] font-black uppercase h-10 px-6">
+                <Share2 className="w-4 h-4 mr-2" /> Share
               </Button>
             </div>
           </div>
