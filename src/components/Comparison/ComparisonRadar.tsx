@@ -36,15 +36,15 @@ const ComparisonRadar = ({ itemA, itemB }: ComparisonRadarProps) => {
           <Radar
             name={itemA.name}
             dataKey="A"
-            stroke="#3b82f6"
-            fill="#3b82f6"
+            stroke="#a855f7"
+            fill="#a855f7"
             fillOpacity={0.4}
           />
           <Radar
             name={itemB.name}
             dataKey="B"
-            stroke="#a855f7"
-            fill="#a855f7"
+            stroke="#10b981"
+            fill="#10b981"
             fillOpacity={0.4}
           />
           <Legend />

@@ -29,9 +29,9 @@ const SearchSelector = ({ items, selectedItem, onSelect, label }: SearchSelector
       <span className="text-[10px] uppercase tracking-widest font-black text-white/30 px-1">{label}</span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className="flex items-center justify-between w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-4 text-left hover:bg-white/10 transition-all outline-none focus:ring-2 focus:ring-blue-500/50">
+          <button className="flex items-center justify-between w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-4 text-left hover:bg-white/10 transition-all outline-none focus:ring-2 focus:ring-purple-500/50">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-blue-400 leading-tight uppercase">{selectedItem.subtext}</span>
+              <span className="text-[10px] font-bold text-purple-400 leading-tight uppercase">{selectedItem.subtext}</span>
               <span className="text-lg font-black italic tracking-tighter leading-tight">{selectedItem.name}</span>
             </div>
             <ChevronDown className="w-5 h-5 text-white/40" />
@@ -58,7 +58,7 @@ const SearchSelector = ({ items, selectedItem, onSelect, label }: SearchSelector
                   setOpen(false);
                 }}
                 className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all text-left mb-1 ${
-                  selectedItem.id === item.id ? "bg-blue-600/20 text-blue-400" : "hover:bg-white/5"
+                  selectedItem.id === item.id ? "bg-purple-600/20 text-purple-400" : "hover:bg-white/5"
                 }`}
               >
                 <img src={item.image} className="w-10 h-10 rounded-lg object-cover" alt="" />

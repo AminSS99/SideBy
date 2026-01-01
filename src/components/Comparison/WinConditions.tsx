@@ -40,8 +40,8 @@ const WinConditions = ({ itemA, itemB }: WinConditionsProps) => {
 
   return (
     <div className="flex flex-col md:flex-row gap-4 mb-12">
-      <WinCard item={itemA} metric={winA} color="blue" />
-      <WinCard item={itemB} metric={winB} color="purple" />
+      <WinCard item={itemA} metric={winA} color="purple" />
+      <WinCard item={itemB} metric={winB} color="emerald" />
     </div>
   );
 };

@@ -51,7 +51,7 @@ const NeuralNewsFeed = ({ itemA, itemB, category }: { itemA: any, itemB: any, ca
         {news.map((item) => (
           <div key={item.id} className="p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors cursor-pointer group">
             <div className="flex justify-between items-start mb-1">
-              <span className="text-[9px] font-black text-blue-400 uppercase tracking-tighter">{item.source}</span>
+              <span className="text-[9px] font-black text-purple-400 uppercase tracking-tighter">{item.source}</span>
               <div className="flex items-center gap-1 text-white/20">
                 <Clock className="w-2 h-2" />
                 <span className="text-[8px] font-bold">{item.time}</span>

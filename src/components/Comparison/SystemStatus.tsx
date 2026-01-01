@@ -15,7 +15,7 @@ const SystemStatus = ({ credits = 5 }: { credits?: number }) => {
       </div>
       <div className="w-px h-4 bg-white/10" />
       <div className="flex items-center gap-2">
-        <Server className="w-3 h-3 text-blue-400" />
+        <Server className="w-3 h-3 text-purple-400" />
         <div className="flex flex-col">
           <span className="text-[8px] font-black uppercase text-white/40 leading-none">Nodes</span>
           <span className="text-[10px] font-bold leading-tight">12 Online</span>

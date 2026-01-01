@@ -12,14 +12,14 @@ const LiveActivityTicker = () => {
   ];
 
   return (
-    <div className="w-full bg-blue-600/10 border-y border-white/5 py-2 overflow-hidden mb-8 relative">
+    <div className="w-full bg-purple-600/10 border-y border-white/5 py-2 overflow-hidden mb-8 relative">
       <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-[#050505] to-transparent z-10" />
       <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[#050505] to-transparent z-10" />
       
       <div className="flex animate-[marquee_30s_linear_infinite] whitespace-nowrap gap-12 items-center">
         {[...activities, ...activities].map((text, i) => (
           <div key={i} className="flex items-center gap-2">
-            <Activity className="w-3 h-3 text-blue-400" />
+            <Activity className="w-3 h-3 text-purple-400" />
             <span className="text-[10px] font-black uppercase tracking-widest text-white/60 italic">
               {text}
             </span>

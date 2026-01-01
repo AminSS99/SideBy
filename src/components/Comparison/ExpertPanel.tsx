@@ -59,7 +59,7 @@ const ExpertPanel = ({ category, itemA, itemB }: { category: string, itemA: any,
             <img src={e.avatar} alt={e.expert} className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 shadow-lg" />
             <div className="space-y-1">
               <div className="flex justify-between items-center">
-                <p className="text-xs font-black italic text-blue-400">{e.expert}</p>
+                <p className="text-xs font-black italic text-purple-400">{e.expert}</p>
                 <MessageSquareQuote className="w-3 h-3 text-white/10" />
               </div>
               <p className="text-[9px] font-bold text-white/40 uppercase tracking-tighter">{e.role}</p>

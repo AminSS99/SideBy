@@ -15,8 +15,8 @@ const ComparisonTable = ({ itemA, itemB }: ComparisonTableProps) => {
     <div className="bg-white/5 rounded-3xl border border-white/5 overflow-hidden">
       <div className="grid grid-cols-3 bg-white/5 p-4 border-b border-white/5">
         <div className="text-[10px] font-black uppercase text-white/20">Feature Analysis</div>
-        <div className="text-center text-[10px] font-black uppercase text-blue-400">{itemA.name}</div>
-        <div className="text-center text-[10px] font-black uppercase text-purple-400">{itemB.name}</div>
+        <div className="text-center text-[10px] font-black uppercase text-purple-400">{itemA.name}</div>
+        <div className="text-center text-[10px] font-black uppercase text-emerald-400">{itemB.name}</div>
       </div>
       
       {allSpecs.map((spec) => (

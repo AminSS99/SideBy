@@ -23,11 +23,11 @@ const MarketForecast = ({ category, itemA, itemB }: { category: string, itemA: a
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-blue-500" />
+            <div className="w-2 h-2 rounded-full bg-purple-500" />
             <span className="text-[9px] font-bold text-white/40">{itemA.name}</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-purple-500" />
+            <div className="w-2 h-2 rounded-full bg-emerald-500" />
             <span className="text-[9px] font-bold text-white/40">{itemB.name}</span>
           </div>
         </div>
@@ -38,12 +38,12 @@ const MarketForecast = ({ category, itemA, itemB }: { category: string, itemA: a
           <AreaChart data={data}>
             <defs>
               <linearGradient id="colorA" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-              </linearGradient>
-              <linearGradient id="colorB" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
                 <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="colorB" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
               </linearGradient>
             </defs>
             <XAxis dataKey="name" hide />
@@ -52,8 +52,8 @@ const MarketForecast = ({ category, itemA, itemB }: { category: string, itemA: a
               contentStyle={{ backgroundColor: '#000', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '10px' }}
               itemStyle={{ color: '#fff' }}
             />
-            <Area type="monotone" dataKey="A" stroke="#3b82f6" fillOpacity={1} fill="url(#colorA)" />
-            <Area type="monotone" dataKey="B" stroke="#a855f7" fillOpacity={1} fill="url(#colorB)" />
+            <Area type="monotone" dataKey="A" stroke="#a855f7" fillOpacity={1} fill="url(#colorA)" />
+            <Area type="monotone" dataKey="B" stroke="#10b981" fillOpacity={1} fill="url(#colorB)" />
           </AreaChart>
         </ResponsiveContainer>
       </div>

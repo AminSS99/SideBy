@@ -17,7 +17,7 @@ const DuelHistory = ({ history, onClear }: { history: HistoryItem[], onClear: ()
       <div className="bg-black/60 backdrop-blur-2xl border border-white/10 rounded-2xl w-64 overflow-hidden shadow-2xl">
         <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
           <div className="flex items-center gap-2">
-            <History className="w-4 h-4 text-blue-400" />
+            <History className="w-4 h-4 text-purple-400" />
             <span className="text-[10px] font-black uppercase tracking-widest">History</span>
           </div>
           <button onClick={onClear} className="text-white/20 hover:text-white">
@@ -28,7 +28,7 @@ const DuelHistory = ({ history, onClear }: { history: HistoryItem[], onClear: ()
           {history.map((item) => (
             <div key={item.id} className="p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer mb-1 border border-transparent hover:border-white/5 group">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[9px] font-black text-blue-400 uppercase">{item.category}</span>
+                <span className="text-[9px] font-black text-purple-400 uppercase">{item.category}</span>
                 <span className="text-[8px] font-bold text-white/20">{item.timestamp}</span>
               </div>
               <div className="text-xs font-black italic tracking-tight flex items-center gap-1">

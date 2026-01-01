@@ -4,14 +4,14 @@ import { cn } from "@/lib/utils";
 interface GlassCardProps {
   children: React.ReactNode;
   className?: string;
-  glowColor?: "blue" | "orange" | "purple";
+  glowColor?: "purple" | "orange" | "emerald";
 }
 
 const GlassCard = ({ children, className, glowColor }: GlassCardProps) => {
   const glowClasses = {
-    blue: "after:bg-blue-500/10",
-    orange: "after:bg-orange-500/10",
     purple: "after:bg-purple-500/10",
+    orange: "after:bg-orange-500/10",
+    emerald: "after:bg-emerald-500/10",
   };
 
   return (

@@ -30,13 +30,13 @@ const DossierCompiler = ({ onComplete }: { onComplete: () => void }) => {
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-6">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#3b82f610,transparent_70%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.1),transparent_70%)]" />
       
       <div className="max-w-md w-full space-y-12 relative z-10">
         <div className="text-center space-y-4">
-          <div className="w-20 h-20 bg-blue-600/20 rounded-3xl border border-blue-500/50 flex items-center justify-center mx-auto relative overflow-hidden">
-            <FileText className="w-10 h-10 text-blue-400 animate-pulse" />
-            <div className="absolute inset-0 bg-gradient-to-t from-blue-500/20 to-transparent" />
+          <div className="w-20 h-20 bg-purple-600/20 rounded-3xl border border-purple-500/50 flex items-center justify-center mx-auto relative overflow-hidden">
+            <FileText className="w-10 h-10 text-purple-400 animate-pulse" />
+            <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 to-transparent" />
           </div>
           <div>
             <h2 className="text-2xl font-black italic uppercase tracking-tighter">Compiling Dossier</h2>
@@ -48,12 +48,12 @@ const DossierCompiler = ({ onComplete }: { onComplete: () => void }) => {
           {steps.map((step, i) => (
             <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all duration-500 ${
               step.status === 'complete' ? 'bg-emerald-500/5 border-emerald-500/20 opacity-100' :
-              step.status === 'active' ? 'bg-blue-500/10 border-blue-500/30 scale-105 opacity-100' :
+              step.status === 'active' ? 'bg-purple-500/10 border-purple-500/30 scale-105 opacity-100' :
               'bg-white/5 border-white/5 opacity-40'
             }`}>
               <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
                 {step.status === 'complete' ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> :
-                 step.status === 'active' ? <Cpu className="w-4 h-4 text-blue-400 animate-spin" /> :
+                 step.status === 'active' ? <Cpu className="w-4 h-4 text-purple-400 animate-spin" /> :
                  <Database className="w-4 h-4 text-white/20" />}
               </div>
               <span className="text-xs font-bold uppercase tracking-widest">{step.label}</span>
