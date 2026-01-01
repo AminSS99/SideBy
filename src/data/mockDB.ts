@@ -1,4 +1,4 @@
-export type ComparisonCategory = "travel" | "sports" | "education" | "tech" | "cars";
+export type ComparisonCategory = "travel" | "sports" | "education" | "tech" | "living";
 
 export interface ComparisonItem {
   id: string;
@@ -6,7 +6,7 @@ export interface ComparisonItem {
   name: string;
   subtext: string;
   image: string;
-  metrics: Record<string, any>;
+  metrics: Record<string, number>;
   highlights: string[];
 }
 
@@ -15,20 +15,14 @@ export const mockDB: ComparisonItem[] = [
   {
     id: "hamburg", category: "travel", name: "Hamburg", subtext: "Germany",
     image: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=800&q=80",
-    metrics: { safety: 88, budget: 85, culture: 88, transport: 92, climate: 70 },
+    metrics: { budget: 85, accessibility: 92, culture: 88, safety: 90, climate: 70 },
     highlights: ["Maritime", "Techno", "Seafood"]
   },
   {
     id: "tokyo", category: "travel", name: "Tokyo", subtext: "Japan",
     image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=800&q=80",
-    metrics: { safety: 98, budget: 60, culture: 95, transport: 99, climate: 80 },
+    metrics: { budget: 60, accessibility: 98, culture: 95, safety: 98, climate: 80 },
     highlights: ["Cyberpunk", "Sushi", "Anime"]
-  },
-  {
-    id: "barcelona", category: "travel", name: "Barcelona", subtext: "Spain",
-    image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?auto=format&fit=crop&w=800&q=80",
-    metrics: { safety: 72, budget: 88, culture: 92, transport: 85, climate: 95 },
-    highlights: ["Gothic", "Tapas", "Beach"]
   },
   // SPORTS
   {
@@ -43,30 +37,30 @@ export const mockDB: ComparisonItem[] = [
     metrics: { history: 75, squad: 99, fans: 80, form: 98, stadium: 99 },
     highlights: ["Treble Winners", "Pep Guardiola", "Modern"]
   },
-  // TECH
+  // EDUCATION
   {
-    id: "macbook-m3", category: "tech", name: "MacBook Pro M3", subtext: "Apple",
-    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80",
-    metrics: { power: 98, battery: 99, display: 99, value: 65, portability: 92 },
-    highlights: ["M3 Max Chip", "Liquid Retina", "Ecosystem"]
+    id: "harvard", category: "education", name: "Harvard", subtext: "USA",
+    image: "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=800&q=80",
+    metrics: { research: 99, campus: 85, prestige: 99, network: 99, value: 40 },
+    highlights: ["Ivy League", "Acceptance: 4%", "Legacy"]
   },
   {
-    id: "dell-xps", category: "tech", name: "Dell XPS 15", subtext: "Dell",
-    image: "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=800&q=80",
-    metrics: { power: 92, battery: 75, display: 95, value: 85, portability: 88 },
-    highlights: ["InfinityEdge", "OLED Option", "Premium Build"]
+    id: "oxford", category: "education", name: "Oxford", subtext: "UK",
+    image: "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&w=800&q=80",
+    metrics: { research: 98, campus: 95, prestige: 99, network: 95, value: 60 },
+    highlights: ["Ancient", "Collegiate System", "Global Elite"]
   },
-  // CARS
+  // LIVING
   {
-    id: "porsche-911", category: "cars", name: "Porsche 911", subtext: "Stuttgart",
-    image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
-    metrics: { speed: 96, design: 99, tech: 88, economy: 40, prestige: 98 },
-    highlights: ["Iconic Shape", "Rear Engine", "Precision"]
+    id: "austin", category: "living", name: "Austin", subtext: "Texas, USA",
+    image: "https://images.unsplash.com/photo-1531210783285-cf8b9981358d?auto=format&fit=crop&w=800&q=80",
+    metrics: { jobs: 92, rent: 75, commute: 65, fun: 95, nature: 80 },
+    highlights: ["Tech Hub", "Live Music", "No State Tax"]
   },
   {
-    id: "tesla-model-s", category: "cars", name: "Tesla Model S", subtext: "California",
-    image: "https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=800&q=80",
-    metrics: { speed: 99, design: 85, tech: 99, economy: 95, prestige: 85 },
-    highlights: ["Plaid Mode", "Autopilot", "Supercharging"]
+    id: "lisbon", category: "living", name: "Lisbon", subtext: "Portugal",
+    image: "https://images.unsplash.com/photo-1517704130591-789958194bda?auto=format&fit=crop&w=800&q=80",
+    metrics: { jobs: 60, rent: 90, commute: 85, fun: 88, nature: 92 },
+    highlights: ["Digital Nomad Haven", "Sunny", "History"]
   }
 ];
