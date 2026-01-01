@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import DuelEngine from "@/components/Comparison/DuelEngine";
 import Leaderboard from "@/components/Comparison/Leaderboard";
 import SystemStatus from "@/components/Comparison/SystemStatus";
@@ -7,6 +7,8 @@ import { Zap, LayoutGrid, Globe, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
+  const [credits, setCredits] = useState(5);
+
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-blue-500/30 overflow-x-hidden">
       {/* Cyber Grid Background */}
@@ -26,7 +28,7 @@ const Index = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <SystemStatus />
+            <SystemStatus credits={credits} />
             <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/5 text-white/70">
               <LayoutGrid className="w-5 h-5" />
             </Button>
@@ -45,17 +47,18 @@ const Index = () => {
             <Zap className="w-3 h-3 fill-blue-400" /> Version 2.4.0 Live
           </div>
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-4 italic uppercase leading-[0.9]">
-            Compare <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500">Beyond Limits.</span>
+            Compare <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500">Everything.</span>
           </h1>
           <p className="max-w-xl mx-auto text-xs text-white/40 px-4 uppercase tracking-[0.2em] font-bold mt-4 leading-relaxed">
-            The World's Most Advanced Neural Protocol for <br/> Cross-Domain Decision Intelligence.
+            Groceries. Games. Tools. Life decisions. <br/>
+            The World's First Universal Neural Comparator.
           </p>
         </div>
       </header>
 
       {/* Main Duel Engine */}
       <main className="relative z-10">
-        <DuelEngine />
+        <DuelEngine userCredits={credits} onSpendCredit={() => setCredits(c => Math.max(0, c - 1))} />
         
         {/* Global Trends Section */}
         <div className="py-24 border-t border-white/5 relative bg-white/[0.01]">

@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
-import { mockDB, ComparisonItem, ComparisonCategory } from "@/data/mockDB";
+import { mockDB, ComparisonItem, ComparisonCategory, generateSyntheticItem } from "@/data/mockDB";
 import GlassCard from "../GlassCard";
-import { Zap, Shield, Star, Trophy, LayoutList, Share2, Download, CheckCircle2, Info } from "lucide-react";
+import { Zap, Shield, Star, Trophy, LayoutList, Share2, Download, CheckCircle2, Info, Search, AlertTriangle, Lock } from "lucide-react";
 import LoadingScreen from "./LoadingScreen";
 import AIVerdict from "./AIVerdict";
 import SearchSelector from "./SearchSelector";
@@ -21,59 +20,80 @@ import MarketForecast from "./MarketForecast";
 import NeuralNewsFeed from "./NeuralNewsFeed";
 import DossierCompiler from "./DossierCompiler";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
-const DuelEngine = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+interface DuelEngineProps {
+  userCredits: number;
+  onSpendCredit: () => void;
+}
+
+const DuelEngine = ({ userCredits, onSpendCredit }: DuelEngineProps) => {
+  const [activeCategory, setActiveCategory] = useState<ComparisonCategory>("tech");
   
-  const initialCategory = (searchParams.get("cat") as ComparisonCategory) || "tech";
-  const [activeCategory, setActiveCategory] = useState<ComparisonCategory>(initialCategory);
+  // Custom Input State
+  const [customInputA, setCustomInputA] = useState("");
+  const [customInputB, setCustomInputB] = useState("");
   
-  const [itemA, setItemA] = useState<ComparisonItem>(
-    mockDB.find(i => i.id === searchParams.get("a")) || 
-    mockDB.find(i => i.category === initialCategory)!
-  );
-  const [itemB, setItemB] = useState<ComparisonItem>(
-    mockDB.find(i => i.id === searchParams.get("b")) || 
-    mockDB.filter(i => i.category === initialCategory)[1]!
-  );
+  const [itemA, setItemA] = useState<ComparisonItem>(mockDB[0]);
+  const [itemB, setItemB] = useState<ComparisonItem>(mockDB[1]);
 
   const [isSearching, setIsSearching] = useState(false);
   const [isCompiling, setIsCompiling] = useState(false);
-  const [showResult, setShowResult] = useState(true);
+  const [showResult, setShowResult] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [userVote, setUserVote] = useState<'A' | 'B' | null>(null);
   
   const initialWeights = useMemo(() => {
     const keys = Object.keys(itemA.metrics);
     return keys.reduce((acc, key) => ({ ...acc, [key]: 5 }), {});
-  }, [activeCategory]);
+  }, [itemA]);
 
   const [weights, setWeights] = useState<Record<string, number>>(initialWeights);
 
-  const availableItems = useMemo(() => mockDB.filter(item => item.category === activeCategory), [activeCategory]);
-
+  // When category changes, reset defaults
   useEffect(() => {
-    setSearchParams({ cat: activeCategory, a: itemA.id, b: itemB.id }, { replace: true });
-  }, [activeCategory, itemA, itemB]);
-
-  const switchCategory = (cat: ComparisonCategory) => {
-    setActiveCategory(cat);
-    const items = mockDB.filter(i => i.category === cat);
-    setItemA(items[0]);
-    setItemB(items[1]);
+    const defaults = mockDB.filter(i => i.category === activeCategory);
+    if (defaults.length >= 2) {
+      setItemA(defaults[0]);
+      setItemB(defaults[1]);
+      setCustomInputA("");
+      setCustomInputB("");
+    } else {
+      // For categories without presets, keep generic
+      setCustomInputA("");
+      setCustomInputB("");
+    }
     setShowResult(false);
-    setUserVote(null);
-    const keys = Object.keys(items[0].metrics);
-    setWeights(keys.reduce((acc, key) => ({ ...acc, [key]: 5 }), {}));
-  };
+  }, [activeCategory]);
 
   const startDuel = () => {
+    if (userCredits <= 0) {
+      toast.error("Insufficient Neural Credits. Please upgrade.");
+      return;
+    }
+
+    // Generate data if inputs are custom
+    let finalA = itemA;
+    let finalB = itemB;
+
+    if (customInputA) {
+      finalA = generateSyntheticItem(customInputA, activeCategory);
+    }
+    if (customInputB) {
+      finalB = generateSyntheticItem(customInputB, activeCategory);
+    }
+
+    setItemA(finalA);
+    setItemB(finalB);
+    
+    // Reset weights for new metric keys if they differ
+    const keys = Object.keys(finalA.metrics);
+    setWeights(keys.reduce((acc, key) => ({ ...acc, [key]: 5 }), {}));
+
+    onSpendCredit();
     setIsSearching(true);
     setShowResult(false);
-  };
-
-  const compileDossier = () => {
-    setIsCompiling(true);
   };
 
   const handleDuelComplete = () => {
@@ -99,11 +119,12 @@ const DuelEngine = () => {
       
       <DuelHistory history={history} onClear={() => setHistory([])} />
 
+      {/* Category Nav */}
       <div className="flex justify-center flex-wrap gap-2 mb-12">
-        {["tech", "travel", "sports", "education", "living"].map((cat) => (
+        {["tech", "gaming", "ai-tools", "dev-tools", "groceries", "travel", "sports"].map((cat) => (
           <button
             key={cat}
-            onClick={() => switchCategory(cat as ComparisonCategory)}
+            onClick={() => setActiveCategory(cat as ComparisonCategory)}
             className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
               activeCategory === cat 
                 ? "bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-600/20" 
@@ -115,27 +136,63 @@ const DuelEngine = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-4 mb-12">
-        <PersonaPresets category={activeCategory} onApply={(w) => {
-          setWeights(w);
-          setShowResult(false);
-        }} />
-        <PreferenceTuner 
-          metrics={Object.keys(itemA.metrics)} 
-          weights={weights} 
-          onWeightChange={(m, v) => setWeights(prev => ({ ...prev, [m]: v }))}
-        />
-      </div>
-
+      {/* Input Section */}
       {!showResult && !isSearching && (
-        <div className="flex justify-center mb-16 relative z-10">
-          <Button 
-            onClick={startDuel}
-            className="rounded-full bg-blue-600 hover:bg-blue-700 text-white px-12 py-8 text-2xl font-black uppercase italic tracking-tighter shadow-2xl shadow-blue-600/20 transition-all hover:scale-105"
-          >
-            <Zap className="w-8 h-8 mr-4 fill-white" />
-            SYNTHESIZE VERDICT
-          </Button>
+        <div className="max-w-3xl mx-auto mb-16 relative z-10 animate-in fade-in zoom-in duration-500">
+           <GlassCard className="p-8 border-blue-500/20 bg-blue-500/5">
+             <div className="flex flex-col md:flex-row gap-4 items-center">
+               <div className="flex-1 w-full">
+                 <label className="text-[10px] font-black uppercase text-white/40 mb-2 block tracking-widest">Contender A</label>
+                 <div className="relative">
+                   <Input 
+                    value={customInputA}
+                    onChange={(e) => setCustomInputA(e.target.value)}
+                    placeholder={itemA.name}
+                    className="h-14 bg-black/40 border-white/10 rounded-xl pl-4 text-lg font-bold"
+                   />
+                 </div>
+               </div>
+               <div className="flex items-center justify-center pt-6">
+                 <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-sm italic text-white/20">VS</div>
+               </div>
+               <div className="flex-1 w-full">
+                 <label className="text-[10px] font-black uppercase text-white/40 mb-2 block tracking-widest">Contender B</label>
+                 <Input 
+                    value={customInputB}
+                    onChange={(e) => setCustomInputB(e.target.value)}
+                    placeholder={itemB.name}
+                    className="h-14 bg-black/40 border-white/10 rounded-xl pl-4 text-lg font-bold"
+                   />
+               </div>
+             </div>
+             
+             <div className="mt-8 flex justify-center">
+                {userCredits > 0 ? (
+                  <Button 
+                    onClick={startDuel}
+                    className="rounded-full bg-blue-600 hover:bg-blue-700 text-white px-12 py-8 text-2xl font-black uppercase italic tracking-tighter shadow-2xl shadow-blue-600/20 transition-all hover:scale-105"
+                  >
+                    <Zap className="w-6 h-6 mr-3 fill-white" />
+                    COMPARE NOW
+                    <span className="ml-2 text-xs opacity-50 font-medium normal-case not-italic tracking-normal bg-black/20 px-2 py-0.5 rounded-full">-1 Credit</span>
+                  </Button>
+                ) : (
+                   <Button 
+                    disabled
+                    className="rounded-full bg-red-900/50 text-white/50 px-12 py-8 text-xl font-black uppercase italic tracking-tighter cursor-not-allowed border border-red-500/30"
+                  >
+                    <Lock className="w-6 h-6 mr-3" />
+                    CREDIT LIMIT REACHED
+                  </Button>
+                )}
+             </div>
+             
+             {userCredits === 0 && (
+                <p className="text-center text-red-400 text-xs mt-4 font-bold uppercase tracking-widest">
+                  <AlertTriangle className="w-3 h-3 inline mr-1" /> Plan upgrade required for further analysis
+                </p>
+             )}
+           </GlassCard>
         </div>
       )}
 
@@ -144,15 +201,23 @@ const DuelEngine = () => {
           <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-8">
             <AIVerdict itemA={itemA} itemB={itemB} weights={weights} />
             <div className="flex gap-2 pb-6">
-              <Button onClick={compileDossier} variant="outline" className="rounded-full bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-black uppercase h-10 px-6">
-                <Download className="w-4 h-4 mr-2" /> Dossier
+              <Button onClick={() => setShowResult(false)} variant="outline" className="rounded-full bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-black uppercase h-10 px-6">
+                <Search className="w-4 h-4 mr-2" /> New Search
               </Button>
-              <Button variant="outline" className="rounded-full bg-blue-600 hover:bg-blue-700 text-white border-transparent text-[10px] font-black uppercase h-10 px-6">
-                <Share2 className="w-4 h-4 mr-2" /> Share
+              <Button onClick={() => setIsCompiling(true)} variant="outline" className="rounded-full bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-black uppercase h-10 px-6">
+                <Download className="w-4 h-4 mr-2" /> Dossier
               </Button>
             </div>
           </div>
           
+          <div className="grid grid-cols-1 lg:grid-cols-1 gap-4 mb-8">
+             <PreferenceTuner 
+              metrics={Object.keys(itemA.metrics)} 
+              weights={weights} 
+              onWeightChange={(m, v) => setWeights(prev => ({ ...prev, [m]: v }))}
+            />
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-3 space-y-8">
                <WinConditions itemA={itemA} itemB={itemB} />
@@ -172,7 +237,7 @@ const DuelEngine = () => {
                         }`}
                       >
                         <span className="text-[8px] font-black uppercase">Vote for</span>
-                        <span className="text-sm font-black italic">{itemA.name}</span>
+                        <span className="text-sm font-black italic truncate max-w-[100px]">{itemA.name}</span>
                       </Button>
                       <Button 
                         onClick={() => setUserVote('B')}
@@ -181,7 +246,7 @@ const DuelEngine = () => {
                         }`}
                       >
                         <span className="text-[8px] font-black uppercase">Vote for</span>
-                        <span className="text-sm font-black italic">{itemB.name}</span>
+                        <span className="text-sm font-black italic truncate max-w-[100px]">{itemB.name}</span>
                       </Button>
                     </div>
                   </div>
@@ -197,49 +262,13 @@ const DuelEngine = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 px-2">
-                <Info className="w-3 h-3 text-white/20" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Metric Verification</span>
-              </div>
-              <ComparisonRadar itemA={itemA} itemB={itemB} />
-            </div>
-            <div className="space-y-4">
-               <div className="flex items-center gap-2 px-2">
-                <LayoutList className="w-3 h-3 text-white/20" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Tactical Matrix</span>
-              </div>
-              <ComparisonTable itemA={itemA} itemB={itemB} />
-            </div>
+            <ComparisonRadar itemA={itemA} itemB={itemB} />
+            <ComparisonTable itemA={itemA} itemB={itemB} />
           </div>
 
           <ContenderGallery itemA={itemA} itemB={itemB} />
         </div>
       )}
-
-      <div className="flex flex-col lg:flex-row gap-12 items-start opacity-40 hover:opacity-100 transition-all duration-500">
-        <div className="flex flex-col gap-4 w-full">
-           <SearchSelector 
-            label="Contender A"
-            items={availableItems}
-            selectedItem={itemA}
-            onSelect={(newItem) => { setItemA(newItem); setShowResult(false); setUserVote(null); }}
-          />
-          <DomainIntel item={itemA} category={activeCategory} />
-        </div>
-        <div className="hidden lg:flex flex-col items-center justify-center pt-24">
-          <div className="bg-white/10 px-4 py-2 rounded-full font-black text-xl italic text-white/20 border border-white/5">VS</div>
-        </div>
-        <div className="flex flex-col gap-4 w-full">
-           <SearchSelector 
-            label="Contender B"
-            items={availableItems}
-            selectedItem={itemB}
-            onSelect={(newItem) => { setItemB(newItem); setShowResult(false); setUserVote(null); }}
-          />
-          <DomainIntel item={itemB} category={activeCategory} />
-        </div>
-      </div>
     </div>
   );
 };
