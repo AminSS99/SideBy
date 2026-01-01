@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from "react";
 import { mockDB, ComparisonItem, ComparisonCategory } from "@/data/mockDB";
 import GlassCard from "../GlassCard";
-import { Zap, Shield, Star, DollarSign, Cpu, Gauge, History, Trophy, Globe, Activity } from "lucide-react";
+import { Zap, Shield, Star, DollarSign, Cpu, Gauge, History, Trophy, Globe, Activity, LayoutList } from "lucide-react";
 import LoadingScreen from "./LoadingScreen";
 import AIVerdict from "./AIVerdict";
 import SearchSelector from "./SearchSelector";
 import PreferenceTuner from "./PreferenceTuner";
 import ComparisonRadar from "./ComparisonRadar";
+import ComparisonTable from "./ComparisonTable";
+import SocialPulse from "./SocialPulse";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
@@ -14,13 +16,14 @@ const metricIcons: Record<string, any> = {
   safety: Shield, budget: DollarSign, value: DollarSign, culture: Globe,
   power: Cpu, speed: Gauge, history: History, tech: Zap, fans: Star,
   research: Activity, campus: Globe, prestige: Trophy, network: Activity,
-  jobs: Activity, rent: DollarSign, commute: Activity, fun: Star, nature: Globe
+  jobs: Activity, rent: DollarSign, camera: Activity, performance: Cpu,
+  battery: Zap, display: LayoutList
 };
 
 const DuelEngine = () => {
-  const [activeCategory, setActiveCategory] = useState<ComparisonCategory>("travel");
-  const [itemA, setItemA] = useState<ComparisonItem>(mockDB.find(i => i.category === "travel")!);
-  const [itemB, setItemB] = useState<ComparisonItem>(mockDB.filter(i => i.category === "travel")[1]!);
+  const [activeCategory, setActiveCategory] = useState<ComparisonCategory>("tech");
+  const [itemA, setItemA] = useState<ComparisonItem>(mockDB.find(i => i.category === "tech")!);
+  const [itemB, setItemB] = useState<ComparisonItem>(mockDB.filter(i => i.category === "tech")[1]!);
   const [isSearching, setIsSearching] = useState(false);
   const [showResult, setShowResult] = useState(true);
   
@@ -39,7 +42,6 @@ const DuelEngine = () => {
     setItemA(items[0]);
     setItemB(items[1]);
     setShowResult(false);
-    // Reset weights for new category
     const keys = Object.keys(items[0].metrics);
     setWeights(keys.reduce((acc, key) => ({ ...acc, [key]: 5 }), {}));
   };
@@ -58,12 +60,10 @@ const DuelEngine = () => {
       <GlassCard className="relative h-64 p-0 group overflow-hidden border-white/10 shadow-2xl">
         <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
-        <div className="absolute bottom-4 left-4">
-           <div className="flex gap-1 mb-2">
-            {item.highlights.map(h => (
-              <span key={h} className="bg-black/60 backdrop-blur-md text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded border border-white/10">{h}</span>
-            ))}
-          </div>
+        <div className="absolute bottom-4 left-4 flex gap-1">
+          {item.highlights.map(h => (
+            <span key={h} className="bg-black/60 backdrop-blur-md text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded border border-white/10">{h}</span>
+          ))}
         </div>
       </GlassCard>
     </div>
@@ -74,7 +74,7 @@ const DuelEngine = () => {
       {isSearching && <LoadingScreen onComplete={() => { setIsSearching(false); setShowResult(true); }} />}
 
       <div className="flex justify-center flex-wrap gap-2 mb-12">
-        {["travel", "sports", "education", "living"].map((cat) => (
+        {["tech", "travel", "sports", "education", "living"].map((cat) => (
           <button
             key={cat}
             onClick={() => switchCategory(cat as ComparisonCategory)}
@@ -102,7 +102,7 @@ const DuelEngine = () => {
             className="rounded-full bg-blue-600 hover:bg-blue-700 text-white px-12 py-8 text-2xl font-black uppercase italic tracking-tighter shadow-2xl transition-all hover:scale-105"
           >
             <Zap className="w-8 h-8 mr-4 fill-white" />
-            CALCULATE WINNER
+            INITIATE DUEL
           </Button>
         </div>
       )}
@@ -110,25 +110,30 @@ const DuelEngine = () => {
       {showResult && (
         <div className="space-y-12 mb-20 animate-in fade-in slide-in-from-top-4 duration-700">
           <AIVerdict cityA={itemA as any} cityB={itemB as any} />
+          
+          <SocialPulse itemA={itemA} itemB={itemB} />
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <ComparisonRadar itemA={itemA} itemB={itemB} />
-            <div className="flex flex-col gap-4">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30 px-2">Data Comparison</h4>
-              {Object.keys(itemA.metrics).map(metric => (
-                <div key={metric} className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                  <div className="flex justify-between text-[10px] font-bold uppercase mb-2">
-                    <span className="text-blue-400">{itemA.name}: {itemA.metrics[metric]}%</span>
-                    <span className="text-white/40">{metric}</span>
-                    <span className="text-purple-400">{itemB.name}: {itemB.metrics[metric]}%</span>
-                  </div>
-                  <div className="flex gap-1 h-1">
-                    <div className="h-full bg-blue-500 transition-all" style={{ width: `${itemA.metrics[metric]}%` }} />
-                    <div className="flex-1 h-full bg-white/5" />
-                    <div className="h-full bg-purple-500 transition-all" style={{ width: `${itemB.metrics[metric]}%` }} />
-                  </div>
+            <ComparisonTable itemA={itemA} itemB={itemB} />
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30 px-2">Performance Drift</h4>
+            {Object.keys(itemA.metrics).map(metric => (
+              <div key={metric} className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                <div className="flex justify-between text-[10px] font-bold uppercase mb-2">
+                  <span className="text-blue-400">{itemA.name}: {itemA.metrics[metric]}%</span>
+                  <span className="text-white/40">{metric}</span>
+                  <span className="text-purple-400">{itemB.name}: {itemB.metrics[metric]}%</span>
                 </div>
-              ))}
-            </div>
+                <div className="flex gap-1 h-1">
+                  <div className="h-full bg-blue-500 transition-all" style={{ width: `${itemA.metrics[metric]}%` }} />
+                  <div className="flex-1 h-full bg-white/5" />
+                  <div className="h-full bg-purple-500 transition-all" style={{ width: `${itemB.metrics[metric]}%` }} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
