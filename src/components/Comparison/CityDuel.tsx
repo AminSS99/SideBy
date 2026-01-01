@@ -10,7 +10,7 @@ const CityDuel = () => {
   const [cityA, setCityA] = useState<CityData>(cities[0]);
   const [cityB, setCityB] = useState<CityData>(cities[1]);
 
-  const CityPanel = ({ city, side }: { city: CityData; side: "left" | "right" }) => (
+  const CityPanel = ({ city }: { city: CityData; side: "left" | "right" }) => (
     <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header Card */}
       <GlassCard className="relative h-64 p-0 group overflow-hidden">
@@ -88,7 +88,7 @@ const CityDuel = () => {
             <Languages className="w-4 h-4 text-emerald-400" /> Cultural Identity
           </h3>
           <div className="flex flex-wrap gap-2">
-            {city.culture.tags.map(tag => (
+            {city.metrics.culture.tags.map(tag => (
               <span key={tag} className="text-[10px] uppercase tracking-wider font-bold bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded">
                 {tag}
               </span>
@@ -96,7 +96,7 @@ const CityDuel = () => {
           </div>
           <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
             <span className="text-xs text-white/40">Language Friendliness</span>
-            <span className="text-sm font-bold text-emerald-400">{city.culture.languageScore}%</span>
+            <span className="text-sm font-bold text-emerald-400">{city.metrics.culture.languageScore}%</span>
           </div>
         </GlassCard>
       </div>
