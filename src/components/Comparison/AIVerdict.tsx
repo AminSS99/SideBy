@@ -11,17 +11,21 @@ interface AIVerdictProps {
 }
 
 const AIVerdict = ({ itemA, itemB, weights }: AIVerdictProps) => {
-  const calculateScore = (item: ComparisonItem) => {
+  const calculateScore = (item: any) => {
     let totalWeight = 0;
     let weightedSum = 0;
     
     Object.keys(item.metrics).forEach(metric => {
-      const weight = weights[metric] || 5;
-      weightedSum += (item.metrics[metric] * weight);
-      totalWeight += weight;
+      const value = item.metrics[metric];
+      // Only calculate for numeric values to support different data structures
+      if (typeof value === 'number') {
+        const weight = weights[metric] || 5;
+        weightedSum += (value * weight);
+        totalWeight += weight;
+      }
     });
     
-    return weightedSum / totalWeight;
+    return totalWeight > 0 ? weightedSum / totalWeight : 0;
   };
 
   const scoreA = calculateScore(itemA);

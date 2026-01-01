@@ -45,7 +45,7 @@ const CityDuel = () => {
         <div className="absolute bottom-6 left-6 right-6">
           <div className="flex justify-between items-end">
             <div>
-              <p className="text-sm font-medium text-blue-400 mb-1">{city.country}</p>
+              <p className="text-sm font-medium text-emerald-400 mb-1">{city.country}</p>
               <h2 className="text-5xl font-black mb-2 tracking-tighter">{city.name}</h2>
               <p className="text-white/70 italic text-sm">{city.tagline}</p>
             </div>
@@ -76,7 +76,7 @@ const CityDuel = () => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold flex items-center gap-2 text-white/80">
-                  <Shield className="w-3 h-3 text-blue-400" /> Safety
+                  <Shield className="w-3 h-3 text-emerald-400" /> Safety
                 </span>
                 <span className="text-sm font-bold">{city.metrics.safety}</span>
               </div>
@@ -145,7 +145,7 @@ const CityDuel = () => {
         <div className="flex justify-center mb-20 animate-in fade-in zoom-in duration-500">
           <Button 
             onClick={startDuel}
-            className="rounded-full bg-blue-600 hover:bg-blue-700 text-white px-12 py-8 text-2xl font-black uppercase italic tracking-tighter shadow-[0_0_50px_rgba(59,130,246,0.4)] transition-all hover:scale-105 active:scale-95 flex gap-4"
+            className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-12 py-8 text-2xl font-black uppercase italic tracking-tighter shadow-[0_0_50px_rgba(16,185,129,0.4)] transition-all hover:scale-105 active:scale-95 flex gap-4"
           >
             <Zap className="w-8 h-8 fill-white" />
             INITIATE DUEL
@@ -154,13 +154,13 @@ const CityDuel = () => {
         </div>
       )}
 
-      {showResult && <AIVerdict cityA={cityA} cityB={cityB} />}
+      {showResult && <AIVerdict itemA={cityA as any} itemB={cityB as any} weights={{}} />}
 
       <div className="flex flex-col lg:flex-row gap-12">
         <CityPanel city={cityA} onCityChange={setCityA} label="Contender A" />
         <div className="hidden lg:flex items-center justify-center">
           <div className="h-[80%] w-px bg-gradient-to-b from-transparent via-white/10 to-transparent relative">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#050505] border border-white/10 px-6 py-4 rounded-full font-black text-xl italic text-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.2)]">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#050505] border border-white/10 px-6 py-4 rounded-full font-black text-xl italic text-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.2)]">
               VS
             </div>
           </div>
