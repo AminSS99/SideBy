@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { mockDB, ComparisonItem, ComparisonCategory } from "@/data/mockDB";
 import GlassCard from "../GlassCard";
-import { Zap, Shield, Star, DollarSign, Cpu, Gauge, History, Trophy, Globe, Activity, LayoutList } from "lucide-react";
+import { Zap, Shield, Star, DollarSign, Cpu, Gauge, History as HistoryIcon, Trophy, Globe, Activity, LayoutList } from "lucide-react";
 import LoadingScreen from "./LoadingScreen";
 import AIVerdict from "./AIVerdict";
 import SearchSelector from "./SearchSelector";
@@ -9,12 +9,12 @@ import PreferenceTuner from "./PreferenceTuner";
 import ComparisonRadar from "./ComparisonRadar";
 import ComparisonTable from "./ComparisonTable";
 import SocialPulse from "./SocialPulse";
+import DuelHistory from "./DuelHistory";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 
 const metricIcons: Record<string, any> = {
   safety: Shield, budget: DollarSign, value: DollarSign, culture: Globe,
-  power: Cpu, speed: Gauge, history: History, tech: Zap, fans: Star,
+  power: Cpu, speed: Gauge, history: HistoryIcon, tech: Zap, fans: Star,
   research: Activity, campus: Globe, prestige: Trophy, network: Activity,
   jobs: Activity, rent: DollarSign, camera: Activity, performance: Cpu,
   battery: Zap, display: LayoutList
@@ -26,6 +26,7 @@ const DuelEngine = () => {
   const [itemB, setItemB] = useState<ComparisonItem>(mockDB.filter(i => i.category === "tech")[1]!);
   const [isSearching, setIsSearching] = useState(false);
   const [showResult, setShowResult] = useState(true);
+  const [history, setHistory] = useState<any[]>([]);
   
   const initialWeights = useMemo(() => {
     const keys = Object.keys(itemA.metrics);
@@ -44,6 +45,26 @@ const DuelEngine = () => {
     setShowResult(false);
     const keys = Object.keys(items[0].metrics);
     setWeights(keys.reduce((acc, key) => ({ ...acc, [key]: 5 }), {}));
+  };
+
+  const startDuel = () => {
+    setIsSearching(true);
+    setShowResult(false);
+  };
+
+  const handleDuelComplete = () => {
+    setIsSearching(false);
+    setShowResult(true);
+    
+    // Add to history
+    const newHistoryItem = {
+      id: Math.random().toString(36).substr(2, 9),
+      nameA: itemA.name,
+      nameB: itemB.name,
+      category: activeCategory,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setHistory(prev => [newHistoryItem, ...prev].slice(0, 10));
   };
 
   const ItemCard = ({ item, side }: { item: ComparisonItem, side: 'left' | 'right' }) => (
@@ -71,7 +92,9 @@ const DuelEngine = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 relative">
-      {isSearching && <LoadingScreen onComplete={() => { setIsSearching(false); setShowResult(true); }} />}
+      {isSearching && <LoadingScreen onComplete={handleDuelComplete} />}
+      
+      <DuelHistory history={history} onClear={() => setHistory([])} />
 
       <div className="flex justify-center flex-wrap gap-2 mb-12">
         {["tech", "travel", "sports", "education", "living"].map((cat) => (
@@ -98,7 +121,7 @@ const DuelEngine = () => {
       {!showResult && !isSearching && (
         <div className="flex justify-center mb-16 relative z-10">
           <Button 
-            onClick={() => { setIsSearching(true); setShowResult(false); }}
+            onClick={startDuel}
             className="rounded-full bg-blue-600 hover:bg-blue-700 text-white px-12 py-8 text-2xl font-black uppercase italic tracking-tighter shadow-2xl transition-all hover:scale-105"
           >
             <Zap className="w-8 h-8 mr-4 fill-white" />
@@ -109,7 +132,7 @@ const DuelEngine = () => {
 
       {showResult && (
         <div className="space-y-12 mb-20 animate-in fade-in slide-in-from-top-4 duration-700">
-          <AIVerdict cityA={itemA as any} cityB={itemB as any} />
+          <AIVerdict itemA={itemA} itemB={itemB} weights={weights} />
           
           <SocialPulse itemA={itemA} itemB={itemB} />
 
@@ -119,7 +142,7 @@ const DuelEngine = () => {
           </div>
 
           <div className="flex flex-col gap-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30 px-2">Performance Drift</h4>
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30 px-2">Neural Performance Drift</h4>
             {Object.keys(itemA.metrics).map(metric => (
               <div key={metric} className="bg-white/5 p-4 rounded-2xl border border-white/5">
                 <div className="flex justify-between text-[10px] font-bold uppercase mb-2">

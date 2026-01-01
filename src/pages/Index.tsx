@@ -1,7 +1,8 @@
 import React from "react";
 import DuelEngine from "@/components/Comparison/DuelEngine";
+import Leaderboard from "@/components/Comparison/Leaderboard";
 import { MadeWithDyad } from "@/components/made-with-dyad";
-import { Search, Zap, LayoutGrid } from "lucide-react";
+import { Zap, LayoutGrid, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
@@ -18,6 +19,10 @@ const Index = () => {
           </div>
           
           <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2 mr-4 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+              <Globe className="w-3 h-3 text-blue-400" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Live Engine v2.4</span>
+            </div>
             <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/5 text-white/70">
               <LayoutGrid className="w-5 h-5" />
             </Button>
@@ -36,14 +41,19 @@ const Index = () => {
             Side-By-Side <br/> <span className="text-blue-500">Everything.</span>
           </h1>
           <p className="max-w-xl mx-auto text-sm text-white/40 px-4 uppercase tracking-widest font-bold">
-            The AI comparison protocol for cities, clubs, universities, and more.
+            The World's Most Advanced AI Protocol for Multi-Domain Comparisons.
           </p>
         </div>
       </header>
 
       {/* Main Duel Engine */}
-      <main className="relative z-10 pb-40">
+      <main className="relative z-10">
         <DuelEngine />
+        
+        {/* Global Trends Section */}
+        <div className="py-24 border-t border-white/5">
+          <Leaderboard />
+        </div>
       </main>
 
       {/* Footer */}
