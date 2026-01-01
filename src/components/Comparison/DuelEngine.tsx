@@ -12,6 +12,9 @@ import SocialPulse from "./SocialPulse";
 import DuelHistory from "./DuelHistory";
 import PersonaPresets from "./PersonaPresets";
 import ContenderGallery from "./ContenderGallery";
+import LiveActivityTicker from "./LiveActivityTicker";
+import WinConditions from "./WinConditions";
+import DomainIntel from "./DomainIntel";
 import { Button } from "@/components/ui/button";
 
 const DuelEngine = () => {
@@ -74,7 +77,6 @@ const DuelEngine = () => {
         <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
         
-        {/* Animated Scanline Effect */}
         <div className="absolute inset-0 bg-[linear-gradient(transparent_0%,rgba(59,130,246,0.05)_50%,transparent_100%)] bg-[length:100%_4px] animate-[pulse_2s_infinite] pointer-events-none" />
         
         <div className="absolute bottom-4 left-4 flex gap-1">
@@ -83,16 +85,18 @@ const DuelEngine = () => {
           ))}
         </div>
       </div>
+      <DomainIntel item={item} category={activeCategory} />
     </div>
   );
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 relative">
+      <LiveActivityTicker />
+      
       {isSearching && <LoadingScreen onComplete={handleDuelComplete} />}
       
       <DuelHistory history={history} onClear={() => setHistory([])} />
 
-      {/* Category Tabs */}
       <div className="flex justify-center flex-wrap gap-2 mb-12">
         {["tech", "travel", "sports", "education", "living"].map((cat) => (
           <button
@@ -137,6 +141,8 @@ const DuelEngine = () => {
         <div className="space-y-12 mb-20 animate-in fade-in slide-in-from-top-4 duration-700">
           <AIVerdict itemA={itemA} itemB={itemB} weights={weights} />
           
+          <WinConditions itemA={itemA} itemB={itemB} />
+
           <SocialPulse itemA={itemA} itemB={itemB} />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
