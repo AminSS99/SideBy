@@ -1,6 +1,7 @@
 import React from "react";
 import DuelEngine from "@/components/Comparison/DuelEngine";
 import Leaderboard from "@/components/Comparison/Leaderboard";
+import SystemStatus from "@/components/Comparison/SystemStatus";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Zap, LayoutGrid, Globe, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,10 +26,7 @@ const Index = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 mr-4 px-3 py-1 bg-white/5 rounded-full border border-white/10">
-              <ShieldCheck className="w-3 h-3 text-emerald-400" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Neural Engine Secure</span>
-            </div>
+            <SystemStatus />
             <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/5 text-white/70">
               <LayoutGrid className="w-5 h-5" />
             </Button>

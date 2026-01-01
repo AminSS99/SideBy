@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { mockDB, ComparisonItem, ComparisonCategory } from "@/data/mockDB";
 import GlassCard from "../GlassCard";
-import { Zap, Shield, Star, DollarSign, Cpu, Gauge, History as HistoryIcon, Trophy, Globe, Activity, LayoutList } from "lucide-react";
+import { Zap, Shield, Star, Trophy, LayoutList, Share2, Download, CheckCircle2 } from "lucide-react";
 import LoadingScreen from "./LoadingScreen";
 import AIVerdict from "./AIVerdict";
 import SearchSelector from "./SearchSelector";
@@ -18,6 +18,9 @@ import WinConditions from "./WinConditions";
 import DomainIntel from "./DomainIntel";
 import ExpertPanel from "./ExpertPanel";
 import MarketForecast from "./MarketForecast";
+import NeuralNewsFeed from "./NeuralNewsFeed";
+import DossierCompiler from "./DossierCompiler";
+import SystemStatus from "./SystemStatus";
 import { Button } from "@/components/ui/button";
 
 const DuelEngine = () => {
@@ -36,8 +39,10 @@ const DuelEngine = () => {
   );
 
   const [isSearching, setIsSearching] = useState(false);
+  const [isCompiling, setIsCompiling] = useState(false);
   const [showResult, setShowResult] = useState(true);
   const [history, setHistory] = useState<any[]>([]);
+  const [userVote, setUserVote] = useState<'A' | 'B' | null>(null);
   
   const initialWeights = useMemo(() => {
     const keys = Object.keys(itemA.metrics);
@@ -48,13 +53,8 @@ const DuelEngine = () => {
 
   const availableItems = useMemo(() => mockDB.filter(item => item.category === activeCategory), [activeCategory]);
 
-  // Sync URL with State
   useEffect(() => {
-    setSearchParams({
-      cat: activeCategory,
-      a: itemA.id,
-      b: itemB.id
-    }, { replace: true });
+    setSearchParams({ cat: activeCategory, a: itemA.id, b: itemB.id }, { replace: true });
   }, [activeCategory, itemA, itemB]);
 
   const switchCategory = (cat: ComparisonCategory) => {
@@ -63,6 +63,7 @@ const DuelEngine = () => {
     setItemA(items[0]);
     setItemB(items[1]);
     setShowResult(false);
+    setUserVote(null);
     const keys = Object.keys(items[0].metrics);
     setWeights(keys.reduce((acc, key) => ({ ...acc, [key]: 5 }), {}));
   };
@@ -72,10 +73,13 @@ const DuelEngine = () => {
     setShowResult(false);
   };
 
+  const compileDossier = () => {
+    setIsCompiling(true);
+  };
+
   const handleDuelComplete = () => {
     setIsSearching(false);
     setShowResult(true);
-    
     setHistory(prev => [{
       id: Math.random().toString(36).substr(2, 9),
       nameA: itemA.name,
@@ -87,9 +91,12 @@ const DuelEngine = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 relative">
-      <LiveActivityTicker />
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
+        <LiveActivityTicker />
+      </div>
       
       {isSearching && <LoadingScreen onComplete={handleDuelComplete} />}
+      {isCompiling && <DossierCompiler onComplete={() => setIsCompiling(false)} />}
       
       <DuelHistory history={history} onClear={() => setHistory([])} />
 
@@ -135,14 +142,56 @@ const DuelEngine = () => {
 
       {showResult && (
         <div className="space-y-12 mb-20 animate-in fade-in slide-in-from-top-4 duration-700">
-          <AIVerdict itemA={itemA} itemB={itemB} weights={weights} />
+          <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-8">
+            <AIVerdict itemA={itemA} itemB={itemB} weights={weights} />
+            <div className="flex gap-2 pb-6">
+              <Button onClick={compileDossier} variant="outline" className="rounded-full bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-black uppercase h-10 px-6">
+                <Download className="w-4 h-4 mr-2" /> Dossier
+              </Button>
+              <Button variant="outline" className="rounded-full bg-blue-600 hover:bg-blue-700 text-white border-transparent text-[10px] font-black uppercase h-10 px-6">
+                <Share2 className="w-4 h-4 mr-2" /> Share
+              </Button>
+            </div>
+          </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="lg:col-span-3 space-y-8">
                <WinConditions itemA={itemA} itemB={itemB} />
+               
+               {/* User Intuition Voting */}
+               <GlassCard className="bg-gradient-to-r from-blue-600/10 to-purple-600/10 border-blue-500/20">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div>
+                      <h4 className="text-lg font-black italic uppercase tracking-tighter mb-1">Human Intuition Protocol</h4>
+                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">How does your instinct compare to the Neural Engine?</p>
+                    </div>
+                    <div className="flex gap-4">
+                      <Button 
+                        onClick={() => setUserVote('A')}
+                        className={`rounded-2xl px-6 h-14 flex flex-col items-center justify-center transition-all ${
+                          userVote === 'A' ? 'bg-blue-600 text-white scale-105' : 'bg-white/5 text-white/40 hover:bg-white/10'
+                        }`}
+                      >
+                        <span className="text-[8px] font-black uppercase">Vote for</span>
+                        <span className="text-sm font-black italic">{itemA.name}</span>
+                      </Button>
+                      <Button 
+                        onClick={() => setUserVote('B')}
+                        className={`rounded-2xl px-6 h-14 flex flex-col items-center justify-center transition-all ${
+                          userVote === 'B' ? 'bg-purple-600 text-white scale-105' : 'bg-white/5 text-white/40 hover:bg-white/10'
+                        }`}
+                      >
+                        <span className="text-[8px] font-black uppercase">Vote for</span>
+                        <span className="text-sm font-black italic">{itemB.name}</span>
+                      </Button>
+                    </div>
+                  </div>
+               </GlassCard>
+
                <ExpertPanel category={activeCategory} itemA={itemA} itemB={itemB} />
             </div>
             <div className="space-y-8">
+               <NeuralNewsFeed itemA={itemA} itemB={itemB} category={activeCategory} />
                <MarketForecast category={activeCategory} itemA={itemA} itemB={itemB} />
                <SocialPulse itemA={itemA} itemB={itemB} />
             </div>
@@ -163,7 +212,7 @@ const DuelEngine = () => {
             label="Contender A"
             items={availableItems}
             selectedItem={itemA}
-            onSelect={(newItem) => { setItemA(newItem); setShowResult(false); }}
+            onSelect={(newItem) => { setItemA(newItem); setShowResult(false); setUserVote(null); }}
           />
           <DomainIntel item={itemA} category={activeCategory} />
         </div>
@@ -175,7 +224,7 @@ const DuelEngine = () => {
             label="Contender B"
             items={availableItems}
             selectedItem={itemB}
-            onSelect={(newItem) => { setItemB(newItem); setShowResult(false); }}
+            onSelect={(newItem) => { setItemB(newItem); setShowResult(false); setUserVote(null); }}
           />
           <DomainIntel item={itemB} category={activeCategory} />
         </div>
