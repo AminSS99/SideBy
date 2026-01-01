@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { mockDB, ComparisonItem, ComparisonCategory } from "@/data/mockDB";
 import GlassCard from "../GlassCard";
-import { Zap, Shield, Star, Trophy, LayoutList, Share2, Download, CheckCircle2 } from "lucide-react";
+import { Zap, Shield, Star, Trophy, LayoutList, Share2, Download, CheckCircle2, Info } from "lucide-react";
 import LoadingScreen from "./LoadingScreen";
 import AIVerdict from "./AIVerdict";
 import SearchSelector from "./SearchSelector";
@@ -20,7 +20,6 @@ import ExpertPanel from "./ExpertPanel";
 import MarketForecast from "./MarketForecast";
 import NeuralNewsFeed from "./NeuralNewsFeed";
 import DossierCompiler from "./DossierCompiler";
-import SystemStatus from "./SystemStatus";
 import { Button } from "@/components/ui/button";
 
 const DuelEngine = () => {
@@ -198,8 +197,20 @@ const DuelEngine = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <ComparisonRadar itemA={itemA} itemB={itemB} />
-            <ComparisonTable itemA={itemA} itemB={itemB} />
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-2">
+                <Info className="w-3 h-3 text-white/20" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Metric Verification</span>
+              </div>
+              <ComparisonRadar itemA={itemA} itemB={itemB} />
+            </div>
+            <div className="space-y-4">
+               <div className="flex items-center gap-2 px-2">
+                <LayoutList className="w-3 h-3 text-white/20" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Tactical Matrix</span>
+              </div>
+              <ComparisonTable itemA={itemA} itemB={itemB} />
+            </div>
           </div>
 
           <ContenderGallery itemA={itemA} itemB={itemB} />
