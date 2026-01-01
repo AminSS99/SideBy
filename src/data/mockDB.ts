@@ -1,4 +1,4 @@
-export type ComparisonCategory = "travel" | "sports" | "education" | "living";
+export type ComparisonCategory = "travel" | "sports" | "education" | "tech" | "cars";
 
 export interface ComparisonItem {
   id: string;
@@ -11,79 +11,62 @@ export interface ComparisonItem {
 }
 
 export const mockDB: ComparisonItem[] = [
-  // CITIES (Travel Module)
+  // TRAVEL
   {
-    id: "hamburg",
-    category: "travel",
-    name: "Hamburg",
-    subtext: "Germany",
+    id: "hamburg", category: "travel", name: "Hamburg", subtext: "Germany",
     image: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=800&q=80",
-    metrics: {
-      budget: 85, accessibility: 92, culture: 88, safety: 90, climate: 70, reputation: 82,
-      cost: { hotels: 120, food: 45, flights: 300 }
-    },
-    highlights: ["Maritime", "Techno", "Cidre"]
+    metrics: { safety: 88, budget: 85, culture: 88, transport: 92, climate: 70 },
+    highlights: ["Maritime", "Techno", "Seafood"]
   },
   {
-    id: "tokyo",
-    category: "travel",
-    name: "Tokyo",
-    subtext: "Japan",
+    id: "tokyo", category: "travel", name: "Tokyo", subtext: "Japan",
     image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=800&q=80",
-    metrics: {
-      budget: 60, accessibility: 98, culture: 95, safety: 98, climate: 80, reputation: 96,
-      cost: { hotels: 180, food: 60, flights: 900 }
-    },
+    metrics: { safety: 98, budget: 60, culture: 95, transport: 99, climate: 80 },
     highlights: ["Cyberpunk", "Sushi", "Anime"]
   },
-  // FOOTBALL TEAMS (Sports Module)
   {
-    id: "real-madrid",
-    category: "sports",
-    name: "Real Madrid",
-    subtext: "La Liga • Spain",
+    id: "barcelona", category: "travel", name: "Barcelona", subtext: "Spain",
+    image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?auto=format&fit=crop&w=800&q=80",
+    metrics: { safety: 72, budget: 88, culture: 92, transport: 85, climate: 95 },
+    highlights: ["Gothic", "Tapas", "Beach"]
+  },
+  // SPORTS
+  {
+    id: "real-madrid", category: "sports", name: "Real Madrid", subtext: "La Liga",
     image: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80",
-    metrics: {
-      history: 99, squadValue: 98, fanBase: 99, recentForm: 85, infrastructure: 95, globalImpact: 99,
-      stats: { wins: 28, trophies: 35, stadiumCap: 81000 }
-    },
-    highlights: ["Kings of Europe", "Galacticos", "Bernabéu"]
+    metrics: { history: 99, squad: 98, fans: 99, form: 85, stadium: 95 },
+    highlights: ["14 Champions Leagues", "Galacticos", "Royal"]
   },
   {
-    id: "man-city",
-    category: "sports",
-    name: "Manchester City",
-    subtext: "Premier League • UK",
+    id: "man-city", category: "sports", name: "Manchester City", subtext: "Premier League",
     image: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=800&q=80",
-    metrics: {
-      history: 75, squadValue: 99, fanBase: 80, recentForm: 98, infrastructure: 99, globalImpact: 88,
-      stats: { wins: 30, trophies: 10, stadiumCap: 53000 }
-    },
-    highlights: ["Tactical Genius", "Oil Wealth", "Treble Winners"]
+    metrics: { history: 75, squad: 99, fans: 80, form: 98, stadium: 99 },
+    highlights: ["Treble Winners", "Pep Guardiola", "Modern"]
   },
-  // UNIVERSITIES (Education Module)
+  // TECH
   {
-    id: "harvard",
-    category: "education",
-    name: "Harvard University",
-    subtext: "Cambridge, USA",
-    image: "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=800&q=80",
-    metrics: {
-      research: 99, campusLife: 85, tuition: 20, employability: 98, location: 88, network: 99,
-      info: { ranking: 1, acceptance: 4, cost: 75000 }
-    },
-    highlights: ["Ivy League", "Legacy", "Global Network"]
+    id: "macbook-m3", category: "tech", name: "MacBook Pro M3", subtext: "Apple",
+    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80",
+    metrics: { power: 98, battery: 99, display: 99, value: 65, portability: 92 },
+    highlights: ["M3 Max Chip", "Liquid Retina", "Ecosystem"]
   },
   {
-    id: "eth-zurich",
-    category: "education",
-    name: "ETH Zurich",
-    subtext: "Zurich, Switzerland",
-    image: "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&w=800&q=80",
-    metrics: {
-      research: 97, campusLife: 75, tuition: 95, employability: 94, location: 99, network: 90,
-      info: { ranking: 7, acceptance: 25, cost: 2000 }
-    },
-    highlights: ["STEM Leader", "Innovation", "Swiss Quality"]
+    id: "dell-xps", category: "tech", name: "Dell XPS 15", subtext: "Dell",
+    image: "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=800&q=80",
+    metrics: { power: 92, battery: 75, display: 95, value: 85, portability: 88 },
+    highlights: ["InfinityEdge", "OLED Option", "Premium Build"]
+  },
+  // CARS
+  {
+    id: "porsche-911", category: "cars", name: "Porsche 911", subtext: "Stuttgart",
+    image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
+    metrics: { speed: 96, design: 99, tech: 88, economy: 40, prestige: 98 },
+    highlights: ["Iconic Shape", "Rear Engine", "Precision"]
+  },
+  {
+    id: "tesla-model-s", category: "cars", name: "Tesla Model S", subtext: "California",
+    image: "https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=800&q=80",
+    metrics: { speed: 99, design: 85, tech: 99, economy: 95, prestige: 85 },
+    highlights: ["Plaid Mode", "Autopilot", "Supercharging"]
   }
 ];
