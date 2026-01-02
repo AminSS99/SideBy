@@ -1,24 +1,64 @@
+# Dependencies
+node_modules/
+target/
+
+# Build outputs
+dist/
+build/
+.vite/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
 # Logs
-logs
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Environment
+.env
+.env.local
+.env.*.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Maven
+*.jar
+!.mvn/wrapper/*.jar
+
+# ===== OLD STRUCTURE (migrated to backend/ and frontend/) =====
+/android/
+/ios/
+/src/
+/public/
+/capacitor.config.ts
+/components.json
+/eslint.config.js
+/index.html
+/postcss.config.js
+/package.json
+/package-lock.json
+/pnpm-lock.yaml
+/tailwind.config.ts
+/tsconfig*.json
+/vite.config.ts
+/vercel.json
+
+# ===== FRONTEND - Ignore auto-generated/library code =====
+# Shadcn UI components (can be regenerated)
+frontend/src/components/ui/
+
+# Hooks (standard utility hooks)
+frontend/src/hooks/
+
+# Lock files (regenerated on install)
+frontend/package-lock.json
+frontend/pnpm-lock.yaml
+
+# ===== BACKEND - Ignore generated files =====
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
