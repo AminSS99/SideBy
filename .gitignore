@@ -25,6 +25,10 @@ npm-debug.log*
 .env.local
 .env.*.local
 
+# Backend config with API keys (use application.properties.example as template)
+backend/src/main/resources/application.properties
+backend/src/main/resources/application-*.properties
+
 # Maven
 *.jar
 !.mvn/wrapper/*.jar

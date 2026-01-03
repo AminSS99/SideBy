@@ -6,7 +6,7 @@ const DossierCompiler = ({ onComplete }: { onComplete: () => void }) => {
     { label: "Initializing Dossier Protocol...", status: "active" },
     { label: "Aggregating Sentiment Data...", status: "pending" },
     { label: "Syncing Market Forecasts...", status: "pending" },
-    { label: "Generating Neural Verdict...", status: "pending" },
+    { label: "Generating AI Verdict...", status: "pending" },
   ]);
 
   useEffect(() => {
@@ -40,7 +40,7 @@ const DossierCompiler = ({ onComplete }: { onComplete: () => void }) => {
           </div>
           <div>
             <h2 className="text-2xl font-black italic uppercase tracking-tighter">Compiling Dossier</h2>
-            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Neural Encryption Level 4 Activated</p>
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Secure Encryption Level 4 Activated</p>
           </div>
         </div>
 

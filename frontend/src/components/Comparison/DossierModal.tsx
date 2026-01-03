@@ -26,7 +26,7 @@ const DossierModal = ({ open, onOpenChange, winner, loser, matchPercentage }: Do
                 <div className="flex justify-between items-start">
                     <div>
                         <DialogTitle className="text-3xl font-black uppercase tracking-tighter mb-1">Confidential</DialogTitle>
-                        <p className="text-xs uppercase tracking-widest font-bold opacity-60">Neural Intelligence Report #884-X</p>
+                        <p className="text-xs uppercase tracking-widest font-bold opacity-60">AI Intelligence Report #884-X</p>
                     </div>
                     <div className="border-2 border-black px-2 py-1">
                         <p className="text-xs font-bold uppercase">Classification: Top Secret</p>
@@ -51,7 +51,7 @@ const DossierModal = ({ open, onOpenChange, winner, loser, matchPercentage }: Do
                     
                     <div className="bg-black/5 p-4 rounded border border-black/10">
                         <p className="text-sm font-medium leading-relaxed">
-                            <span className="font-bold">Summary:</span> Utilizing advanced neural heuristics, {winner.name} has demonstrated superior capability over {loser.name}. 
+                            <span className="font-bold">Summary:</span> Utilizing advanced AI analysis, {winner.name} has demonstrated superior capability over {loser.name}. 
                             The aggregate score differential of <span className="font-bold">+{matchPercentage - 80}%</span> indicates a decisive strategic advantage.
                         </p>
                     </div>
@@ -78,7 +78,7 @@ const DossierModal = ({ open, onOpenChange, winner, loser, matchPercentage }: Do
             <div className="flex justify-between items-end pt-4 border-t-2 border-black">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase opacity-60">
                     <ShieldCheck className="w-4 h-4" />
-                    <span>Verified by SideBy Neural Engine</span>
+                    <span>Verified by SideBy AI Engine</span>
                 </div>
                 <div className="flex items-center gap-4">
                     <Fingerprint className="w-8 h-8 opacity-20" />

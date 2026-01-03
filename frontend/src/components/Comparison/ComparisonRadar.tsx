@@ -25,7 +25,7 @@ const ComparisonRadar = ({ itemA, itemB }: ComparisonRadarProps) => {
 
   return (
     <div className="h-[350px] w-full bg-white/5 rounded-3xl border border-white/5 p-6 animate-in fade-in zoom-in duration-1000">
-      <h4 className="text-[10px] font-black uppercase tracking-widest text-center mb-4 text-white/30">Neural Blueprint</h4>
+      <h4 className="text-[10px] font-black uppercase tracking-widest text-center mb-4 text-white/30">AI Blueprint</h4>
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
           <PolarGrid stroke="#ffffff10" />

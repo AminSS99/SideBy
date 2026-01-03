@@ -11,7 +11,7 @@ const PreferenceTuner = ({ metrics, weights, onWeightChange }: PreferenceTunerPr
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-8 bg-white/5 rounded-3xl border border-white/10 mb-12">
       <div className="col-span-full">
-        <h3 className="text-sm font-black italic uppercase tracking-widest text-purple-400 mb-2">Neural Calibration</h3>
+        <h3 className="text-sm font-black italic uppercase tracking-widest text-purple-400 mb-2">Preference Settings</h3>
         <p className="text-[10px] text-white/40 uppercase font-bold">Adjust the sliders to tell the AI what matters most to you.</p>
       </div>
       

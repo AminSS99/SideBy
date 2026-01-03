@@ -3,14 +3,14 @@ import { Zap, Globe, Database, Cpu, Search } from "lucide-react";
 
 const LoadingScreen = ({ onComplete }: { onComplete: () => void }) => {
   const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState("Initializing SideBy Neural Engine...");
+  const [status, setStatus] = useState("Initializing SideBy AI Engine...");
 
   const logs = [
     "Scraping real-time sector indices...",
     "Analyzing cultural sentiment on social media...",
     "Fetching current global market liquidity...",
     "Calculating utility vs. efficiency curves...",
-    "Processing neural weights for your region...",
+    "Processing AI weights for your region...",
     "Synthesizing the final AI Verdict..."
   ];
 

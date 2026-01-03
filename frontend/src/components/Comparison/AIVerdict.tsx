@@ -40,14 +40,14 @@ const AIVerdict = ({ itemA, itemB, weights, summary }: AIVerdictProps) => {
       <GlassCard className="border-purple-500/30 bg-purple-500/5 backdrop-blur-3xl overflow-visible" glowColor="purple">
         <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-emerald-500 text-white px-6 py-2 rounded-full flex items-center gap-2 shadow-xl shadow-purple-600/20 border border-white/20">
           <Sparkles className="w-4 h-4 fill-white" />
-          <span className="text-sm font-black italic uppercase tracking-tighter">AI NEURAL VERDICT</span>
+          <span className="text-sm font-black italic uppercase tracking-tighter">AI SMART VERDICT</span>
         </div>
 
         <div className="flex flex-col lg:flex-row items-start gap-12 pt-8">
           <div className="flex-1 text-center lg:text-left space-y-6">
             <div>
               <h3 className="text-4xl font-black mb-4 tracking-tighter uppercase italic leading-tight">
-                Neural Match: <br/> <span className="text-emerald-400">{winner.name}</span>
+                AI Match: <br/> <span className="text-emerald-400">{winner.name}</span>
               </h3>
               <div className="text-white/60 text-sm leading-relaxed font-medium">
                 {summary ? (
@@ -63,7 +63,7 @@ const AIVerdict = ({ itemA, itemB, weights, summary }: AIVerdictProps) => {
                   </div>
                 ) : (
                   <p>
-                    Based on your <span className="text-white font-bold italic">Neural Calibration</span>, 
+                    Based on your <span className="text-white font-bold italic">Preference Settings</span>, 
                     {winner.name} achieves superior trait-alignment in this sector.
                   </p>
                 )}

@@ -120,33 +120,34 @@ const Index = () => {
         variants={itemVariants}
       >
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12 text-left opacity-40">
-            <div className="space-y-4">
-              <p className="text-white/60">Platform</p>
-              <p>Neural Engine</p>
-              <p>API Access</p>
-              <p>Global Nodes</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12 text-left opacity-60">
+            <div className="space-y-3">
+              <p className="text-white/80">Product</p>
+              <p className="hover:text-white/60 cursor-pointer transition-colors">How it Works</p>
+              <p className="hover:text-white/60 cursor-pointer transition-colors">Pricing</p>
+              <p className="hover:text-white/60 cursor-pointer transition-colors">API Access</p>
             </div>
-            <div className="space-y-4">
-              <p className="text-white/60">Network</p>
-              <p>Sentiment Data</p>
-              <p>Market Pricing</p>
-              <p>Social Pulse</p>
+            <div className="space-y-3">
+              <p className="text-white/80">Features</p>
+              <p className="hover:text-white/60 cursor-pointer transition-colors">AI Comparison</p>
+              <p className="hover:text-white/60 cursor-pointer transition-colors">Smart Categories</p>
+              <p className="hover:text-white/60 cursor-pointer transition-colors">Share Results</p>
             </div>
-            <div className="space-y-4 hidden md:block">
-              <p className="text-white/60">Company</p>
-              <p>About SideBy</p>
-              <p>Ethical AI</p>
-              <p>Whitepaper</p>
+            <div className="space-y-3 hidden md:block">
+              <p className="text-white/80">Company</p>
+              <p className="hover:text-white/60 cursor-pointer transition-colors">About Us</p>
+              <p className="hover:text-white/60 cursor-pointer transition-colors">Blog</p>
+              <p className="hover:text-white/60 cursor-pointer transition-colors">Contact</p>
             </div>
-            <div className="space-y-4 hidden md:block">
-              <p className="text-white/60">Security</p>
-              <p>Data Privacy</p>
-              <p>Neural Shield</p>
-              <p>Audit Logs</p>
+            <div className="space-y-3 hidden md:block">
+              <p className="text-white/80">Legal</p>
+              <p className="hover:text-white/60 cursor-pointer transition-colors">Privacy Policy</p>
+              <p className="hover:text-white/60 cursor-pointer transition-colors">Terms of Service</p>
+              <p className="hover:text-white/60 cursor-pointer transition-colors">Cookie Policy</p>
             </div>
           </div>
-          <p>© 2026 SIDEBY • COMPARE ANYTHING</p>
+          <p>© 2026 SideBy • Compare Anything, Decide Faster</p>
+          <p className="mt-2 text-white/30 normal-case tracking-normal">Made by Amin Sobor</p>
         </div>
       </motion.footer>
     </motion.div>
