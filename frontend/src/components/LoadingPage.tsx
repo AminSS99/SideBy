@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { brand } from "@/config/brand";
 
 const LoadingPage: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   const [progress, setProgress] = useState(0);
@@ -41,10 +42,10 @@ const LoadingPage: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
         </motion.div>
 
         <h1 className="text-4xl font-black tracking-tighter mb-2 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent italic uppercase">
-          SIDEBY
+          {brand.productName}
         </h1>
         <p className="text-gray-400 text-sm tracking-widest uppercase mb-8">
-          Gathering Intel from the Web
+          Preparing the {brand.aiEngineName}
         </p>
 
         <div className="w-64 h-1 bg-white/10 rounded-full overflow-hidden relative">
@@ -66,12 +67,18 @@ const LoadingPage: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="absolute bottom-12 text-blue-400 text-xs font-medium animate-pulse"
+            className="absolute bottom-16 text-blue-400 text-xs font-medium animate-pulse"
           >
             Almost ready...
           </motion.div>
         )}
       </AnimatePresence>
+      <a
+        href={brand.url}
+        className="absolute bottom-6 text-xs text-white/35 transition-colors hover:text-white/70"
+      >
+        {brand.operatedByLine}
+      </a>
     </div>
   );
 };

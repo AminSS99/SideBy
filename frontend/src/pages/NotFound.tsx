@@ -1,5 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { brand } from "@/config/brand";
 
 const NotFound = () => {
   const location = useLocation();
@@ -19,6 +20,14 @@ const NotFound = () => {
         <a href="/" className="text-purple-500 hover:text-purple-400 underline">
           Return to Home
         </a>
+        <div className="mt-6">
+          <a
+            href={brand.url}
+            className="text-sm text-white/35 transition-colors hover:text-white/70"
+          >
+            {brand.operatedByLine}
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -1,12 +1,14 @@
 package com.comparison.app.service;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -22,10 +24,10 @@ public class AISummaryService {
     private String deepseekApiKey;
 
     private static final String DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
+    private static final String DEEPSEEK_MODEL = "deepseek-chat";
 
     private final RestClient restClient;
 
-    // Category keywords for detection
     private static final Set<String> SPORTS_KEYWORDS = Set.of(
             "bayern", "munich", "psg", "barcelona", "real madrid", "manchester", "liverpool",
             "chelsea", "arsenal", "juventus", "inter", "milan", "dortmund", "atletico",
@@ -36,7 +38,13 @@ public class AISummaryService {
     private static final Set<String> TRAVEL_KEYWORDS = Set.of(
             "paris", "london", "tokyo", "new york", "rome", "amsterdam", "berlin",
             "dubai", "singapore", "bangkok", "sydney", "los angeles", "istanbul",
-            "prague", "vienna", "budapest", "lisbon", "moscow", "beijing", "vacation");
+            "prague", "vienna", "budapest", "lisbon", "moscow", "beijing", "vacation",
+            "baku", "azerbaijan", "venezuela", "caracas", "brazil", "rio", "mexico",
+            "cairo", "egypt", "morocco", "marrakech", "athens", "greece", "spain",
+            "barcelona", "madrid", "milan", "florence", "venice", "naples", "munich",
+            "zurich", "geneva", "oslo", "stockholm", "copenhagen", "helsinki",
+            "seoul", "taipei", "hong kong", "manila", "jakarta", "mumbai", "delhi",
+            "city", "country", "travel", "trip", "destination", "tourism", "tourist");
 
     private static final Set<String> GAMING_KEYWORDS = Set.of(
             "ps5", "playstation", "xbox", "nintendo", "switch", "fortnite", "minecraft",
@@ -58,54 +66,91 @@ public class AISummaryService {
         this.restClient = RestClient.create();
     }
 
-    /**
-     * Compare two items side-by-side with smart category detection
-     */
-    public String compareTwoItems(String itemA, String itemB) {
-        String category = detectCategory(itemA, itemB);
-        String prompt = buildCategorySpecificPrompt(itemA, itemB, category);
+    public AIResponse compareTwoItems(String itemA, String itemB, CompareRequestOptions options) {
+        CompareRequestOptions safeOptions = options == null ? CompareRequestOptions.defaults() : options;
+        String category = StringUtils.hasText(safeOptions.categoryOverride())
+                ? safeOptions.categoryOverride()
+                : detectCategory(itemA, itemB);
+        String prompt = buildCategorySpecificPrompt(itemA, itemB, category, safeOptions);
 
         try {
-            System.out.println("Trying Gemini API... Category: " + category);
-            return callGeminiAPI(prompt);
-        } catch (Exception e) {
-            System.err.println("Gemini API error: " + e.getMessage());
-            try {
-                System.out.println("Falling back to DeepSeek API...");
-                return callDeepSeekAPI(prompt);
-            } catch (Exception e2) {
-                System.err.println("DeepSeek API error: " + e2.getMessage());
-                return generateFallbackComparison(itemA, itemB, category);
+            if (isGeminiConfigured()) {
+                System.out.println("Trying Gemini API... Category: " + category);
+                return callGeminiAPI(prompt, category);
             }
+        } catch (Exception geminiError) {
+            System.err.println("Gemini API error: " + geminiError.getMessage());
         }
+
+        try {
+            if (isDeepSeekConfigured()) {
+                System.out.println("Falling back to DeepSeek API...");
+                return callDeepSeekAPI(prompt, category);
+            }
+        } catch (Exception deepSeekError) {
+            System.err.println("DeepSeek API error: " + deepSeekError.getMessage());
+        }
+
+        return new AIResponse(
+                generateFallbackComparison(itemA, itemB, category),
+                "fallback",
+                "template-fallback",
+                category,
+                true,
+                null,
+                null,
+                null);
     }
 
-    /**
-     * Detect category based on keywords
-     */
     private String detectCategory(String itemA, String itemB) {
         String combined = (itemA + " " + itemB).toLowerCase();
 
-        if (FOOD_KEYWORDS.stream().anyMatch(combined::contains))
+        if (FOOD_KEYWORDS.stream().anyMatch(combined::contains)) {
             return "food";
-        if (SPORTS_KEYWORDS.stream().anyMatch(combined::contains))
+        }
+        if (SPORTS_KEYWORDS.stream().anyMatch(combined::contains)) {
             return "sports";
-        if (TRAVEL_KEYWORDS.stream().anyMatch(combined::contains))
+        }
+        if (TRAVEL_KEYWORDS.stream().anyMatch(combined::contains)) {
             return "travel";
-        if (GAMING_KEYWORDS.stream().anyMatch(combined::contains))
+        }
+        if (GAMING_KEYWORDS.stream().anyMatch(combined::contains)) {
             return "gaming";
-        if (AUTO_KEYWORDS.stream().anyMatch(combined::contains))
+        }
+        if (AUTO_KEYWORDS.stream().anyMatch(combined::contains)) {
             return "auto";
+        }
 
-        return "tech"; // Default
+        return "tech";
     }
 
-    /**
-     * Build category-specific comparison prompt
-     */
-    private String buildCategorySpecificPrompt(String itemA, String itemB, String category) {
+    private String buildCategorySpecificPrompt(
+            String itemA,
+            String itemB,
+            String category,
+            CompareRequestOptions options) {
         String metricsSection = getCategoryMetrics(category);
         String tipsSection = getCategoryTips(category);
+        String compareMode = normalizeCompareMode(options.compareMode());
+        String depth = normalizeDepth(options.depth());
+        String decisionContext = StringUtils.hasText(options.decisionContext())
+                ? options.decisionContext().trim()
+                : "No extra context provided.";
+        String priorities = options.priorities().isEmpty()
+                ? "None selected. Use the category metrics above."
+                : String.join(", ", options.priorities());
+        String mustHaves = options.mustHaves().isEmpty()
+                ? "None specified."
+                : String.join(", ", options.mustHaves());
+        String redFlags = options.redFlags().isEmpty()
+                ? "None specified."
+                : String.join(", ", options.redFlags());
+        String depthInstruction = switch (depth) {
+            case "quick" -> "Keep the answer tight and decisive in under 220 words.";
+            case "extreme" ->
+                    "Go deeper than usual: expose tradeoffs, failure modes, edge cases, and practical decision boundaries while staying under 550 words.";
+            default -> "Keep the answer practical and structured in under 400 words.";
+        };
 
         return """
                 You are an expert %s comparison analyst. Compare "%s" vs "%s".
@@ -115,7 +160,17 @@ public class AISummaryService {
                 IMPORTANT: Use ONLY these domain-specific metrics for comparison:
                 %s
 
-                ## 🏆 Quick Verdict
+                ## Engine Settings
+                - Compare mode: %s
+                - Analysis depth: %s
+                - Decision context: %s
+                - Priority metrics: %s
+                - Must-have requirements: %s
+                - Red flags to avoid: %s
+
+                Treat the engine settings above as hard guidance. Weigh the chosen priorities more heavily, explicitly call out whether must-have requirements are satisfied, and highlight any red flags that appear.
+
+                ## Quick Verdict
                 [One clear sentence declaring the winner and why. Name the winner explicitly.]
 
                 ## %s
@@ -130,34 +185,51 @@ public class AISummaryService {
                 - Strength 3: [specific to this %s context]
                 - Best for: [target audience for %s]
 
-                ## 📊 Head-to-Head Scores (rate 1-100)
+                ## Head-to-Head Scores (rate 1-100)
                 | Metric | %s | %s | Winner |
                 |--------|------|------|--------|
                 %s
 
-                ## 💡 Contextual Tip
+                ## Contextual Tip
                 %s
 
-                ## 📝 Final Recommendation
+                ## Final Recommendation
                 Choose %s if [specific condition]. Choose %s if [specific condition].
 
-                Keep response under 400 words. Be specific, practical, and domain-appropriate. Always declare a clear winner.
+                %s
+                Be specific, practical, and domain-appropriate. Always declare a clear winner.
                 """
                 .formatted(
-                        category, itemA, itemB,
+                        category,
+                        itemA,
+                        itemB,
                         category.toUpperCase(),
                         metricsSection,
-                        itemA, category, category, category, category,
-                        itemB, category, category, category, category,
-                        itemA, itemB,
+                        compareMode,
+                        depth,
+                        decisionContext,
+                        priorities,
+                        mustHaves,
+                        redFlags,
+                        itemA,
+                        category,
+                        category,
+                        category,
+                        category,
+                        itemB,
+                        category,
+                        category,
+                        category,
+                        category,
+                        itemA,
+                        itemB,
                         getMetricsTableRows(category),
                         tipsSection,
-                        itemA, itemB);
+                        itemA,
+                        itemB,
+                        depthInstruction);
     }
 
-    /**
-     * Get category-specific metrics
-     */
     private String getCategoryMetrics(String category) {
         return switch (category) {
             case "sports" -> """
@@ -245,9 +317,6 @@ public class AISummaryService {
         };
     }
 
-    /**
-     * Get contextual tips for category
-     */
     private String getCategoryTips(String category) {
         return switch (category) {
             case "sports" -> "Consider recent Champions League and domestic league performance when choosing";
@@ -259,9 +328,6 @@ public class AISummaryService {
         };
     }
 
-    /**
-     * Get metrics table rows for category
-     */
     private String getMetricsTableRows(String category) {
         return switch (category) {
             case "sports" -> """
@@ -315,20 +381,26 @@ public class AISummaryService {
         };
     }
 
-    /**
-     * Analyze a single item
-     */
     public String analyzeSingle(String query) {
         String prompt = buildSingleAnalysisPrompt(query);
+
         try {
-            return callGeminiAPI(prompt);
-        } catch (Exception e) {
-            try {
-                return callDeepSeekAPI(prompt);
-            } catch (Exception e2) {
-                return "Unable to analyze '" + query + "'. Please try again later.";
+            if (isGeminiConfigured()) {
+                return callGeminiAPI(prompt, "general").summary();
             }
+        } catch (Exception geminiError) {
+            System.err.println("Gemini API error: " + geminiError.getMessage());
         }
+
+        try {
+            if (isDeepSeekConfigured()) {
+                return callDeepSeekAPI(prompt, "general").summary();
+            }
+        } catch (Exception deepSeekError) {
+            System.err.println("DeepSeek API error: " + deepSeekError.getMessage());
+        }
+
+        return "Unable to analyze '" + query + "'. Please try again later.";
     }
 
     private String buildSingleAnalysisPrompt(String query) {
@@ -344,9 +416,24 @@ public class AISummaryService {
                 """.formatted(query);
     }
 
-    private String callGeminiAPI(String prompt) {
-        String fullUrl = geminiApiUrl + "?key=" + geminiApiKey;
+    private String normalizeCompareMode(String compareMode) {
+        if (!StringUtils.hasText(compareMode)) {
+            return "balanced";
+        }
 
+        return compareMode.trim().toLowerCase();
+    }
+
+    private String normalizeDepth(String depth) {
+        if (!StringUtils.hasText(depth)) {
+            return "standard";
+        }
+
+        return depth.trim().toLowerCase();
+    }
+
+    private AIResponse callGeminiAPI(String prompt, String category) {
+        String fullUrl = geminiApiUrl + "?key=" + geminiApiKey;
         Map<String, Object> requestBody = Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
                 "generationConfig", Map.of("temperature", 0.7, "maxOutputTokens", 1200));
@@ -369,18 +456,30 @@ public class AISummaryService {
                     @SuppressWarnings("unchecked")
                     List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
                     if (!parts.isEmpty()) {
-                        System.out.println("✅ Gemini API success");
-                        return (String) parts.get(0).get("text");
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> usageMetadata = (Map<String, Object>) response.get("usageMetadata");
+
+                        System.out.println("Gemini API success");
+                        return new AIResponse(
+                                Objects.toString(parts.get(0).get("text"), ""),
+                                "google-gemini",
+                                resolveGeminiModel(response),
+                                category,
+                                false,
+                                readInt(usageMetadata, "promptTokenCount"),
+                                readInt(usageMetadata, "candidatesTokenCount"),
+                                readInt(usageMetadata, "totalTokenCount"));
                     }
                 }
             }
         }
+
         throw new RuntimeException("Invalid response from Gemini API");
     }
 
-    private String callDeepSeekAPI(String prompt) {
+    private AIResponse callDeepSeekAPI(String prompt, String category) {
         Map<String, Object> requestBody = Map.of(
-                "model", "deepseek-chat",
+                "model", DEEPSEEK_MODEL,
                 "messages", List.of(
                         Map.of("role", "system", "content", "You are a helpful comparison expert."),
                         Map.of("role", "user", "content", prompt)),
@@ -403,12 +502,32 @@ public class AISummaryService {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
                 if (message != null && message.containsKey("content")) {
-                    System.out.println("✅ DeepSeek API success (fallback)");
-                    return (String) message.get("content");
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> usage = (Map<String, Object>) response.get("usage");
+
+                    System.out.println("DeepSeek API success (fallback)");
+                    return new AIResponse(
+                            Objects.toString(message.get("content"), ""),
+                            "deepseek",
+                            resolveDeepSeekModel(response),
+                            category,
+                            false,
+                            readInt(usage, "prompt_tokens"),
+                            readInt(usage, "completion_tokens"),
+                            readInt(usage, "total_tokens"));
                 }
             }
         }
+
         throw new RuntimeException("Invalid response from DeepSeek API");
+    }
+
+    private boolean isGeminiConfigured() {
+        return StringUtils.hasText(geminiApiKey) && StringUtils.hasText(geminiApiUrl);
+    }
+
+    private boolean isDeepSeekConfigured() {
+        return StringUtils.hasText(deepseekApiKey);
     }
 
     private String generateFallbackComparison(String itemA, String itemB, String category) {
@@ -416,8 +535,8 @@ public class AISummaryService {
         return """
                 ## Category: %s
 
-                ## 🏆 Quick Verdict
-                Both %s and %s are excellent choices in the %s category - the winner depends on your specific needs.
+                ## Quick Verdict
+                Both %s and %s are excellent choices in the %s category. The winner depends on your specific needs.
 
                 ## %s
                 - Strength 1: Strong reputation and proven track record
@@ -431,17 +550,56 @@ public class AISummaryService {
                 - Strength 3: Fresh perspective
                 - Best for: Those seeking something new
 
-                ## 📊 Head-to-Head
+                ## Head-to-Head
                 | Metric | %s | %s |
                 |--------|------|------|
                 | Overall | 85 | 82 |
                 | Value | 80 | 85 |
                 | Popularity | 88 | 78 |
 
-                ## 💡 Final Recommendation
+                ## Final Recommendation
                 Choose %s for stability. Choose %s for innovation.
 
-                ⚠️ AI service temporarily unavailable. Try again for detailed analysis.
+                AI service is temporarily unavailable. Try again for detailed analysis.
                 """.formatted(categoryLabel, itemA, itemB, category, itemA, itemB, itemA, itemB, itemA, itemB);
+    }
+
+    private String resolveGeminiModel(Map<String, Object> response) {
+        String modelVersion = readString(response, "modelVersion");
+        if (StringUtils.hasText(modelVersion)) {
+            return modelVersion;
+        }
+
+        int modelsIndex = geminiApiUrl.indexOf("/models/");
+        if (modelsIndex == -1) {
+            return "gemini-unknown";
+        }
+
+        String modelPath = geminiApiUrl.substring(modelsIndex + "/models/".length());
+        int separatorIndex = modelPath.indexOf(':');
+        return separatorIndex == -1 ? modelPath : modelPath.substring(0, separatorIndex);
+    }
+
+    private String resolveDeepSeekModel(Map<String, Object> response) {
+        String model = readString(response, "model");
+        return StringUtils.hasText(model) ? model : DEEPSEEK_MODEL;
+    }
+
+    private String readString(Map<String, Object> source, String key) {
+        if (source == null) {
+            return null;
+        }
+
+        Object value = source.get(key);
+        return value instanceof String stringValue ? stringValue : null;
+    }
+
+    private Integer readInt(Map<String, Object> source, String key) {
+        if (source == null) {
+            return null;
+        }
+
+        Object value = source.get(key);
+        return value instanceof Number numberValue ? numberValue.intValue() : null;
     }
 }

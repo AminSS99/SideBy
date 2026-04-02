@@ -5,99 +5,95 @@
 <h1 align="center">SideBy</h1>
 
 <p align="center">
-  <strong>Compare Anything. Decide Faster.</strong>
+  <strong>Research Faster. Compare Smarter.</strong>
 </p>
 
 ---
 
-## 🌟 What is SideBy?
+## What is SideBy?
 
-SideBy is an intelligent comparison platform that helps you make better decisions by analyzing and comparing any two items side-by-side.
+SideBy is an AI-powered research and comparison platform operated by SnapSolve Ink. It helps users analyze options, synthesize web signals, and make clearer decisions.
 
-### What You Can Compare
+The current repository is transitioning from a single comparison experience into a broader SaaS product built around:
 
-- 🌍 **Cities & Travel** — Paris vs London, Tokyo vs Seoul
-- 💻 **Technologies** — React vs Vue, Python vs JavaScript
-- 🎮 **Gaming** — PS5 vs Xbox, Fortnite vs Apex
-- 📱 **Products** — iPhone vs Samsung, MacBook vs ThinkPad
-- 🏢 **Services** — Vercel vs Netlify, Spotify vs Apple Music
-- 🍔 **Food & Restaurants** — And much more...
+- AI comparison
+- AI research
+- AI generation
+- workspaces
+- multi-provider model routing
+- premium UI and motion
 
-### Key Features
-
-- **Smart Analysis** — Automatically detects what you're comparing and adjusts the analysis
-- **Side-by-Side View** — Clear, structured comparisons with tables and bullet points
-- **Instant Results** — Get AI-powered insights in seconds
-- **Beautiful UI** — Modern, responsive interface with smooth animations
-
----
-
-## 🛠️ Tech Stack
-
-### Current
+## Current Stack
 
 | Layer | Technologies |
 |-------|-------------|
-| **Frontend** | React, TypeScript, Vite, Tailwind CSS, Framer Motion |
-| **Backend** | Spring Boot, Java 17, Maven |
-| **AI Integration** | REST API with LLM providers |
+| Frontend | React, TypeScript, Vite, Tailwind CSS, shadcn/ui, Framer Motion |
+| Backend | Spring Boot Java service in transition |
+| Target Platform | Supabase, Vercel, Stripe |
+| AI Providers | Gemini, MiniMax, Z.AI |
 
-### Planned Additions
-
-| Category | Technologies |
-|----------|-------------|
-| **Database** | Supabase (PostgreSQL) |
-| **Authentication** | Supabase Auth |
-| **Payments** | Stripe |
-| **Containerization** | Docker, Docker Compose |
-| **CI/CD** | GitHub Actions |
-| **Cloud** | Vercel (Frontend), Railway/Render (Backend) |
-
----
-
-## 🔧 DevOps & Infrastructure
-
-### CI/CD Pipeline (Coming Soon)
-- Automated testing on pull requests
-- Build and deploy on merge to main
-- Environment-specific deployments (staging/production)
-
-### DevSecOps (Coming Soon)
-- Dependency vulnerability scanning
-- Secret detection in commits
-- Container image scanning
-- SAST/DAST integration
-
-### Monitoring & Observability (Coming Soon)
-- Application performance monitoring
-- Error tracking and alerting
-- Log aggregation
-
----
-
-## 🚀 Quick Start
+## Local Development
 
 ```bash
-# Backend
-cd backend
-mvn spring-boot:run
-
 # Frontend
 cd frontend
 npm install
 npm run dev
+
+# Backend
+cd backend
+# Run with your preferred Maven setup
 ```
 
-Open `http://localhost:5174` and start comparing!
+## Docker
 
----
+1. Copy `.env.docker.example` to `.env`
+2. Fill in your Supabase and AI provider keys
+3. Start everything:
 
-## 📄 License
+```bash
+docker compose up --build
+```
 
-MIT License
+The app will be available at:
+
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:8080`
+
+Notes:
+
+- The frontend container serves the built app with Nginx.
+- Nginx proxies `/api/*` to the backend container, so the default Docker frontend API base URL is `http://localhost:5173`.
+- Supabase remains your external hosted dependency; it is not containerized here.
+
+## Environment
+
+Frontend expects:
+
+- `VITE_API_BASE_URL`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_PEXELS_API_KEY` (optional)
+
+Backend expects:
+
+- `GEMINI_API_KEY`
+- `GEMINI_API_URL` (optional override)
+- `DEEPSEEK_API_KEY`
+- `SERVER_PORT` (optional)
+
+## Product Direction
+
+The product roadmap for the full SideBy SaaS is documented in:
+
+- [SNAPSOLVE_MASTER_PLAN.md](./SNAPSOLVE_MASTER_PLAN.md)
+
+## Domain
+
+- https://snapsolve.ink
 
 ---
 
 <p align="center">
-  <strong>Made with ❤️ by Amin Sobor</strong>
+  <a href="https://snapsolve.ink"><strong>Made by SnapSolve Ink</strong></a>
 </p>

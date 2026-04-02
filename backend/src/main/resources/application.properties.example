@@ -1,14 +1,14 @@
-# Backend Configuration Template
-# Copy this file to application.properties and fill in your API keys
+# Backend configuration template
+# Keep application.properties env-driven and set real values in your shell or hosting platform.
 
 spring.application.name=comparison-app
-server.port=8080
+server.port=${SERVER_PORT:8080}
 
 # Gemini AI Configuration (Primary)
 # Get your API key from: https://aistudio.google.com/app/apikey
-gemini.api.key=YOUR_GEMINI_API_KEY_HERE
-gemini.api.url=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+gemini.api.key=${GEMINI_API_KEY:}
+gemini.api.url=${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent}
 
 # DeepSeek AI Configuration (Fallback)
 # Get your API key from: https://platform.deepseek.com/
-deepseek.api.key=YOUR_DEEPSEEK_API_KEY_HERE
+deepseek.api.key=${DEEPSEEK_API_KEY:}

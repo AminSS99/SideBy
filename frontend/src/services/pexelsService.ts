@@ -3,9 +3,10 @@
  * Fetches high-quality images for comparison items
  */
 
-// API key should be set in .env file as VITE_PEXELS_API_KEY
-const PEXELS_API_KEY = import.meta.env.VITE_PEXELS_API_KEY || '';
-const PEXELS_BASE_URL = 'https://api.pexels.com/v1';
+import { envConfig } from "@/config/env";
+
+const PEXELS_API_KEY = envConfig.pexelsApiKey;
+const PEXELS_BASE_URL = "https://api.pexels.com/v1";
 
 export interface PexelsPhoto {
   id: number;
@@ -42,9 +43,13 @@ const imageCache = new Map<string, PexelsPhoto[]>();
  * Search for images on Pexels
  */
 export const searchPexelsImages = async (
-  query: string, 
-  perPage: number = 3
+  query: string,
+  perPage: number = 3,
 ): Promise<PexelsPhoto[]> => {
+  if (!PEXELS_API_KEY) {
+    return [];
+  }
+
   // Check cache first
   const cacheKey = `${query.toLowerCase()}_${perPage}`;
   if (imageCache.has(cacheKey)) {
@@ -56,9 +61,9 @@ export const searchPexelsImages = async (
       `${PEXELS_BASE_URL}/search?query=${encodeURIComponent(query)}&per_page=${perPage}&orientation=landscape`,
       {
         headers: {
-          'Authorization': PEXELS_API_KEY,
+          Authorization: PEXELS_API_KEY,
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -66,13 +71,13 @@ export const searchPexelsImages = async (
     }
 
     const data: PexelsSearchResponse = await response.json();
-    
+
     // Cache the results
     imageCache.set(cacheKey, data.photos);
-    
+
     return data.photos;
   } catch (error) {
-    console.error('Failed to fetch Pexels images:', error);
+    console.error("Failed to fetch Pexels images:", error);
     return [];
   }
 };
@@ -80,7 +85,9 @@ export const searchPexelsImages = async (
 /**
  * Get a single image for an item (first result)
  */
-export const getItemImage = async (itemName: string): Promise<PexelsPhoto | null> => {
+export const getItemImage = async (
+  itemName: string,
+): Promise<PexelsPhoto | null> => {
   const photos = await searchPexelsImages(itemName, 1);
   return photos.length > 0 ? photos[0] : null;
 };
@@ -88,14 +95,23 @@ export const getItemImage = async (itemName: string): Promise<PexelsPhoto | null
 /**
  * Get multiple images for an item (for gallery/carousel)
  */
-export const getItemGallery = async (itemName: string, count: number = 5): Promise<PexelsPhoto[]> => {
+export const getItemGallery = async (
+  itemName: string,
+  count: number = 5,
+): Promise<PexelsPhoto[]> => {
   return await searchPexelsImages(itemName, count);
 };
 
 /**
  * Get curated photos (trending/popular)
  */
-export const getCuratedPhotos = async (perPage: number = 6): Promise<PexelsPhoto[]> => {
+export const getCuratedPhotos = async (
+  perPage: number = 6,
+): Promise<PexelsPhoto[]> => {
+  if (!PEXELS_API_KEY) {
+    return [];
+  }
+
   const cacheKey = `curated_${perPage}`;
   if (imageCache.has(cacheKey)) {
     return imageCache.get(cacheKey)!;
@@ -106,9 +122,9 @@ export const getCuratedPhotos = async (perPage: number = 6): Promise<PexelsPhoto
       `${PEXELS_BASE_URL}/curated?per_page=${perPage}`,
       {
         headers: {
-          'Authorization': PEXELS_API_KEY,
+          Authorization: PEXELS_API_KEY,
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -117,10 +133,10 @@ export const getCuratedPhotos = async (perPage: number = 6): Promise<PexelsPhoto
 
     const data: PexelsSearchResponse = await response.json();
     imageCache.set(cacheKey, data.photos);
-    
+
     return data.photos;
   } catch (error) {
-    console.error('Failed to fetch curated photos:', error);
+    console.error("Failed to fetch curated photos:", error);
     return [];
   }
 };
@@ -128,45 +144,68 @@ export const getCuratedPhotos = async (perPage: number = 6): Promise<PexelsPhoto
 /**
  * Get smart search query based on item and category
  */
-export const getSmartSearchQuery = (item: string, category?: string): string => {
+export const getSmartSearchQuery = (
+  item: string,
+  category?: string,
+): string => {
   const itemLower = item.toLowerCase();
-  
+
   // Common food items - be very specific
-  const foodItems = ['pizza', 'burger', 'sushi', 'pasta', 'taco', 'ramen', 'steak', 'salad', 'sandwich', 'wings', 'noodles', 'curry', 'kebab'];
-  if (foodItems.some(food => itemLower.includes(food))) {
+  const foodItems = [
+    "pizza",
+    "burger",
+    "sushi",
+    "pasta",
+    "taco",
+    "ramen",
+    "steak",
+    "salad",
+    "sandwich",
+    "wings",
+    "noodles",
+    "curry",
+    "kebab",
+  ];
+  if (foodItems.some((food) => itemLower.includes(food))) {
     return `delicious ${item} food close up`;
   }
-  
+
   // Sports teams - search for stadium or logo
-  if (category === 'sports' || itemLower.includes('fc') || itemLower.includes('united') || itemLower.includes('munich') || itemLower.includes('psg')) {
+  if (
+    category === "sports" ||
+    itemLower.includes("fc") ||
+    itemLower.includes("united") ||
+    itemLower.includes("munich") ||
+    itemLower.includes("psg")
+  ) {
     return `${item} football team logo`;
   }
-  
+
   // Cities - search for landmarks
-  if (category === 'travel') {
+  if (category === "travel") {
     return `${item} city skyline`;
   }
-  
+
   // Tech - search for code or laptop
-  if (category === 'tech') {
+  if (category === "tech") {
     return `${item} programming`;
   }
-  
+
   // Gaming - search for gaming setup
-  if (category === 'gaming') {
+  if (category === "gaming") {
     return `${item} gaming`;
   }
-  
+
   // Food category fallback
-  if (category === 'food') {
+  if (category === "food") {
     return `delicious ${item} food`;
   }
-  
+
   // Auto - search for the car
-  if (category === 'auto') {
+  if (category === "auto") {
     return `${item} car`;
   }
-  
+
   // Default - just use the item name
   return item;
 };

@@ -68,7 +68,13 @@ export const travelConfig: CategoryConfig = {
     "paris", "london", "tokyo", "new york", "rome", "barcelona", "amsterdam",
     "berlin", "dubai", "singapore", "bangkok", "sydney", "los angeles",
     "istanbul", "prague", "vienna", "budapest", "lisbon", "moscow", "beijing",
-    "city", "country", "destination", "vacation", "trip", "travel", "visit"
+    // Additional cities and countries
+    "baku", "azerbaijan", "venezuela", "caracas", "brazil", "rio", "mexico",
+    "cairo", "egypt", "morocco", "marrakech", "athens", "greece", "spain",
+    "madrid", "milan", "florence", "venice", "naples", "munich",
+    "zurich", "geneva", "oslo", "stockholm", "copenhagen", "helsinki",
+    "seoul", "taipei", "hong kong", "manila", "jakarta", "mumbai", "delhi",
+    "city", "country", "destination", "vacation", "trip", "travel", "visit", "tourism"
   ],
   metrics: [
     { id: "cost_of_living", label: "Cost of Living", icon: "DollarSign", description: "Daily expenses" },
