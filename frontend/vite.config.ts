@@ -7,7 +7,8 @@ export default defineConfig(() => ({
   envPrefix: ["VITE_", "NEXT_PUBLIC_"],
   server: {
     host: "::",
-    port: 5173,
+    port: process.env.PORT ? parseInt(process.env.PORT) : 5173,
+    allowedHosts: "all"
   },
   plugins: [dyadComponentTagger(), react()],
   resolve: {
