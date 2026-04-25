@@ -7,23 +7,15 @@ import {
   BadgeCheck,
   BookOpenText,
   Boxes,
-  Check,
-  ChevronRight,
   Clock3,
   ExternalLink,
   FileSearch,
   GitCompareArrows,
-  Globe2,
-  Library,
-  Link as LinkIcon,
   Lock,
-  MessageSquareText,
   RefreshCw,
   Search,
-  ShieldCheck,
   Sparkles,
   TrendingUp,
-  Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -435,7 +427,7 @@ const Index = () => {
   const [query, setQuery] = useState("Supabase vs Firebase for a SaaS");
   const [job, setJob] = useState<ActiveJob | null>(null);
   const [comparisonId, setComparisonId] = useState<string | null>(null);
-  const [result, setResult] = useState<ComparisonResult | null>(null);
+  const [result, setResult] = useState<ComparisonResult | null>(() => buildResult("Supabase vs Firebase for a SaaS", 0));
   const [refreshCount, setRefreshCount] = useState(0);
   const [followUp, setFollowUp] = useState("");
   const [followUpAnswer, setFollowUpAnswer] = useState("");
@@ -448,13 +440,12 @@ const Index = () => {
         query,
       ),
     enabled: Boolean(job),
-    refetchInterval: (queryState) =>
-      queryState.state.data?.status === "completed" ? false : 620,
+    refetchInterval: (query) =>
+      query.state.data?.status === "completed" ? false : 620,
   });
 
   const jobData = jobQuery.data;
   const isResearching = Boolean(job && jobData?.status !== "completed");
-  const currentStep = researchSteps[jobData?.activeStep ?? 0];
 
   useEffect(() => {
     if (!job || jobData?.status !== "completed") return;
@@ -1007,7 +998,7 @@ const EntityFactPanel = ({
           <div className="flex flex-wrap gap-2">
             {facts[key].slice(0, 4).map((fact) => (
               <span
-                key={`${key}-${fact.category}`}
+                key={`${key}-${fact.category}-${fact.label}`}
                 className="bg-white/5 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-white/50"
               >
                 {fact.category}
