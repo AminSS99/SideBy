@@ -17,10 +17,10 @@ SideBy is an AI-powered research and comparison platform operated by SnapSolve I
 The current repository is transitioning from a single comparison experience into a broader SaaS product built around:
 
 - AI comparison
-- AI research
-- AI generation
-- workspaces
-- multi-provider model routing
+- source-backed web research
+- private beta accounts
+- refreshable comparison records
+- public comparison URLs
 - premium UI and motion
 
 ## Current Stack
@@ -28,27 +28,38 @@ The current repository is transitioning from a single comparison experience into
 | Layer | Technologies |
 |-------|-------------|
 | Frontend | React, TypeScript, Vite, Tailwind CSS, shadcn/ui, Framer Motion |
-| Backend | Spring Boot Java service in transition |
-| Target Platform | Supabase, Vercel, Stripe |
-| AI Providers | Gemini, MiniMax, Z.AI |
+| API | Vercel Serverless Functions plus Spring Boot service in transition |
+| Database | Neon Postgres |
+| Auth | Clerk |
+| Deployment | Vercel |
+| Research Extraction | Firecrawl when configured, fetch fallback otherwise |
+
+## Private Beta
+
+The current beta is deployed on Vercel and uses marketplace-provisioned Neon and Clerk resources.
+
+- Beta URL: https://sideby-kappa.vercel.app
+- Neon schema: [neon/migrations/001_sideby_private_beta.sql](./neon/migrations/001_sideby_private_beta.sql)
+- Vercel API functions: [frontend/api](./frontend/api)
 
 ## Local Development
 
 ```bash
 # Frontend
 cd frontend
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 
-# Backend
-cd backend
-# Run with your preferred Maven setup
+# Vercel serverless parity
+npx vercel dev
 ```
+
+The legacy Spring Boot backend still exists while the product migrates to the Vercel beta architecture.
 
 ## Docker
 
 1. Copy `.env.docker.example` to `.env`
-2. Fill in your Supabase and AI provider keys
+2. Fill in your database and provider keys
 3. Start everything:
 
 ```bash
@@ -64,22 +75,25 @@ Notes:
 
 - The frontend container serves the built app with Nginx.
 - Nginx proxies `/api/*` to the backend container, so the default Docker frontend API base URL is `http://localhost:5173`.
-- Supabase remains your external hosted dependency; it is not containerized here.
+- Neon remains your external hosted dependency; it is not containerized here.
 
 ## Environment
 
 Frontend expects:
 
-- `VITE_API_BASE_URL`
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_API_BASE_URL` (leave empty on Vercel for same-origin functions)
+- `VITE_CLERK_PUBLISHABLE_KEY` or `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `VITE_PEXELS_API_KEY` (optional)
 
-Backend expects:
+Serverless API expects:
 
-- `GEMINI_API_KEY`
-- `GEMINI_API_URL` (optional override)
-- `DEEPSEEK_API_KEY`
+- `DATABASE_URL` or `POSTGRES_URL`
+- `CLERK_SECRET_KEY`
+- `FIRECRAWL_API_KEY` (optional but recommended for clean extraction)
+
+Spring Boot backend expects:
+
+- `FIRECRAWL_API_KEY` (optional)
 - `SERVER_PORT` (optional)
 
 ## Product Direction

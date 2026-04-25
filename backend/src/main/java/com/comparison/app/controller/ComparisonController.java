@@ -3,7 +3,6 @@ package com.comparison.app.controller;
 import com.comparison.app.service.AIResponse;
 import com.comparison.app.service.AISummaryService;
 import com.comparison.app.service.CompareRequestOptions;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,12 +15,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @RestController
 @RequestMapping("/api/compare")
-@RequiredArgsConstructor
 @CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000",
         "https://snapsolve.ink" })
 public class ComparisonController {
 
     private final AISummaryService aiSummaryService;
+
+    public ComparisonController(AISummaryService aiSummaryService) {
+        this.aiSummaryService = aiSummaryService;
+    }
 
     // Simple rate limiting: max 10 requests per minute per IP
     private final ConcurrentHashMap<String, RateLimitInfo> rateLimits = new ConcurrentHashMap<>();

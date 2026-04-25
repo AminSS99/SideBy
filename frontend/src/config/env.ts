@@ -12,23 +12,29 @@ const supabasePublishableKey = normalizeEnv(
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
 );
 const pexelsApiKey = normalizeEnv(import.meta.env.VITE_PEXELS_API_KEY);
+const clerkPublishableKey = normalizeEnv(
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
+    import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+);
 
 export const envConfig = {
   apiBaseUrl,
   supabaseUrl,
   supabasePublishableKey,
   pexelsApiKey,
-  hasApiBaseUrl: apiBaseUrl.length > 0,
+  clerkPublishableKey,
+  hasApiBaseUrl: true,
   hasSupabaseConfig:
     supabaseUrl.length > 0 && supabasePublishableKey.length > 0,
   hasPexelsApiKey: pexelsApiKey.length > 0,
+  hasClerkConfig: clerkPublishableKey.length > 0,
 } as const;
 
 export const buildApiUrl = (path: string) => {
-  if (!envConfig.hasApiBaseUrl) {
-    throw new Error("Missing VITE_API_BASE_URL.");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (!envConfig.apiBaseUrl) {
+    return normalizedPath;
   }
 
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${envConfig.apiBaseUrl}${normalizedPath}`;
 };

@@ -12,3 +12,8 @@ gemini.api.url=${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta
 # DeepSeek AI Configuration (Fallback)
 # Get your API key from: https://platform.deepseek.com/
 deepseek.api.key=${DEEPSEEK_API_KEY:}
+
+# Firecrawl extraction (optional for local dev; Jsoup fallback is used when empty)
+# Current scrape API docs: https://docs.firecrawl.dev/api-reference/endpoint/scrape
+firecrawl.api.key=${FIRECRAWL_API_KEY:}
+firecrawl.api.url=${FIRECRAWL_API_URL:https://api.firecrawl.dev/v2/scrape}
