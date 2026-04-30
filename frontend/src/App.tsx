@@ -10,6 +10,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Compare from "./pages/Compare";
+import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/auth/SignIn";
 import SignUp from "./pages/auth/SignUp";
@@ -20,6 +21,8 @@ import ComparisonsPage from "./pages/app/ComparisonsPage";
 import ChatPage from "./pages/app/ChatPage";
 import ResearchPage from "./pages/app/ResearchPage";
 import UploadsPage from "./pages/app/UploadsPage";
+import AnalyticsPage from "./pages/app/AnalyticsPage";
+import BillingPage from "./pages/app/BillingPage";
 import ProjectsPage from "./pages/app/ProjectsPage";
 import SettingsPage from "./pages/app/SettingsPage";
 import WorkspacesPage from "./pages/app/WorkspacesPage";
@@ -38,6 +41,7 @@ const App = () => {
               <BrowserRouter>
                 <Routes>
                   <Route path="/" element={<Index />} />
+                  <Route path="/pricing" element={<Pricing />} />
                   <Route path="/compare/:slug" element={<Compare />} />
                   <Route path="/auth/sign-in" element={<SignIn />} />
                   <Route path="/auth/sign-up" element={<SignUp />} />
@@ -56,6 +60,8 @@ const App = () => {
                     <Route path="comparisons/:id" element={<ComparisonDetailPage />} />
                     <Route path="research" element={<ResearchPage />} />
                     <Route path="uploads" element={<UploadsPage />} />
+                    <Route path="analytics" element={<AnalyticsPage />} />
+                    <Route path="billing" element={<BillingPage />} />
                     <Route path="workspaces" element={<WorkspacesPage />} />
                     <Route path="projects" element={<ProjectsPage />} />
                     <Route path="settings" element={<SettingsPage />} />

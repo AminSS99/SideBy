@@ -84,29 +84,35 @@ const Index = () => {
             </div>
           </Link>
 
-          {envConfig.hasClerkConfig ? (
-            <>
-              <SignedIn>
-                <div className="p-1">
-                  <UserButton afterSignOutUrl="/" />
-                </div>
-              </SignedIn>
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="border border-[#fdfbf7]/20 bg-transparent px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#fdfbf7] hover:text-[#0c0b0a]">
-                    Sign In
-                  </button>
-                </SignInButton>
-              </SignedOut>
-            </>
-          ) : (
-            <Link
-              to="/auth/sign-in"
-              className="border border-[#fdfbf7]/20 bg-transparent px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#fdfbf7] hover:text-[#0c0b0a]"
-            >
-              Sign In
+          <div className="flex items-center gap-6">
+            <Link to="/pricing" className="text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/60 hover:text-white transition-colors">
+              Pricing
             </Link>
-          )}
+
+            {envConfig.hasClerkConfig ? (
+              <>
+                <SignedIn>
+                  <div className="p-1">
+                    <UserButton afterSignOutUrl="/" />
+                  </div>
+                </SignedIn>
+                <SignedOut>
+                  <SignInButton mode="modal">
+                    <button className="border border-[#fdfbf7]/20 bg-transparent px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#fdfbf7] hover:text-[#0c0b0a]">
+                      Sign In
+                    </button>
+                  </SignInButton>
+                </SignedOut>
+              </>
+            ) : (
+              <Link
+                to="/auth/sign-in"
+                className="border border-[#fdfbf7]/20 bg-transparent px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#fdfbf7] hover:text-[#0c0b0a]"
+              >
+                Sign In
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 

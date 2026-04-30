@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { GitCompareArrows, LayoutDashboard, Layers3, FolderKanban, Settings, LogOut, MessageSquare, Microscope, Database } from "lucide-react";
+import { GitCompareArrows, LayoutDashboard, Layers3, FolderKanban, Settings, LogOut, MessageSquare, Microscope, Database, Activity, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,8 @@ const navItems = [
   { to: "/app/comparisons", label: "Comparisons", icon: GitCompareArrows },
   { to: "/app/research", label: "Research", icon: Microscope },
   { to: "/app/uploads", label: "Knowledge", icon: Database },
+  { to: "/app/analytics", label: "Analytics", icon: Activity },
+  { to: "/app/billing", label: "Billing", icon: CreditCard },
   { to: "/app/workspaces", label: "Workspaces", icon: Layers3 },
   { to: "/app/projects", label: "Projects", icon: FolderKanban },
   { to: "/app/settings", label: "Settings", icon: Settings },
