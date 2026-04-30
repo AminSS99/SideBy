@@ -17,7 +17,7 @@ import {
   FollowUpPanel,
   EntityFactPanel,
 } from "@/components/Comparison/ComparisonEngine";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 const examples = [
   "ChatGPT Plus vs Claude Pro",
