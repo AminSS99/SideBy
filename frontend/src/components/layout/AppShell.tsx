@@ -8,6 +8,7 @@ import { brand } from "@/config/brand";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { CommandMenu } from "@/components/CommandMenu";
+import { BrandFooter } from "@/components/brand/BrandFooter";
 
 const navItems = [
   { to: "/app", label: "Overview", icon: LayoutDashboard, end: true },
@@ -122,9 +123,9 @@ const AppShell = () => {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-7xl gap-4 px-4 py-5 sm:px-6 sm:py-8 lg:grid-cols-[220px_1fr] lg:gap-8">
-        <aside className="shell-sidebar rounded-sm border border-white/10 bg-white/[0.02] p-2 sm:p-4 self-start sticky top-28">
-          <nav className="flex gap-2 overflow-x-auto lg:block lg:space-y-1 lg:overflow-visible no-scrollbar">
+      <div className="mx-auto grid max-w-7xl gap-4 px-4 py-5 sm:px-6 sm:py-8 lg:grid-cols-[220px_1fr] lg:gap-8 items-start">
+        <aside className="shell-sidebar flex flex-col rounded-sm border border-white/10 bg-white/[0.02] p-2 sm:p-4 sticky top-28 lg:h-[calc(100vh-8rem)]">
+          <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:space-y-1 lg:overflow-visible no-scrollbar flex-1">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -144,6 +145,10 @@ const AppShell = () => {
               </NavLink>
             ))}
           </nav>
+          
+          <div className="hidden lg:block pt-6 mt-6 border-t border-white/10 px-2">
+            <BrandFooter />
+          </div>
         </aside>
 
         <main className="shell-main min-w-0 rounded-sm border border-white/10 bg-[#0a0a0a] p-6 sm:p-8 md:p-10 shadow-2xl">
@@ -153,6 +158,11 @@ const AppShell = () => {
             </div>
           )}
           <Outlet />
+          
+          {/* Mobile Footer since the sidebar footer is hidden on mobile */}
+          <div className="mt-12 pt-6 border-t border-white/10 lg:hidden flex justify-center">
+            <BrandFooter />
+          </div>
         </main>
       </div>
     </div>
