@@ -18,6 +18,8 @@ import DashboardHome from "./pages/app/DashboardHome";
 import ComparisonDetailPage from "./pages/app/ComparisonDetailPage";
 import ComparisonsPage from "./pages/app/ComparisonsPage";
 import ChatPage from "./pages/app/ChatPage";
+import ResearchPage from "./pages/app/ResearchPage";
+import UploadsPage from "./pages/app/UploadsPage";
 import ProjectsPage from "./pages/app/ProjectsPage";
 import SettingsPage from "./pages/app/SettingsPage";
 import WorkspacesPage from "./pages/app/WorkspacesPage";
@@ -52,6 +54,8 @@ const App = () => {
                     <Route path="chat" element={<ChatPage />} />
                     <Route path="comparisons" element={<ComparisonsPage />} />
                     <Route path="comparisons/:id" element={<ComparisonDetailPage />} />
+                    <Route path="research" element={<ResearchPage />} />
+                    <Route path="uploads" element={<UploadsPage />} />
                     <Route path="workspaces" element={<WorkspacesPage />} />
                     <Route path="projects" element={<ProjectsPage />} />
                     <Route path="settings" element={<SettingsPage />} />
