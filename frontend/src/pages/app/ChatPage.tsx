@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, LoaderCircle, Sparkles } from "lucide-react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 
 interface Message {
   id: string;
@@ -18,6 +20,13 @@ const ChatPage = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    const tl = gsap.timeline();
+    tl.from(".chat-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
+      .from(".chat-window", { y: 40, opacity: 0, duration: 1, ease: "expo.out" }, "-=0.6");
+  }, { scope: containerRef });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -54,22 +63,22 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] flex-col space-y-6">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.35em] text-emerald-400">
+    <div ref={containerRef} className="flex h-[calc(100vh-12rem)] flex-col space-y-6">
+      <div className="chat-header">
+        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-400">
           Research Assistant
         </p>
-        <h1 className="mt-3 text-4xl font-black uppercase tracking-tight">
+        <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
           AI Chat
         </h1>
-        <p className="mt-2 text-sm text-white/55">
-          Ask questions, synthesize findings, or deep dive into specific product details.
+        <p className="mt-3 text-sm text-[#fdfbf7]/55 leading-relaxed">
+          Ask questions, synthesize findings, or deep dive into specific product details with the orchestration engine.
         </p>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-[28px] border border-white/10 bg-black/30 overflow-hidden">
+      <div className="chat-window flex min-h-0 flex-1 flex-col rounded-sm border border-[#2a2a2a] bg-[#111] overflow-hidden shadow-2xl">
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -78,10 +87,10 @@ const ChatPage = () => {
               }`}
             >
               <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border ${
                   msg.role === "assistant"
-                    ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
-                    : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    ? "bg-orange-500/10 text-orange-400 border-orange-500/20"
+                    : "bg-[#222] text-[#fdfbf7]/80 border-[#444]"
                 }`}
               >
                 {msg.role === "assistant" ? (
@@ -92,25 +101,25 @@ const ChatPage = () => {
               </div>
               
               <div
-                className={`max-w-[80%] rounded-2xl p-5 ${
+                className={`max-w-[80%] rounded-sm p-5 border ${
                   msg.role === "assistant"
-                    ? "bg-white/[0.03] border border-white/5 text-white/80"
-                    : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-50"
+                    ? "bg-[#0c0b0a] border-[#333] text-[#fdfbf7]/90"
+                    : "bg-[#1a1a1a] border-[#444] text-[#fdfbf7]"
                 }`}
               >
-                <p className="text-sm leading-relaxed">{msg.content}</p>
+                <p className="text-sm leading-relaxed font-serif">{msg.content}</p>
               </div>
             </div>
           ))}
           
           {isLoading && (
             <div className="flex gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-400 border border-orange-500/20">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-orange-500/10 text-orange-400 border border-orange-500/20">
                 <Sparkles className="h-4 w-4 animate-pulse" />
               </div>
-              <div className="flex items-center rounded-2xl bg-white/[0.03] border border-white/5 px-5 py-3">
+              <div className="flex items-center rounded-sm bg-[#0c0b0a] border border-[#333] px-5 py-3">
                 <LoaderCircle className="h-4 w-4 animate-spin text-orange-400" />
-                <span className="ml-3 text-xs uppercase tracking-widest text-white/40">Thinking...</span>
+                <span className="ml-3 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">Thinking...</span>
               </div>
             </div>
           )}
@@ -118,10 +127,10 @@ const ChatPage = () => {
         </div>
 
         {/* Input Area */}
-        <div className="border-t border-white/10 bg-white/[0.02] p-4">
+        <div className="border-t border-[#2a2a2a] bg-[#0c0b0a] p-5">
           <form
             onSubmit={handleSend}
-            className="relative mx-auto max-w-4xl flex items-end gap-3 rounded-2xl border border-white/10 bg-black/50 p-2 focus-within:border-orange-500/50 focus-within:ring-1 focus-within:ring-orange-500/50 transition-all"
+            className="relative mx-auto max-w-4xl flex items-end gap-3 rounded-sm border border-[#333] bg-[#111] p-2 focus-within:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500 transition-all"
           >
             <textarea
               value={input}
@@ -133,20 +142,20 @@ const ChatPage = () => {
                 }
               }}
               placeholder="Ask anything about the products you're researching..."
-              className="max-h-32 min-h-[44px] w-full resize-none bg-transparent px-3 py-3 text-sm text-white placeholder:text-white/30 outline-none"
+              className="max-h-32 min-h-[44px] w-full resize-none bg-transparent px-3 py-3 text-sm text-[#fdfbf7] placeholder:text-[#fdfbf7]/30 outline-none"
               rows={1}
             />
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-black transition-colors hover:bg-[#e0e0e0] disabled:opacity-50 disabled:hover:bg-white"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-[#fdfbf7] text-black transition-colors hover:bg-[#e0e0e0] disabled:opacity-50 disabled:hover:bg-white"
             >
               <Send className="h-4 w-4" />
             </button>
           </form>
-          <div className="mt-3 text-center">
-            <p className="text-[10px] uppercase tracking-widest text-white/30">
-              AI responses can be inaccurate. Verify important facts.
+          <div className="mt-4 text-center">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
+              AI responses can be inaccurate. Verify important facts using the comparison sources.
             </p>
           </div>
         </div>

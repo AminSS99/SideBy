@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { FolderKanban, LoaderCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useProjects } from "@/contexts/ProjectsContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 
 const ProjectsPage = () => {
   const { activeWorkspace } = useWorkspace();
@@ -20,6 +22,14 @@ const ProjectsPage = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    const tl = gsap.timeline();
+    tl.from(".proj-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
+      .from(".proj-form", { x: -20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6")
+      .from(".proj-list", { x: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.8");
+  }, { scope: containerRef });
 
   const handleCreateProject = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -53,75 +63,75 @@ const ProjectsPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.35em] text-emerald-400">
+    <div ref={containerRef} className="space-y-8">
+      <div className="proj-header">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
           Projects
         </p>
-        <h1 className="mt-3 text-4xl font-black uppercase tracking-tight">
+        <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
           Real project records
         </h1>
-        <p className="mt-4 max-w-3xl text-white/60">
+        <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[#fdfbf7]/60">
           Create projects inside your active workspace and use them to group persisted
           compare runs before richer orchestration lands.
         </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
+      <div className="grid gap-8 xl:grid-cols-[400px_1fr] items-start">
         <form
-          className="rounded-[28px] border border-white/10 bg-black/30 p-6"
+          className="proj-form rounded-sm border border-[#2a2a2a] bg-[#111] p-8 sticky top-24"
           onSubmit={handleCreateProject}
         >
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-emerald-400/15 p-3 text-emerald-300">
-              <Plus className="h-5 w-5" />
+          <div className="mb-8 flex items-center gap-4 border-b border-[#2a2a2a] pb-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+              <Plus className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Create project</h2>
-              <p className="mt-1 text-sm text-white/50">
+              <h2 className="font-serif text-2xl text-[#fdfbf7]">Create project</h2>
+              <p className="mt-1 text-xs text-[#fdfbf7]/40">
                 {activeWorkspace
-                  ? `Projects are created inside ${activeWorkspace.name}.`
-                  : "Load a workspace first to create projects."}
+                  ? `Inside ${activeWorkspace.name}`
+                  : "Load a workspace first"}
               </p>
             </div>
           </div>
 
-          <div className="mt-6 space-y-4">
+          <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-white/70">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
                 Project name
               </label>
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Compare launch readiness"
-                className="h-12 border-white/10 bg-black/30 text-white"
+                placeholder="e.g. Q4 Competitor Analysis"
+                className="h-12 rounded-sm border-[#333] bg-[#0c0b0a] text-[#fdfbf7] focus-visible:ring-1 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
                 disabled={!activeWorkspace || isSubmitting}
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-white/70">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
                 Description
               </label>
               <Textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="Track the first persisted compare and dashboard history flows."
-                className="min-h-32 border-white/10 bg-black/30 text-white"
+                className="min-h-32 resize-none rounded-sm border-[#333] bg-[#0c0b0a] text-[#fdfbf7] focus-visible:ring-1 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
                 disabled={!activeWorkspace || isSubmitting}
               />
             </div>
 
-            <Button
+            <button
               type="submit"
               disabled={!activeWorkspace || isSubmitting}
-              className="h-12 w-full rounded-2xl bg-white text-black hover:bg-white/90"
+              className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-sm bg-[#fdfbf7] text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
                   <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                  Creating project...
+                  Creating...
                 </>
               ) : (
                 <>
@@ -129,46 +139,46 @@ const ProjectsPage = () => {
                   Create project
                 </>
               )}
-            </Button>
+            </button>
 
             {error && (
-              <p className="text-sm text-amber-300">
+              <p className="mt-4 border-l-2 border-amber-500 bg-amber-500/10 p-3 text-xs text-amber-400">
                 {error}
               </p>
             )}
           </div>
         </form>
 
-        <div className="rounded-[28px] border border-white/10 bg-black/30 p-6">
-          <div className="flex items-center justify-between gap-4">
+        <div className="proj-list rounded-sm border border-[#2a2a2a] bg-[#111] p-8">
+          <div className="mb-8 flex items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
             <div>
-              <h2 className="text-xl font-bold text-white">Workspace projects</h2>
-              <p className="mt-1 text-sm text-white/50">
+              <h2 className="font-serif text-2xl text-[#fdfbf7]">Workspace projects</h2>
+              <p className="mt-2 text-sm text-[#fdfbf7]/50">
                 Select the active project to attach future compare runs.
               </p>
             </div>
-            <div className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/45">
+            <div className="rounded-sm border border-[#333] bg-[#0c0b0a] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
               {projects.length} total
             </div>
           </div>
 
           {isLoading ? (
-            <div className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/55">
+            <div className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-12 text-center text-sm text-[#fdfbf7]/40 animate-pulse">
               Loading projects...
             </div>
           ) : projects.length === 0 ? (
-            <div className="mt-6 rounded-[28px] border border-dashed border-white/10 bg-white/[0.02] p-10 text-center">
-              <FolderKanban className="mx-auto h-10 w-10 text-white/25" />
-              <h3 className="mt-4 text-lg font-semibold text-white">
+            <div className="rounded-sm border border-dashed border-[#333] bg-[#0c0b0a] p-16 text-center">
+              <FolderKanban className="mx-auto h-10 w-10 text-[#fdfbf7]/20" />
+              <h3 className="mt-6 font-serif text-xl text-[#fdfbf7]">
                 No projects yet
               </h3>
-              <p className="mt-2 text-sm text-white/50">
+              <p className="mt-3 text-sm text-[#fdfbf7]/50 max-w-sm mx-auto leading-relaxed">
                 Create the first project so compare runs can start landing in something
                 more structured than the workspace root.
               </p>
             </div>
           ) : (
-            <div className="mt-6 space-y-4">
+            <div className="space-y-4">
               {projects.map((project) => {
                 const isActive = project.id === activeProject?.id;
 
@@ -178,36 +188,38 @@ const ProjectsPage = () => {
                     type="button"
                     onClick={() => setActiveProjectId(project.id)}
                     className={[
-                      "w-full rounded-[28px] border p-6 text-left transition-colors",
+                      "w-full rounded-sm border p-6 text-left transition-all",
                       isActive
-                        ? "border-emerald-400/50 bg-emerald-400/10"
-                        : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]",
+                        ? "border-emerald-500/50 bg-[#1a1c1a] shadow-[0_0_20px_rgba(16,185,129,0.05)]"
+                        : "border-[#2a2a2a] bg-[#0c0b0a] hover:border-[#444] hover:bg-[#151515]",
                     ].join(" ")}
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="text-xl font-bold text-white">
+                      <div className="min-w-0">
+                        <h3 className="font-serif text-xl text-[#fdfbf7] truncate">
                           {project.name}
                         </h3>
-                        <p className="mt-2 text-sm leading-relaxed text-white/55">
+                        <p className="mt-3 text-sm leading-relaxed text-[#fdfbf7]/60 line-clamp-2">
                           {project.description || "No description added yet."}
                         </p>
                       </div>
                       <span
                         className={[
-                          "rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]",
+                          "shrink-0 rounded-sm border px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest",
                           isActive
-                            ? "bg-emerald-300 text-black"
-                            : "bg-white/10 text-white/50",
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                            : "border-[#333] bg-[#111] text-[#fdfbf7]/40",
                         ].join(" ")}
                       >
                         {isActive ? "Active" : "Available"}
                       </span>
                     </div>
 
-                    <p className="mt-4 text-xs uppercase tracking-[0.25em] text-white/35">
-                      Created {new Date(project.created_at).toLocaleDateString()}
-                    </p>
+                    <div className="mt-6 flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
+                      <span>Created</span>
+                      <span className="h-1 w-1 rounded-full bg-[#444]" />
+                      <span>{new Date(project.created_at).toLocaleDateString()}</span>
+                    </div>
                   </button>
                 );
               })}

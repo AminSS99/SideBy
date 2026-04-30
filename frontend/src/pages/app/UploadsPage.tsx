@@ -1,5 +1,7 @@
-import React, { useState, useCallback } from "react";
-import { UploadCloud, FileText, Trash2, CheckCircle2, Loader2, Database, AlertCircle } from "lucide-react";
+import React, { useState, useCallback, useRef } from "react";
+import { UploadCloud, Trash2, CheckCircle2, Loader2, Database, AlertCircle } from "lucide-react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 
 interface UploadedFile {
   id: string;
@@ -22,6 +24,14 @@ const UploadsPage = () => {
     }
   ]);
   const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    const tl = gsap.timeline();
+    tl.from(".up-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
+      .from(".up-dropzone", { scale: 0.95, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6")
+      .from(".up-list", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.4");
+  }, { scope: containerRef });
 
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -84,16 +94,16 @@ const UploadsPage = () => {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <div ref={containerRef} className="space-y-8">
+      <div className="up-header flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.35em] text-emerald-400">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
             Workspace Context
           </p>
-          <h1 className="mt-3 text-4xl font-black uppercase tracking-tight">
+          <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
             Knowledge Base
           </h1>
-          <p className="mt-4 max-w-3xl text-white/60">
+          <p className="mt-4 max-w-3xl text-sm text-[#fdfbf7]/60 leading-relaxed">
             Upload PDFs, documents, or data sheets. SideBy will index them to ground your AI comparisons and research in your own private data.
           </p>
         </div>
@@ -104,19 +114,19 @@ const UploadsPage = () => {
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
-        className={`relative flex flex-col items-center justify-center rounded-[28px] border-2 border-dashed p-12 text-center transition-all ${
-          isDragging ? "border-emerald-400 bg-emerald-400/5" : "border-white/10 bg-black/30 hover:border-white/20 hover:bg-white/[0.02]"
+        className={`up-dropzone relative flex flex-col items-center justify-center rounded-sm border-2 border-dashed p-14 text-center transition-all ${
+          isDragging ? "border-emerald-500 bg-emerald-500/10" : "border-[#333] bg-[#0c0b0a] hover:border-[#555] hover:bg-[#111]"
         }`}
       >
-        <div className={`mb-4 flex h-16 w-16 items-center justify-center rounded-full transition-colors ${isDragging ? "bg-emerald-400/20 text-emerald-300" : "bg-white/5 text-white/40"}`}>
+        <div className={`mb-6 flex h-20 w-20 items-center justify-center rounded-sm border transition-colors ${isDragging ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-[#1a1a1a] text-[#fdfbf7]/40 border-[#333]"}`}>
           <UploadCloud className="h-8 w-8" />
         </div>
-        <h3 className="text-xl font-bold text-white">Drag & drop files here</h3>
-        <p className="mt-2 text-sm text-white/40">Support for PDF, DOCX, CSV, and TXT up to 50MB</p>
-        <div className="mt-6 flex items-center gap-4">
-          <span className="text-xs font-bold uppercase tracking-widest text-white/20">OR</span>
+        <h3 className="font-serif text-2xl text-[#fdfbf7]">Drag & drop files here</h3>
+        <p className="mt-2 text-sm text-[#fdfbf7]/40">Support for PDF, DOCX, CSV, and TXT up to 50MB</p>
+        <div className="mt-8 flex items-center gap-4">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/20">OR</span>
         </div>
-        <label className="mt-6 cursor-pointer rounded-xl bg-white px-6 py-3 text-xs font-bold uppercase tracking-widest text-black transition-colors hover:bg-[#e0e0e0]">
+        <label className="mt-8 cursor-pointer rounded-sm bg-[#fdfbf7] px-8 py-3.5 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]">
           Browse Files
           <input 
             type="file" 
@@ -129,52 +139,52 @@ const UploadsPage = () => {
       </div>
 
       {/* Files List */}
-      <div className="rounded-[28px] border border-white/10 bg-black/30 p-6">
-        <div className="mb-6 flex items-center gap-3">
-          <Database className="h-5 w-5 text-white/50" />
-          <h2 className="text-xl font-bold text-white">Indexed Documents</h2>
+      <div className="up-list rounded-sm border border-[#2a2a2a] bg-[#111] p-8">
+        <div className="mb-8 flex items-center gap-3 border-b border-[#2a2a2a] pb-6">
+          <Database className="h-5 w-5 text-orange-500" />
+          <h2 className="font-serif text-2xl text-[#fdfbf7]">Indexed Documents</h2>
         </div>
 
         {files.length === 0 ? (
-          <div className="py-8 text-center text-sm text-white/30">
+          <div className="py-12 text-center text-sm text-[#fdfbf7]/30 border border-dashed border-[#333] bg-[#0c0b0a] rounded-sm">
             No documents uploaded yet.
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {files.map(file => (
-              <div key={file.id} className="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition-colors hover:border-white/10 hover:bg-white/[0.04]">
+              <div key={file.id} className="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-5 transition-colors hover:border-[#444] hover:bg-[#1a1a1a]">
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                    file.status === "indexed" ? "bg-emerald-500/10 text-emerald-400" :
-                    file.status === "error" ? "bg-red-500/10 text-red-400" : "bg-blue-500/10 text-blue-400"
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-sm border ${
+                    file.status === "indexed" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                    file.status === "error" ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20"
                   }`}>
                     {file.status === "indexed" ? <CheckCircle2 className="h-5 w-5" /> :
                      file.status === "error" ? <AlertCircle className="h-5 w-5" /> :
                      <Loader2 className="h-5 w-5 animate-spin" />}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-white">{file.name}</p>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-white/40">
+                    <p className="truncate text-base font-serif text-[#fdfbf7]">{file.name}</p>
+                    <div className="mt-2 flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
                       <span>{formatSize(file.size)}</span>
-                      <span>•</span>
+                      <span className="h-1 w-1 rounded-full bg-[#444]" />
                       <span>{new Date(file.date).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
+                <div className="flex items-center justify-between sm:justify-end gap-5 w-full sm:w-auto">
                   {file.status === "uploading" && (
-                    <div className="flex items-center gap-3 w-full sm:w-32">
-                      <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                    <div className="flex items-center gap-3 w-full sm:w-40">
+                      <div className="h-1.5 w-full rounded-full bg-[#222] overflow-hidden">
                         <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${file.progress}%` }} />
                       </div>
-                      <span className="text-xs font-medium text-white/50">{file.progress}%</span>
+                      <span className="text-[10px] font-bold tabular-nums text-[#fdfbf7]/50">{file.progress}%</span>
                     </div>
                   )}
                   
                   <button
                     onClick={() => removeFile(file.id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-white/30 transition-colors hover:bg-red-500/10 hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100"
+                    className="flex h-9 w-9 items-center justify-center rounded-sm border border-transparent text-[#fdfbf7]/30 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100"
                     title="Remove document"
                   >
                     <Trash2 className="h-4 w-4" />
