@@ -226,7 +226,7 @@ const Index = () => {
   const [query, setQuery] = useState("Supabase vs Firebase for a SaaS");
   const [job, setJob] = useState<ActiveJob | null>(null);
   const [comparisonId, setComparisonId] = useState<string | null>(null);
-  const [result, setResult] = useState<ComparisonData | null>(() => buildResult("Supabase vs Firebase for a SaaS", 0));
+  const [result, setResult] = useState<ComparisonData | null>(null);
   const [refreshCount, setRefreshCount] = useState(0);
   const [followUp, setFollowUp] = useState("");
   const [followUpAnswer, setFollowUpAnswer] = useState("");
@@ -350,12 +350,6 @@ const Index = () => {
           )}
         </div>
       </header>
-
-      {envConfig.hasClerkConfig && (
-        <SignedOut>
-          <PrivateBetaGate />
-        </SignedOut>
-      )}
 
       <main className="relative z-10 mx-auto max-w-7xl px-6 pb-32 pt-20 lg:px-8">
         {/* Editorial Hero */}
@@ -485,31 +479,6 @@ const EntityFactPanel = ({
       ))}
     </div>
   </motion.div>
-);
-
-const PrivateBetaGate = () => (
-  <div className="fixed inset-x-0 bottom-0 top-20 z-30 flex items-center justify-center bg-[#0c0b0a]/95 px-6 backdrop-blur-md">
-    <motion.div
-      initial={{ opacity: 0, y: 18 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: "easeOut" }}
-      className="w-full max-w-xl border-t-4 border-orange-600 bg-[#111] p-10 text-center shadow-2xl"
-    >
-      <div className="mx-auto mb-8 flex h-16 w-16 items-center justify-center border border-orange-500/30 text-orange-500">
-        <Lock className="h-6 w-6" />
-      </div>
-      <p className="mb-4 text-[10px] font-bold uppercase tracking-widest text-orange-500">SideBy Private Beta</p>
-      <h2 className="mb-4 font-serif text-4xl text-[#fdfbf7] tracking-tight">Sign in to research comparisons.</h2>
-      <p className="mx-auto mb-10 max-w-md text-base leading-relaxed text-[#fdfbf7]/60 font-serif">
-        The beta is wired to Clerk and Neon, with refreshable source-backed comparisons stored for audit and iteration.
-      </p>
-      <SignInButton mode="modal">
-        <button className="inline-flex items-center gap-3 bg-[#fdfbf7] px-8 py-3.5 text-xs font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]">
-          Enter Beta <ArrowRight className="h-4 w-4" />
-        </button>
-      </SignInButton>
-    </motion.div>
-  </div>
 );
 
 export default Index;
