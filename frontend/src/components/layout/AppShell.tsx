@@ -135,15 +135,23 @@ const AppShell = () => {
                 end={item.end}
                 className={({ isActive }) =>
                   [
-                    "flex shrink-0 items-center gap-3 rounded-sm px-3 py-2.5 text-xs uppercase tracking-widest font-bold transition-all sm:px-4",
+                    "relative flex shrink-0 items-center gap-3 rounded-sm px-3 py-2.5 text-xs uppercase tracking-widest font-bold transition-all sm:px-4 group overflow-hidden",
                     isActive
-                      ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
-                      : "text-white/50 hover:bg-white/[0.05] border border-transparent hover:text-white",
+                      ? "text-orange-400"
+                      : "text-white/50 hover:text-white",
                   ].join(" ")
                 }
               >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {item.label}
+                {({ isActive }) => (
+                  <>
+                    {isActive && (
+                      <div className="absolute inset-0 bg-orange-500/10 border border-orange-500/20 rounded-sm z-0" />
+                    )}
+                    <div className="absolute inset-0 bg-white/[0.05] translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out z-0" />
+                    <item.icon className="relative z-10 h-4 w-4 shrink-0" />
+                    <span className="relative z-10">{item.label}</span>
+                  </>
+                )}
               </NavLink>
             ))}
           </nav>

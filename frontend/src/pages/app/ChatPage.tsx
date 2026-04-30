@@ -36,7 +36,7 @@ const ChatPage = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isLoading]); // added isLoading so it scrolls when the loading indicator appears
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -112,7 +112,7 @@ const ChatPage = () => {
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex gap-4 ${
+              className={`animate-in fade-in slide-in-from-bottom-3 duration-500 flex gap-4 ${
                 msg.role === "assistant" ? "flex-row" : "flex-row-reverse"
               }`}
             >
@@ -143,7 +143,7 @@ const ChatPage = () => {
           ))}
           
           {isLoading && (
-            <div className="flex gap-4">
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex gap-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-orange-500/10 text-orange-400 border border-orange-500/20">
                 <Sparkles className="h-4 w-4 animate-pulse" />
               </div>

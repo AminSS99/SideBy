@@ -30,6 +30,35 @@ const formatTimestamp = (value: string) =>
     timeStyle: "short",
   });
 
+const GlowCard = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    cardRef.current.style.setProperty("--mouse-x", `${x}px`);
+    cardRef.current.style.setProperty("--mouse-y", `${y}px`);
+  };
+
+  return (
+    <div 
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      className={`relative overflow-hidden rounded-sm border border-[#2a2a2a] bg-[#111] p-6 hover:border-[#444] transition-colors group ${className}`}
+    >
+      <div 
+        className="pointer-events-none absolute -inset-px rounded-sm opacity-0 transition duration-300 group-hover:opacity-100"
+        style={{
+          background: `radial-gradient(400px circle at var(--mouse-x, 0) var(--mouse-y, 0), rgba(234, 88, 12, 0.15), transparent 40%)`
+        }}
+      />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+};
+
 const DashboardHome = () => {
   const { user, isConfigured } = useAuth();
   const { activeWorkspace, error, isLoading, workspaces } = useWorkspace();
@@ -172,10 +201,7 @@ const DashboardHome = () => {
 
       <div className="grid gap-4 md:grid-cols-2">
         {cards.map((card) => (
-          <div
-            key={card.title}
-            className="dash-card rounded-sm border border-[#2a2a2a] bg-[#111] p-6 hover:border-[#444] transition-colors"
-          >
+          <GlowCard key={card.title} className="dash-card">
             <card.icon className="h-5 w-5 text-orange-500" />
             <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
               {card.title}
@@ -184,7 +210,7 @@ const DashboardHome = () => {
             <p className="mt-2 text-xs leading-relaxed text-[#fdfbf7]/50">
               {card.description}
             </p>
-          </div>
+          </GlowCard>
         ))}
       </div>
 
