@@ -96,6 +96,9 @@ const Index = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <Link to="/features" className="hidden sm:block text-xs font-bold uppercase tracking-widest text-white/50 hover:text-white transition-colors">
+              Features
+            </Link>
             <Link to="/app" className="hidden sm:block text-xs font-bold uppercase tracking-widest text-white/50 hover:text-white transition-colors">
               Workbench
             </Link>
@@ -260,6 +263,7 @@ const Index = () => {
             <div>
               <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/80 mb-6">Product</h4>
               <ul className="space-y-4">
+                <li><Link to="/features" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Features</Link></li>
                 <li><Link to="/app" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Workbench</Link></li>
                 <li><Link to="/pricing" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Pricing</Link></li>
                 <li><Link to="/contact" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Contact Sales</Link></li>
@@ -270,8 +274,8 @@ const Index = () => {
               <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/80 mb-6">Company</h4>
               <ul className="space-y-4">
                 <li><Link to="/about" className="text-sm text-white/40 hover:text-orange-400 transition-colors">About SnapSolve Ink</Link></li>
-                <li><a href="#" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Terms of Service</a></li>
+                <li><Link to="/legal/privacy" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/legal/terms" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Terms of Service</Link></li>
               </ul>
             </div>
           </div>
