@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { colors } from "@/config/brand";
 import { resolveLogo } from "@/lib/logos";
 import { panelClass } from "./constants";
@@ -10,17 +12,69 @@ interface EntityCardProps {
 }
 
 export const EntityCard = ({ entity, side }: EntityCardProps) => {
+  const cardRef = useRef<HTMLDivElement>(null);
   const accentColor = side === "a" ? colors.entityA : colors.entityB;
   const logo = resolveLogo(entity.name);
-  
+
+  // 3D Tilt Effect on Mouse Move
+  useGSAP(() => {
+    if (!cardRef.current) return;
+    
+    const card = cardRef.current;
+    const xTo = gsap.quickTo(card, "rotationY", { ease: "power3", duration: 0.5 });
+    const yTo = gsap.quickTo(card, "rotationX", { ease: "power3", duration: 0.5 });
+    const bgTo = gsap.quickTo(card, "background", { ease: "power3", duration: 0.5 });
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const xPct = x / rect.width - 0.5;
+      const yPct = y / rect.height - 0.5;
+
+      xTo(xPct * 10); // Tilt multiplier
+      yTo(-yPct * 10);
+      
+      // Dynamic gradient that follows mouse
+      bgTo(`radial-gradient(circle at ${x}px ${y}px, ${accentColor}15 0%, #0c0b0a 60%)`);
+    };
+
+    const handleMouseLeave = () => {
+      xTo(0);
+      yTo(0);
+      bgTo("#0c0b0a");
+      gsap.to(card, { rotationY: 0, rotationX: 0, duration: 0.8, ease: "elastic.out(1, 0.3)" });
+    };
+
+    card.addEventListener("mousemove", handleMouseMove);
+    card.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      card.removeEventListener("mousemove", handleMouseMove);<think>The user wants me to continue exactly where the previous response left off, with no preamble. The last output was the middle of the `frontend/src/components/Comparison/EntityCard.tsx` file, specifically the `return () => {` block inside the `useGSAP` hook for the 3D tilt effect.
+
+I will resume writing the `EntityCard.tsx` file from that exact point. Then, I'll continue with the rest of the GSAP implementations for the Comparison Engine (`CategorySection.tsx`, `FactCard.tsx`, `ResearchLoader.tsx`, `VerdictPanel.tsx`, `SourcesPanel.tsx`).
+
+Current state of `EntityCard.tsx` buffer:
+```typescript
+    return () => {
+      card.removeEventListener("mousemove", handleMouseMove);
+```
+
+Let's complete the file and move to the next ones.
+</think>      card.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, { scope: cardRef });
+
   return (
     <div
-      className={`${panelClass} overflow-hidden border-t-2 p-8`}
+      ref={cardRef}
+      className={`${panelClass} overflow-hidden border-t-2 p-8 transition-shadow hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] transform-style-3d will-change-transform`}
       style={{ borderTopColor: accentColor }}
     >
-      <div className="mb-6 flex items-center gap-5">
+      <div className="mb-6 flex items-center gap-5 transform-translate-z-20">
         {logo ? (
-          <div className="flex h-14 w-14 items-center justify-center rounded-sm overflow-hidden bg-[#1a1a1a] border border-[#333]">
+          <div className="flex h-14 w-14 items-center justify-center rounded-sm overflow-hidden bg-[#1a1a1a] border border-[#333] shadow-lg">
             <img
               src={logo.url}
               alt={entity.name}
@@ -33,7 +87,7 @@ export const EntityCard = ({ entity, side }: EntityCardProps) => {
           </div>
         ) : (
           <div
-            className="flex h-14 w-14 items-center justify-center rounded-sm border font-serif text-2xl"
+            className="flex h-14 w-14 items-center justify-center rounded-sm border font-serif text-2xl shadow-lg"
             style={{
               borderColor: `${accentColor}40`,
               background: `${accentColor}10`,
@@ -51,9 +105,9 @@ export const EntityCard = ({ entity, side }: EntityCardProps) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-px overflow-hidden border border-[#2a2a2a] bg-[#2a2a2a]">
+      <div className="grid grid-cols-2 gap-px overflow-hidden border border-[#2a2a2a] bg-[#2a2a2a] transform-translate-z-10">
         {["Pricing", "Docs", "Capabilities", "Ecosystem"].map((label) => (
-          <div key={label} className="bg-[#0c0b0a] p-4 text-center">
+          <div key={label} className="bg-[#0c0b0a] p-4 text-center transition-colors hover:bg-[#111]">
             <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">
               {label}
             </p>

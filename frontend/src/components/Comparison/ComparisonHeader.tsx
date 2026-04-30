@@ -12,6 +12,23 @@ interface ComparisonHeaderProps {
   comparisonId?: string | null;
 }
 
+// Helper to split text for GSAP character animations without the premium plugin
+const SplitTextChars = ({ text, className }: { text: string; className?: string }) => {
+  return (
+    <span className={className} style={{ display: "inline-block" }}>
+      {text.split("").map((char, i) => (
+        <span
+          key={i}
+          className="char inline-block"
+          style={{ whiteSpace: char === " " ? "pre" : "normal" }}
+        >
+          {char}
+        </span>
+      ))}
+    </span>
+  );
+};
+
 export const ComparisonHeader = ({
   result,
   onRefresh,
@@ -22,66 +39,73 @@ export const ComparisonHeader = ({
   useGSAP(() => {
     const tl = gsap.timeline();
     
-    // Top bar elements
+    // Top bar elements drop in
     tl.from(".ch-top-item", {
       y: -20,
       opacity: 0,
       stagger: 0.1,
-      duration: 0.8,
-      ease: "power3.out",
-    });
-
-    // The dramatic VS reveal
-    tl.from(".ch-entity-a", {
-      x: -50,
-      opacity: 0,
       duration: 1,
       ease: "expo.out",
-    }, "-=0.4");
+    });
+
+    // Dramatic typography reveal (character by character)
+    tl.from(".ch-entity-a .char", {
+      y: 100,
+      opacity: 0,
+      rotationX: -90,
+      stagger: 0.02,
+      duration: 1.2,
+      ease: "power4.out",
+    }, "-=0.6");
     
+    // The "VS" impact
     tl.from(".ch-vs", {
       scale: 0,
       opacity: 0,
-      duration: 0.8,
-      ease: "back.out(1.7)",
-    }, "-=0.8");
-
-    tl.from(".ch-entity-b", {
-      x: 50,
-      opacity: 0,
+      rotation: -20,
       duration: 1,
-      ease: "expo.out",
+      ease: "elastic.out(1.2, 0.5)",
     }, "-=0.8");
 
-    // Verdict box
+    tl.from(".ch-entity-b .char", {
+      y: -100,
+      opacity: 0,
+      rotationX: 90,
+      stagger: 0.02,
+      duration: 1.2,
+      ease: "power4.out",
+    }, "-=0.9");
+
+    // Verdict box sweeping in
     tl.from(".ch-verdict-line", {
       scaleY: 0,
       transformOrigin: "top",
-      duration: 0.6,
-      ease: "power2.out",
-    }, "-=0.4");
+      duration: 1,
+      ease: "expo.inOut",
+    }, "-=0.5");
 
     tl.from(".ch-verdict-content", {
       opacity: 0,
-      y: 20,
-      duration: 0.8,
-      ease: "power3.out",
-    }, "-=0.4");
-
-    // Entity Cards
-    tl.from(".ch-card", {
-      y: 40,
-      opacity: 0,
-      stagger: 0.2,
+      x: -30,
       duration: 1,
       ease: "power3.out",
-    }, "-=0.6");
+    }, "-=0.5");
+
+    // Entity Cards stagger up
+    tl.from(".ch-card", {
+      y: 60,
+      opacity: 0,
+      scale: 0.95,
+      stagger: 0.2,
+      duration: 1.2,
+      ease: "expo.out",
+    }, "-=0.8");
 
   }, { scope: container });
 
   return (
-    <div ref={container}>
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
+    <div ref={container} className="relative">
+      <div className="mb-12 flex flex-wrap items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
         <div className="flex flex-wrap items-center gap-4">
           <span className="ch-top-item flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
             <span className="relative flex h-2 w-2">
@@ -106,7 +130,7 @@ export const ComparisonHeader = ({
           </div>
           <button
             onClick={onRefresh}
-            className="ch-top-item flex items-center gap-2 rounded-sm border border-[#2a2a2a] bg-[#111] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#1a1a1a] hover:border-[#444]"
+            className="ch-top-item flex items-center gap-2 rounded-sm border border-[#2a2a2a] bg-[#111] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#1a1a1a] hover:border-[#444] hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
           >
             <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
@@ -116,37 +140,40 @@ export const ComparisonHeader = ({
         </div>
       </div>
 
-      <div className="mb-8 flex flex-col md:flex-row md:items-baseline md:justify-between overflow-hidden py-2">
-        <h2 className="font-serif text-5xl text-[#fdfbf7] sm:text-6xl md:text-7xl leading-none tracking-tight flex items-baseline">
-          <span className="ch-entity-a inline-block" style={{ color: colors.entityA }}>
-            {result.entities.a.name}
-          </span>
-          <span className="ch-vs mx-4 font-serif italic font-light text-[#fdfbf7]/30 text-4xl sm:text-5xl inline-block">
+      <div className="mb-12 flex flex-col md:flex-row md:items-baseline md:justify-between overflow-hidden py-4 perspective-1000">
+        <h2 className="font-serif text-5xl text-[#fdfbf7] sm:text-6xl md:text-7xl lg:text-[5.5rem] leading-none tracking-tight flex flex-wrap items-baseline gap-y-4">
+          <SplitTextChars 
+            text={result.entities.a.name} 
+            className="ch-entity-a inline-block" 
+          />
+          <span className="ch-vs mx-6 font-serif italic font-light text-[#fdfbf7]/20 text-4xl sm:text-5xl lg:text-6xl inline-block">
             vs
           </span>
-          <span className="ch-entity-b inline-block" style={{ color: colors.entityB }}>
-            {result.entities.b.name}
-          </span>
+          <SplitTextChars 
+            text={result.entities.b.name} 
+            className="ch-entity-b inline-block" 
+          />
         </h2>
       </div>
 
-      <div className="mb-12 relative pl-6 py-2">
+      <div className="mb-16 relative pl-8 py-2">
         {/* Animated left border line */}
-        <div className="ch-verdict-line absolute left-0 top-0 bottom-0 w-0.5 bg-orange-600" />
+        <div className="ch-verdict-line absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-orange-500 to-orange-800" />
         
         <div className="ch-verdict-content">
-          <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-orange-500">
+          <p className="mb-4 flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-orange-500">
+            <span className="h-px w-8 bg-orange-500/50"></span>
             Executive Verdict
           </p>
-          <p className="max-w-3xl text-lg leading-relaxed text-[#fdfbf7]/90 font-serif">
+          <p className="max-w-4xl text-xl leading-relaxed text-[#fdfbf7]/90 font-serif md:text-2xl">
             {result.verdict.summary}
           </p>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="ch-card"><EntityCard entity={result.entities.a} side="a" /></div>
-        <div className="ch-card"><EntityCard entity={result.entities.b} side="b" /></div>
+        <div className="ch-card perspective-1000"><EntityCard entity={result.entities.a} side="a" /></div>
+        <div className="ch-card perspective-1000"><EntityCard entity={result.entities.b} side="b" /></div>
       </div>
     </div>
   );
