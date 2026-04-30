@@ -14,9 +14,12 @@ import Pricing from "./pages/Pricing";
 import Features from "./pages/Features";
 import Contact from "./pages/Contact";
 import About from "./pages/About";
+import Blog from "./pages/Blog";
+import Docs from "./pages/Docs";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import TermsOfService from "./pages/legal/TermsOfService";
+import CookiesPolicy from "./pages/legal/CookiesPolicy";
 import SignIn from "./pages/auth/SignIn";
 import SignUp from "./pages/auth/SignUp";
 import AuthCallback from "./pages/auth/AuthCallback";
@@ -52,8 +55,11 @@ const App = () => {
                   <Route path="/features" element={<Features />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/about" element={<About />} />
+                  <Route path="/blog" element={<Blog />} />
+                  <Route path="/docs" element={<Docs />} />
                   <Route path="/legal/privacy" element={<PrivacyPolicy />} />
                   <Route path="/legal/terms" element={<TermsOfService />} />
+                  <Route path="/legal/cookies" element={<CookiesPolicy />} />
                   <Route path="/compare/:slug" element={<Compare />} />
                   <Route path="/auth/sign-in" element={<SignIn />} />
                   <Route path="/auth/sign-up" element={<SignUp />} />
