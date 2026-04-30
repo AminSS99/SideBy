@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef } from "react";
 import { UploadCloud, Trash2, CheckCircle2, Loader2, Database, AlertCircle } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { EmptyState } from "@/components/EmptyState";
 
 interface UploadedFile {
   id: string;
@@ -146,9 +147,12 @@ const UploadsPage = () => {
         </div>
 
         {files.length === 0 ? (
-          <div className="py-12 text-center text-sm text-[#fdfbf7]/30 border border-dashed border-[#333] bg-[#0c0b0a] rounded-sm">
-            No documents uploaded yet.
-          </div>
+          <EmptyState 
+            icon={Database}
+            title="No documents yet"
+            description="Your workspace knowledge base is empty. Upload documents above to start indexing them."
+            glowColor="blue"
+          />
         ) : (
           <div className="space-y-4">
             {files.map(file => (

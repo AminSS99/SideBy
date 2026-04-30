@@ -1,11 +1,11 @@
 import React, { useState, useRef } from "react";
 import { FolderKanban, LoaderCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useProjects } from "@/contexts/ProjectsContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { EmptyState } from "@/components/EmptyState";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
@@ -167,16 +167,12 @@ const ProjectsPage = () => {
               Loading projects...
             </div>
           ) : projects.length === 0 ? (
-            <div className="rounded-sm border border-dashed border-[#333] bg-[#0c0b0a] p-16 text-center">
-              <FolderKanban className="mx-auto h-10 w-10 text-[#fdfbf7]/20" />
-              <h3 className="mt-6 font-serif text-xl text-[#fdfbf7]">
-                No projects yet
-              </h3>
-              <p className="mt-3 text-sm text-[#fdfbf7]/50 max-w-sm mx-auto leading-relaxed">
-                Create the first project so compare runs can start landing in something
-                more structured than the workspace root.
-              </p>
-            </div>
+            <EmptyState 
+              icon={FolderKanban}
+              title="No projects yet"
+              description="Create the first project so compare runs can start landing in something more structured than the workspace root."
+              glowColor="emerald"
+            />
           ) : (
             <div className="space-y-4">
               {projects.map((project) => {

@@ -116,7 +116,7 @@ export const ComparisonHeader = ({
   };
 
   return (
-    <div ref={container} className="relative">
+    <div ref={container} className="relative break-inside-avoid">
       <div className="mb-12 flex flex-wrap items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
         <div className="flex flex-wrap items-center gap-4">
           <span className="ch-top-item flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
@@ -130,7 +130,7 @@ export const ComparisonHeader = ({
             {result.sourceCount} verified sources
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 print-hidden">
           <button
             onClick={handleExport}
             className="ch-top-item flex items-center gap-2 rounded-sm border border-[#2a2a2a] bg-[#111] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#1a1a1a] hover:border-[#444] hidden sm:flex"
@@ -176,7 +176,7 @@ export const ComparisonHeader = ({
         </h2>
       </div>
 
-      <div className="mb-16 relative pl-8 py-2">
+      <div className="mb-16 relative pl-8 py-2 break-inside-avoid">
         {/* Animated left border line */}
         <div className="ch-verdict-line absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-orange-500 to-orange-800" />
         
@@ -191,7 +191,7 @@ export const ComparisonHeader = ({
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 mb-10">
+      <div className="grid gap-6 md:grid-cols-2 mb-10 break-inside-avoid">
         <div className="ch-card perspective-1000"><EntityCard entity={result.entities.a} side="a" /></div>
         <div className="ch-card perspective-1000"><EntityCard entity={result.entities.b} side="b" /></div>
       </div>

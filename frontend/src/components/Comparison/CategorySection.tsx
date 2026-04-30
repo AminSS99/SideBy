@@ -70,7 +70,7 @@ export const CategorySection = ({ category, entities, index }: CategorySectionPr
                      : null;
 
   return (
-    <div ref={containerRef} className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-8 sm:p-10 relative overflow-hidden">
+    <div ref={containerRef} className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-8 sm:p-10 relative overflow-hidden break-inside-avoid">
       {/* Subtle background number watermark */}
       <div className="absolute -right-8 -top-12 z-0 font-serif text-[200px] font-black italic leading-none text-[#ffffff03] select-none pointer-events-none">
         {index + 1}

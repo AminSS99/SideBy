@@ -118,4 +118,52 @@
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
   }
+
+  /* Prevent awkward page breaks in PDFs */
+  .break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+/* 
+  Print & Export Styles 
+  Creates a stunning PDF export of the technical report, stripping out nav and chat interfaces.
+*/
+@media print {
+  @page {
+    margin: 1.5cm;
+    size: auto;
+  }
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    background-color: #050505 !important;
+    color: #fdfbf7 !important;
+  }
+  .print-hidden, 
+  .shell-sidebar, 
+  .shell-header, 
+  header, 
+  footer, 
+  button {
+    display: none !important;
+  }
+  .shell-main, 
+  .compare-content-grid {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important; /* Flatten grid for printing */
+  }
+  .shell-main aside {
+    display: none !important; /* Hide right sidebar (Follow-up chat) */
+  }
+  .shell-main > div > div > div.xl\:col-span-8,
+  .shell-main > div > div > div.lg\:col-span-8 {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+  }
 }

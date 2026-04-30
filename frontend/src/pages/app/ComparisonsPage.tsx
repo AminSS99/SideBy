@@ -18,6 +18,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
+import { EmptyState } from "@/components/EmptyState";
 
 type ComparisonStatus = "running" | "completed" | "failed";
 type ComparisonVisibility = "private" | "team" | "public";
@@ -395,13 +396,12 @@ const ComparisonsPage = () => {
           Loading saved comparisons...
         </div>
       ) : filteredItems.length === 0 ? (
-        <div className="rounded-sm border border-dashed border-[#333] bg-[#0c0b0a] p-16 text-center">
-          <Sparkles className="mx-auto h-8 w-8 text-[#fdfbf7]/20" />
-          <h2 className="mt-6 font-serif text-2xl text-[#fdfbf7]">No matching comparisons</h2>
-          <p className="mx-auto mt-3 max-w-lg text-sm text-[#fdfbf7]/50 leading-relaxed">
-            Run a comparison from the homepage, then return here to manage its visibility and public report.
-          </p>
-        </div>
+        <EmptyState 
+          icon={Sparkles}
+          title="No matching comparisons"
+          description="Run a comparison from the homepage, then return here to manage its visibility and public report."
+          glowColor="orange"
+        />
       ) : (
         <div className="space-y-4">
           {filteredItems.map((item) => (
