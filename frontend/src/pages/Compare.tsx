@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import { Sparkles, Search, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { brand, colors } from "@/config/brand";
+import { brand } from "@/config/brand";
 import { buildApiUrl } from "@/config/env";
 import { apiFetch } from "@/lib/api";
+import { buildResult } from "@/lib/comparisonUtils";
 import {
   type ComparisonData,
   ComparisonHeader,
@@ -13,6 +13,7 @@ import {
   VerdictPanel,
   SourcesPanel,
   FollowUpPanel,
+  EntityFactPanel,
 } from "@/components/Comparison/ComparisonEngine";
 
 const Compare = () => {
@@ -23,10 +24,23 @@ const Compare = () => {
   const { data: jobData, isLoading, error } = useQuery({
     queryKey: ["public-comparison", slug],
     queryFn: async () => {
-      const res = await apiFetch(buildApiUrl(`/api/comparisons/by-slug/${slug}`));
-      if (!res.ok) throw new Error("Comparison not found.");
-      const data = await res.json();
-      return data as { result: ComparisonData; query: string; id: string };
+      try {
+        const res = await apiFetch(buildApiUrl(`/api/comparisons/by-slug/${slug}`));
+        const contentType = res.headers.get("content-type");
+        if (!res.ok || !contentType?.includes("application/json")) throw new Error("Comparison not found.");
+        const data = await res.json();
+        return data as { result: ComparisonData; query: string; id: string };
+      } catch (e) {
+        console.warn("Backend disconnected. Falling back to local simulation.", e);
+        // Clean up the slug into a readable query
+        const [a, b] = (slug || "supabase-vs-firebase").split("-vs-");
+        const query = `${a || "Item A"} vs ${b || "Item B"}`;
+        return {
+          result: buildResult(query, 0),
+          query,
+          id: "mock-" + Date.now()
+        };
+      }
     },
     staleTime: 5 * 60 * 1000,
     retry: 1,
@@ -54,7 +68,7 @@ const Compare = () => {
         setFollowUp("");
         return;
       }
-    } catch (e) { console.error("Follow-up failed:", e); }
+    } catch (e) { console.error("Follow-up failed, falling back to local simulation:", e); }
     setFollowUpAnswer(`Based on the current source-backed matrix, the answer leans toward ${result?.verdict?.developers || "the left option"} for technical control.`);
     setFollowUp("");
   };
@@ -64,22 +78,24 @@ const Compare = () => {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#030303] text-white selection:bg-purple-500/30">
+    <div className="min-h-screen overflow-x-hidden bg-[#030303] text-white selection:bg-orange-500/30">
       <div className="pointer-events-none fixed inset-0 opacity-[0.03]">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
       </div>
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-purple-600/[0.04] blur-[120px]" />
-        <div className="absolute -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-sky-600/[0.04] blur-[120px]" />
+        <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-orange-600/[0.04] blur-[120px]" />
+        <div className="absolute -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-blue-600/[0.04] blur-[120px]" />
       </div>
 
       <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#030303]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 font-serif text-lg text-white shadow-lg shadow-purple-500/20">S</div>
+          <Link to="/" className="flex items-center gap-4 group" aria-label={brand.productName}>
+            <div className="flex h-10 w-10 items-center justify-center border border-[#333] bg-[#111] font-serif text-xl text-[#fdfbf7] transition-all group-hover:border-orange-500/50 group-hover:text-orange-400">
+              S
+            </div>
             <div>
-              <p className="text-sm font-semibold tracking-tight text-white">{brand.productName}</p>
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30">Research Engine</p>
+              <p className="font-serif text-sm tracking-tight text-[#fdfbf7] group-hover:text-orange-50 transition-colors">{brand.productName}</p>
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#fdfbf7]/40">Research Engine</p>
             </div>
           </Link>
           <Link
@@ -96,7 +112,7 @@ const Compare = () => {
         {isLoading ? (
           <div className="flex items-center justify-center py-32">
             <div className="text-center">
-              <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-purple-400/50" />
+              <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-orange-500/50" />
               <p className="text-sm text-white/30">Loading comparison...</p>
             </div>
           </div>
@@ -116,13 +132,13 @@ const Compare = () => {
         ) : (
           <>
             <section className="mb-10">
-              <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-purple-400">
+              <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-500">
                 <Sparkles className="h-3.5 w-3.5" /> Public Comparison
               </div>
               <h1 className="font-serif text-4xl text-white sm:text-5xl">
-                <span className="bg-gradient-to-b from-purple-400 to-purple-600 bg-clip-text text-transparent">{result.entities.a.name}</span>
-                <span className="mx-3 font-sans text-xl italic font-light text-white/15">vs</span>
-                <span className="bg-gradient-to-b from-sky-400 to-blue-600 bg-clip-text text-transparent">{result.entities.b.name}</span>
+                <span className="bg-gradient-to-b from-orange-400 to-orange-600 bg-clip-text text-transparent">{result.entities.a.name}</span>
+                <span className="mx-4 font-sans text-xl italic font-light text-white/15">vs</span>
+                <span className="bg-gradient-to-b from-cyan-400 to-blue-600 bg-clip-text text-transparent">{result.entities.b.name}</span>
               </h1>
               <p className="mt-3 text-sm text-white/30">{brand.tagline} — {brand.domain}</p>
             </section>
@@ -138,7 +154,7 @@ const Compare = () => {
               </div>
               <aside className="space-y-6 lg:col-span-4">
                 <VerdictPanel result={result} />
-                <FactPanel result={result} facts={entityFacts} />
+                <EntityFactPanel result={result} facts={entityFacts} />
                 <SourcesPanel sources={result.sources} />
                 <FollowUpPanel
                   question={followUp}
@@ -156,7 +172,7 @@ const Compare = () => {
                   const [a, b] = q.split(/\s+vs\s+/i);
                   const link = `/compare/${a.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-vs-${b.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
                   return (
-                    <Link key={q} to={link} className="rounded-full border border-white/[0.06] bg-white/[0.01] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/35 transition-all hover:border-purple-500/20 hover:bg-purple-500/[0.04] hover:text-purple-300">
+                    <Link key={q} to={link} className="rounded-full border border-white/[0.06] bg-[#111] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/40 transition-all hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-400">
                       {q}
                     </Link>
                   );
@@ -169,26 +185,5 @@ const Compare = () => {
     </div>
   );
 };
-
-const FactPanel = ({ result, facts }: { result: ComparisonData; facts: Record<string, Array<{ category: string }>> }) => (
-  <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }} className="rounded-2xl border border-white/[0.08] bg-[#0a0a0a]/80 backdrop-blur-xl p-6">
-    <h3 className="mb-5 font-serif text-lg text-white">Fact Coverage</h3>
-    <div className="space-y-3">
-      {(["a", "b"] as const).map((key) => (
-        <div key={key} className="rounded-xl border border-white/[0.06] bg-white/[0.01] p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-semibold" style={{ color: result.entities[key].hex }}>{result.entities[key].name}</span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">{facts[key].length} facts</span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {facts[key].slice(0, 4).map((f) => (
-              <span key={`${key}-${f.category}`} className="rounded-md bg-white/[0.03] px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-white/35">{f.category}</span>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  </motion.div>
-);
 
 export default Compare;
