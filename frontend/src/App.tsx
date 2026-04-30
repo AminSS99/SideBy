@@ -17,6 +17,7 @@ import AuthCallback from "./pages/auth/AuthCallback";
 import DashboardHome from "./pages/app/DashboardHome";
 import ComparisonDetailPage from "./pages/app/ComparisonDetailPage";
 import ComparisonsPage from "./pages/app/ComparisonsPage";
+import ChatPage from "./pages/app/ChatPage";
 import ProjectsPage from "./pages/app/ProjectsPage";
 import SettingsPage from "./pages/app/SettingsPage";
 import WorkspacesPage from "./pages/app/WorkspacesPage";
@@ -48,6 +49,7 @@ const App = () => {
                     }
                   >
                     <Route index element={<DashboardHome />} />
+                    <Route path="chat" element={<ChatPage />} />
                     <Route path="comparisons" element={<ComparisonsPage />} />
                     <Route path="comparisons/:id" element={<ComparisonDetailPage />} />
                     <Route path="workspaces" element={<WorkspacesPage />} />

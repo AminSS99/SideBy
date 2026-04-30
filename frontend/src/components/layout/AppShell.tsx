@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { GitCompareArrows, Layers3, FolderKanban, Settings, LogOut } from "lucide-react";
+import { GitCompareArrows, Layers3, FolderKanban, Settings, LogOut, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +8,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 const navItems = [
   { to: "/app", label: "Overview", icon: Layers3, end: true },
+  { to: "/app/chat", label: "AI Chat", icon: MessageSquare },
   { to: "/app/comparisons", label: "Comparisons", icon: GitCompareArrows },
   { to: "/app/workspaces", label: "Workspaces", icon: Layers3 },
   { to: "/app/projects", label: "Projects", icon: FolderKanban },
