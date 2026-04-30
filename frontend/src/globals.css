@@ -109,4 +109,13 @@
   .will-change-transform {
     will-change: transform;
   }
+  
+  /* Hide scrollbar for clean sticky sidebars */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
 }

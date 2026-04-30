@@ -1,6 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import {
   ArrowLeft,
   Globe2,
@@ -40,6 +42,7 @@ const ComparisonDetailPage = () => {
   const [followUpAnswer, setFollowUpAnswer] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isChangingVisibility, setIsChangingVisibility] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const comparisonQuery = useQuery({
     queryKey: ["app-comparison", id],
@@ -165,10 +168,19 @@ const ComparisonDetailPage = () => {
     }
   };
 
+  useGSAP(() => {
+    if (!comparisonQuery.isLoading && result) {
+      const tl = gsap.timeline();
+      tl.from(".wb-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
+        .from(".wb-actions", { x: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6")
+        .from(".wb-grid", { y: 60, opacity: 0, duration: 1.2, ease: "expo.out" }, "-=0.4");
+    }
+  }, [comparisonQuery.isLoading, result]);
+
   return (
-    <div className="space-y-8">
+    <div ref={containerRef} className="space-y-8">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div>
+        <div className="wb-header">
           <Link
             to="/app/comparisons"
             className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-white/40 transition-colors hover:text-white"
@@ -185,7 +197,7 @@ const ComparisonDetailPage = () => {
         </div>
 
         {result && job && (
-          <div className="flex flex-wrap gap-2">
+          <div className="wb-actions flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => void toggleVisibility()}
@@ -261,7 +273,7 @@ const ComparisonDetailPage = () => {
           steps={researchSteps}
         />
       ) : (
-        <div className="grid gap-10 xl:grid-cols-12">
+        <div className="wb-grid grid gap-10 xl:grid-cols-12 relative items-start">
           <div className="space-y-10 xl:col-span-8">
             <ComparisonHeader
               result={result}
@@ -280,7 +292,7 @@ const ComparisonDetailPage = () => {
             </div>
           </div>
 
-          <aside className="space-y-6 xl:col-span-4">
+          <aside className="space-y-6 xl:col-span-4 sticky top-6 self-start pb-8 h-[calc(100vh-2rem)] overflow-y-auto no-scrollbar">
             <VerdictPanel result={result} />
             <EntityFactPanel result={result} facts={entityFacts} />
             <SourcesPanel sources={result.sources} />

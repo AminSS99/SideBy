@@ -156,7 +156,7 @@ const Compare = () => {
               <p className="compare-hero-desc mt-3 text-sm text-white/30">{brand.tagline} — {brand.domain}</p>
             </section>
 
-            <div className="compare-content-grid grid gap-10 lg:grid-cols-12">
+            <div className="compare-content-grid grid gap-10 lg:grid-cols-12 relative items-start">
               <div className="space-y-10 lg:col-span-8">
                 <ComparisonHeader result={result} onRefresh={handleRefresh} comparisonId={jobData.id} />
                 <div className="space-y-10">
@@ -165,7 +165,7 @@ const Compare = () => {
                   ))}
                 </div>
               </div>
-              <aside className="space-y-6 lg:col-span-4">
+              <aside className="space-y-6 lg:col-span-4 sticky top-24 self-start pb-8 h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar">
                 <VerdictPanel result={result} />
                 <EntityFactPanel result={result} facts={entityFacts} />
                 <SourcesPanel sources={result.sources} />
