@@ -59,6 +59,9 @@ export type ComparisonData = {
     ecosystem?: string;
     summary: string;
   };
+  dimensions: Array<{ subject: string; a: number; b: number; fullMark: number }>;
+  consensus: string[];
+  contradictions: string[];
   categories: Category[];
   sources: ComparisonSource[];
 };

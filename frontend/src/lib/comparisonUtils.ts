@@ -72,6 +72,23 @@ export const buildResult = (query: string, refreshCount: number, previousResult?
     entities,
     sourceCount: changed ? 14 : 12,
     updatedAt: now,
+    dimensions: [
+      { subject: "Pricing Value", a: 85, b: 92, fullMark: 100 },
+      { subject: "Dev Experience", a: 95, b: 82, fullMark: 100 },
+      { subject: "Ecosystem", a: 70, b: 98, fullMark: 100 },
+      { subject: "Scalability", a: 90, b: 88, fullMark: 100 },
+      { subject: "Security", a: 85, b: 90, fullMark: 100 },
+      { subject: "Vendor Lock-in", a: 95, b: 60, fullMark: 100 }, // High score = less lock-in / better portability
+    ],
+    consensus: [
+      `Both ${entities.a.name} and ${entities.b.name} offer generous free tiers suitable for hobby projects and prototyping.`,
+      "Both natively support serverless compute/edge functions for backend logic.",
+      "The documentation for both platforms is highly rated by the developer community."
+    ],
+    contradictions: [
+      "Sources disagree on which is actually cheaper at enterprise scale; it depends heavily on the ratio of reads/writes vs storage.",
+      `Community sentiment is split on the maturity of ${entities.a.name}'s ecosystem compared to the legacy integrations of ${entities.b.name}.`
+    ],
     verdict: {
       bestOverall: entities.a.name,
       bestValue: entities.b.name,
@@ -115,7 +132,7 @@ export const buildResult = (query: string, refreshCount: number, previousResult?
         winner: "a",
         verdict: "Open standards and portability reduce long-term lock-in risk for technical teams.",
         facts: [
-          { entity: "a" as const, label: "Portability", value: "Postgres foundation gives clearer migration and self-hosting pathways.", source: "Official docs", sourceUrl: "#", sourceTitle: `${entities.a.name} docs`, confidence: 0.87, freshness: "Stable" as const },
+          { entity: "a" as const, label: "Portability", value: "Open standards foundation gives clearer migration and self-hosting pathways.", source: "Official docs", sourceUrl: "#", sourceTitle: `${entities.a.name} docs`, confidence: 0.87, freshness: "Stable" as const },
           { entity: "b" as const, label: "Portability", value: "Managed convenience can create product-specific architecture dependencies.", source: "Docs and migration notes", sourceUrl: "#", sourceTitle: `${entities.b.name} docs`, confidence: 0.79, freshness: "Stable" as const },
         ],
       },

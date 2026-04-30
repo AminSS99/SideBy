@@ -16,6 +16,8 @@ import {
   SourcesPanel,
   FollowUpPanel,
   EntityFactPanel,
+  RadarChartPanel,
+  ConsensusPanel,
 } from "@/components/Comparison/ComparisonEngine";
 
 const Compare = () => {
@@ -159,6 +161,10 @@ const Compare = () => {
             <div className="compare-content-grid grid gap-10 lg:grid-cols-12 relative items-start">
               <div className="space-y-10 lg:col-span-8">
                 <ComparisonHeader result={result} onRefresh={handleRefresh} comparisonId={jobData.id} />
+                
+                <RadarChartPanel result={result} />
+                <ConsensusPanel result={result} />
+
                 <div className="space-y-10">
                   {result.categories.map((cat, i) => (
                     <CategorySection key={cat.name} category={cat} entities={result.entities} index={i} />

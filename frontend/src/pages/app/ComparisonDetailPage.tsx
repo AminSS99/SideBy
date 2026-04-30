@@ -23,6 +23,8 @@ import {
   SourcesPanel,
   VerdictPanel,
   EntityFactPanel,
+  RadarChartPanel,
+  ConsensusPanel,
 } from "@/components/Comparison/ComparisonEngine";
 
 type ComparisonJob = {
@@ -280,6 +282,10 @@ const ComparisonDetailPage = () => {
               onRefresh={() => void refresh()}
               comparisonId={job.id}
             />
+            
+            <RadarChartPanel result={result} />
+            <ConsensusPanel result={result} />
+
             <div className="space-y-10">
               {result.categories.map((category, index) => (
                 <CategorySection

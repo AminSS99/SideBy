@@ -1,10 +1,12 @@
 import React, { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { Download } from "lucide-react";
 import { ShareButton } from "@/components/ShareModal";
 import { colors } from "@/config/brand";
 import { EntityCard } from "./EntityCard";
 import type { ComparisonData } from "./types";
+import { toast } from "sonner";
 
 interface ComparisonHeaderProps {
   result: ComparisonData;
@@ -103,6 +105,16 @@ export const ComparisonHeader = ({
 
   }, { scope: container });
 
+  const handleExport = () => {
+    toast("Preparing Export", {
+      description: "Generating a clean PDF layout for your report.",
+      icon: <Download className="h-4 w-4 text-emerald-500" />,
+    });
+    setTimeout(() => {
+      window.print(); // Simple fallback for PDF export
+    }, 800);
+  };
+
   return (
     <div ref={container} className="relative">
       <div className="mb-12 flex flex-wrap items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
@@ -119,6 +131,14 @@ export const ComparisonHeader = ({
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleExport}
+            className="ch-top-item flex items-center gap-2 rounded-sm border border-[#2a2a2a] bg-[#111] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#1a1a1a] hover:border-[#444] hidden sm:flex"
+            title="Export to PDF"
+          >
+            <Download className="h-3 w-3" />
+            Export
+          </button>
           <div className="ch-top-item">
             <ShareButton
               entityA={result.entities.a.name}
@@ -171,7 +191,7 @@ export const ComparisonHeader = ({
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 mb-10">
         <div className="ch-card perspective-1000"><EntityCard entity={result.entities.a} side="a" /></div>
         <div className="ch-card perspective-1000"><EntityCard entity={result.entities.b} side="b" /></div>
       </div>
