@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -21,12 +21,59 @@ const Index = () => {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+
+  // Parallax Effect
+  useEffect(() => {
+    if (!heroRef.current) return;
+    const hero = heroRef.current;
+    
+    // QuickTo for smooth performant following
+    const xToTitle = gsap.quickTo(".parallax-title", "x", { duration: 0.8, ease: "power3" });
+    const yToTitle = gsap.quickTo(".parallax-title", "y", { duration: 0.8, ease: "power3" });
+    
+    const xToDesc = gsap.quickTo(".parallax-desc", "x", { duration: 1, ease: "power3" });
+    const yToDesc = gsap.quickTo(".parallax-desc", "y", { duration: 1, ease: "power3" });
+
+    const xToBg = gsap.quickTo(".parallax-bg", "x", { duration: 1.5, ease: "power2.out" });
+    const yToBg = gsap.quickTo(".parallax-bg", "y", { duration: 1.5, ease: "power2.out" });
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = hero.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+
+      // Move elements on different depth planes
+      xToTitle(x * -20);
+      yToTitle(y * -20);
+      
+      xToDesc(x * -10);
+      yToDesc(y * -10);
+
+      xToBg(x * 40);
+      yToBg(y * 40);
+    };
+
+    const handleMouseLeave = () => {
+      xToTitle(0); yToTitle(0);
+      xToDesc(0); yToDesc(0);
+      xToBg(0); yToBg(0);
+    };
+
+    hero.addEventListener("mousemove", handleMouseMove);
+    hero.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      hero.removeEventListener("mousemove", handleMouseMove);
+      hero.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
 
   useGSAP(() => {
     const tl = gsap.timeline();
     tl.from(".hero-badge", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" })
-      .from(".hero-title", { y: 30, opacity: 0, duration: 1, ease: "expo.out" }, "-=0.6")
-      .from(".hero-desc", { y: 20, opacity: 0, duration: 0.8 }, "-=0.6")
+      .from(".parallax-title", { y: 30, opacity: 0, duration: 1, ease: "expo.out" }, "-=0.6")
+      .from(".parallax-desc", { y: 20, opacity: 0, duration: 0.8 }, "-=0.6")
       .from(".hero-search", { y: 20, opacity: 0, duration: 0.8, ease: "back.out(1.2)" }, "-=0.4")
       .from(".hero-featured", { opacity: 0, duration: 1 }, "-=0.4");
 
@@ -81,7 +128,7 @@ const Index = () => {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
       </div>
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[600px] w-[800px] rounded-full bg-orange-600/[0.05] blur-[120px]" />
+        <div className="parallax-bg absolute -top-40 left-1/2 -translate-x-1/2 h-[600px] w-[800px] rounded-full bg-orange-600/[0.05] blur-[120px]" />
       </div>
 
       <header className="relative z-40 border-b border-white/[0.06] bg-[#030303]/80 backdrop-blur-xl sticky top-0">
@@ -117,21 +164,21 @@ const Index = () => {
 
       <main className="relative z-10 mx-auto max-w-7xl px-4 pt-24 sm:px-6 pb-24">
         {/* Hero Section */}
-        <div className="flex flex-col items-center text-center pb-24">
-          <div className="hero-badge mb-6 flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-400">
+        <div ref={heroRef} className="flex flex-col items-center text-center pb-24 relative perspective-1000">
+          <div className="hero-badge mb-6 flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-400 transform-style-3d">
             <Sparkles className="h-3 w-3" />
             AI-Powered Technical Research
           </div>
           
-          <h1 className="hero-title max-w-4xl font-serif text-5xl tracking-tight text-white md:text-7xl leading-[1.1]">
+          <h1 className="parallax-title max-w-4xl font-serif text-5xl tracking-tight text-white md:text-7xl leading-[1.1] transform-style-3d will-change-transform">
             The truth about your tech stack, <span className="bg-gradient-to-br from-orange-400 to-orange-600 bg-clip-text text-transparent italic font-light pr-2">side by side.</span>
           </h1>
           
-          <p className="hero-desc mt-6 max-w-2xl text-lg text-white/50 font-light leading-relaxed">
+          <p className="parallax-desc mt-6 max-w-2xl text-lg text-white/50 font-light leading-relaxed transform-style-3d will-change-transform">
             Stop digging through biased marketing pages and outdated Reddit threads. Generate deep, source-backed technical comparisons in seconds.
           </p>
 
-          <form onSubmit={handleSearch} className="hero-search mt-10 w-full max-w-2xl relative group">
+          <form onSubmit={handleSearch} className="hero-search mt-10 w-full max-w-2xl relative group transform-translate-z-10">
             <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none">
               <Search className="h-5 w-5 text-white/30 group-focus-within:text-orange-500 transition-colors" />
             </div>

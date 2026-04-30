@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import { Activity, Cpu, Database, Zap } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
@@ -13,6 +13,23 @@ const mockData = [
   { date: "Sat", runs: 8, tokens: 2100 },
   { date: "Sun", runs: 35, tokens: 15600 },
 ];
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-sm border border-[#333] bg-[#0c0b0a]/90 p-4 shadow-2xl backdrop-blur-xl">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">{label}</p>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_8px_#ea580c]" />
+            <span className="text-sm font-medium text-[#fdfbf7]">{payload[0].value} runs</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 const AnalyticsPage = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,29 +56,33 @@ const AnalyticsPage = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <div className="stat-card rounded-sm border border-[#2a2a2a] bg-[#111] p-8 hover:border-[#444] transition-colors">
-          <Activity className="h-5 w-5 text-orange-500" />
-          <p className="mt-5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">Total AI Runs</p>
-          <p className="mt-2 font-serif text-4xl text-[#fdfbf7]">139</p>
-          <p className="mt-3 text-xs font-medium text-emerald-500">+24% from last week</p>
+        <div className="stat-card rounded-sm border border-[#2a2a2a] bg-[#111] p-8 hover:border-[#444] transition-colors relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Activity className="h-5 w-5 text-orange-500 relative z-10" />
+          <p className="mt-5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 relative z-10">Total AI Runs</p>
+          <p className="mt-2 font-serif text-4xl text-[#fdfbf7] relative z-10">139</p>
+          <p className="mt-3 text-xs font-medium text-emerald-500 relative z-10">+24% from last week</p>
         </div>
-        <div className="stat-card rounded-sm border border-[#2a2a2a] bg-[#111] p-8 hover:border-[#444] transition-colors">
-          <Zap className="h-5 w-5 text-cyan-500" />
-          <p className="mt-5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">Credits Used</p>
-          <p className="mt-2 font-serif text-4xl text-[#fdfbf7]">425</p>
-          <p className="mt-3 text-xs text-[#fdfbf7]/40">Out of 500 included</p>
+        <div className="stat-card rounded-sm border border-[#2a2a2a] bg-[#111] p-8 hover:border-[#444] transition-colors relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Zap className="h-5 w-5 text-cyan-500 relative z-10" />
+          <p className="mt-5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 relative z-10">Credits Used</p>
+          <p className="mt-2 font-serif text-4xl text-[#fdfbf7] relative z-10">425</p>
+          <p className="mt-3 text-xs text-[#fdfbf7]/40 relative z-10">Out of 500 included</p>
         </div>
-        <div className="stat-card rounded-sm border border-[#2a2a2a] bg-[#111] p-8 hover:border-[#444] transition-colors">
-          <Cpu className="h-5 w-5 text-purple-500" />
-          <p className="mt-5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">Tokens Generated</p>
-          <p className="mt-2 font-serif text-4xl text-[#fdfbf7]">55.8k</p>
-          <p className="mt-3 text-xs font-medium text-emerald-500">Highly efficient</p>
+        <div className="stat-card rounded-sm border border-[#2a2a2a] bg-[#111] p-8 hover:border-[#444] transition-colors relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Cpu className="h-5 w-5 text-purple-500 relative z-10" />
+          <p className="mt-5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 relative z-10">Tokens Generated</p>
+          <p className="mt-2 font-serif text-4xl text-[#fdfbf7] relative z-10">55.8k</p>
+          <p className="mt-3 text-xs font-medium text-emerald-500 relative z-10">Highly efficient</p>
         </div>
-        <div className="stat-card rounded-sm border border-[#2a2a2a] bg-[#111] p-8 hover:border-[#444] transition-colors">
-          <Database className="h-5 w-5 text-emerald-500" />
-          <p className="mt-5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">Indexed Docs</p>
-          <p className="mt-2 font-serif text-4xl text-[#fdfbf7]">12</p>
-          <p className="mt-3 text-xs text-[#fdfbf7]/40">14.2 MB total storage</p>
+        <div className="stat-card rounded-sm border border-[#2a2a2a] bg-[#111] p-8 hover:border-[#444] transition-colors relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Database className="h-5 w-5 text-emerald-500 relative z-10" />
+          <p className="mt-5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 relative z-10">Indexed Docs</p>
+          <p className="mt-2 font-serif text-4xl text-[#fdfbf7] relative z-10">12</p>
+          <p className="mt-3 text-xs text-[#fdfbf7]/40 relative z-10">14.2 MB total storage</p>
         </div>
       </div>
 
@@ -73,38 +94,41 @@ const AnalyticsPage = () => {
         
         <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={mockData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+            <AreaChart data={mockData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <defs>
+                <linearGradient id="colorRuns" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ea580c" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#ea580c" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" vertical={false} />
               <XAxis 
                 dataKey="date" 
-                stroke="#666" 
-                tick={{ fill: '#888', fontSize: 12, fontFamily: "ui-sans-serif, system-ui, sans-serif" }} 
+                stroke="#555" 
+                tick={{ fill: '#888', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }} 
                 axisLine={false} 
                 tickLine={false}
                 dy={10}
               />
               <YAxis 
-                stroke="#666" 
+                stroke="#555" 
                 tick={{ fill: '#888', fontSize: 12, fontFamily: "ui-sans-serif, system-ui, sans-serif" }} 
                 axisLine={false} 
                 tickLine={false} 
                 dx={-10}
               />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#0c0b0a', borderColor: '#333', borderRadius: '4px', padding: '12px' }}
-                itemStyle={{ color: '#ea580c', fontWeight: 'bold' }}
-                labelStyle={{ color: '#888', marginBottom: '8px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
-              />
-              <Line 
+              <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#444', strokeWidth: 1, strokeDasharray: '4 4' }} />
+              <Area 
                 type="monotone" 
                 dataKey="runs" 
                 name="AI Runs"
                 stroke="#ea580c" 
                 strokeWidth={3}
-                dot={{ fill: '#111', stroke: '#ea580c', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, fill: '#ea580c', stroke: 'transparent' }} 
+                fillOpacity={1}
+                fill="url(#colorRuns)"
+                activeDot={{ r: 6, fill: '#ea580c', stroke: '#111', strokeWidth: 2 }} 
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>

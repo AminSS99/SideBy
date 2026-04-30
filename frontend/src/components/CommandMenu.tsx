@@ -20,7 +20,6 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut,
 } from "@/components/ui/command";
 
 export function CommandMenu({ open, setOpen }: { open: boolean, setOpen: (open: boolean) => void }) {
@@ -44,88 +43,103 @@ export function CommandMenu({ open, setOpen }: { open: boolean, setOpen: (open: 
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <div className="bg-[#0c0b0a] border border-[#2a2a2a] rounded-xl overflow-hidden shadow-2xl">
+      <div className="bg-[#0c0b0a]/90 backdrop-blur-2xl border border-[#333] rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
         <CommandInput 
           placeholder="Type a command or search..." 
-          className="h-14 border-b border-[#2a2a2a] text-[#fdfbf7]"
+          className="h-14 border-b border-[#2a2a2a] text-[#fdfbf7] font-serif text-lg bg-transparent px-4"
         />
-        <CommandList className="max-h-[350px] overflow-y-auto no-scrollbar">
-          <CommandEmpty className="py-6 text-center text-sm text-[#fdfbf7]/40">No results found.</CommandEmpty>
-          <CommandGroup heading="Suggestions" className="text-[#fdfbf7]/40 px-2 py-3">
+        <CommandList className="max-h-[400px] overflow-y-auto no-scrollbar p-2">
+          <CommandEmpty className="py-10 text-center text-sm text-[#fdfbf7]/40 font-serif italic">No signals found in the matrix.</CommandEmpty>
+          
+          <CommandGroup heading="Suggestions" className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 px-2 py-3">
             <CommandItem 
               onSelect={() => runCommand(() => navigate("/app/comparisons"))}
-              className="text-[#fdfbf7] aria-selected:bg-[#1a1a1a] aria-selected:text-orange-400 cursor-pointer rounded-sm mb-1"
+              className="text-[#fdfbf7]/80 aria-selected:bg-orange-500/10 aria-selected:text-orange-400 cursor-pointer rounded-sm mb-1 transition-colors group relative overflow-hidden"
             >
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-orange-500 opacity-0 group-aria-selected:opacity-100 transition-opacity" />
               <GitCompareArrows className="mr-3 h-4 w-4" />
               <span>New Comparison</span>
             </CommandItem>
             <CommandItem 
               onSelect={() => runCommand(() => navigate("/app/chat"))}
-              className="text-[#fdfbf7] aria-selected:bg-[#1a1a1a] aria-selected:text-orange-400 cursor-pointer rounded-sm"
+              className="text-[#fdfbf7]/80 aria-selected:bg-orange-500/10 aria-selected:text-orange-400 cursor-pointer rounded-sm group relative overflow-hidden"
             >
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-orange-500 opacity-0 group-aria-selected:opacity-100 transition-opacity" />
               <MessageSquare className="mr-3 h-4 w-4" />
               <span>Ask AI Assistant</span>
             </CommandItem>
           </CommandGroup>
-          <CommandSeparator className="bg-[#2a2a2a]" />
-          <CommandGroup heading="Navigation" className="text-[#fdfbf7]/40 px-2 py-3">
+          
+          <CommandSeparator className="bg-[#2a2a2a] mx-2" />
+          
+          <CommandGroup heading="Navigation" className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 px-2 py-3">
             <CommandItem 
               onSelect={() => runCommand(() => navigate("/app"))}
-              className="text-[#fdfbf7] aria-selected:bg-[#1a1a1a] aria-selected:text-orange-400 cursor-pointer rounded-sm mb-1"
+              className="text-[#fdfbf7]/80 aria-selected:bg-white/5 aria-selected:text-white cursor-pointer rounded-sm mb-1 group relative overflow-hidden"
             >
-              <LayoutDashboard className="mr-3 h-4 w-4" />
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white opacity-0 group-aria-selected:opacity-100 transition-opacity" />
+              <LayoutDashboard className="mr-3 h-4 w-4 text-white/50 group-aria-selected:text-white transition-colors" />
               <span>Overview</span>
             </CommandItem>
             <CommandItem 
               onSelect={() => runCommand(() => navigate("/app/research"))}
-              className="text-[#fdfbf7] aria-selected:bg-[#1a1a1a] aria-selected:text-orange-400 cursor-pointer rounded-sm mb-1"
+              className="text-[#fdfbf7]/80 aria-selected:bg-white/5 aria-selected:text-white cursor-pointer rounded-sm mb-1 group relative overflow-hidden"
             >
-              <Microscope className="mr-3 h-4 w-4" />
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white opacity-0 group-aria-selected:opacity-100 transition-opacity" />
+              <Microscope className="mr-3 h-4 w-4 text-white/50 group-aria-selected:text-white transition-colors" />
               <span>Research Canvas</span>
             </CommandItem>
             <CommandItem 
               onSelect={() => runCommand(() => navigate("/app/uploads"))}
-              className="text-[#fdfbf7] aria-selected:bg-[#1a1a1a] aria-selected:text-orange-400 cursor-pointer rounded-sm mb-1"
+              className="text-[#fdfbf7]/80 aria-selected:bg-white/5 aria-selected:text-white cursor-pointer rounded-sm mb-1 group relative overflow-hidden"
             >
-              <Database className="mr-3 h-4 w-4" />
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white opacity-0 group-aria-selected:opacity-100 transition-opacity" />
+              <Database className="mr-3 h-4 w-4 text-white/50 group-aria-selected:text-white transition-colors" />
               <span>Knowledge Base</span>
             </CommandItem>
             <CommandItem 
               onSelect={() => runCommand(() => navigate("/app/projects"))}
-              className="text-[#fdfbf7] aria-selected:bg-[#1a1a1a] aria-selected:text-orange-400 cursor-pointer rounded-sm mb-1"
+              className="text-[#fdfbf7]/80 aria-selected:bg-white/5 aria-selected:text-white cursor-pointer rounded-sm mb-1 group relative overflow-hidden"
             >
-              <FolderKanban className="mr-3 h-4 w-4" />
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white opacity-0 group-aria-selected:opacity-100 transition-opacity" />
+              <FolderKanban className="mr-3 h-4 w-4 text-white/50 group-aria-selected:text-white transition-colors" />
               <span>Projects</span>
             </CommandItem>
             <CommandItem 
               onSelect={() => runCommand(() => navigate("/app/workspaces"))}
-              className="text-[#fdfbf7] aria-selected:bg-[#1a1a1a] aria-selected:text-orange-400 cursor-pointer rounded-sm"
+              className="text-[#fdfbf7]/80 aria-selected:bg-white/5 aria-selected:text-white cursor-pointer rounded-sm group relative overflow-hidden"
             >
-              <Layers3 className="mr-3 h-4 w-4" />
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white opacity-0 group-aria-selected:opacity-100 transition-opacity" />
+              <Layers3 className="mr-3 h-4 w-4 text-white/50 group-aria-selected:text-white transition-colors" />
               <span>Workspaces</span>
             </CommandItem>
           </CommandGroup>
-          <CommandSeparator className="bg-[#2a2a2a]" />
-          <CommandGroup heading="Account & Settings" className="text-[#fdfbf7]/40 px-2 py-3">
+          
+          <CommandSeparator className="bg-[#2a2a2a] mx-2" />
+          
+          <CommandGroup heading="Account & Settings" className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 px-2 py-3">
             <CommandItem 
               onSelect={() => runCommand(() => navigate("/app/team"))}
-              className="text-[#fdfbf7] aria-selected:bg-[#1a1a1a] aria-selected:text-orange-400 cursor-pointer rounded-sm mb-1"
+              className="text-[#fdfbf7]/80 aria-selected:bg-white/5 aria-selected:text-white cursor-pointer rounded-sm mb-1 group relative overflow-hidden"
             >
-              <Users className="mr-3 h-4 w-4" />
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white opacity-0 group-aria-selected:opacity-100 transition-opacity" />
+              <Users className="mr-3 h-4 w-4 text-white/50 group-aria-selected:text-white transition-colors" />
               <span>Team & Access</span>
             </CommandItem>
             <CommandItem 
               onSelect={() => runCommand(() => navigate("/app/billing"))}
-              className="text-[#fdfbf7] aria-selected:bg-[#1a1a1a] aria-selected:text-orange-400 cursor-pointer rounded-sm mb-1"
+              className="text-[#fdfbf7]/80 aria-selected:bg-white/5 aria-selected:text-white cursor-pointer rounded-sm mb-1 group relative overflow-hidden"
             >
-              <CreditCard className="mr-3 h-4 w-4" />
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white opacity-0 group-aria-selected:opacity-100 transition-opacity" />
+              <CreditCard className="mr-3 h-4 w-4 text-white/50 group-aria-selected:text-white transition-colors" />
               <span>Billing</span>
             </CommandItem>
             <CommandItem 
               onSelect={() => runCommand(() => navigate("/app/settings"))}
-              className="text-[#fdfbf7] aria-selected:bg-[#1a1a1a] aria-selected:text-orange-400 cursor-pointer rounded-sm"
+              className="text-[#fdfbf7]/80 aria-selected:bg-white/5 aria-selected:text-white cursor-pointer rounded-sm group relative overflow-hidden"
             >
-              <Settings className="mr-3 h-4 w-4" />
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white opacity-0 group-aria-selected:opacity-100 transition-opacity" />
+              <Settings className="mr-3 h-4 w-4 text-white/50 group-aria-selected:text-white transition-colors" />
               <span>Settings</span>
             </CommandItem>
           </CommandGroup>
