@@ -55,14 +55,17 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
   return (
     <div
       ref={cardRef}
-      className={`rounded-sm border-t-2 p-6 transition-colors hover:bg-[#151515] bg-[#111] ${
+      className={`group relative overflow-hidden rounded-sm border-t-2 p-6 transition-colors hover:bg-[#151515] bg-[#111] ${
         fact.changed
           ? "bg-[#1a1510] border-orange-500 shadow-[0_0_20px_rgba(234,88,12,0.05)]"
           : "border-[#2a2a2a]"
       } ${className}`}
       style={{ borderTopColor: fact.changed ? "#ea580c" : entity.hex }}
     >
-      <div className="mb-5 flex items-start justify-between gap-3 border-b border-[#2a2a2a] pb-4">
+      {/* Sweeping Glassmorphic Shine Effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-[1.5s] ease-out z-0 pointer-events-none" />
+
+      <div className="relative z-10 mb-5 flex items-start justify-between gap-3 border-b border-[#2a2a2a] pb-4">
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: entity.hex }}>
             {entity.name}
@@ -84,16 +87,16 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
         </div>
       </div>
 
-      <p className="mb-6 text-sm leading-relaxed text-[#fdfbf7]/80">{fact.value}</p>
+      <p className="relative z-10 mb-6 text-sm leading-relaxed text-[#fdfbf7]/80">{fact.value}</p>
 
       {fact.changed && fact.previousValue && (
-        <div className="mb-6 border-l-2 border-[#444] pl-4 py-1">
+        <div className="relative z-10 mb-6 border-l-2 border-[#444] pl-4 py-1">
           <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1.5">Previously</p>
           <p className="text-xs text-[#fdfbf7]/40 line-through">{fact.previousValue}</p>
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 pt-2">
+      <div className="relative z-10 flex flex-wrap gap-2 pt-2">
         <span className="inline-flex items-center gap-1.5 border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
           <SourcePin className="h-2.5 w-2.5" />
           {fact.source}

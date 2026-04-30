@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { CommandMenu } from "@/components/CommandMenu";
 import { BrandFooter } from "@/components/brand/BrandFooter";
+import { AmbientOrbs } from "@/components/AmbientOrbs";
 
 const navItems = [
   { to: "/app", label: "Overview", icon: LayoutDashboard, end: true },
@@ -69,7 +70,8 @@ const AppShell = () => {
   };
 
   return (
-    <div ref={shellRef} className="min-h-screen bg-[#050505] text-white selection:bg-orange-500/30">
+    <div ref={shellRef} className="min-h-screen bg-[#050505] text-white selection:bg-orange-500/30 relative">
+      <AmbientOrbs />
       <CommandMenu open={commandOpen} setOpen={setCommandOpen} />
       
       <div className="shell-header border-b border-white/10 bg-black/40 backdrop-blur-xl sticky top-0 z-50">
@@ -125,8 +127,8 @@ const AppShell = () => {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-7xl gap-4 px-4 py-5 sm:px-6 sm:py-8 lg:grid-cols-[220px_1fr] lg:gap-8 items-start">
-        <aside className="shell-sidebar flex flex-col rounded-sm border border-white/10 bg-white/[0.02] p-2 sm:p-4 sticky top-28 lg:h-[calc(100vh-8rem)]">
+      <div className="relative z-10 mx-auto grid max-w-7xl gap-4 px-4 py-5 sm:px-6 sm:py-8 lg:grid-cols-[220px_1fr] lg:gap-8 items-start">
+        <aside className="shell-sidebar flex flex-col rounded-sm border border-white/10 bg-white/[0.02] backdrop-blur-md p-2 sm:p-4 sticky top-28 lg:h-[calc(100vh-8rem)]">
           <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:space-y-1 lg:overflow-visible no-scrollbar flex-1">
             {navItems.map((item) => (
               <NavLink
@@ -161,7 +163,7 @@ const AppShell = () => {
           </div>
         </aside>
 
-        <main className="shell-main min-w-0 rounded-sm border border-white/10 bg-[#0a0a0a] p-6 sm:p-8 md:p-10 shadow-2xl">
+        <main className="shell-main min-w-0 rounded-sm border border-white/10 bg-[#0a0a0a]/90 backdrop-blur-md p-6 sm:p-8 md:p-10 shadow-2xl">
           {workspaceError && (
             <div className="mb-6 rounded-sm border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-100">
               {workspaceError}

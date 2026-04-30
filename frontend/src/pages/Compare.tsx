@@ -8,6 +8,7 @@ import { brand } from "@/config/brand";
 import { buildApiUrl } from "@/config/env";
 import { apiFetch } from "@/lib/api";
 import { buildResult } from "@/lib/comparisonUtils";
+import { AmbientOrbs } from "@/components/AmbientOrbs";
 import {
   type ComparisonData,
   ComparisonHeader,
@@ -94,14 +95,12 @@ const Compare = () => {
   }, [isLoading, result]);
 
   return (
-    <div ref={containerRef} className="min-h-screen overflow-x-hidden bg-[#030303] text-white selection:bg-orange-500/30">
-      <div className="pointer-events-none fixed inset-0 opacity-[0.03]">
+    <div ref={containerRef} className="min-h-screen overflow-x-hidden bg-[#030303] text-white selection:bg-orange-500/30 relative">
+      <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
       </div>
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-orange-600/[0.04] blur-[120px]" />
-        <div className="absolute -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-blue-600/[0.04] blur-[120px]" />
-      </div>
+      
+      <AmbientOrbs />
 
       <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#030303]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">

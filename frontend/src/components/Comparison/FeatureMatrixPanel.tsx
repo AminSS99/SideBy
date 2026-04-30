@@ -62,11 +62,11 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
         </div>
       </div>
       
-      <div className="overflow-x-auto no-scrollbar">
+      <div className="overflow-x-auto no-scrollbar relative">
         <div className="min-w-[700px]">
           {/* Sticky Header */}
-          <div className="grid grid-cols-[1.2fr_1fr_1fr] bg-[#0c0b0a] border-b border-[#2a2a2a] sticky top-0 z-20">
-            <div className="p-6 font-bold uppercase tracking-widest text-[10px] text-[#fdfbf7]/40 self-end">
+          <div className="grid grid-cols-[1.2fr_1fr_1fr] bg-[#0c0b0a] border-b border-[#2a2a2a] sticky top-0 z-30">
+            <div className="p-6 font-bold uppercase tracking-widest text-[10px] text-[#fdfbf7]/40 self-end sticky left-0 z-40 bg-[#0c0b0a] border-r border-[#2a2a2a]">
               Criteria
             </div>
             <div className="p-6 border-l border-[#2a2a2a] bg-[#111]/50 backdrop-blur-md">
@@ -82,8 +82,8 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
           {/* Matrix Body */}
           {matrixData.map((cat, i) => (
             <React.Fragment key={i}>
-              <div className="bg-[#1a1a1a] border-b border-[#2a2a2a] p-4 pl-6 flex items-center justify-between sticky top-[97px] z-10 shadow-sm">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/80">{cat.category}</span>
+              <div className="bg-[#1a1a1a] border-b border-[#2a2a2a] p-4 pl-6 flex items-center justify-between sticky top-[97px] z-20 shadow-sm">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/80 sticky left-6 z-30">{cat.category}</span>
                 {cat.winner !== 'tie' && (
                   <span className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-orange-400 border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 rounded-sm">
                     <Trophy className="h-3 w-3" />
@@ -98,18 +98,18 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
                 const isBWinner = cat.winner === 'b';
 
                 return (
-                  <div key={j} className="matrix-row grid grid-cols-[1.2fr_1fr_1fr] border-b border-[#2a2a2a] hover:bg-[#151515] transition-colors group">
-                    <div className="p-5 pl-6 text-sm text-[#fdfbf7]/90 font-medium">
+                  <div key={j} className="matrix-row grid grid-cols-[1.2fr_1fr_1fr] border-b border-[#2a2a2a] hover:bg-[#151515] transition-colors group relative">
+                    <div className="p-5 pl-6 text-sm text-[#fdfbf7]/90 font-medium sticky left-0 z-10 bg-[#0c0b0a] group-hover:bg-[#151515] border-r border-[#2a2a2a] transition-colors">
                       {row.label}
                     </div>
                     <div className={cn(
-                      "p-5 border-l border-[#2a2a2a] text-sm text-[#fdfbf7]/60 group-hover:text-[#fdfbf7]/90 transition-colors leading-relaxed",
+                      "p-5 border-l border-[#2a2a2a] text-sm text-[#fdfbf7]/60 group-hover:text-[#fdfbf7]/90 transition-colors leading-relaxed relative",
                       isAWinner && "bg-white/[0.02]"
                     )}>
                       {row.factA?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}
                     </div>
                     <div className={cn(
-                      "p-5 border-l border-[#2a2a2a] text-sm text-[#fdfbf7]/60 group-hover:text-[#fdfbf7]/90 transition-colors leading-relaxed",
+                      "p-5 border-l border-[#2a2a2a] text-sm text-[#fdfbf7]/60 group-hover:text-[#fdfbf7]/90 transition-colors leading-relaxed relative",
                       isBWinner && "bg-white/[0.02]"
                     )}>
                       {row.factB?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}

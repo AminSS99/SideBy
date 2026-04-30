@@ -5,6 +5,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { Search, Sparkles, Zap, ArrowRight, ShieldCheck, Scale, Cpu, Network, BookOpenText } from "lucide-react";
 import { BrandFooter } from "@/components/brand/BrandFooter";
+import { AmbientOrbs } from "@/components/AmbientOrbs";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -35,9 +36,6 @@ const Index = () => {
     const xToDesc = gsap.quickTo(".parallax-desc", "x", { duration: 1, ease: "power3" });
     const yToDesc = gsap.quickTo(".parallax-desc", "y", { duration: 1, ease: "power3" });
 
-    const xToBg = gsap.quickTo(".parallax-bg", "x", { duration: 1.5, ease: "power2.out" });
-    const yToBg = gsap.quickTo(".parallax-bg", "y", { duration: 1.5, ease: "power2.out" });
-
     const handleMouseMove = (e: MouseEvent) => {
       const rect = hero.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width - 0.5;
@@ -49,15 +47,11 @@ const Index = () => {
       
       xToDesc(x * -10);
       yToDesc(y * -10);
-
-      xToBg(x * 40);
-      yToBg(y * 40);
     };
 
     const handleMouseLeave = () => {
       xToTitle(0); yToTitle(0);
       xToDesc(0); yToDesc(0);
-      xToBg(0); yToBg(0);
     };
 
     hero.addEventListener("mousemove", handleMouseMove);
@@ -123,13 +117,12 @@ const Index = () => {
   };
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-[#030303] text-white overflow-x-hidden selection:bg-orange-500/30">
-      <div className="pointer-events-none fixed inset-0 opacity-[0.03]">
+    <div ref={containerRef} className="min-h-screen bg-[#030303] text-white overflow-x-hidden selection:bg-orange-500/30 relative">
+      <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
       </div>
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="parallax-bg absolute -top-40 left-1/2 -translate-x-1/2 h-[600px] w-[800px] rounded-full bg-orange-600/[0.05] blur-[120px]" />
-      </div>
+      
+      <AmbientOrbs />
 
       <header className="relative z-40 border-b border-white/[0.06] bg-[#030303]/80 backdrop-blur-xl sticky top-0">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
