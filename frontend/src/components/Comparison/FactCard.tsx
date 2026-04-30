@@ -1,21 +1,20 @@
 import React from "react";
-import { motion } from "framer-motion";
 import type { ComparisonFact, Entity } from "./types";
 
 interface FactCardProps {
   fact: ComparisonFact;
   entity: Entity;
+  className?: string;
 }
 
-export const FactCard = ({ fact, entity }: FactCardProps) => (
-  <motion.div
-    className={`rounded-sm border-t-2 p-6 transition-colors bg-[#111] ${
+export const FactCard = ({ fact, entity, className = "" }: FactCardProps) => (
+  <div
+    className={`rounded-sm border-t-2 p-6 transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl bg-[#111] ${
       fact.changed
         ? "bg-[#1a1510] border-orange-500 shadow-[0_0_15px_rgba(234,88,12,0.1)]"
         : "border-[#2a2a2a]"
-    }`}
+    } ${className}`}
     style={{ borderTopColor: fact.changed ? "#ea580c" : entity.hex }}
-    whileHover={{ scale: 1.01 }}
   >
     <div className="mb-5 flex items-start justify-between gap-3 border-b border-[#2a2a2a] pb-4">
       <div className="min-w-0">
@@ -51,7 +50,7 @@ export const FactCard = ({ fact, entity }: FactCardProps) => (
         </span>
       )}
     </div>
-  </motion.div>
+  </div>
 );
 
 const ConfidenceGauge = ({ value, color }: { value: number; color: string }) => (
@@ -59,13 +58,10 @@ const ConfidenceGauge = ({ value, color }: { value: number; color: string }) => 
     <span className="text-[10px] font-bold tabular-nums text-[#fdfbf7]/50 uppercase tracking-widest">
       {Math.round(value * 100)}% Conf
     </span>
-    <div className="h-0.5 w-12 bg-[#2a2a2a]">
-      <motion.div
-        className="h-full"
+    <div className="h-0.5 w-12 bg-[#2a2a2a] relative overflow-hidden">
+      <div
+        className="absolute left-0 top-0 h-full confidence-bar"
         style={{ width: `${Math.round(value * 100)}%`, backgroundColor: color }}
-        initial={{ width: 0 }}
-        animate={{ width: `${Math.round(value * 100)}%` }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
       />
     </div>
   </div>

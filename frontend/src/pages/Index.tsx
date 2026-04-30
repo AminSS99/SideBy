@@ -1,7 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react";
 import { useQuery } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "framer-motion";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
 import { ArrowRight, GitCompareArrows, Lock, Search, Sparkles, BookOpenText, BadgeCheck, Boxes, FileSearch } from "lucide-react";
 import { Link } from "react-router-dom";
 import { brand, colors } from "@/config/brand";
@@ -17,6 +19,8 @@ import {
   SourcesPanel,
   FollowUpPanel,
 } from "@/components/Comparison/ComparisonEngine";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const examples = [
   "ChatGPT Plus vs Claude Pro",
@@ -226,10 +230,22 @@ const Index = () => {
   const [query, setQuery] = useState("Supabase vs Firebase for a SaaS");
   const [job, setJob] = useState<ActiveJob | null>(null);
   const [comparisonId, setComparisonId] = useState<string | null>(null);
-  const [result, setResult] = useState<ComparisonData | null>(null);
+  const [result, setResult] = useState<ComparisonData | null>(null); // Start empty so hero is visible
   const [refreshCount, setRefreshCount] = useState(0);
   const [followUp, setFollowUp] = useState("");
   const [followUpAnswer, setFollowUpAnswer] = useState("");
+
+  const pageRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    // Initial Hero Entrance Choreography
+    const tl = gsap.timeline();
+    tl.from(".hero-eyebrow", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" })
+      .from(".hero-title", { y: 40, opacity: 0, duration: 1, ease: "expo.out" }, "-=0.6")
+      .from(".hero-desc", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.8")
+      .from(".hero-input", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6")
+      .from(".hero-examples", { y: 10, opacity: 0, stagger: 0.1, duration: 0.5, ease: "power2.out" }, "-=0.4");
+  }, { scope: pageRef });
 
   const jobQuery = useQuery({
     queryKey: ["comparison-job", job?.id],
@@ -251,6 +267,18 @@ const Index = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job, jobData?.result, jobData?.status, query, refreshCount]);
 
+  // Entrance animation for result wrapper when result changes
+  useGSAP(() => {
+    if (result && !isResearching) {
+      gsap.from(".result-wrapper", {
+        y: 60,
+        opacity: 0,
+        duration: 1.2,
+        ease: "expo.out"
+      });
+    }
+  }, [result, isResearching]);
+
   const entityFacts = useMemo(() => {
     if (!result) return { a: [] as { category: string }[], b: [] as { category: string }[] };
     const facts = result.categories.flatMap((c) => c.facts.map((f) => ({ ...f, category: c.name })));
@@ -263,6 +291,9 @@ const Index = () => {
     setQuery(clean);
     setFollowUpAnswer("");
     if (refreshed) setRefreshCount((c) => c + 1);
+
+    // Scroll down slightly for effect
+    gsap.to(window, { duration: 0.8, scrollTo: { y: 200 }, ease: "power3.inOut" });
 
     try {
       const j = await createBackendJob(clean);
@@ -310,7 +341,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#0c0b0a] text-[#fdfbf7] selection:bg-orange-500/30">
+    <div ref={pageRef} className="min-h-screen overflow-x-hidden bg-[#0c0b0a] text-[#fdfbf7] selection:bg-orange-500/30">
       
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-[#2a2a2a] bg-[#0c0b0a]/90 backdrop-blur-md">
@@ -354,20 +385,20 @@ const Index = () => {
       <main className="relative z-10 mx-auto max-w-7xl px-6 pb-32 pt-20 lg:px-8">
         {/* Editorial Hero */}
         <section className="mb-24 w-full max-w-4xl">
-          <div className="mb-8 flex items-center gap-3 border-b-2 border-orange-600 pb-2 inline-flex">
+          <div className="hero-eyebrow mb-8 flex items-center gap-3 border-b-2 border-orange-600 pb-2 inline-flex">
             <Sparkles className="h-4 w-4 text-orange-500" /> 
             <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-orange-500">
               Editorial Intelligence
             </span>
           </div>
-          <h1 className="mb-8 font-serif text-5xl leading-[1.05] text-[#fdfbf7] sm:text-6xl md:text-[5rem] tracking-tight">
+          <h1 className="hero-title mb-8 font-serif text-5xl leading-[1.05] text-[#fdfbf7] sm:text-6xl md:text-[5rem] tracking-tight">
             Compare anything with source-backed confidence.
           </h1>
-          <p className="max-w-2xl text-lg leading-relaxed text-[#fdfbf7]/60 font-serif md:text-xl">
+          <p className="hero-desc max-w-2xl text-lg leading-relaxed text-[#fdfbf7]/60 font-serif md:text-xl">
             A premium engine that parses decisions, extracts official facts, and builds a living, nuanced matrix.
           </p>
 
-          <div className="relative mt-12 flex w-full flex-col gap-4 border-b border-[#444] pb-4 transition-colors focus-within:border-orange-500 md:flex-row md:items-center">
+          <div className="hero-input relative mt-12 flex w-full flex-col gap-4 border-b border-[#444] pb-4 transition-colors focus-within:border-orange-500 md:flex-row md:items-center">
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -389,7 +420,7 @@ const Index = () => {
               <button
                 key={ex}
                 onClick={() => startResearch(ex)}
-                className="border border-[#333] bg-[#111] px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 transition-all hover:border-orange-500/50 hover:bg-[#1a1a1a] hover:text-[#fdfbf7]"
+                className="hero-examples border border-[#333] bg-[#111] px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 transition-all hover:border-orange-500/50 hover:bg-[#1a1a1a] hover:text-[#fdfbf7]"
               >
                 {ex}
               </button>
@@ -398,8 +429,8 @@ const Index = () => {
         </section>
 
         {/* Results */}
-        <section className="border-t-4 border-[#2a2a2a] pt-20">
-          <AnimatePresence mode="wait">
+        {(isResearching || result) && (
+          <section className="border-t-4 border-[#2a2a2a] pt-20">
             {isResearching ? (
               <ResearchLoader
                 key="loading"
@@ -409,7 +440,7 @@ const Index = () => {
                 steps={researchSteps}
               />
             ) : result ? (
-              <div key="result" className="grid gap-12 lg:grid-cols-12">
+              <div key="result" className="result-wrapper grid gap-12 lg:grid-cols-12">
                 <div className="space-y-12 lg:col-span-8">
                   <ComparisonHeader result={result} onRefresh={handleRefresh} comparisonId={comparisonId} />
 
@@ -433,8 +464,8 @@ const Index = () => {
                 </aside>
               </div>
             ) : null}
-          </AnimatePresence>
-        </section>
+          </section>
+        )}
       </main>
     </div>
   );
@@ -446,39 +477,55 @@ const EntityFactPanel = ({
 }: {
   result: ComparisonData;
   facts: Record<string, Array<{ category: string }>>;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 12 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.35, delay: 0.1 }}
-    className="border border-[#2a2a2a] bg-[#0c0b0a] p-8"
-  >
-    <h3 className="mb-6 font-serif text-2xl text-[#fdfbf7] tracking-tight">Fact Coverage</h3>
-    <div className="space-y-4">
-      {(["a", "b"] as const).map((key) => (
-        <div key={key} className="border border-[#2a2a2a] bg-[#111] p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <span className="text-base font-serif" style={{ color: result.entities[key].hex }}>
-              {result.entities[key].name}
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
-              {facts[key].length} facts
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {facts[key].slice(0, 4).map((f) => (
-              <span
-                key={`${key}-${f.category}`}
-                className="border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50"
-              >
-                {f.category}
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  useGSAP(() => {
+    gsap.from(".efp-item", {
+      scrollTrigger: {
+        trigger: containerRef.current,
+        start: "top 90%",
+      },
+      y: 20,
+      opacity: 0,
+      stagger: 0.15,
+      duration: 0.8,
+      ease: "power3.out"
+    });
+  }, { scope: containerRef });
+
+  return (
+    <div
+      ref={containerRef}
+      className="border border-[#2a2a2a] bg-[#0c0b0a] p-8"
+    >
+      <h3 className="mb-6 font-serif text-2xl text-[#fdfbf7] tracking-tight">Fact Coverage</h3>
+      <div className="space-y-4">
+        {(["a", "b"] as const).map((key) => (
+          <div key={key} className="efp-item border border-[#2a2a2a] bg-[#111] p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <span className="text-base font-serif" style={{ color: result.entities[key].hex }}>
+                {result.entities[key].name}
               </span>
-            ))}
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
+                {facts[key].length} facts
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {facts[key].slice(0, 4).map((f) => (
+                <span
+                  key={`${key}-${f.category}`}
+                  className="border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50"
+                >
+                  {f.category}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
-  </motion.div>
-);
+  );
+};
 
 export default Index;
