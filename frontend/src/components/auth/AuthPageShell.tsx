@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Link } from "react-router-dom";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { brand } from "@/config/brand";
 
 interface AuthPageShellProps {
@@ -21,57 +23,88 @@ const AuthPageShell = ({
   footerLinkLabel,
   footerHref,
 }: AuthPageShellProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    const tl = gsap.timeline();
+    
+    tl.from(".auth-logo", { 
+      y: -20, 
+      opacity: 0, 
+      duration: 0.8, 
+      ease: "power3.out" 
+    })
+    .from(".auth-text > *", { 
+      y: 20, 
+      opacity: 0, 
+      stagger: 0.1, 
+      duration: 0.8, 
+      ease: "power3.out" 
+    }, "-=0.6")
+    .from(".auth-card", { 
+      x: 30, 
+      opacity: 0, 
+      duration: 1, 
+      ease: "expo.out" 
+    }, "-=0.8");
+  }, { scope: containerRef });
+
   return (
-    <div className="min-h-screen bg-[#020202] text-white">
-      <div className="pointer-events-none fixed inset-0 opacity-20">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:48px_48px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_600px_at_50%_-100px,rgba(168,85,247,0.16),transparent)]" />
+    <div ref={containerRef} className="min-h-screen bg-[#030303] text-white selection:bg-orange-500/30">
+      <div className="pointer-events-none fixed inset-0 opacity-[0.03]">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
       </div>
-      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-16">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-orange-600/[0.04] blur-[120px]" />
+      </div>
+
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-16">
         <Link
           to="/"
-          className="mb-10 inline-flex items-center gap-3 self-start text-white/85 transition-colors hover:text-white"
+          className="auth-logo mb-16 flex items-center gap-4 self-start group"
         >
-          <img
-            src="/sideby-logo.jpg"
-            alt={brand.productName}
-            className="h-10 w-10 rounded-xl shadow-lg shadow-purple-600/20"
-          />
+          <div className="flex h-12 w-12 items-center justify-center border border-[#333] bg-[#111] font-serif text-2xl text-[#fdfbf7] transition-all group-hover:border-orange-500/50 group-hover:text-orange-400">
+            S
+          </div>
           <div>
-            <span className="block text-xl font-black tracking-tight">{brand.productName}</span>
-            <span className="block text-[10px] uppercase tracking-[0.35em] text-white/35">
+            <span className="block font-serif text-xl tracking-tight text-[#fdfbf7] group-hover:text-orange-50 transition-colors">{brand.productName}</span>
+            <span className="block text-[9px] uppercase tracking-[0.3em] text-[#fdfbf7]/40">
               Operated by {brand.companyName}
             </span>
           </div>
         </Link>
 
-        <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-6">
-            <p className="text-xs font-bold uppercase tracking-[0.35em] text-emerald-400">
+        <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] items-center">
+          <div className="auth-text space-y-6">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-orange-500">
               {eyebrow}
             </p>
-            <h1 className="max-w-xl text-5xl font-black uppercase leading-[0.95] tracking-tight md:text-6xl">
+            <h1 className="max-w-xl font-serif text-5xl md:text-6xl lg:text-7xl tracking-tight text-[#fdfbf7] leading-[1.1]">
               {title}
             </h1>
-            <p className="max-w-xl text-base leading-relaxed text-white/60">
+            <p className="max-w-xl text-lg font-light leading-relaxed text-[#fdfbf7]/60">
               {description}
             </p>
             <a
               href={brand.url}
-              className="inline-block text-sm text-white/35 transition-colors hover:text-white/70"
+              className="inline-block text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 transition-colors hover:text-orange-400 mt-4"
             >
               {brand.operatedByLine}
             </a>
           </div>
 
-          <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl md:p-8">
-            {children}
-            <p className="mt-6 text-sm text-white/45">
-              {footerLabel}{" "}
-              <Link to={footerHref} className="text-white transition-colors hover:text-emerald-300">
-                {footerLinkLabel}
-              </Link>
-            </p>
+          <div className="auth-card rounded-sm border border-[#2a2a2a] bg-[#111] p-8 shadow-2xl md:p-10 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 blur-[50px] rounded-full pointer-events-none" />
+            
+            <div className="relative z-10">
+              {children}
+              <p className="mt-8 text-center text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
+                {footerLabel}{" "}
+                <Link to={footerHref} className="text-[#fdfbf7] transition-colors hover:text-orange-400 underline decoration-[#fdfbf7]/30 underline-offset-4">
+                  {footerLinkLabel}
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>
