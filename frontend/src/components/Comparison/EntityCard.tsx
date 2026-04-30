@@ -51,18 +51,8 @@ export const EntityCard = ({ entity, side }: EntityCardProps) => {
     card.addEventListener("mouseleave", handleMouseLeave);
 
     return () => {
-      card.removeEventListener("mousemove", handleMouseMove);<think>The user wants me to continue exactly where the previous response left off, with no preamble. The last output was the middle of the `frontend/src/components/Comparison/EntityCard.tsx` file, specifically the `return () => {` block inside the `useGSAP` hook for the 3D tilt effect.
-
-I will resume writing the `EntityCard.tsx` file from that exact point. Then, I'll continue with the rest of the GSAP implementations for the Comparison Engine (`CategorySection.tsx`, `FactCard.tsx`, `ResearchLoader.tsx`, `VerdictPanel.tsx`, `SourcesPanel.tsx`).
-
-Current state of `EntityCard.tsx` buffer:
-```typescript
-    return () => {
       card.removeEventListener("mousemove", handleMouseMove);
-```
-
-Let's complete the file and move to the next ones.
-</think>      card.removeEventListener("mouseleave", handleMouseLeave);
+      card.removeEventListener("mouseleave", handleMouseLeave);
     };
   }, { scope: cardRef });
 
