@@ -262,16 +262,14 @@ const Index = () => {
               <ul className="space-y-4">
                 <li><Link to="/app" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Workbench</Link></li>
                 <li><Link to="/pricing" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Pricing</Link></li>
-                <li><a href="#" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Documentation</a></li>
-                <li><a href="#" className="text-sm text-white/40 hover:text-orange-400 transition-colors">API Reference</a></li>
+                <li><Link to="/contact" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Contact Sales</Link></li>
               </ul>
             </div>
             
             <div>
               <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/80 mb-6">Company</h4>
               <ul className="space-y-4">
-                <li><a href="#" className="text-sm text-white/40 hover:text-orange-400 transition-colors">About SnapSolve Ink</a></li>
-                <li><a href="#" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Blog</a></li>
+                <li><Link to="/about" className="text-sm text-white/40 hover:text-orange-400 transition-colors">About SnapSolve Ink</Link></li>
                 <li><a href="#" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Privacy Policy</a></li>
                 <li><a href="#" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Terms of Service</a></li>
               </ul>
