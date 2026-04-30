@@ -1,12 +1,13 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { GitCompareArrows, LayoutDashboard, Layers3, FolderKanban, Settings, LogOut, MessageSquare, Microscope, Database, Activity, CreditCard } from "lucide-react";
+import { GitCompareArrows, LayoutDashboard, Layers3, FolderKanban, Settings, LogOut, MessageSquare, Microscope, Database, Activity, CreditCard, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { CommandMenu } from "@/components/CommandMenu";
 
 const navItems = [
   { to: "/app", label: "Overview", icon: LayoutDashboard, end: true },
@@ -30,6 +31,7 @@ const AppShell = () => {
     isLoading: workspaceLoading,
   } = useWorkspace();
   const shellRef = useRef<HTMLDivElement>(null);
+  const [commandOpen, setCommandOpen] = useState(false);
 
   useGSAP(() => {
     const tl = gsap.timeline();
@@ -65,6 +67,8 @@ const AppShell = () => {
 
   return (
     <div ref={shellRef} className="min-h-screen bg-[#050505] text-white selection:bg-orange-500/30">
+      <CommandMenu open={commandOpen} setOpen={setCommandOpen} />
+      
       <div className="shell-header border-b border-white/10 bg-black/40 backdrop-blur-xl sticky top-0 z-50">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0 flex items-center gap-4">
@@ -84,7 +88,19 @@ const AppShell = () => {
             </div>
           </div>
           <div className="flex w-full items-center justify-between gap-3 lg:w-auto lg:justify-end">
-            <div className="min-w-0 lg:text-right">
+            
+            <button
+              onClick={() => setCommandOpen(true)}
+              className="hidden lg:flex items-center gap-2 rounded-sm border border-white/10 bg-white/[0.02] px-3 py-1.5 text-xs text-white/50 hover:bg-white/[0.08] hover:border-white/20 hover:text-white transition-all mr-4"
+            >
+              <Search className="h-3.5 w-3.5" />
+              <span>Search or command...</span>
+              <kbd className="pointer-events-none ml-2 inline-flex h-5 select-none items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[10px] font-medium text-white/40">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </button>
+
+            <div className="min-w-0 lg:text-right border-l border-white/10 pl-6 hidden lg:block">
               <p className="text-sm font-semibold text-white">
                 {user?.email ?? "Guest"}
               </p>
