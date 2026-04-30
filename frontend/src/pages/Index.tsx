@@ -3,6 +3,7 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-reac
 import { useQuery } from "@tanstack/react-query";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import { useGSAP } from "@gsap/react";
 import { ArrowRight, GitCompareArrows, Lock, Search, Sparkles, BookOpenText, BadgeCheck, Boxes, FileSearch } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -20,7 +21,7 @@ import {
   FollowUpPanel,
 } from "@/components/Comparison/ComparisonEngine";
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
 const examples = [
   "ChatGPT Plus vs Claude Pro",
@@ -292,7 +293,7 @@ const Index = () => {
     setFollowUpAnswer("");
     if (refreshed) setRefreshCount((c) => c + 1);
 
-    // Scroll down slightly for effect
+    // Scroll down slightly for effect using ScrollToPlugin
     gsap.to(window, { duration: 0.8, scrollTo: { y: 200 }, ease: "power3.inOut" });
 
     try {
