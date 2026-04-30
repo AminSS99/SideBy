@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Clock3, ExternalLink, FolderKanban, Layers3, Sparkles, Workflow } from "lucide-react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { brand } from "@/config/brand";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/contexts/ProjectsContext";
@@ -36,6 +38,28 @@ const DashboardHome = () => {
   const [comparisonsLoading, setComparisonsLoading] = useState(true);
   const [comparisonsError, setComparisonsError] = useState<string | null>(null);
   const activeWorkspaceId = activeWorkspace?.id ?? null;
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    if (!comparisonsLoading) {
+      gsap.from(".dash-card", {
+        y: 20,
+        opacity: 0,
+        duration: 0.8,
+        stagger: 0.1,
+        ease: "power3.out"
+      });
+      
+      gsap.from(".dash-list-item", {
+        x: -20,
+        opacity: 0,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: "power2.out",
+        delay: 0.2
+      });
+    }
+  }, [comparisonsLoading]);
 
   useEffect(() => {
     if (!activeWorkspaceId || !isConfigured) {
@@ -114,15 +138,15 @@ const DashboardHome = () => {
   ];
 
   return (
-    <div className="space-y-8">
+    <div ref={containerRef} className="space-y-10">
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.35em] text-emerald-400">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">
           SaaS foundation
         </p>
-        <h1 className="mt-3 text-4xl font-black uppercase tracking-tight">
+        <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
           Welcome back to {brand.productName}
         </h1>
-        <p className="mt-4 max-w-3xl text-white/60">
+        <p className="mt-4 max-w-3xl text-[#fdfbf7]/60 leading-relaxed">
           {user?.email
             ? `Signed in as ${user.email}.`
             : "Your auth state is active."}{" "}
@@ -130,113 +154,99 @@ const DashboardHome = () => {
           will expand from.
         </p>
         {activeWorkspace && (
-          <p className="mt-4 text-sm text-white/45">
+          <p className="mt-4 text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/40">
             Active workspace:{" "}
-            <span className="font-semibold text-white">
+            <span className="text-[#fdfbf7]">
               {activeWorkspace.name}
             </span>
           </p>
         )}
         {!isConfigured && (
-          <p className="mt-4 text-sm text-amber-300">
+          <p className="mt-4 text-sm text-amber-500">
             Clerk keys are still missing, so this route is currently using
             scaffolded state only.
           </p>
         )}
-        {error && <p className="mt-4 text-sm text-amber-300">{error}</p>}
+        {error && <p className="mt-4 text-sm text-amber-500">{error}</p>}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         {cards.map((card) => (
           <div
             key={card.title}
-            className="rounded-[28px] border border-white/10 bg-black/30 p-6"
+            className="dash-card rounded-sm border border-[#2a2a2a] bg-[#111] p-6 hover:border-[#444] transition-colors"
           >
-            <card.icon className="h-5 w-5 text-emerald-300" />
-            <p className="mt-4 text-xs font-bold uppercase tracking-[0.3em] text-white/35">
+            <card.icon className="h-5 w-5 text-orange-500" />
+            <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
               {card.title}
             </p>
-            <h2 className="mt-3 text-3xl font-black text-white">{card.value}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-white/55">
+            <h2 className="mt-2 font-serif text-3xl text-[#fdfbf7]">{card.value}</h2>
+            <p className="mt-2 text-xs leading-relaxed text-[#fdfbf7]/50">
               {card.description}
             </p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-[28px] border border-white/10 bg-black/30 p-6">
-        <h2 className="text-xl font-bold text-white">
-          Workspace bootstrap status
-        </h2>
-        <p className="mt-3 text-sm leading-relaxed text-white/55">
-          {isLoading
-            ? "Creating or loading your first workspace..."
-            : `Loaded ${workspaces.length} workspace record(s) for this beta session.`}
-        </p>
-      </div>
-
-      <div className="rounded-[28px] border border-white/10 bg-black/30 p-6">
-        <div className="flex items-center justify-between gap-4">
+      <div className="dash-card rounded-sm border border-[#2a2a2a] bg-[#111] p-8">
+        <div className="flex items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
           <div>
-            <h2 className="text-xl font-bold text-white">Recent compare history</h2>
-            <p className="mt-2 text-sm text-white/55">
-              The latest comparison jobs attached to your Clerk beta account.
+            <h2 className="font-serif text-2xl text-[#fdfbf7]">Recent compare history</h2>
+            <p className="mt-1 text-xs text-[#fdfbf7]/50 uppercase tracking-widest font-bold">
+              Attached to your beta account
             </p>
           </div>
           <Link
             to="/app/comparisons"
-            className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-300 transition-colors hover:text-emerald-200"
+            className="rounded-sm border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-orange-400 transition-colors hover:bg-orange-500/20"
           >
             View all
           </Link>
         </div>
 
         {comparisonsError && (
-          <p className="mt-4 text-sm text-amber-300">{comparisonsError}</p>
+          <p className="mt-6 text-sm text-amber-500">{comparisonsError}</p>
         )}
 
         {comparisonsLoading ? (
-          <div className="mt-6 text-sm text-white/55">
+          <div className="mt-8 text-sm text-[#fdfbf7]/50 text-center animate-pulse">
             Loading comparison history...
           </div>
         ) : comparisons.length === 0 ? (
-          <div className="mt-6 rounded-[28px] border border-dashed border-white/10 bg-white/[0.02] p-8">
-            <p className="text-sm text-white/55">
+          <div className="mt-8 rounded-sm border border-dashed border-[#333] bg-[#0c0b0a] p-10 text-center">
+            <p className="text-sm text-[#fdfbf7]/50">
               No comparisons have been persisted yet. Run a source-backed comparison while signed in and it will appear here.
             </p>
           </div>
         ) : (
-          <div className="mt-6 space-y-3">
+          <div className="mt-6 divide-y divide-[#2a2a2a]">
             {comparisons.map((comparison) => {
               return (
                 <div
                   key={comparison.id}
-                  className="flex flex-col gap-4 rounded-[24px] border border-white/10 bg-white/[0.02] p-5 md:flex-row md:items-center md:justify-between"
+                  className="dash-list-item flex flex-col gap-4 py-6 md:flex-row md:items-center md:justify-between group"
                 >
                   <div>
-                    <p className="text-lg font-bold text-white">
+                    <p className="font-serif text-xl text-[#fdfbf7] group-hover:text-orange-400 transition-colors">
                       {[comparison.entityA, comparison.entityB].filter(Boolean).join(" vs ") || comparison.query}
                     </p>
-                    <p className="mt-2 text-sm text-white/50">
-                      {comparison.visibility} · {comparison.sourceCount} sources · {comparison.progress}% complete
-                    </p>
-                    {comparison.summary && (
-                      <p className="mt-3 line-clamp-2 max-w-3xl text-sm leading-relaxed text-white/60">
-                        {comparison.summary}
-                      </p>
-                    )}
+                    <div className="mt-2 flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
+                      <span>{comparison.visibility}</span>
+                      <span className="h-1 w-1 rounded-full bg-[#333]" />
+                      <span>{comparison.sourceCount} sources</span>
+                    </div>
                   </div>
 
                   <div className="text-left md:text-right">
-                    <div className="flex flex-wrap gap-2 md:justify-end">
+                    <div className="flex flex-wrap items-center gap-3 md:justify-end">
                       <span
                         className={[
-                          "inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]",
+                          "inline-flex rounded-sm px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest border",
                           comparison.status === "completed"
-                            ? "bg-emerald-300 text-black"
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                             : comparison.status === "failed"
-                              ? "bg-red-400/20 text-red-200"
-                              : "bg-white/10 text-white/60",
+                              ? "bg-red-500/10 text-red-400 border-red-500/20"
+                              : "bg-[#222] text-[#fdfbf7]/60 border-[#333]",
                         ].join(" ")}
                       >
                         {comparison.status}
@@ -244,15 +254,15 @@ const DashboardHome = () => {
                       {comparison.visibility === "public" && (
                         <Link
                           to={`/compare/${comparison.slug}`}
-                          className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/55 transition-colors hover:border-white/25 hover:text-white"
+                          className="inline-flex items-center gap-1.5 rounded-sm border border-[#333] bg-[#111] px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/70 transition-colors hover:border-[#555] hover:text-[#fdfbf7]"
                         >
-                          Open
+                          Link
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       )}
                     </div>
-                    <div className="mt-3 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/35 md:justify-end">
-                      <Clock3 className="h-3.5 w-3.5" />
+                    <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 md:justify-end">
+                      <Clock3 className="h-3 w-3" />
                       {formatTimestamp(comparison.updatedAt)}
                     </div>
                   </div>

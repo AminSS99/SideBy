@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useRef } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { GitCompareArrows, LayoutDashboard, Layers3, FolderKanban, Settings, LogOut, MessageSquare, Microscope, Database, Activity, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
@@ -27,6 +29,30 @@ const AppShell = () => {
     error: workspaceError,
     isLoading: workspaceLoading,
   } = useWorkspace();
+  const shellRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    const tl = gsap.timeline();
+    
+    tl.from(".shell-header", {
+      y: -20,
+      opacity: 0,
+      duration: 0.8,
+      ease: "power3.out"
+    })
+    .from(".shell-sidebar", {
+      x: -20,
+      opacity: 0,
+      duration: 0.8,
+      ease: "power3.out"
+    }, "-=0.6")
+    .from(".shell-main", {
+      y: 20,
+      opacity: 0,
+      duration: 0.8,
+      ease: "power3.out"
+    }, "-=0.6");
+  }, { scope: shellRef });
 
   const handleSignOut = async () => {
     try {
@@ -38,19 +64,24 @@ const AppShell = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
-      <div className="border-b border-white/10 bg-black/40 backdrop-blur-xl">
+    <div ref={shellRef} className="min-h-screen bg-[#050505] text-white selection:bg-orange-500/30">
+      <div className="shell-header border-b border-white/10 bg-black/40 backdrop-blur-xl sticky top-0 z-50">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <a
-              href={brand.url}
-              className="text-2xl font-black tracking-tight text-white"
-            >
-              {brand.productName}
-            </a>
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white/35 sm:text-xs sm:tracking-[0.3em]">
-              Operated by {brand.companyName}
-            </p>
+          <div className="min-w-0 flex items-center gap-4">
+            <div className="flex h-10 w-10 items-center justify-center border border-[#333] bg-[#111] font-serif text-xl text-[#fdfbf7]">
+              S
+            </div>
+            <div>
+              <a
+                href={brand.url}
+                className="font-serif text-lg tracking-tight text-white hover:text-orange-50 transition-colors"
+              >
+                {brand.productName}
+              </a>
+              <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.24em] text-white/35 sm:tracking-[0.3em]">
+                Operated by {brand.companyName}
+              </p>
+            </div>
           </div>
           <div className="flex w-full items-center justify-between gap-3 lg:w-auto lg:justify-end">
             <div className="min-w-0 lg:text-right">
@@ -65,7 +96,7 @@ const AppShell = () => {
             </div>
             <Button
               variant="ghost"
-              className="rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+              className="rounded-sm border border-transparent text-white/70 hover:bg-white/10 hover:border-white/10 hover:text-white transition-all"
               onClick={handleSignOut}
             >
               <LogOut className="h-4 w-4 sm:mr-2" />
@@ -75,9 +106,9 @@ const AppShell = () => {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-7xl gap-4 px-4 py-5 sm:px-6 sm:py-8 lg:grid-cols-[220px_1fr] lg:gap-6">
-        <aside className="rounded-[24px] border border-white/10 bg-white/5 p-2 sm:p-4 lg:rounded-[28px]">
-          <nav className="flex gap-2 overflow-x-auto lg:block lg:space-y-2 lg:overflow-visible">
+      <div className="mx-auto grid max-w-7xl gap-4 px-4 py-5 sm:px-6 sm:py-8 lg:grid-cols-[220px_1fr] lg:gap-8">
+        <aside className="shell-sidebar rounded-sm border border-white/10 bg-white/[0.02] p-2 sm:p-4 self-start sticky top-28">
+          <nav className="flex gap-2 overflow-x-auto lg:block lg:space-y-1 lg:overflow-visible no-scrollbar">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -85,23 +116,23 @@ const AppShell = () => {
                 end={item.end}
                 className={({ isActive }) =>
                   [
-                    "flex shrink-0 items-center gap-2 rounded-2xl px-3 py-3 text-sm font-semibold transition-colors sm:gap-3 sm:px-4",
+                    "flex shrink-0 items-center gap-3 rounded-sm px-3 py-2.5 text-xs uppercase tracking-widest font-bold transition-all sm:px-4",
                     isActive
-                      ? "bg-emerald-400 text-black"
-                      : "text-white/65 hover:bg-white/10 hover:text-white",
+                      ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                      : "text-white/50 hover:bg-white/[0.05] border border-transparent hover:text-white",
                   ].join(" ")
                 }
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className="h-4 w-4 shrink-0" />
                 {item.label}
               </NavLink>
             ))}
           </nav>
         </aside>
 
-        <main className="min-w-0 rounded-[24px] border border-white/10 bg-white/[0.03] p-4 sm:p-6 md:p-8 lg:rounded-[32px]">
+        <main className="shell-main min-w-0 rounded-sm border border-white/10 bg-[#0a0a0a] p-6 sm:p-8 md:p-10 shadow-2xl">
           {workspaceError && (
-            <div className="mb-6 rounded-2xl border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-100">
+            <div className="mb-6 rounded-sm border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-100">
               {workspaceError}
             </div>
           )}
