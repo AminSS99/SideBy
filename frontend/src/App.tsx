@@ -21,6 +21,7 @@ import ComparisonsPage from "./pages/app/ComparisonsPage";
 import ChatPage from "./pages/app/ChatPage";
 import ResearchPage from "./pages/app/ResearchPage";
 import UploadsPage from "./pages/app/UploadsPage";
+import PromptsPage from "./pages/app/PromptsPage";
 import AnalyticsPage from "./pages/app/AnalyticsPage";
 import BillingPage from "./pages/app/BillingPage";
 import ProjectsPage from "./pages/app/ProjectsPage";
@@ -60,6 +61,7 @@ const App = () => {
                     <Route path="comparisons/:id" element={<ComparisonDetailPage />} />
                     <Route path="research" element={<ResearchPage />} />
                     <Route path="uploads" element={<UploadsPage />} />
+                    <Route path="prompts" element={<PromptsPage />} />
                     <Route path="analytics" element={<AnalyticsPage />} />
                     <Route path="billing" element={<BillingPage />} />
                     <Route path="workspaces" element={<WorkspacesPage />} />
