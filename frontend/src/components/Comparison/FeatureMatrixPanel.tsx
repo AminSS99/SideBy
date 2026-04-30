@@ -1,0 +1,126 @@
+import React, { useRef, useMemo } from 'react';
+import { Table2, Trophy } from 'lucide-react';
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+import type { ComparisonData } from './types';
+import { panelClass } from './constants';
+import { cn } from '@/lib/utils';
+
+gsap.registerPlugin(ScrollTrigger);
+
+export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Pivot the category facts into a matrix format
+  const matrixData = useMemo(() => {
+    return result.categories.map(cat => {
+      // Find all unique fact labels in this category
+      const labels = Array.from(new Set(cat.facts.map(f => f.label)));
+      
+      const rows = labels.map(label => {
+        const factA = cat.facts.find(f => f.entity === 'a' && f.label === label);
+        const factB = cat.facts.find(f => f.entity === 'b' && f.label === label);
+        return { label, factA, factB };
+      });
+
+      return {
+        category: cat.name,
+        winner: cat.winner,
+        rows
+      };
+    });
+  }, [result.categories]);
+
+  useGSAP(() => {
+    if (!containerRef.current) return;
+    
+    gsap.from(".matrix-row", {
+      scrollTrigger: {
+        trigger: containerRef.current,
+        start: "top 85%",
+      },
+      opacity: 0,
+      y: 10,
+      stagger: 0.05,
+      duration: 0.5,
+      ease: "power2.out"
+    });
+  }, { scope: containerRef });
+
+  if (!matrixData || matrixData.length === 0) return null;
+
+  return (
+    <div ref={containerRef} className={cn(panelClass, "overflow-hidden mb-10")}>
+      <div className="p-8 border-b border-[#2a2a2a] flex items-center gap-4 bg-[#111]">
+        <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7]/50">
+          <Table2 className="h-5 w-5" />
+        </div>
+        <div>
+          <h3 className="font-serif text-2xl text-[#fdfbf7] tracking-tight">Feature Matrix</h3>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mt-1">Detailed Head-to-Head</p>
+        </div>
+      </div>
+      
+      <div className="overflow-x-auto no-scrollbar">
+        <div className="min-w-[700px]">
+          {/* Sticky Header */}
+          <div className="grid grid-cols-[1.2fr_1fr_1fr] bg-[#0c0b0a] border-b border-[#2a2a2a] sticky top-0 z-20">
+            <div className="p-6 font-bold uppercase tracking-widest text-[10px] text-[#fdfbf7]/40 self-end">
+              Criteria
+            </div>
+            <div className="p-6 border-l border-[#2a2a2a] bg-[#111]/50 backdrop-blur-md">
+              <span className="text-[10px] font-bold uppercase tracking-widest block mb-1 opacity-50" style={{ color: result.entities.a.hex }}>Entity A</span>
+              <span className="font-serif text-xl text-[#fdfbf7]">{result.entities.a.name}</span>
+            </div>
+            <div className="p-6 border-l border-[#2a2a2a] bg-[#111]/50 backdrop-blur-md">
+              <span className="text-[10px] font-bold uppercase tracking-widest block mb-1 opacity-50" style={{ color: result.entities.b.hex }}>Entity B</span>
+              <span className="font-serif text-xl text-[#fdfbf7]">{result.entities.b.name}</span>
+            </div>
+          </div>
+
+          {/* Matrix Body */}
+          {matrixData.map((cat, i) => (
+            <React.Fragment key={i}>
+              <div className="bg-[#1a1a1a] border-b border-[#2a2a2a] p-4 pl-6 flex items-center justify-between sticky top-[97px] z-10 shadow-sm">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/80">{cat.category}</span>
+                {cat.winner !== 'tie' && (
+                  <span className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-orange-400 border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 rounded-sm">
+                    <Trophy className="h-3 w-3" />
+                    Winner: {cat.winner === 'a' ? result.entities.a.name : result.entities.b.name}
+                  </span>
+                )}
+              </div>
+              
+              {cat.rows.map((row, j) => {
+                // Subtle highlight for the winner's cell if there is a distinct winner
+                const isAWinner = cat.winner === 'a';
+                const isBWinner = cat.winner === 'b';
+
+                return (
+                  <div key={j} className="matrix-row grid grid-cols-[1.2fr_1fr_1fr] border-b border-[#2a2a2a] hover:bg-[#151515] transition-colors group">
+                    <div className="p-5 pl-6 text-sm text-[#fdfbf7]/90 font-medium">
+                      {row.label}
+                    </div>
+                    <div className={cn(
+                      "p-5 border-l border-[#2a2a2a] text-sm text-[#fdfbf7]/60 group-hover:text-[#fdfbf7]/90 transition-colors leading-relaxed",
+                      isAWinner && "bg-white/[0.02]"
+                    )}>
+                      {row.factA?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}
+                    </div>
+                    <div className={cn(
+                      "p-5 border-l border-[#2a2a2a] text-sm text-[#fdfbf7]/60 group-hover:text-[#fdfbf7]/90 transition-colors leading-relaxed",
+                      isBWinner && "bg-white/[0.02]"
+                    )}>
+                      {row.factB?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};

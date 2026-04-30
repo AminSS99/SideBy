@@ -25,6 +25,7 @@ import {
   EntityFactPanel,
   RadarChartPanel,
   ConsensusPanel,
+  FeatureMatrixPanel,
 } from "@/components/Comparison/ComparisonEngine";
 
 type ComparisonJob = {
@@ -285,6 +286,7 @@ const ComparisonDetailPage = () => {
             
             <RadarChartPanel result={result} />
             <ConsensusPanel result={result} />
+            <FeatureMatrixPanel result={result} />
 
             <div className="space-y-10">
               {result.categories.map((category, index) => (
@@ -302,12 +304,7 @@ const ComparisonDetailPage = () => {
             <VerdictPanel result={result} />
             <EntityFactPanel result={result} facts={entityFacts} />
             <SourcesPanel sources={result.sources} />
-            <FollowUpPanel
-              question={followUp}
-              answer={followUpAnswer}
-              onQuestionChange={setFollowUp}
-              onAsk={askFollowUp}
-            />
+            <FollowUpPanel />
           </aside>
         </div>
       )}

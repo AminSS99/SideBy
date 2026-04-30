@@ -11,3 +11,4 @@ export * from "./FollowUpPanel";
 export * from "./EntityFactPanel";
 export * from "./RadarChartPanel";
 export * from "./ConsensusPanel";
+export * from "./FeatureMatrixPanel";
