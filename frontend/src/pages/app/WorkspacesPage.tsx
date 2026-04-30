@@ -11,11 +11,10 @@ const WorkspacesPage = () => {
           Workspaces
         </p>
         <h1 className="mt-3 text-4xl font-black uppercase tracking-tight">
-          Workspace model scaffolded
+          Workspace model active
         </h1>
         <p className="mt-4 max-w-3xl text-white/60">
-          This page now reads from Supabase and bootstraps your first owner
-          workspace on demand.
+          This page bootstraps your private beta workspace from Clerk session state.
         </p>
       </div>
 

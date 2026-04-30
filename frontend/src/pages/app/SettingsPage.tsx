@@ -3,16 +3,16 @@ import { envConfig } from "@/config/env";
 
 const settingsRows = [
   {
-    label: "Supabase URL",
-    value: envConfig.supabaseUrl || "Not configured",
+    label: "Clerk publishable key",
+    value: envConfig.clerkPublishableKey ? "Configured" : "Not configured",
   },
   {
-    label: "Publishable key",
-    value: envConfig.supabasePublishableKey ? "Configured" : "Not configured",
+    label: "Research API",
+    value: envConfig.apiBaseUrl || "Same origin",
   },
   {
-    label: "Backend API",
-    value: envConfig.apiBaseUrl || "Not configured",
+    label: "Pexels API",
+    value: envConfig.hasPexelsApiKey ? "Configured" : "Not configured",
   },
 ];
 

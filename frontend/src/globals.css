@@ -4,68 +4,62 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    /* Brand Purple */
-    --primary: 271 91% 65%;
+    /* Warm, dark editorial ink background */
+    --background: 30 10% 4%;
+    --foreground: 40 20% 95%;
+    
+    --card: 30 10% 6%;
+    --card-foreground: 40 20% 95%;
+    
+    --popover: 30 10% 6%;
+    --popover-foreground: 40 20% 95%;
+    
+    /* Copper/Amber primary */
+    --primary: 25 95% 45%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 161 94% 30%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 161 94% 30%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 271 91% 65%;
-
-    --radius: 0.5rem;
+    
+    /* Cyan/Teal secondary */
+    --secondary: 190 90% 40%;
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 30 10% 12%;
+    --muted-foreground: 40 10% 60%;
+    
+    --accent: 30 10% 12%;
+    --accent-foreground: 40 20% 95%;
+    
+    --destructive: 0 70% 40%;
+    --destructive-foreground: 40 20% 95%;
+    
+    /* Sharp, crisp borders */
+    --border: 30 5% 15%;
+    --input: 30 5% 15%;
+    --ring: 25 95% 45%;
+    
+    /* Sharper corners for editorial look */
+    --radius: 0.125rem;
   }
 
-  .dark, :root {
-    --background: 240 10% 2%;
-    --foreground: 210 40% 98%;
-
-    --card: 240 10% 2%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 240 10% 2%;
-    --popover-foreground: 210 40% 98%;
-
-    /* Brand Primary: Purple */
-    --primary: 271 91% 65%;
-    --primary-foreground: 210 40% 98%;
-
-    /* Brand Secondary: Emerald Green */
-    --secondary: 161 94% 30%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 161 94% 43%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 271 91% 65%;
+  .dark {
+    --background: 30 10% 4%;
+    --foreground: 40 20% 95%;
+    --card: 30 10% 6%;
+    --card-foreground: 40 20% 95%;
+    --popover: 30 10% 6%;
+    --popover-foreground: 40 20% 95%;
+    --primary: 25 95% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 190 90% 40%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 30 10% 12%;
+    --muted-foreground: 40 10% 60%;
+    --accent: 30 10% 12%;
+    --accent-foreground: 40 20% 95%;
+    --destructive: 0 70% 40%;
+    --destructive-foreground: 40 20% 95%;
+    --border: 30 5% 15%;
+    --input: 30 5% 15%;
+    --ring: 25 95% 45%;
   }
 }
 
@@ -73,8 +67,29 @@
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Make all serif fonts look highly elegant */
+  h1, h2, h3, h4, h5, h6, .font-serif {
+    font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply border border-white/10 bg-[#111] backdrop-blur-none;
+  }
+  .glass-hover {
+    @apply glass hover:border-white/20 transition-all duration-300;
+  }
+  .glass-card {
+    @apply glass rounded-sm;
+  }
+  .gradient-text {
+    @apply bg-gradient-to-br from-orange-400 to-orange-700 bg-clip-text text-transparent;
   }
 }

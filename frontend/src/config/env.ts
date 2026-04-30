@@ -23,7 +23,7 @@ export const envConfig = {
   supabasePublishableKey,
   pexelsApiKey,
   clerkPublishableKey,
-  hasApiBaseUrl: true,
+  hasApiBaseUrl: apiBaseUrl.length > 0,
   hasSupabaseConfig:
     supabaseUrl.length > 0 && supabasePublishableKey.length > 0,
   hasPexelsApiKey: pexelsApiKey.length > 0,

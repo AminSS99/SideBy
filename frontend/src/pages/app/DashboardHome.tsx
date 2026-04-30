@@ -1,13 +1,28 @@
 import React, { useEffect, useState } from "react";
-import { Clock3, FolderKanban, Layers3, Sparkles, Workflow } from "lucide-react";
+import { Clock3, ExternalLink, FolderKanban, Layers3, Sparkles, Workflow } from "lucide-react";
 import { brand } from "@/config/brand";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/contexts/ProjectsContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { listWorkspaceAiRuns, type AiRunRecord } from "@/lib/supabase/aiRuns";
+import { apiFetch } from "@/lib/api";
+import { buildApiUrl } from "@/config/env";
 import { Link } from "react-router-dom";
 
-const formatRunTimestamp = (value: string) =>
+type ComparisonHistoryItem = {
+  id: string;
+  query: string;
+  slug: string;
+  status: "running" | "completed" | "failed";
+  visibility: "private" | "team" | "public";
+  sourceCount: number;
+  progress: number;
+  updatedAt: string;
+  summary: string | null;
+  entityA: string | null;
+  entityB: string | null;
+};
+
+const formatTimestamp = (value: string) =>
   new Date(value).toLocaleString([], {
     dateStyle: "medium",
     timeStyle: "short",
@@ -17,54 +32,54 @@ const DashboardHome = () => {
   const { user, isConfigured } = useAuth();
   const { activeWorkspace, error, isLoading, workspaces } = useWorkspace();
   const { activeProject, projects, isLoading: projectsLoading } = useProjects();
-  const [recentRuns, setRecentRuns] = useState<AiRunRecord[]>([]);
-  const [runsLoading, setRunsLoading] = useState(true);
-  const [runsError, setRunsError] = useState<string | null>(null);
+  const [comparisons, setComparisons] = useState<ComparisonHistoryItem[]>([]);
+  const [comparisonsLoading, setComparisonsLoading] = useState(true);
+  const [comparisonsError, setComparisonsError] = useState<string | null>(null);
   const activeWorkspaceId = activeWorkspace?.id ?? null;
 
   useEffect(() => {
     if (!activeWorkspaceId || !isConfigured) {
-      setRecentRuns([]);
-      setRunsError(null);
-      setRunsLoading(false);
+      setComparisons([]);
+      setComparisonsError(null);
+      setComparisonsLoading(false);
       return;
     }
 
-    let isMounted = true;
+    let mounted = true;
 
-    const loadRuns = async () => {
+    const loadComparisons = async () => {
       try {
-        setRunsLoading(true);
-        setRunsError(null);
-        const nextRuns = await listWorkspaceAiRuns(activeWorkspaceId, 6);
-
-        if (!isMounted) {
-          return;
+        setComparisonsLoading(true);
+        setComparisonsError(null);
+        const res = await apiFetch(buildApiUrl("/api/comparisons/list?limit=6"));
+        if (!res.ok) {
+          throw new Error("Unable to load comparison history.");
         }
 
-        setRecentRuns(nextRuns);
+        const data = (await res.json()) as { comparisons: ComparisonHistoryItem[] };
+        if (mounted) {
+          setComparisons(data.comparisons);
+        }
       } catch (loadError) {
-        if (!isMounted) {
-          return;
+        if (mounted) {
+          setComparisons([]);
+          setComparisonsError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Unable to load comparison history.",
+          );
         }
-
-        setRecentRuns([]);
-        setRunsError(
-          loadError instanceof Error
-            ? loadError.message
-            : "Failed to load recent AI activity.",
-        );
       } finally {
-        if (isMounted) {
-          setRunsLoading(false);
+        if (mounted) {
+          setComparisonsLoading(false);
         }
       }
     };
 
-    void loadRuns();
+    void loadComparisons();
 
     return () => {
-      isMounted = false;
+      mounted = false;
     };
   }, [activeWorkspaceId, isConfigured]);
 
@@ -82,18 +97,18 @@ const DashboardHome = () => {
       icon: FolderKanban,
     },
     {
-      title: "Tracked AI runs",
-      value: runsLoading ? "..." : String(recentRuns.length),
+      title: "Comparisons",
+      value: comparisonsLoading ? "..." : String(comparisons.length),
       description:
-        recentRuns[0]?.title || "No persisted compare history in this workspace yet",
+        comparisons[0]?.query || "No persisted compare history yet",
       icon: Workflow,
     },
     {
       title: "Platform state",
       value: isConfigured ? "Live" : "Scaffold",
       description: isConfigured
-        ? "Supabase-backed product data is enabled"
-        : "Supabase keys are still missing",
+        ? "Clerk-backed private beta access is enabled"
+        : "Clerk keys are still missing",
       icon: Sparkles,
     },
   ];
@@ -124,7 +139,7 @@ const DashboardHome = () => {
         )}
         {!isConfigured && (
           <p className="mt-4 text-sm text-amber-300">
-            Supabase keys are still missing, so this route is currently using
+            Clerk keys are still missing, so this route is currently using
             scaffolded state only.
           </p>
         )}
@@ -156,7 +171,7 @@ const DashboardHome = () => {
         <p className="mt-3 text-sm leading-relaxed text-white/55">
           {isLoading
             ? "Creating or loading your first workspace..."
-            : `Loaded ${workspaces.length} workspace record(s) from Supabase.`}
+            : `Loaded ${workspaces.length} workspace record(s) for this beta session.`}
         </p>
       </div>
 
@@ -165,82 +180,80 @@ const DashboardHome = () => {
           <div>
             <h2 className="text-xl font-bold text-white">Recent compare history</h2>
             <p className="mt-2 text-sm text-white/55">
-              The latest tracked AI runs from your active workspace.
+              The latest comparison jobs attached to your Clerk beta account.
             </p>
           </div>
           <Link
-            to="/app/projects"
+            to="/app/comparisons"
             className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-300 transition-colors hover:text-emerald-200"
           >
-            Manage projects
+            View all
           </Link>
         </div>
 
-        {runsError && (
-          <p className="mt-4 text-sm text-amber-300">{runsError}</p>
+        {comparisonsError && (
+          <p className="mt-4 text-sm text-amber-300">{comparisonsError}</p>
         )}
 
-        {runsLoading ? (
+        {comparisonsLoading ? (
           <div className="mt-6 text-sm text-white/55">
-            Loading recent AI activity...
+            Loading comparison history...
           </div>
-        ) : recentRuns.length === 0 ? (
+        ) : comparisons.length === 0 ? (
           <div className="mt-6 rounded-[28px] border border-dashed border-white/10 bg-white/[0.02] p-8">
             <p className="text-sm text-white/55">
-              No compare runs have been persisted yet. Create a project in{" "}
-              <Link to="/app/projects" className="text-emerald-300 underline underline-offset-4">
-                Projects
-              </Link>{" "}
-              and run a comparison while signed in.
+              No comparisons have been persisted yet. Run a source-backed comparison while signed in and it will appear here.
             </p>
           </div>
         ) : (
           <div className="mt-6 space-y-3">
-            {recentRuns.map((run) => {
-              const inputPayload = run.input_payload ?? {};
-              const itemA =
-                typeof inputPayload.itemA === "string" ? inputPayload.itemA : null;
-              const itemB =
-                typeof inputPayload.itemB === "string" ? inputPayload.itemB : null;
-              const linkedProject =
-                projects.find((project) => project.id === run.project_id)?.name ??
-                "Workspace only";
-
+            {comparisons.map((comparison) => {
               return (
                 <div
-                  key={run.id}
+                  key={comparison.id}
                   className="flex flex-col gap-4 rounded-[24px] border border-white/10 bg-white/[0.02] p-5 md:flex-row md:items-center md:justify-between"
                 >
                   <div>
                     <p className="text-lg font-bold text-white">
-                      {run.title || [itemA, itemB].filter(Boolean).join(" vs ") || "Untitled run"}
+                      {[comparison.entityA, comparison.entityB].filter(Boolean).join(" vs ") || comparison.query}
                     </p>
                     <p className="mt-2 text-sm text-white/50">
-                      {linkedProject} · {run.provider} · {run.model}
+                      {comparison.visibility} · {comparison.sourceCount} sources · {comparison.progress}% complete
                     </p>
-                    {run.output_summary && (
+                    {comparison.summary && (
                       <p className="mt-3 line-clamp-2 max-w-3xl text-sm leading-relaxed text-white/60">
-                        {run.output_summary}
+                        {comparison.summary}
                       </p>
                     )}
                   </div>
 
                   <div className="text-left md:text-right">
-                    <span
-                      className={[
-                        "inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]",
-                        run.status === "completed"
-                          ? "bg-emerald-300 text-black"
-                          : run.status === "failed"
-                            ? "bg-red-400/20 text-red-200"
-                            : "bg-white/10 text-white/60",
-                      ].join(" ")}
-                    >
-                      {run.status}
-                    </span>
+                    <div className="flex flex-wrap gap-2 md:justify-end">
+                      <span
+                        className={[
+                          "inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]",
+                          comparison.status === "completed"
+                            ? "bg-emerald-300 text-black"
+                            : comparison.status === "failed"
+                              ? "bg-red-400/20 text-red-200"
+                              : "bg-white/10 text-white/60",
+                        ].join(" ")}
+                      >
+                        {comparison.status}
+                      </span>
+                      {comparison.visibility === "public" && (
+                        <Link
+                          to={`/compare/${comparison.slug}`}
+                          className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/55 transition-colors hover:border-white/25 hover:text-white"
+                        >
+                          Open
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      )}
+                    </div>
                     <div className="mt-3 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/35 md:justify-end">
                       <Clock3 className="h-3.5 w-3.5" />
-                      {formatRunTimestamp(run.created_at)}
+                      {formatTimestamp(comparison.updatedAt)}
                     </div>
                   </div>
                 </div>

@@ -4,27 +4,25 @@ import { cn } from "@/lib/utils";
 interface GlassCardProps {
   children: React.ReactNode;
   className?: string;
-  glowColor?: "purple" | "orange" | "emerald";
+  glowColor?: "purple" | "sky" | "emerald";
 }
 
-const GlassCard = ({ children, className, glowColor }: GlassCardProps) => {
-  const glowClasses = {
-    purple: "after:bg-purple-500/10",
-    orange: "after:bg-orange-500/10",
-    emerald: "after:bg-emerald-500/10",
-  };
-
-  return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl p-6 transition-all duration-300 hover:border-white/20 hover:bg-black/50 group",
-        glowColor && `after:absolute after:-inset-4 after:z-[-1] after:blur-3xl ${glowClasses[glowColor]}`,
-        className
-      )}
-    >
-      {children}
-    </div>
-  );
+const glowMap = {
+  purple: "after:bg-purple-500/[0.06]",
+  sky: "after:bg-sky-500/[0.06]",
+  emerald: "after:bg-emerald-500/[0.06]",
 };
+
+const GlassCard = ({ children, className, glowColor }: GlassCardProps) => (
+  <div
+    className={cn(
+      "relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.05]",
+      glowColor && `after:absolute after:-inset-3 after:-z-10 after:blur-3xl after:opacity-50 ${glowMap[glowColor]}`,
+      className,
+    )}
+  >
+    {children}
+  </div>
+);
 
 export default GlassCard;

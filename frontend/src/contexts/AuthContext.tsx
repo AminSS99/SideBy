@@ -1,11 +1,21 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import type { Session, User } from "@supabase/supabase-js";
+import React, { createContext, useContext, useMemo } from "react";
+import { useClerk, useUser } from "@clerk/clerk-react";
 import { envConfig } from "@/config/env";
-import { supabase } from "@/lib/supabase/client";
+
+export interface AppUser {
+  id: string;
+  email: string | null;
+  fullName: string | null;
+  imageUrl: string | null;
+}
+
+export interface AppSession {
+  userId: string;
+}
 
 interface AuthContextValue {
-  session: Session | null;
-  user: User | null;
+  session: AppSession | null;
+  user: AppUser | null;
   isLoading: boolean;
   isConfigured: boolean;
   signInWithPassword: (email: string, password: string) => Promise<void>;
@@ -17,108 +27,76 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  if (!envConfig.hasClerkConfig) {
+    return <UnconfiguredAuthProvider>{children}</UnconfiguredAuthProvider>;
+  }
 
-  useEffect(() => {
-    if (!supabase) {
-      setIsLoading(false);
-      return;
+  return <ClerkAuthProvider>{children}</ClerkAuthProvider>;
+};
+
+const UnconfiguredAuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      session: null,
+      user: null,
+      isLoading: false,
+      isConfigured: false,
+      async signInWithPassword() {
+        throw new Error("Clerk is not configured.");
+      },
+      async signUpWithPassword() {
+        throw new Error("Clerk is not configured.");
+      },
+      async signInWithGoogle() {
+        throw new Error("Clerk is not configured.");
+      },
+      async signOut() {
+        return;
+      },
+    }),
+    [],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const { isLoaded, isSignedIn, user: clerkUser } = useUser();
+  const { signOut: clerkSignOut } = useClerk();
+
+  const user = useMemo<AppUser | null>(() => {
+    if (!isSignedIn || !clerkUser) {
+      return null;
     }
 
-    let isMounted = true;
-
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (!isMounted) {
-        return;
-      }
-
-      if (error) {
-        console.error("Failed to fetch initial auth session.", error);
-      }
-
-      setSession(data.session ?? null);
-      setIsLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setIsLoading(false);
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
+    return {
+      id: clerkUser.id,
+      email: clerkUser.primaryEmailAddress?.emailAddress ?? null,
+      fullName: clerkUser.fullName,
+      imageUrl: clerkUser.imageUrl,
     };
-  }, []);
+  }, [clerkUser, isSignedIn]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      session,
-      user: session?.user ?? null,
-      isLoading,
-      isConfigured: envConfig.hasSupabaseConfig && Boolean(supabase),
-      async signInWithPassword(email, password) {
-        if (!supabase) {
-          throw new Error("Supabase is not configured.");
-        }
-
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          throw error;
-        }
+      session: user ? { userId: user.id } : null,
+      user,
+      isLoading: !isLoaded,
+      isConfigured: true,
+      async signInWithPassword() {
+        throw new Error("Use the Clerk sign-in form to authenticate.");
       },
-      async signUpWithPassword(email, password) {
-        if (!supabase) {
-          throw new Error("Supabase is not configured.");
-        }
-
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        });
-
-        if (error) {
-          throw error;
-        }
+      async signUpWithPassword() {
+        throw new Error("Use the Clerk sign-up form to create an account.");
       },
       async signInWithGoogle() {
-        if (!supabase) {
-          throw new Error("Supabase is not configured.");
-        }
-
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo: `${window.location.origin}/auth/callback`,
-          },
-        });
-
-        if (error) {
-          throw error;
-        }
+        throw new Error("Use the Clerk sign-in form to authenticate.");
       },
       async signOut() {
-        if (!supabase) {
-          return;
-        }
-
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-          throw error;
-        }
+        await clerkSignOut();
       },
     }),
-    [isLoading, session],
+    [clerkSignOut, isLoaded, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

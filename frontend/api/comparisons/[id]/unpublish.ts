@@ -1,10 +1,10 @@
-import { refreshComparisonJob, sendJson } from "../../_lib/sideby.js";
+import { sendJson, unpublishComparison } from "../../_lib/sideby.js";
 import { authenticateRequest, isAuthEnabled } from "../../_lib/auth.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
   runtime: "nodejs",
-  maxDuration: 60,
+  maxDuration: 15,
 };
 
 export default async function handler(
@@ -30,11 +30,11 @@ export default async function handler(
       return sendJson(response, { error: "Comparison id is required." }, 400);
     }
 
-    return sendJson(response, await refreshComparisonJob(id, userId));
+    return sendJson(response, await unpublishComparison(id, userId));
   } catch (error) {
     return sendJson(
       response,
-      { error: error instanceof Error ? error.message : "Unable to refresh comparison." },
+      { error: error instanceof Error ? error.message : "Unable to unpublish comparison." },
       500,
     );
   }

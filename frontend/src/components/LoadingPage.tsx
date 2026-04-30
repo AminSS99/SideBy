@@ -1,23 +1,35 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { brand } from "@/config/brand";
 
 const LoadingPage: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   const [progress, setProgress] = useState(0);
+  const didComplete = useRef(false);
 
   useEffect(() => {
+    const complete = () => {
+      if (didComplete.current) return;
+      didComplete.current = true;
+      onComplete();
+    };
+
     const timer = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(timer);
-          setTimeout(onComplete, 800);
+          window.setTimeout(complete, 180);
           return 100;
         }
-        return prev + 1;
+        return Math.min(100, prev + 8);
       });
-    }, 40);
+    }, 30);
 
-    return () => clearInterval(timer);
+    const fallback = window.setTimeout(complete, 1400);
+
+    return () => {
+      clearInterval(timer);
+      window.clearTimeout(fallback);
+    };
   }, [onComplete]);
 
   return (

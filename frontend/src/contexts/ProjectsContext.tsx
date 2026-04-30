@@ -8,11 +8,7 @@ import React, {
 } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import {
-  createWorkspaceProject,
-  listWorkspaceProjects,
-  type ProjectRecord,
-} from "@/lib/supabase/projects";
+import type { ProjectRecord } from "@/lib/supabase/projects";
 
 interface CreateProjectValues {
   name: string;
@@ -35,7 +31,7 @@ const buildProjectStorageKey = (workspaceId: string) =>
   `sideby.active-project.${workspaceId}`;
 
 export const ProjectsProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user, session, isConfigured, isLoading: authLoading } = useAuth();
+  const { user, session, isLoading: authLoading } = useAuth();
   const { activeWorkspace } = useWorkspace();
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
@@ -60,7 +56,7 @@ export const ProjectsProvider = ({ children }: { children: React.ReactNode }) =>
   }, [activeWorkspace]);
 
   const refresh = useCallback(async () => {
-    if (!isConfigured || !session || !user || !activeWorkspace) {
+    if (!session || !user || !activeWorkspace) {
       setProjects([]);
       setActiveProjectIdState(null);
       setError(null);
@@ -72,14 +68,20 @@ export const ProjectsProvider = ({ children }: { children: React.ReactNode }) =>
       setIsLoading(true);
       setError(null);
 
-      const nextProjects = await listWorkspaceProjects(activeWorkspace.id);
+      const storageKey = `sideby.projects.${activeWorkspace.id}`;
+      const storedProjects = typeof window === "undefined"
+        ? []
+        : JSON.parse(window.localStorage.getItem(storageKey) || "[]");
+      const nextProjects = Array.isArray(storedProjects)
+        ? (storedProjects as ProjectRecord[])
+        : [];
       setProjects(nextProjects);
 
-      const storageKey = buildProjectStorageKey(activeWorkspace.id);
+      const activeStorageKey = buildProjectStorageKey(activeWorkspace.id);
       const storedProjectId =
         typeof window === "undefined"
           ? null
-          : window.localStorage.getItem(storageKey);
+          : window.localStorage.getItem(activeStorageKey);
       const nextActiveProjectId =
         nextProjects.find((project) => project.id === storedProjectId)?.id ??
         nextProjects[0]?.id ??
@@ -90,28 +92,41 @@ export const ProjectsProvider = ({ children }: { children: React.ReactNode }) =>
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to load project data from Supabase.",
+          : "Failed to load local project data.",
       );
       setProjects([]);
       setActiveProjectIdState(null);
     } finally {
       setIsLoading(false);
     }
-  }, [activeWorkspace, isConfigured, session, user]);
+  }, [activeWorkspace, session, user]);
 
   const createProject = useCallback(async ({ name, description }: CreateProjectValues) => {
     if (!activeWorkspace || !user) {
       throw new Error("You need an active workspace before creating a project.");
     }
 
-    const project = await createWorkspaceProject({
-      workspaceId: activeWorkspace.id,
-      createdBy: user.id,
+    const now = new Date().toISOString();
+    const project: ProjectRecord = {
+      id: crypto.randomUUID(),
+      workspace_id: activeWorkspace.id,
+      created_by: user.id,
       name: name.trim(),
-      description,
-    });
+      description: description?.trim() || null,
+      created_at: now,
+      updated_at: now,
+    };
 
-    setProjects((current) => [project, ...current]);
+    setProjects((current) => {
+      const next = [project, ...current];
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          `sideby.projects.${activeWorkspace.id}`,
+          JSON.stringify(next),
+        );
+      }
+      return next;
+    });
     persistActiveProjectId(project.id);
     setError(null);
 
@@ -124,7 +139,7 @@ export const ProjectsProvider = ({ children }: { children: React.ReactNode }) =>
     }
 
     void refresh();
-  }, [activeWorkspace?.id, authLoading, isConfigured, refresh, session, user?.id]);
+  }, [activeWorkspace?.id, authLoading, refresh, session, user?.id]);
 
   const activeProject =
     projects.find((project) => project.id === activeProjectId) ?? null;

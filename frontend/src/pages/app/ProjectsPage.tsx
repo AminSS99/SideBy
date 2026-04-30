@@ -45,7 +45,7 @@ const ProjectsPage = () => {
         description:
           creationError instanceof Error
             ? creationError.message
-            : "Check your Supabase migration and policies.",
+            : "Check your workspace state and try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -154,7 +154,7 @@ const ProjectsPage = () => {
 
           {isLoading ? (
             <div className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/55">
-              Loading projects from Supabase...
+              Loading projects...
             </div>
           ) : projects.length === 0 ? (
             <div className="mt-6 rounded-[28px] border border-dashed border-white/10 bg-white/[0.02] p-10 text-center">
