@@ -28,6 +28,9 @@ export type ComparisonResult = {
   verdict: Verdict;
   categories: CategoryResult[];
   sources: ComparisonSource[];
+  dimensions?: Array<{ subject: string; a: number; b: number; fullMark: number }>;
+  consensus?: string[];
+  contradictions?: string[];
 };
 
 export type ComparisonHistoryItem = {
@@ -497,6 +500,9 @@ const executeResearch = async (id: string, parsed: ParsedComparison, comparisonS
       ecosystem: extracted.verdict.ecosystem || b.name,
       summary: extracted.verdict.summary || `${a.name} vs ${b.name} comparison based on extracted web sources.`,
     },
+    dimensions: extracted.dimensions || [],
+    consensus: extracted.consensus || [],
+    contradictions: extracted.contradictions || [],
     categories,
     sources: extractedSources,
   };
@@ -611,6 +617,9 @@ const buildLLMResult = async (parsed: ParsedComparison, a: Entity, b: Entity, ch
       ecosystem: extracted.verdict.ecosystem || b.name,
       summary: extracted.verdict.summary || `${a.name} vs ${b.name} comparison based on extracted web sources.`,
     },
+    dimensions: extracted.dimensions || [],
+    consensus: extracted.consensus || [],
+    contradictions: extracted.contradictions || [],
     categories,
     sources: extractedSources,
   };
@@ -650,6 +659,22 @@ const buildSyntheticResult = (a: Entity, b: Entity, parsed: ParsedComparison, ch
   entities: { a, b },
   sourceCount: 4,
   updatedAt: changed ? "just now" : "2 min ago",
+  dimensions: [
+    { subject: "Pricing Value", a: 85, b: 92, fullMark: 100 },
+    { subject: "Dev Experience", a: 95, b: 82, fullMark: 100 },
+    { subject: "Ecosystem", a: 70, b: 98, fullMark: 100 },
+    { subject: "Scalability", a: 90, b: 88, fullMark: 100 },
+    { subject: "Security", a: 85, b: 90, fullMark: 100 },
+    { subject: "Portability", a: 95, b: 60, fullMark: 100 },
+  ],
+  consensus: [
+    `Both ${a.name} and ${b.name} offer strong capabilities suitable for enterprise scaling.`,
+    "The documentation for both platforms is highly rated by the developer community."
+  ],
+  contradictions: [
+    "Sources disagree on which is actually cheaper at enterprise scale.",
+    `Community sentiment is split on the maturity of ${a.name}'s ecosystem compared to ${b.name}.`
+  ],
   verdict: {
     bestOverall: a.name, bestValue: b.name, developers: a.name, teams: b.name,
     students: "Depends on usage cap", powerUsers: a.name, ecosystem: b.name,

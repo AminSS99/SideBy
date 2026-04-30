@@ -30,10 +30,20 @@ type ExtractedVerdict = {
   summary: string;
 };
 
+type ExtractedDimension = {
+  subject: string;
+  a: number;
+  b: number;
+  fullMark: number;
+};
+
 type ExtractedComparison = {
   categories: ExtractedCategory[];
   verdict: ExtractedVerdict;
   context: string;
+  dimensions: ExtractedDimension[];
+  consensus: string[];
+  contradictions: string[];
 };
 
 type SourceContent = {
@@ -57,10 +67,18 @@ Rules:
 10. Write a 2-3 sentence verdict summary.
 11. If pricing is unclear from sources, say "not confirmed from official source" in the verdict.
 12. Confidence scores: 0.9+ for direct official source quotes, 0.7-0.89 for inferred from documentation, <0.7 for community/indirect.
+13. Generate exactly 6 comparison dimensions for a radar chart (e.g., "Pricing Value", "Dev Experience", "Ecosystem", "Scalability", "Security", "Portability"). Rate both 'a' and 'b' from 0 to 100 (fullMark: 100).
+14. Generate an array of 3 'consensus' strings (where sources strongly agree).
+15. Generate an array of 2 'contradictions' strings (where sources conflict or are unclear).
 
 Return valid JSON only, with this exact structure:
 {
   "context": "brief context of this comparison",
+  "dimensions": [
+    { "subject": "Pricing Value", "a": 85, "b": 90, "fullMark": 100 }
+  ],
+  "consensus": ["Point of agreement 1", "Point of agreement 2", "Point of agreement 3"],
+  "contradictions": ["Point of conflict 1", "Point of conflict 2"],
   "categories": [
     {
       "name": "Category Name",
@@ -158,6 +176,20 @@ const validate = (parsed: ExtractedComparison): ExtractedComparison => {
       students: "", powerUsers: "", ecosystem: "", summary: "",
     };
   }
+
+  if (!parsed.dimensions || !Array.isArray(parsed.dimensions)) {
+    parsed.dimensions = [
+      { subject: "Pricing Value", a: 80, b: 80, fullMark: 100 },
+      { subject: "Dev Experience", a: 80, b: 80, fullMark: 100 },
+      { subject: "Ecosystem", a: 80, b: 80, fullMark: 100 },
+      { subject: "Scalability", a: 80, b: 80, fullMark: 100 },
+      { subject: "Security", a: 80, b: 80, fullMark: 100 },
+      { subject: "Vendor Lock-in", a: 80, b: 80, fullMark: 100 },
+    ];
+  }
+
+  if (!parsed.consensus || !Array.isArray(parsed.consensus)) parsed.consensus = [];
+  if (!parsed.contradictions || !Array.isArray(parsed.contradictions)) parsed.contradictions = [];
 
   return parsed;
 };

@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, LoaderCircle, Sparkles } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { apiFetch } from "@/lib/api";
+import { buildApiUrl } from "@/config/env";
 
 interface Message {
   id: string;
@@ -14,7 +16,7 @@ const ChatPage = () => {
     {
       id: "1",
       role: "assistant",
-      content: "Hello! I'm the SideBy Research Engine. How can I help you analyze or compare products today?",
+      content: "Hello! I'm the SideBy Research Engine. I'm connected and ready to help you analyze products, architectures, or development tools.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -46,20 +48,48 @@ const ChatPage = () => {
       content: input.trim(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput("");
     setIsLoading(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
+    try {
+      // Map out previous messages to send to API for context
+      const apiMessages = newMessages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const res = await apiFetch(buildApiUrl("/api/chat"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: apiMessages }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to get response");
+      }
+
+      const data = await res.json();
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `I'm a simulated response for now. In the full implementation, I'll connect to the orchestrator to answer your questions about "${userMessage.content}".`,
+        content: data.answer || "Sorry, I couldn't generate a response.",
       };
       setMessages((prev) => [...prev, assistantMessage]);
+    } catch (err) {
+      console.error(err);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content:
+          "I encountered an error connecting to the orchestrator. Please check your API keys or try again later.",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -101,7 +131,7 @@ const ChatPage = () => {
               </div>
               
               <div
-                className={`max-w-[80%] rounded-sm p-5 border ${
+                className={`max-w-[80%] rounded-sm p-5 border whitespace-pre-wrap ${
                   msg.role === "assistant"
                     ? "bg-[#0c0b0a] border-[#333] text-[#fdfbf7]/90"
                     : "bg-[#1a1a1a] border-[#444] text-[#fdfbf7]"
