@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { Microscope, Search, Sparkles, FileText, Clock3, ArrowRight, Loader2 } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { GlowCard } from "@/components/GlowCard";
 
 interface ResearchReport {
   id: string;
@@ -94,8 +95,8 @@ const ResearchPage = () => {
       {/* Research Input */}
       <div className="res-input rounded-sm border border-[#2a2a2a] bg-[#111] p-6 sm:p-8">
         <form onSubmit={handleStartResearch} className="relative mx-auto max-w-3xl">
-          <div className="group relative flex w-full flex-col items-center rounded-sm border border-[#333] bg-[#0c0b0a] p-2 transition-all focus-within:border-orange-500/50 focus-within:ring-1 focus-within:ring-orange-500/50 sm:flex-row">
-            <Microscope className="ml-4 hidden h-6 w-6 text-white/30 sm:block group-focus-within:text-orange-500 transition-colors" />
+          <div className="group relative flex w-full flex-col items-center rounded-sm border border-[#333] bg-[#0c0b0a] p-2 transition-all focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/50 sm:flex-row shadow-[0_0_15px_rgba(0,0,0,0.2)]">
+            <Microscope className="ml-4 hidden h-6 w-6 text-white/30 sm:block group-focus-within:text-emerald-500 transition-colors" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -127,9 +128,11 @@ const ResearchPage = () => {
       <div className="space-y-4">
         <h2 className="res-report text-2xl font-serif text-[#fdfbf7] tracking-tight px-2">Recent Reports</h2>
         {reports.map((report) => (
-          <article
+          <GlowCard
             key={report.id}
-            className="res-report rounded-sm border border-[#2a2a2a] bg-[#111] p-8 transition-colors hover:border-[#444]"
+            glowColor={report.status === "completed" ? "rgba(16, 185, 129, 0.15)" : "rgba(234, 88, 12, 0.15)"}
+            containerClassName="res-report"
+            className="p-8"
           >
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 flex-1">
@@ -148,7 +151,7 @@ const ResearchPage = () => {
 
                 {report.status === "completed" && report.summary && (
                   <div className="mt-6 space-y-5 pl-16">
-                    <p className="text-sm leading-relaxed text-[#fdfbf7]/80 border-l-2 border-orange-500 pl-4 py-1">
+                    <p className="text-sm leading-relaxed text-[#fdfbf7]/80 border-l-2 border-emerald-500 pl-4 py-1">
                       {report.summary}
                     </p>
                     <div className="space-y-3">
@@ -156,7 +159,7 @@ const ResearchPage = () => {
                       <ul className="space-y-3">
                         {report.findings?.map((finding, idx) => (
                           <li key={idx} className="flex items-start gap-3 text-sm text-[#fdfbf7]/70">
-                            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-400" />
+                            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
                             {finding}
                           </li>
                         ))}
@@ -166,13 +169,13 @@ const ResearchPage = () => {
                 )}
               </div>
 
-              <div className="flex shrink-0 items-center gap-2 lg:justify-end">
+              <div className="flex shrink-0 items-center gap-2 lg:justify-end mt-4 lg:mt-0">
                 <span className={`inline-flex items-center gap-1.5 rounded-sm border px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest ${report.status === "completed" ? "bg-[#0c0b0a] border-[#333] text-white/60" : "bg-orange-500/10 border-orange-500/20 text-orange-400"}`}>
                   {report.status === "researching" ? "Analyzing Sources..." : "Completed"}
                 </span>
               </div>
             </div>
-          </article>
+          </GlowCard>
         ))}
       </div>
     </div>

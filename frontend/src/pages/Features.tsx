@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { brand } from "@/config/brand";
 import { BrandFooter } from "@/components/brand/BrandFooter";
+import { GlowCard } from "@/components/GlowCard";
 
 const Features = () => {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -96,13 +97,13 @@ const Features = () => {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, i) => (
-            <div key={i} className="feat-card rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-8 hover:bg-[#111] hover:border-[#444] transition-colors">
+            <GlowCard key={i} containerClassName="feat-card" className="p-8">
               <feature.icon className={`h-8 w-8 mb-6 ${feature.color}`} />
               <h3 className="font-serif text-2xl text-white mb-3">{feature.title}</h3>
               <p className="text-sm text-white/50 leading-relaxed">
                 {feature.description}
               </p>
-            </div>
+            </GlowCard>
           ))}
         </div>
 
