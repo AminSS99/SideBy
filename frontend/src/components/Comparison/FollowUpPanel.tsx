@@ -15,7 +15,7 @@ const suggestedQuestions = [
   "What are the main differences in developer experience (DX)?",
 ];
 
-const FollowUpPanel = () => {
+export const FollowUpPanel = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -183,5 +183,3 @@ const FollowUpPanel = () => {
     </div>
   );
 };
-
-export default FollowUpPanel;
