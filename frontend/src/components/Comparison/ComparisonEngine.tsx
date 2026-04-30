@@ -8,3 +8,4 @@ export * from "./CategorySection";
 export * from "./VerdictPanel";
 export * from "./SourcesPanel";
 export * from "./FollowUpPanel";
+export * from "./EntityFactPanel";

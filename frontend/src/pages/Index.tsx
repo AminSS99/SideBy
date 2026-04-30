@@ -1,27 +1,23 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useRef } from "react";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react";
-import { useQuery } from "@tanstack/react-query";
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import { useGSAP } from "@gsap/react";
-import { ArrowRight, GitCompareArrows, Lock, Search, Sparkles, BookOpenText, BadgeCheck, Boxes, FileSearch } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
-import { brand, colors } from "@/config/brand";
-import { buildApiUrl, envConfig } from "@/config/env";
-import { apiFetch } from "@/lib/api";
+import { brand } from "@/config/brand";
+import { envConfig } from "@/config/env";
+import { researchSteps } from "@/lib/comparisonUtils";
+import { useComparisonEngine } from "@/hooks/useComparisonEngine";
 import {
-  type ComparisonData,
-  type ResearchStep,
   ResearchLoader,
   ComparisonHeader,
   CategorySection,
   VerdictPanel,
   SourcesPanel,
   FollowUpPanel,
+  EntityFactPanel,
 } from "@/components/Comparison/ComparisonEngine";
-
-gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
+import { AnimatePresence } from "framer-motion";
 
 const examples = [
   "ChatGPT Plus vs Claude Pro",
@@ -31,210 +27,23 @@ const examples = [
   "Paddle vs RevenueCat",
 ];
 
-const researchSteps: ResearchStep[] = [
-  { label: "Understanding query", detail: "Parsing entities and decision context", icon: GitCompareArrows },
-  { label: "Finding official sources", detail: "Prioritizing pricing, docs, and product pages", icon: Search },
-  { label: "Checking pricing", detail: "Flagging values that need fast refresh windows", icon: BadgeCheck },
-  { label: "Reading docs", detail: "Extracting capabilities and integration notes", icon: BookOpenText },
-  { label: "Extracting facts", detail: "Adding source URLs, confidence, and timestamps", icon: FileSearch },
-  { label: "Building comparison", detail: "Creating category winners and nuanced verdicts", icon: Boxes },
-];
-
-const normalizeEntity = (name: string) =>
-  name.replace(/\b(for|with|inside|on)\b.*$/i, "").replace(/[^a-z0-9\s+.-]/gi, "").trim();
-
-const parseQuery = (query: string) => {
-  const [left, rightWithContext] = query.split(/\s+vs\.?\s+/i);
-  const [right, contextTail] = (rightWithContext || "").split(/\s+for\s+/i);
-  const entityA = normalizeEntity(left || "Supabase") || "Supabase";
-  const entityB = normalizeEntity(right || "Firebase") || "Firebase";
-  const context = contextTail?.trim()
-    ? `for ${contextTail.trim()}`
-    : query.toLowerCase().includes("saas")
-      ? "for a SaaS product"
-      : "for the decision you described";
-  return { entityA, entityB, context };
-};
-
-const makeSlug = (a: string, b: string) =>
-  `${a}-vs-${b}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-
-const titleCase = (v: string) =>
-  v.split(" ").filter(Boolean).map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
-
-const productSubtitle = (name: string) => {
-  const l = name.toLowerCase();
-  if (l.includes("supabase")) return "Open-source Postgres platform";
-  if (l.includes("firebase")) return "Google-backed app platform";
-  if (l.includes("cursor")) return "AI-native code editor";
-  if (l.includes("windsurf")) return "Agentic developer environment";
-  if (l.includes("paddle")) return "Merchant of record billing";
-  if (l.includes("revenuecat")) return "Subscription infrastructure";
-  if (l.includes("chatgpt")) return "OpenAI consumer AI plan";
-  if (l.includes("claude")) return "Anthropic consumer AI plan";
-  if (l.includes("vercel")) return "Frontend cloud platform";
-  if (l.includes("render")) return "Cloud app hosting platform";
-  return "Product research target";
-};
-
-const buildResult = (query: string, refreshCount: number, previousResult?: ComparisonData | null): ComparisonData => {
-  const { entityA, entityB, context } = parseQuery(query);
-  const now = refreshCount > 0 ? "just now" : "2 min ago";
-  const changed = refreshCount > 0;
-
-  const entities = {
-    a: { name: titleCase(entityA), subtitle: productSubtitle(entityA), mark: entityA.slice(0, 1).toUpperCase(), hex: colors.entityA },
-    b: { name: titleCase(entityB), subtitle: productSubtitle(entityB), mark: entityB.slice(0, 1).toUpperCase(), hex: colors.entityB },
-  };
-
-  const result: ComparisonData = {
-    slug: makeSlug(entityA, entityB),
-    query,
-    context,
-    entities,
-    sourceCount: changed ? 14 : 12,
-    updatedAt: now,
-    verdict: {
-      bestOverall: entities.a.name,
-      bestValue: entities.b.name,
-      developers: entities.a.name,
-      teams: entities.b.name,
-      students: "Depends on usage cap",
-      powerUsers: entities.a.name,
-      ecosystem: entities.b.name,
-      summary: `${entities.a.name} has the edge when control, extensibility, and developer velocity matter. ${entities.b.name} is still the safer recommendation for teams that want more managed defaults, broader ecosystem gravity, and less infrastructure ownership. Pricing-sensitive claims should be treated as fast-moving unless confirmed from official sources.`,
-    },
-    categories: [
-      {
-        name: "Pricing and plan clarity",
-        winner: "tie",
-        verdict: "Both need current official pricing checks before a purchase decision.",
-        facts: [
-          { entity: "a" as const, label: "Pricing posture", value: changed ? "Official pricing reviewed; usage-based lines changed since last run." : "Usage-based pricing with free tier signals; exact totals depend on workload.", source: "Official pricing page", sourceUrl: "#", sourceTitle: `${entities.a.name} pricing`, confidence: 0.86, freshness: "Monitor" as const, changed },
-          { entity: "b" as const, label: "Pricing posture", value: "Generous starter path, but production costs vary by product mix.", source: "Official pricing page", sourceUrl: "#", sourceTitle: `${entities.b.name} pricing`, confidence: 0.84, freshness: "Monitor" as const },
-        ],
-      },
-      {
-        name: "Developer workflow",
-        winner: "a",
-        verdict: "The left option is stronger for teams that want inspectable primitives and SQL-native control.",
-        facts: [
-          { entity: "a" as const, label: "Core workflow", value: "Postgres-first architecture with SQL, auth, storage, and edge functions.", source: "Official docs", sourceUrl: "#", sourceTitle: `${entities.a.name} docs`, confidence: 0.91, freshness: "Fresh" as const },
-          { entity: "b" as const, label: "Core workflow", value: "Integrated SDKs and managed services reduce setup for common app patterns.", source: "Official docs", sourceUrl: "#", sourceTitle: `${entities.b.name} docs`, confidence: 0.88, freshness: "Fresh" as const },
-        ],
-      },
-      {
-        name: "Ecosystem and integrations",
-        winner: "b",
-        verdict: "The right option benefits from broader default ecosystem pull and platform integrations.",
-        facts: [
-          { entity: "a" as const, label: "Integration profile", value: "Strong fit with modern web stacks and Postgres tooling.", source: "Docs and integration catalog", sourceUrl: "#", sourceTitle: `${entities.a.name} integrations`, confidence: 0.82, freshness: "Stable" as const },
-          { entity: "b" as const, label: "Integration profile", value: "Deep platform ecosystem with analytics, messaging, hosting, and mobile SDKs.", source: "Official product docs", sourceUrl: "#", sourceTitle: `${entities.b.name} docs`, confidence: 0.89, freshness: "Stable" as const },
-        ],
-      },
-      {
-        name: "Risk and lock-in",
-        winner: "a",
-        verdict: "Open standards and portability reduce long-term lock-in risk for technical teams.",
-        facts: [
-          { entity: "a" as const, label: "Portability", value: "Postgres foundation gives clearer migration and self-hosting pathways.", source: "Official docs", sourceUrl: "#", sourceTitle: `${entities.a.name} docs`, confidence: 0.87, freshness: "Stable" as const },
-          { entity: "b" as const, label: "Portability", value: "Managed convenience can create product-specific architecture dependencies.", source: "Docs and migration notes", sourceUrl: "#", sourceTitle: `${entities.b.name} docs`, confidence: 0.79, freshness: "Stable" as const },
-        ],
-      },
-    ],
-    sources: [
-      { title: `${entities.a.name} official pricing`, url: `https://www.google.com/search?q=${encodeURIComponent(`${entities.a.name} official pricing`)}`, reliability: "Official" as const, fetchedAt: "3 min ago" },
-      { title: `${entities.b.name} official pricing`, url: `https://www.google.com/search?q=${encodeURIComponent(`${entities.b.name} official pricing`)}`, reliability: "Official" as const, fetchedAt: "4 min ago" },
-      { title: `${entities.a.name} product docs`, url: `https://www.google.com/search?q=${encodeURIComponent(`${entities.a.name} docs`)}`, reliability: "Docs" as const, fetchedAt: "6 min ago" },
-      { title: `${entities.b.name} product docs`, url: `https://www.google.com/search?q=${encodeURIComponent(`${entities.b.name} docs`)}`, reliability: "Docs" as const, fetchedAt: "8 min ago" },
-    ],
-  };
-
-  if (previousResult) {
-    return detectClientChanges(result, previousResult);
-  }
-
-  return result;
-};
-
-const detectClientChanges = (current: ComparisonData, previous: ComparisonData): ComparisonData => {
-  const oldFacts = new Map<string, string>();
-  for (const cat of previous.categories) {
-    for (const f of cat.facts) {
-      oldFacts.set(`${f.entity}:${f.label}`, f.value);
-    }
-  }
-
-  const categories = current.categories.map((cat) => ({
-    ...cat,
-    facts: cat.facts.map((f) => {
-      const key = `${f.entity}:${f.label}`;
-      const oldValue = oldFacts.get(key);
-      if (oldValue !== undefined && oldValue !== f.value) {
-        return { ...f, changed: true, previousValue: oldValue };
-      }
-      return { ...f, changed: false };
-    }),
-  }));
-
-  return { ...current, categories, sourceCount: current.sourceCount + 1, updatedAt: "just now" };
-};
-
-type ComparisonJob = {
-  id: string;
-  status: "running" | "completed" | "failed";
-  progress: number;
-  activeStep: number;
-  query: string;
-  result: ComparisonData | null;
-  error?: string | null;
-};
-
-type ActiveJob = { id: string; startedAt: number; mode: "local" | "backend" };
-
-const createBackendJob = async (query: string) => {
-  const res = await apiFetch(buildApiUrl("/api/comparisons/create"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query }),
-  });
-  if (!res.ok) throw new Error("Unable to start comparison research.");
-  return (await res.json()) as ComparisonJob;
-};
-
-const refreshBackendJob = async (id: string) => {
-  const res = await apiFetch(buildApiUrl(`/api/comparisons/${id}/refresh`), { method: "POST" });
-  if (!res.ok) throw new Error("Unable to refresh comparison.");
-  return (await res.json()) as ComparisonJob;
-};
-
-const pollJob = async (activeJob: ActiveJob, query: string): Promise<ComparisonJob> => {
-  if (activeJob.mode === "backend") {
-    const res = await apiFetch(buildApiUrl(`/api/comparisons/${activeJob.id}`));
-    if (!res.ok) throw new Error("Unable to poll comparison.");
-    return (await res.json()) as ComparisonJob;
-  }
-  await new Promise((r) => setTimeout(r, 180));
-  const elapsed = Date.now() - activeJob.startedAt;
-  const progress = Math.min(100, Math.round((elapsed / 5200) * 100));
-  return {
-    id: activeJob.id,
-    status: progress >= 100 ? "completed" : "running",
-    progress,
-    activeStep: Math.min(researchSteps.length - 1, Math.floor((progress / 100) * researchSteps.length)),
-    query,
-    result: null,
-  };
-};
-
 const Index = () => {
-  const [query, setQuery] = useState("Supabase vs Firebase for a SaaS");
-  const [job, setJob] = useState<ActiveJob | null>(null);
-  const [comparisonId, setComparisonId] = useState<string | null>(null);
-  const [result, setResult] = useState<ComparisonData | null>(null); // Start empty so hero is visible
-  const [refreshCount, setRefreshCount] = useState(0);
-  const [followUp, setFollowUp] = useState("");
-  const [followUpAnswer, setFollowUpAnswer] = useState("");
+  const {
+    query,
+    setQuery,
+    result,
+    isResearching,
+    followUp,
+    setFollowUp,
+    followUpAnswer,
+    startResearch,
+    handleRefresh,
+    askFollowUp,
+    entityFacts,
+    comparisonId,
+    progress,
+    activeStep,
+  } = useComparisonEngine("Supabase vs Firebase for a SaaS");
 
   const pageRef = useRef<HTMLDivElement>(null);
 
@@ -248,26 +57,6 @@ const Index = () => {
       .from(".hero-examples", { y: 10, opacity: 0, stagger: 0.1, duration: 0.5, ease: "power2.out" }, "-=0.4");
   }, { scope: pageRef });
 
-  const jobQuery = useQuery({
-    queryKey: ["comparison-job", job?.id],
-    queryFn: () => pollJob(job ?? { id: "local", startedAt: Date.now(), mode: "local" }, query),
-    enabled: Boolean(job),
-    refetchInterval: (q) => (q.state.data?.status === "completed" ? false : 620),
-  });
-
-  const jobData = jobQuery.data;
-  const isResearching = Boolean(job && jobData?.status !== "completed");
-
-  useEffect(() => {
-    if (!job || jobData?.status !== "completed") return;
-    const prevResult = result;
-    const newResult = jobData.result ?? buildResult(query, refreshCount, prevResult);
-    setResult(newResult);
-    setComparisonId(job.mode === "backend" ? job.id : null);
-    setJob(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [job, jobData?.result, jobData?.status, query, refreshCount]);
-
   // Entrance animation for result wrapper when result changes
   useGSAP(() => {
     if (result && !isResearching) {
@@ -279,67 +68,6 @@ const Index = () => {
       });
     }
   }, [result, isResearching]);
-
-  const entityFacts = useMemo(() => {
-    if (!result) return { a: [] as { category: string }[], b: [] as { category: string }[] };
-    const facts = result.categories.flatMap((c) => c.facts.map((f) => ({ ...f, category: c.name })));
-    return { a: facts.filter((f) => f.entity === "a"), b: facts.filter((f) => f.entity === "b") };
-  }, [result]);
-
-  const startResearch = async (nextQuery = query, refreshed = false) => {
-    const clean = nextQuery.trim();
-    if (!clean) return;
-    setQuery(clean);
-    setFollowUpAnswer("");
-    if (refreshed) setRefreshCount((c) => c + 1);
-
-    // Scroll down slightly for effect using ScrollToPlugin
-    gsap.to(window, { duration: 0.8, scrollTo: { y: 200 }, ease: "power3.inOut" });
-
-    try {
-      const j = await createBackendJob(clean);
-      setJob({ id: j.id, startedAt: Date.now(), mode: "backend" });
-      return;
-    } catch (e) { console.error("Backend comparison failed.", e); }
-    setJob({ id: `${Date.now()}`, startedAt: Date.now(), mode: "local" });
-  };
-
-  const handleRefresh = async () => {
-    if (!result) return;
-    setFollowUpAnswer("");
-    setRefreshCount((c) => c + 1);
-    if (comparisonId) {
-      try {
-        const j = await refreshBackendJob(comparisonId);
-        setJob({ id: j.id, startedAt: Date.now(), mode: "backend" });
-        return;
-      } catch (e) { console.error("Backend refresh failed.", e); }
-    }
-    setJob({ id: `${Date.now()}`, startedAt: Date.now(), mode: "local" });
-  };
-
-  const askFollowUp = async () => {
-    if (!result) return;
-    const clean = followUp.trim();
-    if (!clean) return;
-    if (comparisonId) {
-      try {
-        const res = await apiFetch(buildApiUrl(`/api/comparisons/${comparisonId}/follow-up`), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: clean }),
-        });
-        if (res.ok) {
-          const data = (await res.json()) as { answer: string };
-          setFollowUpAnswer(data.answer);
-          setFollowUp("");
-          return;
-        }
-      } catch (e) { console.error("Follow-up failed.", e); }
-    }
-    setFollowUpAnswer(`Based on the current source-backed matrix, the answer leans toward ${result.verdict.developers} for technical control and ${result.verdict.bestValue} for lower-friction adoption. SideBy would rerun targeted source checks before answering pricing-sensitive follow-ups.`);
-    setFollowUp("");
-  };
 
   return (
     <div ref={pageRef} className="min-h-screen overflow-x-hidden bg-[#0c0b0a] text-[#fdfbf7] selection:bg-orange-500/30">
@@ -432,99 +160,44 @@ const Index = () => {
         {/* Results */}
         {(isResearching || result) && (
           <section className="border-t-4 border-[#2a2a2a] pt-20">
-            {isResearching ? (
-              <ResearchLoader
-                key="loading"
-                query={query}
-                progress={jobData?.progress ?? 4}
-                activeStep={jobData?.activeStep ?? 0}
-                steps={researchSteps}
-              />
-            ) : result ? (
-              <div key="result" className="result-wrapper grid gap-12 lg:grid-cols-12">
-                <div className="space-y-12 lg:col-span-8">
-                  <ComparisonHeader result={result} onRefresh={handleRefresh} comparisonId={comparisonId} />
+            <AnimatePresence mode="wait">
+              {isResearching ? (
+                <ResearchLoader
+                  key="loading"
+                  query={query}
+                  progress={progress}
+                  activeStep={activeStep}
+                  steps={researchSteps}
+                />
+              ) : result ? (
+                <div key="result" className="result-wrapper grid gap-12 lg:grid-cols-12">
+                  <div className="space-y-12 lg:col-span-8">
+                    <ComparisonHeader result={result} onRefresh={handleRefresh} comparisonId={comparisonId} />
 
-                  <div className="space-y-12">
-                    {result.categories.map((cat, i) => (
-                      <CategorySection key={cat.name} category={cat} entities={result.entities} index={i} />
-                    ))}
+                    <div className="space-y-12">
+                      {result.categories.map((cat, i) => (
+                        <CategorySection key={cat.name} category={cat} entities={result.entities} index={i} />
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <aside className="space-y-8 lg:col-span-4">
-                  <VerdictPanel result={result} />
-                  <EntityFactPanel result={result} facts={entityFacts} />
-                  <SourcesPanel sources={result.sources} />
-                  <FollowUpPanel
-                    question={followUp}
-                    answer={followUpAnswer}
-                    onQuestionChange={setFollowUp}
-                    onAsk={askFollowUp}
-                  />
-                </aside>
-              </div>
-            ) : null}
+                  <aside className="space-y-8 lg:col-span-4">
+                    <VerdictPanel result={result} />
+                    <EntityFactPanel result={result} facts={entityFacts} />
+                    <SourcesPanel sources={result.sources} />
+                    <FollowUpPanel
+                      question={followUp}
+                      answer={followUpAnswer}
+                      onQuestionChange={setFollowUp}
+                      onAsk={askFollowUp}
+                    />
+                  </aside>
+                </div>
+              ) : null}
+            </AnimatePresence>
           </section>
         )}
       </main>
-    </div>
-  );
-};
-
-const EntityFactPanel = ({
-  result,
-  facts,
-}: {
-  result: ComparisonData;
-  facts: Record<string, Array<{ category: string }>>;
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  useGSAP(() => {
-    gsap.from(".efp-item", {
-      scrollTrigger: {
-        trigger: containerRef.current,
-        start: "top 90%",
-      },
-      y: 20,
-      opacity: 0,
-      stagger: 0.15,
-      duration: 0.8,
-      ease: "power3.out"
-    });
-  }, { scope: containerRef });
-
-  return (
-    <div
-      ref={containerRef}
-      className="border border-[#2a2a2a] bg-[#0c0b0a] p-8"
-    >
-      <h3 className="mb-6 font-serif text-2xl text-[#fdfbf7] tracking-tight">Fact Coverage</h3>
-      <div className="space-y-4">
-        {(["a", "b"] as const).map((key) => (
-          <div key={key} className="efp-item border border-[#2a2a2a] bg-[#111] p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <span className="text-base font-serif" style={{ color: result.entities[key].hex }}>
-                {result.entities[key].name}
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
-                {facts[key].length} facts
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {facts[key].slice(0, 4).map((f) => (
-                <span
-                  key={`${key}-${f.category}`}
-                  className="border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50"
-                >
-                  {f.category}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 };
