@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   FolderKanban,
   Layers3,
+  Users,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -106,6 +107,13 @@ export function CommandMenu({ open, setOpen }: { open: boolean, setOpen: (open: 
           </CommandGroup>
           <CommandSeparator className="bg-[#2a2a2a]" />
           <CommandGroup heading="Account & Settings" className="text-[#fdfbf7]/40 px-2 py-3">
+            <CommandItem 
+              onSelect={() => runCommand(() => navigate("/app/team"))}
+              className="text-[#fdfbf7] aria-selected:bg-[#1a1a1a] aria-selected:text-orange-400 cursor-pointer rounded-sm mb-1"
+            >
+              <Users className="mr-3 h-4 w-4" />
+              <span>Team & Access</span>
+            </CommandItem>
             <CommandItem 
               onSelect={() => runCommand(() => navigate("/app/billing"))}
               className="text-[#fdfbf7] aria-selected:bg-[#1a1a1a] aria-selected:text-orange-400 cursor-pointer rounded-sm mb-1"

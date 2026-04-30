@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { GitCompareArrows, LayoutDashboard, Layers3, FolderKanban, Settings, LogOut, MessageSquare, Microscope, Database, Activity, CreditCard, Search, Terminal } from "lucide-react";
+import { GitCompareArrows, LayoutDashboard, Layers3, FolderKanban, Settings, LogOut, MessageSquare, Microscope, Database, Activity, CreditCard, Search, Terminal, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +18,7 @@ const navItems = [
   { to: "/app/uploads", label: "Knowledge", icon: Database },
   { to: "/app/prompts", label: "Prompts", icon: Terminal },
   { to: "/app/analytics", label: "Analytics", icon: Activity },
+  { to: "/app/team", label: "Team", icon: Users },
   { to: "/app/billing", label: "Billing", icon: CreditCard },
   { to: "/app/workspaces", label: "Workspaces", icon: Layers3 },
   { to: "/app/projects", label: "Projects", icon: FolderKanban },
