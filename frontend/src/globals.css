@@ -92,4 +92,21 @@
   .gradient-text {
     @apply bg-gradient-to-br from-orange-400 to-orange-700 bg-clip-text text-transparent;
   }
+
+  /* 3D GSAP Utilities */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+  .transform-translate-z-10 {
+    transform: translateZ(10px);
+  }
+  .transform-translate-z-20 {
+    transform: translateZ(20px);
+  }
+  .will-change-transform {
+    will-change: transform;
+  }
 }

@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Sparkles, Search, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { brand } from "@/config/brand";
 import { buildApiUrl } from "@/config/env";
 import { apiFetch } from "@/lib/api";
@@ -20,6 +22,7 @@ const Compare = () => {
   const { slug } = useParams<{ slug: string }>();
   const [followUp, setFollowUp] = useState("");
   const [followUpAnswer, setFollowUpAnswer] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const { data: jobData, isLoading, error } = useQuery({
     queryKey: ["public-comparison", slug],
@@ -77,8 +80,18 @@ const Compare = () => {
     window.location.reload();
   };
 
+  useGSAP(() => {
+    if (!isLoading && result) {
+      const tl = gsap.timeline();
+      tl.from(".compare-hero-badge", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" })
+        .from(".compare-hero-title", { y: 30, opacity: 0, duration: 1, ease: "expo.out" }, "-=0.6")
+        .from(".compare-hero-desc", { opacity: 0, duration: 0.8 }, "-=0.4")
+        .from(".compare-content-grid", { y: 60, opacity: 0, duration: 1.2, ease: "expo.out" }, "-=0.6");
+    }
+  }, [isLoading, result]);
+
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#030303] text-white selection:bg-orange-500/30">
+    <div ref={containerRef} className="min-h-screen overflow-x-hidden bg-[#030303] text-white selection:bg-orange-500/30">
       <div className="pointer-events-none fixed inset-0 opacity-[0.03]">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
       </div>
@@ -132,18 +145,18 @@ const Compare = () => {
         ) : (
           <>
             <section className="mb-10">
-              <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-500">
+              <div className="compare-hero-badge mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-500">
                 <Sparkles className="h-3.5 w-3.5" /> Public Comparison
               </div>
-              <h1 className="font-serif text-4xl text-white sm:text-5xl">
+              <h1 className="compare-hero-title font-serif text-4xl text-white sm:text-5xl">
                 <span className="bg-gradient-to-b from-orange-400 to-orange-600 bg-clip-text text-transparent">{result.entities.a.name}</span>
                 <span className="mx-4 font-sans text-xl italic font-light text-white/15">vs</span>
                 <span className="bg-gradient-to-b from-cyan-400 to-blue-600 bg-clip-text text-transparent">{result.entities.b.name}</span>
               </h1>
-              <p className="mt-3 text-sm text-white/30">{brand.tagline} — {brand.domain}</p>
+              <p className="compare-hero-desc mt-3 text-sm text-white/30">{brand.tagline} — {brand.domain}</p>
             </section>
 
-            <div className="grid gap-10 lg:grid-cols-12">
+            <div className="compare-content-grid grid gap-10 lg:grid-cols-12">
               <div className="space-y-10 lg:col-span-8">
                 <ComparisonHeader result={result} onRefresh={handleRefresh} comparisonId={jobData.id} />
                 <div className="space-y-10">
