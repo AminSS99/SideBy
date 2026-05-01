@@ -51,7 +51,7 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
   if (!matrixData || matrixData.length === 0) return null;
 
   return (
-    <div ref={containerRef} className={cn(panelClass, "overflow-hidden mb-10")}>
+    <div id="feature-matrix" ref={containerRef} className={cn(panelClass, "overflow-hidden mb-10 scroll-mt-28")}>
       <div className="p-8 border-b border-[#2a2a2a] flex items-center gap-4 bg-[#111]">
         <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7]/50">
           <Table2 className="h-5 w-5" />

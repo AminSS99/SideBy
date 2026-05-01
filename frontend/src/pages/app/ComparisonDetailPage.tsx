@@ -26,6 +26,7 @@ import {
   RadarChartPanel,
   ConsensusPanel,
   FeatureMatrixPanel,
+  TableOfContents,
 } from "@/components/Comparison/ComparisonEngine";
 
 type ComparisonJob = {
@@ -301,6 +302,7 @@ const ComparisonDetailPage = () => {
           </div>
 
           <aside className="space-y-6 xl:col-span-4 sticky top-6 self-start pb-8 h-[calc(100vh-2rem)] overflow-y-auto no-scrollbar">
+            <TableOfContents result={result} />
             <VerdictPanel result={result} />
             <EntityFactPanel result={result} facts={entityFacts} />
             <SourcesPanel sources={result.sources} />

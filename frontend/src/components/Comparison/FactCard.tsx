@@ -1,7 +1,8 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
+import { Copy, Check } from "lucide-react";
 import type { ComparisonFact, Entity } from "./types";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -16,6 +17,7 @@ interface FactCardProps {
 export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const gaugeRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
 
   useGSAP(() => {
     if (!cardRef.current) return;
@@ -52,6 +54,12 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
     }
   }, { scope: cardRef });
 
+  const handleCopy = () => {
+    navigator.clipboard.writeText(`${fact.label} for ${entity.name}: ${fact.value}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div
       ref={cardRef}
@@ -65,7 +73,16 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
       {/* Sweeping Glassmorphic Shine Effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-[1.5s] ease-out z-0 pointer-events-none" />
 
-      <div className="relative z-10 mb-5 flex items-start justify-between gap-3 border-b border-[#2a2a2a] pb-4">
+      {/* Copy Button */}
+      <button 
+        onClick={handleCopy}
+        title="Copy Fact"
+        className="absolute top-4 right-4 p-1.5 rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7]/50 opacity-0 group-hover:opacity-100 transition-opacity hover:text-[#fdfbf7] z-20"
+      >
+        {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+      </button>
+
+      <div className="relative z-10 mb-5 flex items-start justify-between gap-3 border-b border-[#2a2a2a] pb-4 pr-8">
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: entity.hex }}>
             {entity.name}

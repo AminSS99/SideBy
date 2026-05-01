@@ -20,6 +20,7 @@ import {
   RadarChartPanel,
   ConsensusPanel,
   FeatureMatrixPanel,
+  TableOfContents,
 } from "@/components/Comparison/ComparisonEngine";
 
 const Compare = () => {
@@ -173,6 +174,7 @@ const Compare = () => {
                 </div>
               </div>
               <aside className="space-y-6 lg:col-span-4 sticky top-24 self-start pb-8 h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar">
+                <TableOfContents result={result} />
                 <VerdictPanel result={result} />
                 <EntityFactPanel result={result} facts={entityFacts} />
                 <SourcesPanel sources={result.sources} />
