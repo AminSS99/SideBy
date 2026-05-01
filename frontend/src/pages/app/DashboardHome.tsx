@@ -1,5 +1,18 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Clock3, ExternalLink, FolderKanban, Layers3, Sparkles, Workflow } from "lucide-react";
+import { Link } from "react-router-dom";
+import { 
+  Clock3, 
+  ExternalLink, 
+  FolderKanban, 
+  Layers3, 
+  Sparkles, 
+  Workflow,
+  Plus,
+  UploadCloud,
+  UserPlus,
+  Activity
+} from "lucide-react";
+import { AreaChart, Area, ResponsiveContainer } from "recharts";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { brand } from "@/config/brand";
@@ -8,7 +21,6 @@ import { useProjects } from "@/contexts/ProjectsContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
-import { Link } from "react-router-dom";
 import { GlowCard } from "@/components/GlowCard";
 
 type ComparisonHistoryItem = {
@@ -31,6 +43,12 @@ const formatTimestamp = (value: string) =>
     timeStyle: "short",
   });
 
+// Mock data for the mini telemetry chart
+const miniChartData = [
+  { runs: 2 }, { runs: 5 }, { runs: 3 }, { runs: 8 }, 
+  { runs: 4 }, { runs: 12 }, { runs: 7 }
+];
+
 const DashboardHome = () => {
   const { user, isConfigured } = useAuth();
   const { activeWorkspace, error, isLoading, workspaces } = useWorkspace();
@@ -43,22 +61,11 @@ const DashboardHome = () => {
 
   useGSAP(() => {
     if (!comparisonsLoading) {
-      gsap.from(".dash-card", {
-        y: 20,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.1,
-        ease: "power3.out"
-      });
-      
-      gsap.from(".dash-list-item", {
-        x: -20,
-        opacity: 0,
-        duration: 0.6,
-        stagger: 0.1,
-        ease: "power2.out",
-        delay: 0.2
-      });
+      const tl = gsap.timeline();
+      tl.from(".dash-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
+        .from(".dash-action", { y: 20, opacity: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }, "-=0.6")
+        .from(".dash-card", { y: 20, opacity: 0, duration: 0.8, stagger: 0.1, ease: "power3.out" }, "-=0.4")
+        .from(".dash-list-item", { x: -20, opacity: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }, "-=0.4");
     }
   }, [comparisonsLoading]);
 
@@ -76,145 +83,158 @@ const DashboardHome = () => {
       try {
         setComparisonsLoading(true);
         setComparisonsError(null);
-        const res = await apiFetch(buildApiUrl("/api/comparisons/list?limit=6"));
-        if (!res.ok) {
-          throw new Error("Unable to load comparison history.");
-        }
+        const res = await apiFetch(buildApiUrl("/api/comparisons/list?limit=5"));
+        if (!res.ok) throw new Error("Unable to load comparison history.");
 
         const data = (await res.json()) as { comparisons: ComparisonHistoryItem[] };
-        if (mounted) {
-          setComparisons(data.comparisons);
-        }
+        if (mounted) setComparisons(data.comparisons);
       } catch (loadError) {
         if (mounted) {
           setComparisons([]);
-          setComparisonsError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Unable to load comparison history.",
-          );
+          setComparisonsError(loadError instanceof Error ? loadError.message : "Unable to load history.");
         }
       } finally {
-        if (mounted) {
-          setComparisonsLoading(false);
-        }
+        if (mounted) setComparisonsLoading(false);
       }
     };
 
     void loadComparisons();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [activeWorkspaceId, isConfigured]);
 
-  const cards = [
-    {
-      title: "Workspaces",
-      value: isLoading ? "..." : String(workspaces.length),
-      description: activeWorkspace?.name || "No active workspace yet",
-      icon: Layers3,
-    },
-    {
-      title: "Projects",
-      value: projectsLoading ? "..." : String(projects.length),
-      description: activeProject?.name || "No active project selected",
-      icon: FolderKanban,
-    },
-    {
-      title: "Comparisons",
-      value: comparisonsLoading ? "..." : String(comparisons.length),
-      description:
-        comparisons[0]?.query || "No persisted compare history yet",
-      icon: Workflow,
-    },
-    {
-      title: "Platform state",
-      value: isConfigured ? "Live" : "Scaffold",
-      description: isConfigured
-        ? "Clerk-backed private beta access is enabled"
-        : "Clerk keys are still missing",
-      icon: Sparkles,
-    },
+  const stats = [
+    { title: "Workspaces", value: isLoading ? "-" : workspaces.length, desc: activeWorkspace?.name || "None", icon: Layers3, color: "text-blue-400" },
+    { title: "Projects", value: projectsLoading ? "-" : projects.length, desc: activeProject?.name || "No active project", icon: FolderKanban, color: "text-emerald-400" },
+    { title: "Comparisons", value: comparisonsLoading ? "-" : comparisons.length, desc: "Total historical runs", icon: Workflow, color: "text-orange-400" },
+    { title: "Platform", value: isConfigured ? "Live" : "Setup", desc: isConfigured ? "Services connected" : "Missing config", icon: Sparkles, color: "text-purple-400" },
   ];
 
   return (
-    <div ref={containerRef} className="space-y-10">
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">
-          SaaS foundation
-        </p>
-        <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
-          Welcome back to {brand.productName}
-        </h1>
-        <p className="mt-4 max-w-3xl text-[#fdfbf7]/60 leading-relaxed">
-          {user?.email
-            ? `Signed in as ${user.email}.`
-            : "Your auth state is active."}{" "}
-          This dashboard is the protected shell that the rest of the product
-          will expand from.
-        </p>
-        {activeWorkspace && (
-          <p className="mt-4 text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/40">
-            Active workspace:{" "}
-            <span className="text-[#fdfbf7]">
-              {activeWorkspace.name}
-            </span>
+    <div ref={containerRef} className="space-y-8 max-w-6xl">
+      <div className="dash-header flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
+            Command Center
           </p>
-        )}
-        {!isConfigured && (
-          <p className="mt-4 text-sm text-amber-500">
-            Clerk keys are still missing, so this route is currently using
-            scaffolded state only.
+          <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
+            Welcome, {user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'Researcher'}
+          </h1>
+          <p className="mt-3 text-sm text-[#fdfbf7]/60 leading-relaxed max-w-2xl">
+            This is your workspace overview. From here you can launch new orchestration jobs, invite team members, or review past research.
           </p>
-        )}
-        {error && <p className="mt-4 text-sm text-amber-500">{error}</p>}
+        </div>
+        
+        {/* Mini Telemetry Chart */}
+        <div className="flex items-center gap-4 rounded-sm border border-[#2a2a2a] bg-[#111] p-4 shrink-0">
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">7d Activity</p>
+            <div className="flex items-center gap-2">
+              <Activity className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="font-serif text-xl text-[#fdfbf7]">41</span>
+              <span className="text-xs text-[#fdfbf7]/50">runs</span>
+            </div>
+          </div>
+          <div className="h-12 w-24 ml-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={miniChartData}>
+                <defs>
+                  <linearGradient id="colorMini" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <Area type="monotone" dataKey="runs" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorMini)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {cards.map((card) => (
-          <GlowCard key={card.title} containerClassName="dash-card" className="p-6">
-            <card.icon className="h-5 w-5 text-orange-500" />
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Link to="/app/comparisons" className="dash-action group flex flex-col items-center justify-center gap-3 rounded-sm border border-[#2a2a2a] bg-[#111] p-6 transition-all hover:border-orange-500/50 hover:bg-[#1a110a]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7] group-hover:bg-orange-500/10 group-hover:border-orange-500/30 group-hover:text-orange-400 transition-colors">
+            <Plus className="h-5 w-5" />
+          </div>
+          <div className="text-center">
+            <h3 className="text-sm font-bold text-[#fdfbf7] group-hover:text-orange-400 transition-colors">New Comparison</h3>
+            <p className="text-[10px] text-[#fdfbf7]/40 mt-1 uppercase tracking-widest">Start orchestration</p>
+          </div>
+        </Link>
+
+        <Link to="/app/uploads" className="dash-action group flex flex-col items-center justify-center gap-3 rounded-sm border border-[#2a2a2a] bg-[#111] p-6 transition-all hover:border-blue-500/50 hover:bg-[#0a111a]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7] group-hover:bg-blue-500/10 group-hover:border-blue-500/30 group-hover:text-blue-400 transition-colors">
+            <UploadCloud className="h-5 w-5" />
+          </div>
+          <div className="text-center">
+            <h3 className="text-sm font-bold text-[#fdfbf7] group-hover:text-blue-400 transition-colors">Upload Context</h3>
+            <p className="text-[10px] text-[#fdfbf7]/40 mt-1 uppercase tracking-widest">Add to Knowledge Base</p>
+          </div>
+        </Link>
+
+        <Link to="/app/team" className="dash-action group flex flex-col items-center justify-center gap-3 rounded-sm border border-[#2a2a2a] bg-[#111] p-6 transition-all hover:border-purple-500/50 hover:bg-[#130a1a]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7] group-hover:bg-purple-500/10 group-hover:border-purple-500/30 group-hover:text-purple-400 transition-colors">
+            <UserPlus className="h-5 w-5" />
+          </div>
+          <div className="text-center">
+            <h3 className="text-sm font-bold text-[#fdfbf7] group-hover:text-purple-400 transition-colors">Invite Team</h3>
+            <p className="text-[10px] text-[#fdfbf7]/40 mt-1 uppercase tracking-widest">Collaborate on research</p>
+          </div>
+        </Link>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <GlowCard key={stat.title} containerClassName="dash-card" className="p-6">
+            <stat.icon className={`h-5 w-5 ${stat.color}`} />
             <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
-              {card.title}
+              {stat.title}
             </p>
-            <h2 className="mt-2 font-serif text-3xl text-[#fdfbf7]">{card.value}</h2>
-            <p className="mt-2 text-xs leading-relaxed text-[#fdfbf7]/50">
-              {card.description}
+            <h2 className="mt-2 font-serif text-3xl text-[#fdfbf7]">{stat.value}</h2>
+            <p className="mt-2 text-[10px] uppercase tracking-widest font-bold text-[#fdfbf7]/30 truncate">
+              {stat.desc}
             </p>
           </GlowCard>
         ))}
       </div>
 
-      <div className="dash-card rounded-sm border border-[#2a2a2a] bg-[#111] p-8">
+      {/* Recent History */}
+      <div className="dash-card rounded-sm border border-[#2a2a2a] bg-[#111] p-6 sm:p-8">
         <div className="flex items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
           <div>
-            <h2 className="font-serif text-2xl text-[#fdfbf7]">Recent compare history</h2>
-            <p className="mt-1 text-xs text-[#fdfbf7]/50 uppercase tracking-widest font-bold">
+            <h2 className="font-serif text-2xl text-[#fdfbf7]">Recent orchestration jobs</h2>
+            <p className="mt-1 text-[10px] text-[#fdfbf7]/40 uppercase tracking-widest font-bold">
               Attached to your beta account
             </p>
           </div>
           <Link
             to="/app/comparisons"
-            className="rounded-sm border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-orange-400 transition-colors hover:bg-orange-500/20"
+            className="hidden sm:flex rounded-sm border border-[#333] bg-[#0c0b0a] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-[#555] hover:text-[#fdfbf7]"
           >
-            View all
+            View all history
           </Link>
         </div>
 
         {comparisonsError && (
-          <p className="mt-6 text-sm text-amber-500">{comparisonsError}</p>
+          <div className="mt-6 rounded-sm border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-500">
+            {comparisonsError}
+          </div>
         )}
 
         {comparisonsLoading ? (
-          <div className="mt-8 text-sm text-[#fdfbf7]/50 text-center animate-pulse">
-            Loading comparison history...
+          <div className="mt-8 py-12 text-sm text-[#fdfbf7]/30 text-center font-serif italic animate-pulse">
+            Loading research records...
           </div>
         ) : comparisons.length === 0 ? (
-          <div className="mt-8 rounded-sm border border-dashed border-[#333] bg-[#0c0b0a] p-10 text-center">
+          <div className="mt-8 rounded-sm border border-dashed border-[#333] bg-[#0c0b0a] p-12 text-center">
+            <Workflow className="mx-auto h-8 w-8 text-[#fdfbf7]/20 mb-4" />
             <p className="text-sm text-[#fdfbf7]/50">
-              No comparisons have been persisted yet. Run a source-backed comparison while signed in and it will appear here.
+              No comparisons have been persisted yet.
             </p>
+            <Link to="/app/comparisons" className="inline-block mt-4 text-[10px] font-bold uppercase tracking-widest text-orange-400 hover:text-orange-300">
+              Start your first run &rarr;
+            </Link>
           </div>
         ) : (
           <div className="mt-6 divide-y divide-[#2a2a2a]">
@@ -222,24 +242,24 @@ const DashboardHome = () => {
               return (
                 <div
                   key={comparison.id}
-                  className="dash-list-item flex flex-col gap-4 py-6 md:flex-row md:items-center md:justify-between group"
+                  className="dash-list-item flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between group"
                 >
-                  <div>
-                    <p className="font-serif text-xl text-[#fdfbf7] group-hover:text-orange-400 transition-colors">
+                  <div className="min-w-0">
+                    <Link to={`/app/comparisons/${comparison.id}`} className="font-serif text-lg text-[#fdfbf7] group-hover:text-orange-400 transition-colors truncate block">
                       {[comparison.entityA, comparison.entityB].filter(Boolean).join(" vs ") || comparison.query}
-                    </p>
-                    <div className="mt-2 flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
+                    </Link>
+                    <div className="mt-2 flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
                       <span>{comparison.visibility}</span>
                       <span className="h-1 w-1 rounded-full bg-[#333]" />
                       <span>{comparison.sourceCount} sources</span>
                     </div>
                   </div>
 
-                  <div className="text-left md:text-right">
-                    <div className="flex flex-wrap items-center gap-3 md:justify-end">
+                  <div className="flex items-center justify-between md:justify-end gap-6 shrink-0">
+                    <div className="flex flex-col md:items-end gap-1.5">
                       <span
                         className={[
-                          "inline-flex rounded-sm px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest border",
+                          "inline-flex rounded-sm px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest border",
                           comparison.status === "completed"
                             ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                             : comparison.status === "failed"
@@ -249,19 +269,22 @@ const DashboardHome = () => {
                       >
                         {comparison.status}
                       </span>
+                      <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
+                        <Clock3 className="h-3 w-3" />
+                        {formatTimestamp(comparison.updatedAt)}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                       {comparison.visibility === "public" && (
                         <Link
                           to={`/compare/${comparison.slug}`}
-                          className="inline-flex items-center gap-1.5 rounded-sm border border-[#333] bg-[#111] px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/70 transition-colors hover:border-[#555] hover:text-[#fdfbf7]"
+                          className="flex h-8 w-8 items-center justify-center rounded-sm border border-[#333] bg-[#0c0b0a] text-[#fdfbf7]/50 hover:text-white hover:border-[#555] transition-colors"
+                          title="View Public Page"
                         >
-                          Link
-                          <ExternalLink className="h-3 w-3" />
+                          <ExternalLink className="h-3.5 w-3.5" />
                         </Link>
                       )}
-                    </div>
-                    <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 md:justify-end">
-                      <Clock3 className="h-3 w-3" />
-                      {formatTimestamp(comparison.updatedAt)}
                     </div>
                   </div>
                 </div>
