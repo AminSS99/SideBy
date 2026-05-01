@@ -3,6 +3,7 @@ import { Terminal, Plus, Search, Play, Copy, Edit3, Trash2 } from "lucide-react"
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { toast } from "sonner";
+import { GlowCard } from "@/components/GlowCard";
 
 interface PromptTemplate {
   id: string;
@@ -89,11 +90,16 @@ const PromptsPage = () => {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {filteredPrompts.map((prompt) => (
-          <div key={prompt.id} className="prompt-card flex flex-col rounded-sm border border-[#2a2a2a] bg-[#111] overflow-hidden hover:border-[#444] transition-colors group">
-            <div className="p-6 flex-1">
+          <GlowCard 
+            key={prompt.id} 
+            containerClassName="prompt-card h-full" 
+            className="flex flex-col h-full"
+            glowColor="rgba(16, 185, 129, 0.15)"
+          >
+            <div className="p-6 flex-1 flex flex-col">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                     <Terminal className="h-4 w-4" />
                   </div>
                   <div>
@@ -109,7 +115,7 @@ const PromptsPage = () => {
                 {prompt.description}
               </p>
 
-              <div className="rounded-sm bg-[#0c0b0a] border border-[#2a2a2a] p-4 relative group/code">
+              <div className="rounded-sm bg-[#0c0b0a] border border-[#2a2a2a] p-4 relative group/code flex-1">
                 <code className="text-xs text-[#fdfbf7]/80 font-mono block whitespace-pre-wrap">
                   {prompt.content}
                 </code>
@@ -132,9 +138,9 @@ const PromptsPage = () => {
               )}
             </div>
 
-            <div className="border-t border-[#2a2a2a] bg-[#0c0b0a] p-3 flex justify-between items-center px-6">
+            <div className="border-t border-[#2a2a2a] bg-[#0c0b0a] p-3 flex justify-between items-center px-6 mt-auto">
               <div className="flex gap-2">
-                <button className="p-2 text-[#fdfbf7]/40 hover:text-orange-400 transition-colors">
+                <button className="p-2 text-[#fdfbf7]/40 hover:text-emerald-400 transition-colors">
                   <Edit3 className="h-4 w-4" />
                 </button>
                 <button className="p-2 text-[#fdfbf7]/40 hover:text-red-400 transition-colors">
@@ -146,7 +152,7 @@ const PromptsPage = () => {
                 Test Prompt
               </button>
             </div>
-          </div>
+          </GlowCard>
         ))}
         
         {filteredPrompts.length === 0 && (

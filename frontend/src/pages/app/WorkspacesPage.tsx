@@ -3,6 +3,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Layers3, Settings2, LoaderCircle, AlertCircle } from "lucide-react";
+import { GlowCard } from "@/components/GlowCard";
 
 const WorkspacesPage = () => {
   const { workspaces, isLoading, error, refresh } = useWorkspace();
@@ -55,9 +56,10 @@ const WorkspacesPage = () => {
       {!error && !isLoading && (
         <div className="grid gap-6 md:grid-cols-2">
           {workspaces.map((workspace) => (
-            <div
+            <GlowCard
               key={workspace.id}
-              className="ws-card group rounded-sm border border-[#2a2a2a] bg-[#111] p-8 transition-colors hover:border-[#444]"
+              containerClassName="ws-card group"
+              className="p-8 flex flex-col h-full"
             >
               <div className="mb-6 flex items-center justify-between border-b border-[#2a2a2a] pb-6">
                 <div className="flex items-center gap-4">
@@ -78,7 +80,7 @@ const WorkspacesPage = () => {
                 </span>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 flex-1">
                 <div className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
                   <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">Plan</p>
                   <p className="text-sm text-[#fdfbf7] capitalize">{workspace.plan}</p>
@@ -95,7 +97,7 @@ const WorkspacesPage = () => {
                   Manage
                 </button>
               </div>
-            </div>
+            </GlowCard>
           ))}
         </div>
       )}

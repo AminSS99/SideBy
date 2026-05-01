@@ -19,6 +19,7 @@ import { useGSAP } from "@gsap/react";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { EmptyState } from "@/components/EmptyState";
+import { GlowCard } from "@/components/GlowCard";
 
 type ComparisonStatus = "running" | "completed" | "failed";
 type ComparisonVisibility = "private" | "team" | "public";
@@ -419,12 +420,12 @@ const ComparisonsPage = () => {
 };
 
 const Metric = ({ label, value }: { label: string; value: number }) => (
-  <div className="comp-row rounded-sm border border-[#2a2a2a] bg-[#111] p-6">
+  <GlowCard containerClassName="comp-row" className="p-6">
     <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
       {label}
     </p>
     <p className="mt-3 font-serif text-4xl text-[#fdfbf7]">{value}</p>
-  </div>
+  </GlowCard>
 );
 
 const jobToHistoryItem = (job: ComparisonJob): ComparisonHistoryItem => ({
@@ -464,7 +465,7 @@ const ComparisonRow = ({
   const title = [item.entityA, item.entityB].filter(Boolean).join(" vs ") || item.query;
 
   return (
-    <article className="comp-row rounded-sm border border-[#2a2a2a] bg-[#111] p-8 transition-colors hover:border-[#444]">
+    <GlowCard containerClassName="comp-row" className="p-8">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
@@ -533,7 +534,7 @@ const ComparisonRow = ({
           )}
         </div>
       </div>
-    </article>
+    </GlowCard>
   );
 };
 
