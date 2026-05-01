@@ -42,6 +42,14 @@ export type ComparisonSource = {
   summary?: string;
 };
 
+export type ComparisonTelemetry = {
+  latencyMs: number;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCost: number;
+  models: string[];
+};
+
 export type ComparisonData = {
   slug: string;
   query: string;
@@ -64,6 +72,7 @@ export type ComparisonData = {
   contradictions: string[];
   categories: Category[];
   sources: ComparisonSource[];
+  telemetry?: ComparisonTelemetry;
 };
 
 export type ResearchStep = {

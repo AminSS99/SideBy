@@ -27,6 +27,8 @@ import {
   ConsensusPanel,
   FeatureMatrixPanel,
   TableOfContents,
+  RunTelemetryPanel,
+  FeedbackPanel,
 } from "@/components/Comparison/ComparisonEngine";
 
 type ComparisonJob = {
@@ -42,8 +44,6 @@ type ComparisonJob = {
 
 const ComparisonDetailPage = () => {
   const { id } = useParams<{ id: string }>();
-  const [followUp, setFollowUp] = useState("");
-  const [followUpAnswer, setFollowUpAnswer] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isChangingVisibility, setIsChangingVisibility] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -93,7 +93,6 @@ const ComparisonDetailPage = () => {
     if (!id) return;
     try {
       setIsRefreshing(true);
-      setFollowUpAnswer("");
       const res = await apiFetch(buildApiUrl(`/api/comparisons/${id}/refresh`), {
         method: "POST",
       });
@@ -111,29 +110,6 @@ const ComparisonDetailPage = () => {
       await comparisonQuery.refetch();
     } finally {
       setIsRefreshing(false);
-    }
-  };
-
-  const askFollowUp = async () => {
-    if (!id || !result) return;
-    const question = followUp.trim();
-    if (!question) return;
-
-    try {
-      const res = await apiFetch(buildApiUrl(`/api/comparisons/${id}/follow-up`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
-      });
-      if (!res.ok) {
-        throw new Error("Unable to answer this follow-up.");
-      }
-      const data = (await res.json()) as { answer: string };
-      setFollowUpAnswer(data.answer);
-      setFollowUp("");
-    } catch (followUpError) {
-      setFollowUpAnswer(`Based on the current source-backed matrix, the answer leans toward ${result?.verdict?.developers || "the left option"} for technical control.`);
-      setFollowUp("");
     }
   };
 
@@ -306,6 +282,8 @@ const ComparisonDetailPage = () => {
             <VerdictPanel result={result} />
             <EntityFactPanel result={result} facts={entityFacts} />
             <SourcesPanel sources={result.sources} />
+            <RunTelemetryPanel result={result} />
+            <FeedbackPanel />
             <FollowUpPanel />
           </aside>
         </div>

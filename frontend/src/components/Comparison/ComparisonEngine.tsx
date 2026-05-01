@@ -14,3 +14,5 @@ export * from "./ConsensusPanel";
 export * from "./FeatureMatrixPanel";
 export * from "./TableOfContents";
 export * from "./ExportModal";
+export * from "./RunTelemetryPanel";
+export * from "./FeedbackPanel";

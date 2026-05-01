@@ -72,6 +72,13 @@ export const buildResult = (query: string, refreshCount: number, previousResult?
     entities,
     sourceCount: changed ? 14 : 12,
     updatedAt: now,
+    telemetry: {
+      latencyMs: 14250,
+      inputTokens: 18450,
+      outputTokens: 2150,
+      estimatedCost: 0.024,
+      models: ["DeepSeek V3", "Gemini 2.0 Flash"]
+    },
     dimensions: [
       { subject: "Pricing Value", a: 85, b: 92, fullMark: 100 },
       { subject: "Dev Experience", a: 95, b: 82, fullMark: 100 },

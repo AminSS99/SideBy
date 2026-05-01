@@ -21,6 +21,8 @@ import {
   ConsensusPanel,
   FeatureMatrixPanel,
   TableOfContents,
+  RunTelemetryPanel,
+  FeedbackPanel,
 } from "@/components/Comparison/ComparisonEngine";
 
 const Compare = () => {
@@ -40,7 +42,6 @@ const Compare = () => {
         return data as { result: ComparisonData; query: string; id: string };
       } catch (e) {
         console.warn("Backend disconnected. Falling back to local simulation.", e);
-        // Clean up the slug into a readable query
         const [a, b] = (slug || "supabase-vs-firebase").split("-vs-");
         const query = `${a || "Item A"} vs ${b || "Item B"}`;
         return {
@@ -60,26 +61,6 @@ const Compare = () => {
     const facts = result.categories.flatMap((c) => c.facts.map((f) => ({ ...f, category: c.name })));
     return { a: facts.filter((f) => f.entity === "a"), b: facts.filter((f) => f.entity === "b") };
   }, [result]);
-
-  const askFollowUp = async () => {
-    const clean = followUp.trim();
-    if (!clean || !jobData?.id) return;
-    try {
-      const res = await apiFetch(buildApiUrl(`/api/comparisons/${jobData.id}/follow-up`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: clean }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setFollowUpAnswer(data.answer);
-        setFollowUp("");
-        return;
-      }
-    } catch (e) { console.error("Follow-up failed, falling back to local simulation:", e); }
-    setFollowUpAnswer(`Based on the current source-backed matrix, the answer leans toward ${result?.verdict?.developers || "the left option"} for technical control.`);
-    setFollowUp("");
-  };
 
   const handleRefresh = () => {
     window.location.reload();
@@ -178,6 +159,8 @@ const Compare = () => {
                 <VerdictPanel result={result} />
                 <EntityFactPanel result={result} facts={entityFacts} />
                 <SourcesPanel sources={result.sources} />
+                <RunTelemetryPanel result={result} />
+                <FeedbackPanel />
                 <FollowUpPanel />
               </aside>
             </div>
