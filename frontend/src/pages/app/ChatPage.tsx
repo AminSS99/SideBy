@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, LoaderCircle, Sparkles } from "lucide-react";
+import { Send, Bot, User, LoaderCircle, Sparkles, Database, FolderKanban, Check, ToggleRight, ToggleLeft } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
+import { useProjects } from "@/contexts/ProjectsContext";
 
 interface Message {
   id: string;
@@ -11,7 +12,14 @@ interface Message {
   content: string;
 }
 
+const mockIndexedFiles = [
+  { id: "1", name: "Q3_Competitor_Analysis.pdf", active: true },
+  { id: "2", name: "API_Latency_Benchmarks.csv", active: false },
+  { id: "3", name: "Enterprise_Pricing_Tiers.txt", active: true },
+];
+
 const ChatPage = () => {
+  const { activeProject } = useProjects();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -21,13 +29,15 @@ const ChatPage = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [activeFiles, setActiveFiles] = useState(mockIndexedFiles);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
     const tl = gsap.timeline();
     tl.from(".chat-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
-      .from(".chat-window", { y: 40, opacity: 0, duration: 1, ease: "expo.out" }, "-=0.6");
+      .from(".chat-layout > *", { y: 40, opacity: 0, stagger: 0.15, duration: 1, ease: "expo.out" }, "-=0.6");
   }, { scope: containerRef });
 
   const scrollToBottom = () => {
@@ -36,7 +46,13 @@ const ChatPage = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isLoading]); // added isLoading so it scrolls when the loading indicator appears
+  }, [messages, isLoading]);
+
+  const toggleFile = (id: string) => {
+    setActiveFiles(files => 
+      files.map(f => f.id === id ? { ...f, active: !f.active } : f)
+    );
+  };
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -54,7 +70,6 @@ const ChatPage = () => {
     setIsLoading(true);
 
     try {
-      // Map out previous messages to send to API for context
       const apiMessages = newMessages.map((m) => ({
         role: m.role,
         content: m.content,
@@ -93,7 +108,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div ref={containerRef} className="flex h-[calc(100vh-12rem)] flex-col space-y-6">
+    <div ref={containerRef} className="flex h-full flex-col space-y-6">
       <div className="chat-header">
         <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-400">
           Research Assistant
@@ -101,94 +116,168 @@ const ChatPage = () => {
         <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
           AI Chat
         </h1>
-        <p className="mt-3 text-sm text-[#fdfbf7]/55 leading-relaxed">
-          Ask questions, synthesize findings, or deep dive into specific product details with the orchestration engine.
+        <p className="mt-3 text-sm text-[#fdfbf7]/55 leading-relaxed max-w-3xl">
+          Ask questions, synthesize findings, or deep dive into specific product details. You can ground the AI by selecting files from your knowledge base.
         </p>
       </div>
 
-      <div className="chat-window flex min-h-0 flex-1 flex-col rounded-sm border border-[#2a2a2a] bg-[#111] overflow-hidden shadow-2xl">
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`animate-in fade-in slide-in-from-bottom-3 duration-500 flex gap-4 ${
-                msg.role === "assistant" ? "flex-row" : "flex-row-reverse"
-              }`}
-            >
+      <div className="chat-layout grid gap-6 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_350px] flex-1 min-h-[500px] h-[calc(100vh-16rem)]">
+        
+        {/* Main Chat Window */}
+        <div className="flex min-h-0 flex-1 flex-col rounded-sm border border-[#2a2a2a] bg-[#111] overflow-hidden shadow-2xl h-full">
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth">
+            {messages.map((msg) => (
               <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border ${
-                  msg.role === "assistant"
-                    ? "bg-orange-500/10 text-orange-400 border-orange-500/20"
-                    : "bg-[#222] text-[#fdfbf7]/80 border-[#444]"
+                key={msg.id}
+                className={`animate-in fade-in slide-in-from-bottom-3 duration-500 flex gap-3 sm:gap-4 ${
+                  msg.role === "assistant" ? "flex-row" : "flex-row-reverse"
                 }`}
               >
-                {msg.role === "assistant" ? (
-                  <Bot className="h-5 w-5" />
-                ) : (
-                  <User className="h-5 w-5" />
-                )}
+                <div
+                  className={`flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-sm border ${
+                    msg.role === "assistant"
+                      ? "bg-orange-500/10 text-orange-400 border-orange-500/20"
+                      : "bg-[#222] text-[#fdfbf7]/80 border-[#444]"
+                  }`}
+                >
+                  {msg.role === "assistant" ? (
+                    <Bot className="h-4 w-4 sm:h-5 sm:w-5" />
+                  ) : (
+                    <User className="h-4 w-4 sm:h-5 sm:w-5" />
+                  )}
+                </div>
+                
+                <div
+                  className={`max-w-[85%] sm:max-w-[80%] rounded-sm p-4 sm:p-5 border whitespace-pre-wrap ${
+                    msg.role === "assistant"
+                      ? "bg-[#0c0b0a] border-[#333] text-[#fdfbf7]/90"
+                      : "bg-[#1a1a1a] border-[#444] text-[#fdfbf7]"
+                  }`}
+                >
+                  <p className="text-sm leading-relaxed font-serif">{msg.content}</p>
+                </div>
               </div>
-              
-              <div
-                className={`max-w-[80%] rounded-sm p-5 border whitespace-pre-wrap ${
-                  msg.role === "assistant"
-                    ? "bg-[#0c0b0a] border-[#333] text-[#fdfbf7]/90"
-                    : "bg-[#1a1a1a] border-[#444] text-[#fdfbf7]"
-                }`}
-              >
-                <p className="text-sm leading-relaxed font-serif">{msg.content}</p>
+            ))}
+            
+            {isLoading && (
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                  <Sparkles className="h-4 w-4 animate-pulse" />
+                </div>
+                <div className="flex items-center rounded-sm bg-[#0c0b0a] border border-[#333] px-5 py-3">
+                  <LoaderCircle className="h-4 w-4 animate-spin text-orange-400" />
+                  <span className="ml-3 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">Synthesizing context...</span>
+                </div>
               </div>
-            </div>
-          ))}
-          
-          {isLoading && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-orange-500/10 text-orange-400 border border-orange-500/20">
-                <Sparkles className="h-4 w-4 animate-pulse" />
-              </div>
-              <div className="flex items-center rounded-sm bg-[#0c0b0a] border border-[#333] px-5 py-3">
-                <LoaderCircle className="h-4 w-4 animate-spin text-orange-400" />
-                <span className="ml-3 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">Thinking...</span>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
 
-        {/* Input Area */}
-        <div className="border-t border-[#2a2a2a] bg-[#0c0b0a] p-5">
-          <form
-            onSubmit={handleSend}
-            className="relative mx-auto max-w-4xl flex items-end gap-3 rounded-sm border border-[#333] bg-[#111] p-2 focus-within:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500 transition-all"
-          >
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="Ask anything about the products you're researching..."
-              className="max-h-32 min-h-[44px] w-full resize-none bg-transparent px-3 py-3 text-sm text-[#fdfbf7] placeholder:text-[#fdfbf7]/30 outline-none"
-              rows={1}
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || isLoading}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-[#fdfbf7] text-black transition-colors hover:bg-[#e0e0e0] disabled:opacity-50 disabled:hover:bg-white"
+          {/* Input Area */}
+          <div className="border-t border-[#2a2a2a] bg-[#0c0b0a] p-4 sm:p-5">
+            <form
+              onSubmit={handleSend}
+              className="relative mx-auto w-full flex items-end gap-3 rounded-sm border border-[#333] bg-[#111] p-2 focus-within:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500 transition-all"
             >
-              <Send className="h-4 w-4" />
-            </button>
-          </form>
-          <div className="mt-4 text-center">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
-              AI responses can be inaccurate. Verify important facts using the comparison sources.
-            </p>
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Ask anything..."
+                className="max-h-32 min-h-[44px] w-full resize-none bg-transparent px-3 py-3 text-sm text-[#fdfbf7] placeholder:text-[#fdfbf7]/30 outline-none"
+                rows={1}
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || isLoading}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-[#fdfbf7] text-black transition-colors hover:bg-[#e0e0e0] disabled:opacity-50 disabled:hover:bg-white"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </form>
+            <div className="mt-3 text-center hidden sm:block">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
+                AI responses can be inaccurate. Verify important facts.
+              </p>
+            </div>
           </div>
         </div>
+
+        {/* Right Sidebar - RAG Context Panel */}
+        <aside className="hidden lg:flex flex-col space-y-4 h-full overflow-y-auto no-scrollbar">
+          <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5">
+            <h3 className="flex items-center gap-2 font-serif text-lg text-[#fdfbf7] border-b border-[#2a2a2a] pb-3 mb-4">
+              <FolderKanban className="h-4 w-4 text-emerald-400" />
+              Active Project
+            </h3>
+            <div className="rounded-sm border border-[#333] bg-[#0c0b0a] p-3 text-sm text-[#fdfbf7]/70">
+              {activeProject ? activeProject.name : "Global Workspace (No Project)"}
+            </div>
+            <p className="mt-2 text-[9px] uppercase tracking-widest font-bold text-[#fdfbf7]/40 leading-relaxed">
+              Conversations are saved to the active project automatically.
+            </p>
+          </div>
+
+          <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 flex-1 flex flex-col">
+            <div className="flex items-center justify-between border-b border-[#2a2a2a] pb-3 mb-4">
+              <h3 className="flex items-center gap-2 font-serif text-lg text-[#fdfbf7]">
+                <Database className="h-4 w-4 text-orange-400" />
+                Knowledge Base
+              </h3>
+              <span className="text-[9px] font-bold uppercase tracking-widest bg-[#1a1a1a] border border-[#333] px-2 py-0.5 rounded-sm">
+                RAG Active
+              </span>
+            </div>
+            
+            <p className="text-[10px] text-[#fdfbf7]/50 uppercase tracking-widest font-bold mb-4">
+              Ground AI in uploaded files:
+            </p>
+
+            <div className="space-y-2 flex-1">
+              {activeFiles.map(file => (
+                <button
+                  key={file.id}
+                  onClick={() => toggleFile(file.id)}
+                  className={`w-full flex items-center justify-between gap-3 p-3 rounded-sm border transition-colors ${
+                    file.active 
+                      ? "bg-orange-500/10 border-orange-500/30" 
+                      : "bg-[#0c0b0a] border-[#333] hover:border-[#444]"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`shrink-0 flex h-6 w-6 rounded-sm items-center justify-center border ${
+                      file.active ? "bg-orange-500 border-orange-500 text-white" : "bg-[#1a1a1a] border-[#444] text-transparent"
+                    }`}>
+                      <Check className="h-3.5 w-3.5" />
+                    </div>
+                    <span className={`text-xs truncate text-left ${file.active ? "text-[#fdfbf7]" : "text-[#fdfbf7]/50"}`}>
+                      {file.name}
+                    </span>
+                  </div>
+                  {file.active ? (
+                    <ToggleRight className="h-4 w-4 shrink-0 text-orange-400" />
+                  ) : (
+                    <ToggleLeft className="h-4 w-4 shrink-0 text-[#fdfbf7]/30" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-[#2a2a2a]">
+              <p className="text-[9px] text-[#fdfbf7]/40 leading-relaxed">
+                Tokens used by context: <strong className="text-[#fdfbf7]/70">~4,200</strong>
+                <br />
+                The model will prioritize facts found in active documents.
+              </p>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );
