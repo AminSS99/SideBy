@@ -13,3 +13,4 @@ export * from "./RadarChartPanel";
 export * from "./ConsensusPanel";
 export * from "./FeatureMatrixPanel";
 export * from "./TableOfContents";
+export * from "./ExportModal";

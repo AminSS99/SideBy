@@ -1,12 +1,11 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Download } from "lucide-react";
 import { ShareButton } from "@/components/ShareModal";
-import { colors } from "@/config/brand";
+import { ExportModal } from "./ExportModal";
 import { EntityCard } from "./EntityCard";
 import type { ComparisonData } from "./types";
-import { toast } from "sonner";
 
 interface ComparisonHeaderProps {
   result: ComparisonData;
@@ -14,7 +13,6 @@ interface ComparisonHeaderProps {
   comparisonId?: string | null;
 }
 
-// Helper to split text for GSAP character animations without the premium plugin
 const SplitTextChars = ({ text, className }: { text: string; className?: string }) => {
   return (
     <span className={className} style={{ display: "inline-block" }}>
@@ -37,11 +35,11 @@ export const ComparisonHeader = ({
   comparisonId,
 }: ComparisonHeaderProps) => {
   const container = useRef<HTMLDivElement>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useGSAP(() => {
     const tl = gsap.timeline();
     
-    // Top bar elements drop in
     tl.from(".ch-top-item", {
       y: -20,
       opacity: 0,
@@ -50,7 +48,6 @@ export const ComparisonHeader = ({
       ease: "expo.out",
     });
 
-    // Dramatic typography reveal (character by character)
     tl.from(".ch-entity-a .char", {
       y: 100,
       opacity: 0,
@@ -60,7 +57,6 @@ export const ComparisonHeader = ({
       ease: "power4.out",
     }, "-=0.6");
     
-    // The "VS" impact
     tl.from(".ch-vs", {
       scale: 0,
       opacity: 0,
@@ -78,7 +74,6 @@ export const ComparisonHeader = ({
       ease: "power4.out",
     }, "-=0.9");
 
-    // Verdict box sweeping in
     tl.from(".ch-verdict-line", {
       scaleY: 0,
       transformOrigin: "top",
@@ -93,7 +88,6 @@ export const ComparisonHeader = ({
       ease: "power3.out",
     }, "-=0.5");
 
-    // Entity Cards stagger up
     tl.from(".ch-card", {
       y: 60,
       opacity: 0,
@@ -104,16 +98,6 @@ export const ComparisonHeader = ({
     }, "-=0.8");
 
   }, { scope: container });
-
-  const handleExport = () => {
-    toast("Preparing Export", {
-      description: "Generating a clean PDF layout for your report.",
-      icon: <Download className="h-4 w-4 text-emerald-500" />,
-    });
-    setTimeout(() => {
-      window.print(); // Simple fallback for PDF export
-    }, 800);
-  };
 
   return (
     <div ref={container} className="relative break-inside-avoid">
@@ -132,9 +116,9 @@ export const ComparisonHeader = ({
         </div>
         <div className="flex items-center gap-3 print-hidden">
           <button
-            onClick={handleExport}
+            onClick={() => setExportOpen(true)}
             className="ch-top-item flex items-center gap-2 rounded-sm border border-[#2a2a2a] bg-[#111] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#1a1a1a] hover:border-[#444] hidden sm:flex"
-            title="Export to PDF"
+            title="Export Report"
           >
             <Download className="h-3 w-3" />
             Export
@@ -177,7 +161,6 @@ export const ComparisonHeader = ({
       </div>
 
       <div className="mb-16 relative pl-8 py-2 break-inside-avoid">
-        {/* Animated left border line */}
         <div className="ch-verdict-line absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-orange-500 to-orange-800" />
         
         <div className="ch-verdict-content">
@@ -195,6 +178,12 @@ export const ComparisonHeader = ({
         <div className="ch-card perspective-1000"><EntityCard entity={result.entities.a} side="a" /></div>
         <div className="ch-card perspective-1000"><EntityCard entity={result.entities.b} side="b" /></div>
       </div>
+
+      <ExportModal 
+        isOpen={exportOpen} 
+        onClose={() => setExportOpen(false)} 
+        result={result} 
+      />
     </div>
   );
 };
