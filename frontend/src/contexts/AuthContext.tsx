@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useMemo } from "react";
+import React, { createContext, useContext, useEffect, useMemo } from "react";
 import { useClerk, useUser } from "@clerk/clerk-react";
 import { envConfig } from "@/config/env";
+import { identifyUser, resetPostHog } from "@/lib/posthog";
 
 export interface AppUser {
   id: string;
@@ -76,6 +77,17 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
       imageUrl: clerkUser.imageUrl,
     };
   }, [clerkUser, isSignedIn]);
+
+  useEffect(() => {
+    if (user) {
+      identifyUser(user.id, {
+        email: user.email,
+        name: user.fullName,
+      });
+    } else if (isLoaded && !isSignedIn) {
+      resetPostHog();
+    }
+  }, [user, isLoaded, isSignedIn]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

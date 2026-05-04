@@ -1,15 +1,17 @@
-import { neon } from "@neondatabase/serverless";
-import { sendJson } from "../../_lib/sideby.js";
+/**
+ * GET /api/comparisons/by-slug/:slug
+ * Public comparison lookup by slug.
+ */
+import { eq, and, desc } from "drizzle-orm";
+import { createDbClient } from "../../../src/db/index";
+import { comparisons } from "../../../src/db/schema";
+import { sendJson } from "../../_lib/sideby";
+import { authenticateRequest } from "../../_lib/auth";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
   runtime: "nodejs",
   maxDuration: 10,
-};
-
-const getDb = () => {
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL || "";
-  return url ? neon(url) : null;
 };
 
 export default async function handler(
@@ -28,32 +30,66 @@ export default async function handler(
       return sendJson(response, { error: "Comparison slug is required." }, 400);
     }
 
-    const sql = getDb();
-    if (!sql) {
-      return sendJson(response, { error: "Database not configured." }, 500);
+    const db = createDbClient();
+
+    // Try public first
+    const publicRows = await db
+      .select()
+      .from(comparisons)
+      .where(
+        and(
+          eq(comparisons.slug, slug),
+          eq(comparisons.status, "completed"),
+          eq(comparisons.visibility, "public"),
+        ),
+      )
+      .orderBy(desc(comparisons.updatedAt))
+      .limit(1);
+
+    if (publicRows[0]?.result) {
+      const d = publicRows[0];
+      return sendJson(response, {
+        id: d.id,
+        status: "completed",
+        progress: 100,
+        activeStep: d.activeStep,
+        query: d.query,
+        result: d.result,
+        error: null,
+      });
     }
 
-    const rows = await sql`
-      select id, status, progress, active_step, query, result, error_message, source_count, updated_at
-      from comparisons
-      where slug = ${slug} and status = 'completed' and visibility = 'public'
-      order by updated_at desc
-      limit 1
-    `;
-
-    if (!rows[0] || !rows[0].result) {
+    // If not public, check auth
+    const auth = await authenticateRequest(request);
+    if (!auth.userId) {
       return sendJson(response, { error: "Comparison not found." }, 404);
     }
 
-    const d = rows[0];
+    const privateRows = await db
+      .select()
+      .from(comparisons)
+      .where(
+        and(
+          eq(comparisons.slug, slug),
+          eq(comparisons.clerkUserId, auth.userId),
+        ),
+      )
+      .orderBy(desc(comparisons.updatedAt))
+      .limit(1);
+
+    if (!privateRows[0] || !privateRows[0].result) {
+      return sendJson(response, { error: "Comparison not found." }, 404);
+    }
+
+    const d = privateRows[0];
     return sendJson(response, {
       id: d.id,
-      status: "completed",
-      progress: 100,
-      activeStep: d.active_step,
+      status: d.status === "researching" || d.status === "queued" ? "running" : d.status,
+      progress: d.progress,
+      activeStep: d.activeStep,
       query: d.query,
       result: d.result,
-      error: null,
+      error: d.errorMessage,
     });
   } catch (error) {
     return sendJson(

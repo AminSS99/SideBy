@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import gsap from "gsap";
@@ -8,12 +8,15 @@ import {
   Globe2,
   Loader2,
   LockKeyhole,
+  RefreshCw,
+  XCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
-import { buildResult } from "@/lib/comparisonUtils";
 import { researchSteps } from "@/lib/comparisonUtils";
+import { captureEvent } from "@/lib/posthog";
 import {
   type ComparisonData,
   CategorySection,
@@ -40,36 +43,26 @@ type ComparisonJob = {
   result: ComparisonData | null;
   visibility?: "private" | "team" | "public";
   error?: string | null;
+  failedStep?: string | null;
+  retryable?: boolean;
 };
 
 const ComparisonDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isChangingVisibility, setIsChangingVisibility] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const comparisonQuery = useQuery({
     queryKey: ["app-comparison", id],
     queryFn: async () => {
-      try {
-        const res = await apiFetch(buildApiUrl(`/api/comparisons/${id}`));
-        const contentType = res.headers.get("content-type");
-        if (!res.ok || !contentType?.includes("application/json")) {
-          throw new Error("Unable to load this comparison.");
-        }
-        return (await res.json()) as ComparisonJob;
-      } catch (e) {
-        console.warn("Backend disconnected. Generating local mock result for Detail page.", e);
-        return {
-          id: id || "mock-id",
-          status: "completed",
-          progress: 100,
-          activeStep: 5,
-          query: "Supabase vs Firebase",
-          result: buildResult("Supabase vs Firebase", 0),
-          visibility: "private"
-        } as ComparisonJob;
+      const res = await apiFetch(buildApiUrl(`/api/comparisons/${id}`));
+      const contentType = res.headers.get("content-type");
+      if (!res.ok || !contentType?.includes("application/json")) {
+        throw new Error("Unable to load this comparison.");
       }
+      return (await res.json()) as ComparisonJob;
     },
     enabled: Boolean(id),
     refetchInterval: (query) => (query.state.data?.status === "running" ? 1200 : false),
@@ -93,23 +86,62 @@ const ComparisonDetailPage = () => {
     if (!id) return;
     try {
       setIsRefreshing(true);
-      const res = await apiFetch(buildApiUrl(`/api/comparisons/${id}/refresh`), {
+      captureEvent("comparison_refresh_started", { comparison_id: id });
+      const res = await apiFetch(buildApiUrl(`/api/comparisons/${id}/manage`), {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "refresh" }),
       });
       if (!res.ok) {
         throw new Error("Unable to refresh this comparison.");
       }
       await comparisonQuery.refetch();
+      captureEvent("comparison_refresh_succeeded", { comparison_id: id });
       toast.success("Comparison refreshed.", {
         description: "The source-backed matrix has been regenerated.",
       });
     } catch (refreshError) {
-      toast.success("Mock Refreshed.", {
-        description: "Falling back to mock response.",
+      captureEvent("comparison_refresh_failed", {
+        comparison_id: id,
+        error: refreshError instanceof Error ? refreshError.message : "unknown",
       });
-      await comparisonQuery.refetch();
+      toast.error("Unable to refresh this comparison.", {
+        description: refreshError instanceof Error ? refreshError.message : "Please try again.",
+      });
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const retryJob = async () => {
+    if (!id) return;
+    try {
+      setIsRetrying(true);
+      captureEvent("comparison_retry_started", { comparison_id: id });
+      const res = await apiFetch(buildApiUrl(`/api/comparisons/${id}/manage`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "retry" }),
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error || "Unable to retry this comparison.");
+      }
+      await comparisonQuery.refetch();
+      captureEvent("comparison_retry_succeeded", { comparison_id: id });
+      toast.success("Research restarted.", {
+        description: "The comparison is being reprocessed from the beginning.",
+      });
+    } catch (retryError) {
+      captureEvent("comparison_retry_failed", {
+        comparison_id: id,
+        error: retryError instanceof Error ? retryError.message : "unknown",
+      });
+      toast.error("Unable to restart research.", {
+        description: retryError instanceof Error ? retryError.message : "Please try again.",
+      });
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -119,8 +151,11 @@ const ComparisonDetailPage = () => {
 
     try {
       setIsChangingVisibility(true);
-      const res = await apiFetch(buildApiUrl(`/api/comparisons/${id}/${nextAction}`), {
+      captureEvent(`comparison_${nextAction}_started`, { comparison_id: id });
+      const res = await apiFetch(buildApiUrl(`/api/comparisons/${id}/visibility`), {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: nextAction }),
       });
       if (!res.ok) {
         throw new Error(
@@ -130,6 +165,7 @@ const ComparisonDetailPage = () => {
         );
       }
       await comparisonQuery.refetch();
+      captureEvent(`comparison_${nextAction}_succeeded`, { comparison_id: id });
       toast.success(
         nextAction === "publish" ? "Comparison published." : "Comparison made private.",
         {
@@ -140,13 +176,38 @@ const ComparisonDetailPage = () => {
         },
       );
     } catch (visibilityError) {
-      toast.success(
-        nextAction === "publish" ? "Mock published." : "Mock made private."
+      captureEvent(`comparison_${nextAction}_failed`, {
+        comparison_id: id,
+        error: visibilityError instanceof Error ? visibilityError.message : "unknown",
+      });
+      toast.error(
+        nextAction === "publish" ? "Unable to publish." : "Unable to make private.",
+        {
+          description: visibilityError instanceof Error ? visibilityError.message : "Please try again.",
+        }
       );
     } finally {
       setIsChangingVisibility(false);
     }
   };
+
+  useEffect(() => {
+    if (!job) return;
+    captureEvent("comparison_viewed", {
+      comparison_id: job.id,
+      status: job.status,
+      has_result: Boolean(job.result),
+    });
+    if (job.status === "failed") {
+      captureEvent("comparison_failed_viewed", {
+        comparison_id: job.id,
+        failed_step: job.failedStep,
+        error: job.error,
+        retryable: job.retryable,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.id, job?.status]);
 
   useGSAP(() => {
     if (!comparisonQuery.isLoading && result) {
@@ -231,19 +292,104 @@ const ComparisonDetailPage = () => {
           </button>
         </div>
       ) : job.status === "failed" ? (
-        <div className="rounded-[28px] border border-red-400/20 bg-red-400/10 p-8">
-          <h2 className="text-xl font-bold text-white">Research failed</h2>
-          <p className="mt-2 text-sm text-red-100/75">
-            {job.error || "The comparison job failed before a result was saved."}
-          </p>
-          <button
-            type="button"
-            onClick={() => void refresh()}
-            disabled={isRefreshing}
-            className="mt-5 rounded-full border border-red-200/30 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-red-100 transition-colors hover:bg-red-200/10 disabled:opacity-50"
-          >
-            Retry research
-          </button>
+        <div className="space-y-6">
+          {/* Error banner */}
+          <div className="rounded-[28px] border border-red-400/20 bg-red-400/10 p-8">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-red-300">
+                <XCircle className="h-3 w-3" />
+                Failed
+              </span>
+              {job.failedStep && (
+                <span className="text-[10px] font-bold uppercase tracking-widest text-red-300/60">
+                  at {job.failedStep} step
+                </span>
+              )}
+            </div>
+            <h2 className="text-xl font-bold text-white">Research failed</h2>
+            <p className="mt-2 text-sm text-red-100/75">
+              {job.error || "The comparison job failed before a result was saved."}
+            </p>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              {job.retryable !== false && (
+                <button
+                  type="button"
+                  onClick={() => void retryJob()}
+                  disabled={isRetrying}
+                  className="inline-flex items-center gap-2 rounded-full border border-red-200/30 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-red-100 transition-colors hover:bg-red-200/10 disabled:opacity-50"
+                >
+                  {isRetrying ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Restarting...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-3 w-3" />
+                      Retry research
+                    </>
+                  )}
+                </button>
+              )}
+              <Link
+                to="/app/comparisons"
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/60 transition-colors hover:bg-white/5"
+              >
+                New comparison
+              </Link>
+            </div>
+          </div>
+
+          {/* Partial result fallback */}
+          {result && (
+            <div className="rounded-[28px] border border-amber-500/20 bg-amber-500/5 p-6">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs text-amber-400 font-bold uppercase tracking-widest mb-1">
+                    Partial Result Available
+                  </p>
+                  <p className="text-sm text-amber-100/70">
+                    Some data was saved before the failure. You can review it below, but note that some sections may be missing or incomplete.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {result && (
+            <div className="wb-grid grid gap-10 xl:grid-cols-12 relative items-start">
+              <div className="space-y-10 xl:col-span-8">
+                <ComparisonHeader
+                  result={result}
+                  onRefresh={() => void refresh()}
+                  comparisonId={job.id}
+                />
+                <RadarChartPanel result={result} />
+                <ConsensusPanel result={result} />
+                <FeatureMatrixPanel result={result} />
+                <div className="space-y-10">
+                  {result.categories.map((category, index) => (
+                    <CategorySection
+                      key={category.name}
+                      category={category}
+                      entities={result.entities}
+                      index={index}
+                    />
+                  ))}
+                </div>
+              </div>
+              <aside className="space-y-6 xl:col-span-4 sticky top-6 self-start pb-8 h-[calc(100vh-2rem)] overflow-y-auto no-scrollbar">
+                <TableOfContents result={result} />
+                <VerdictPanel result={result} />
+                <EntityFactPanel result={result} facts={entityFacts} />
+                <SourcesPanel sources={result.sources} />
+                <RunTelemetryPanel result={result} />
+                <FeedbackPanel />
+                <FollowUpPanel comparisonId={job.id} />
+              </aside>
+            </div>
+          )}
         </div>
       ) : job.status === "running" || !result ? (
         <ResearchLoader
@@ -284,7 +430,7 @@ const ComparisonDetailPage = () => {
             <SourcesPanel sources={result.sources} />
             <RunTelemetryPanel result={result} />
             <FeedbackPanel />
-            <FollowUpPanel />
+            <FollowUpPanel comparisonId={job.id} />
           </aside>
         </div>
       )}

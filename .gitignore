@@ -71,3 +71,4 @@ frontend/pnpm-lock.yaml
 backend/.mvn/
 backend/mvnw
 backend/mvnw.cmd
+.vercel

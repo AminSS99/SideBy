@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Sparkles, Search, Loader2 } from "lucide-react";
+import { Sparkles, Search, Loader2, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { brand } from "@/config/brand";
 import { buildApiUrl } from "@/config/env";
 import { apiFetch } from "@/lib/api";
-import { buildResult } from "@/lib/comparisonUtils";
+
 import { AmbientOrbs } from "@/components/AmbientOrbs";
 import {
   type ComparisonData,
@@ -34,22 +34,11 @@ const Compare = () => {
   const { data: jobData, isLoading, error } = useQuery({
     queryKey: ["public-comparison", slug],
     queryFn: async () => {
-      try {
-        const res = await apiFetch(buildApiUrl(`/api/comparisons/by-slug/${slug}`));
-        const contentType = res.headers.get("content-type");
-        if (!res.ok || !contentType?.includes("application/json")) throw new Error("Comparison not found.");
-        const data = await res.json();
-        return data as { result: ComparisonData; query: string; id: string };
-      } catch (e) {
-        console.warn("Backend disconnected. Falling back to local simulation.", e);
-        const [a, b] = (slug || "supabase-vs-firebase").split("-vs-");
-        const query = `${a || "Item A"} vs ${b || "Item B"}`;
-        return {
-          result: buildResult(query, 0),
-          query,
-          id: "mock-" + Date.now()
-        };
-      }
+      const res = await apiFetch(buildApiUrl(`/api/comparisons/by-slug/${slug}`));
+      const contentType = res.headers.get("content-type");
+      if (!res.ok || !contentType?.includes("application/json")) throw new Error("Comparison not found.");
+      const data = await res.json();
+      return data as { result: ComparisonData; query: string; id: string };
     },
     staleTime: 5 * 60 * 1000,
     retry: 1,
@@ -116,9 +105,20 @@ const Compare = () => {
         ) : error || !result ? (
           <div className="flex flex-col items-center justify-center py-32 text-center">
             <p className="mb-4 font-serif text-4xl text-white/20">Comparison not found</p>
-            <p className="mb-8 text-sm text-white/30">
-              This comparison may not exist yet. Try running it first on the homepage.
+            <p className="mb-8 text-sm text-white/30 max-w-md">
+              This comparison may not exist yet or is still being researched. Try running it yourself — it only takes 30 seconds.
             </p>
+            <div className="flex flex-wrap justify-center gap-2 mb-8 max-w-lg">
+              {["Supabase vs Firebase", "Cursor vs Windsurf", "React vs Vue"].map((q) => (
+                <Link
+                  key={q}
+                  to={`/app/comparisons?q=${encodeURIComponent(q)}`}
+                  className="rounded-full border border-white/[0.06] bg-[#111] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/40 transition-all hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-400"
+                >
+                  {q}
+                </Link>
+              ))}
+            </div>
             <Link
               to="/"
               className="rounded-xl bg-white px-6 py-3 text-xs font-bold uppercase tracking-widest text-black transition-colors hover:bg-white/90"
@@ -161,7 +161,7 @@ const Compare = () => {
                 <SourcesPanel sources={result.sources} />
                 <RunTelemetryPanel result={result} />
                 <FeedbackPanel />
-                <FollowUpPanel />
+                <FollowUpPanel comparisonId={jobData.id} />
               </aside>
             </div>
 
@@ -177,6 +177,12 @@ const Compare = () => {
                     </Link>
                   );
                 })}
+              </div>
+              <div className="mt-8 text-center">
+                <Link to="/" className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/30 hover:text-orange-400 transition-colors">
+                  <ArrowRight className="h-3 w-3" />
+                  Create your own comparison
+                </Link>
               </div>
             </section>
           </>

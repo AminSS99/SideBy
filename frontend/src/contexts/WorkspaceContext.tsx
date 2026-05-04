@@ -1,6 +1,18 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import type { WorkspaceRecord } from "@/lib/supabase/workspace";
+import { apiFetch } from "@/lib/api";
+import { buildApiUrl } from "@/config/env";
+
+export interface WorkspaceRecord {
+  id: string;
+  ownerId: string;
+  ownerType: "user" | "org";
+  name: string;
+  slug: string;
+  plan: "free" | "pro" | "team" | "business";
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface WorkspaceContextValue {
   workspaces: WorkspaceRecord[];
@@ -13,41 +25,37 @@ interface WorkspaceContextValue {
 const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
 
 export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user, session, isLoading: authLoading } = useAuth();
+  const { session, isLoading: authLoading } = useAuth();
   const [workspaces, setWorkspaces] = useState<WorkspaceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!session || !user) {
+    if (!session) {
       setWorkspaces([]);
       setError(null);
       setIsLoading(false);
       return;
     }
 
-    const now = new Date().toISOString();
-    const ownerName = user.fullName || user.email?.split("@")[0] || "SideBy";
-    const slugBase = (user.email?.split("@")[0] || user.id)
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 40);
+    try {
+      setIsLoading(true);
+      setError(null);
 
-    setWorkspaces([
-      {
-        id: `clerk-${user.id}`,
-        owner_id: user.id,
-        name: `${ownerName} Workspace`,
-        slug: `${slugBase || "workspace"}-${user.id.slice(-6).toLowerCase()}`,
-        plan: "free",
-        created_at: now,
-        updated_at: now,
-      },
-    ]);
-    setError(null);
-    setIsLoading(false);
-  }, [session, user]);
+      const res = await apiFetch(buildApiUrl("/api/workspaces"));
+      if (!res.ok) {
+        throw new Error("Unable to load workspaces.");
+      }
+
+      const data = (await res.json()) as { workspaces: WorkspaceRecord[] };
+      setWorkspaces(data.workspaces);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load workspaces.");
+      setWorkspaces([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [session]);
 
   useEffect(() => {
     if (authLoading) {

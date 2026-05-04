@@ -24,39 +24,10 @@ interface ActivityEvent {
   type: "research" | "system" | "knowledge";
 }
 
-const initialMembers: TeamMember[] = [
-  {
-    id: "1",
-    name: "Alex Snapshot",
-    email: "alex@snapsolve.ink",
-    role: "owner",
-    status: "active",
-    joinedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "2",
-    name: "Sarah Researcher",
-    email: "sarah@snapsolve.ink",
-    role: "admin",
-    status: "active",
-    joinedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "3",
-    name: "",
-    email: "dev@snapsolve.ink",
-    role: "member",
-    status: "invited",
-    joinedAt: new Date().toISOString(),
-  }
-];
-
-const mockActivity: ActivityEvent[] = [
-  { id: "1", user: "Sarah Researcher", action: "ran comparison", target: "Supabase vs Firebase", time: "10 mins ago", type: "research" },
-  { id: "2", user: "Alex Snapshot", action: "uploaded document", target: "Q3_Competitor_Analysis.pdf", time: "2 hours ago", type: "knowledge" },
-  { id: "3", user: "Sarah Researcher", action: "published report", target: "Vercel vs Render", time: "5 hours ago", type: "research" },
-  { id: "4", user: "Alex Snapshot", action: "invited user", target: "dev@snapsolve.ink", time: "1 day ago", type: "system" },
-];
+// Phase 1: Team data will come from Clerk organizations API in Phase 2.
+// For now, show empty states instead of mock members/activity.
+const initialMembers: TeamMember[] = [];
+const mockActivity: ActivityEvent[] = [];
 
 const RoleIcon = ({ role }: { role: TeamMember["role"] }) => {
   switch (role) {
@@ -97,25 +68,10 @@ const TeamPage = () => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
 
-    setIsInviting(true);
-    
-    setTimeout(() => {
-      const newMember: TeamMember = {
-        id: Date.now().toString(),
-        name: "",
-        email: inviteEmail.trim(),
-        role: inviteRole,
-        status: "invited",
-        joinedAt: new Date().toISOString(),
-      };
-      
-      setMembers([...members, newMember]);
-      setInviteEmail("");
-      setIsInviting(false);
-      toast.success("Invitation sent", {
-        description: `An invite has been sent to ${newMember.email}`,
-      });
-    }, 800);
+    // Phase 2: Wire to Clerk organization invitations.
+    toast.info("Team invites are not yet available.", {
+      description: "This feature will be enabled in Phase 2 with Clerk organizations.",
+    });
   };
 
   const removeMember = (id: string, name: string, email: string) => {

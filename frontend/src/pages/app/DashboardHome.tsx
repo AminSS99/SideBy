@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   Clock3, 
   ExternalLink, 
@@ -10,7 +10,12 @@ import {
   Plus,
   UploadCloud,
   UserPlus,
-  Activity
+  Activity,
+  ArrowRight,
+  Search,
+  Zap,
+  ShieldCheck,
+  Scale
 } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
 import gsap from "gsap";
@@ -22,6 +27,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { GlowCard } from "@/components/GlowCard";
+import { captureEvent } from "@/lib/posthog";
 
 type ComparisonHistoryItem = {
   id: string;
@@ -43,13 +49,20 @@ const formatTimestamp = (value: string) =>
     timeStyle: "short",
   });
 
-// Mock data for the mini telemetry chart
-const miniChartData = [
-  { runs: 2 }, { runs: 5 }, { runs: 3 }, { runs: 8 }, 
-  { runs: 4 }, { runs: 12 }, { runs: 7 }
+// Phase 1: Real usage analytics from PostHog/usage events will be wired in Phase 6.
+// For now, the activity section shows a setup state when no data is available.
+const miniChartData: { runs: number }[] = [];
+
+const onboardingExamples = [
+  "React vs Vue for a SaaS",
+  "Supabase vs Firebase",
+  "Cursor vs Windsurf",
+  "Notion vs Linear",
+  "ChatGPT Plus vs Claude Pro",
 ];
 
 const DashboardHome = () => {
+  const navigate = useNavigate();
   const { user, isConfigured } = useAuth();
   const { activeWorkspace, error, isLoading, workspaces } = useWorkspace();
   const { activeProject, projects, isLoading: projectsLoading } = useProjects();
@@ -83,7 +96,7 @@ const DashboardHome = () => {
       try {
         setComparisonsLoading(true);
         setComparisonsError(null);
-        const res = await apiFetch(buildApiUrl("/api/comparisons/list?limit=5"));
+        const res = await apiFetch(buildApiUrl("/api/comparisons?limit=5"));
         if (!res.ok) throw new Error("Unable to load comparison history.");
 
         const data = (await res.json()) as { comparisons: ComparisonHistoryItem[] };
@@ -130,23 +143,33 @@ const DashboardHome = () => {
             <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">7d Activity</p>
             <div className="flex items-center gap-2">
               <Activity className="h-3.5 w-3.5 text-emerald-400" />
-              <span className="font-serif text-xl text-[#fdfbf7]">41</span>
-              <span className="text-xs text-[#fdfbf7]/50">runs</span>
+              {comparisonsLoading ? (
+                <span className="text-xs text-[#fdfbf7]/50">Loading...</span>
+              ) : comparisons.length === 0 ? (
+                <span className="text-xs text-[#fdfbf7]/50">No activity yet</span>
+              ) : (
+                <>
+                  <span className="font-serif text-xl text-[#fdfbf7]">{comparisons.length}</span>
+                  <span className="text-xs text-[#fdfbf7]/50">runs</span>
+                </>
+              )}
             </div>
           </div>
-          <div className="h-12 w-24 ml-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={miniChartData}>
-                <defs>
-                  <linearGradient id="colorMini" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <Area type="monotone" dataKey="runs" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorMini)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          {miniChartData.length > 0 && (
+            <div className="h-12 w-24 ml-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={miniChartData}>
+                  <defs>
+                    <linearGradient id="colorMini" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <Area type="monotone" dataKey="runs" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorMini)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       </div>
 
@@ -227,13 +250,62 @@ const DashboardHome = () => {
             Loading research records...
           </div>
         ) : comparisons.length === 0 ? (
-          <div className="mt-8 rounded-sm border border-dashed border-[#333] bg-[#0c0b0a] p-12 text-center">
-            <Workflow className="mx-auto h-8 w-8 text-[#fdfbf7]/20 mb-4" />
-            <p className="text-sm text-[#fdfbf7]/50">
-              No comparisons have been persisted yet.
-            </p>
-            <Link to="/app/comparisons" className="inline-block mt-4 text-[10px] font-bold uppercase tracking-widest text-orange-400 hover:text-orange-300">
-              Start your first run &rarr;
+          <div className="mt-8 rounded-sm border border-dashed border-[#333] bg-[#0c0b0a] p-8 sm:p-12 text-center">
+            <div className="mb-8">
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-sm border border-orange-500/20 bg-orange-500/10 text-orange-400">
+                <Search className="h-8 w-8" />
+              </div>
+              <h3 className="font-serif text-2xl text-[#fdfbf7] mb-3">
+                Create your first comparison
+              </h3>
+              <p className="text-sm text-[#fdfbf7]/50 max-w-md mx-auto leading-relaxed">
+                Enter any two products, technologies, or topics and let SideBy research them side by side with cited sources.
+              </p>
+            </div>
+
+            <div className="mb-8">
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#fdfbf7]/30 mb-4">
+                Try an example
+              </p>
+              <div className="flex flex-wrap justify-center gap-2 max-w-xl mx-auto">
+                {onboardingExamples.map((example) => (
+                  <button
+                    key={example}
+                    onClick={() => {
+                      captureEvent("onboarding_example_clicked", { example });
+                      navigate(`/app/comparisons?q=${encodeURIComponent(example)}`);
+                    }}
+                    className="rounded-full border border-[#333] bg-[#111] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 transition-all hover:border-orange-500/40 hover:bg-orange-500/10 hover:text-orange-400"
+                  >
+                    {example}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3 max-w-2xl mx-auto">
+              <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 text-center">
+                <Scale className="h-5 w-5 text-[#fdfbf7]/30 mx-auto mb-3" />
+                <p className="text-xs font-bold text-[#fdfbf7] mb-1">Unbiased</p>
+                <p className="text-[10px] text-[#fdfbf7]/40">Facts from official docs</p>
+              </div>
+              <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 text-center">
+                <Zap className="h-5 w-5 text-orange-400 mx-auto mb-3" />
+                <p className="text-xs font-bold text-[#fdfbf7] mb-1">Instant</p>
+                <p className="text-[10px] text-[#fdfbf7]/40">Full matrix in 30s</p>
+              </div>
+              <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 text-center">
+                <ShieldCheck className="h-5 w-5 text-emerald-400 mx-auto mb-3" />
+                <p className="text-xs font-bold text-[#fdfbf7] mb-1">Source-backed</p>
+                <p className="text-[10px] text-[#fdfbf7]/40">Every claim cited</p>
+              </div>
+            </div>
+
+            <Link
+              to="/app/comparisons"
+              className="inline-flex items-center gap-2 mt-8 rounded-sm bg-[#fdfbf7] px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-black transition-colors hover:bg-[#e0e0e0]"
+            >
+              Start comparing <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         ) : (

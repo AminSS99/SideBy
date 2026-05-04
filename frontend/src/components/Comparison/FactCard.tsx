@@ -114,10 +114,23 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
       )}
 
       <div className="relative z-10 flex flex-wrap gap-2 pt-2">
-        <span className="inline-flex items-center gap-1.5 border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
-          <SourcePin className="h-2.5 w-2.5" />
-          {fact.source}
-        </span>
+        {fact.sourceUrl ? (
+          <a
+            href={fact.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 hover:text-orange-400 hover:border-orange-500/30 transition-colors"
+            title={fact.sourceTitle || fact.source}
+          >
+            <SourcePin className="h-2.5 w-2.5" />
+            {fact.source}
+          </a>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
+            <SourcePin className="h-2.5 w-2.5" />
+            {fact.source}
+          </span>
+        )}
         <span className="inline-flex items-center gap-1.5 border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
           <FreshnessDot freshness={fact.freshness} />
           {fact.freshness}

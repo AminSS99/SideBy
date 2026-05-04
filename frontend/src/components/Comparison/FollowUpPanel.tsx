@@ -1,12 +1,18 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Sparkles, Bot, User, Loader2, ArrowRight } from "lucide-react";
+import { Send, Sparkles, Bot, User, Loader2, ArrowRight, AlertCircle } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { apiFetch, ApiError } from "@/lib/api";
+import { buildApiUrl } from "@/config/env";
+import { toast } from "sonner";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  citations?: string[];
+  confidence?: number;
+  type?: "grounded" | "inference" | "insufficient";
 }
 
 const suggestedQuestions = [
@@ -15,10 +21,15 @@ const suggestedQuestions = [
   "What are the main differences in developer experience (DX)?",
 ];
 
-export const FollowUpPanel = () => {
+interface FollowUpPanelProps {
+  comparisonId: string;
+}
+
+export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -37,8 +48,9 @@ export const FollowUpPanel = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const handleAsk = (question: string) => {
+  const handleAsk = async (question: string) => {
     if (!question.trim() || isTyping) return;
+    setError(null);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -50,21 +62,41 @@ export const FollowUpPanel = () => {
     setInput("");
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const res = await apiFetch(buildApiUrl(`/api/comparisons/${comparisonId}/actions`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "follow-up", question }),
+      });
+
+      const data = await res.json() as {
+        answer: string;
+        citations?: string[];
+        confidence?: number;
+        type?: "grounded" | "inference" | "insufficient";
+      };
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `Based on the comparison data, that's a great question. While both options offer robust features, your specific needs around "${question.toLowerCase().replace(/[^a-z0-9 ]/g, '')}" will heavily dictate the right choice. Our deep dive suggests looking closely at their recent pricing updates.`,
+        content: data.answer,
+        citations: data.citations,
+        confidence: data.confidence,
+        type: data.type,
       };
       setMessages((prev) => [...prev, assistantMessage]);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Unable to get an answer. Please try again.";
+      setError(msg);
+      toast.error("Follow-up failed", { description: msg });
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleAsk(input);
+    void handleAsk(input);
   };
 
   return (
@@ -95,7 +127,7 @@ export const FollowUpPanel = () => {
             {suggestedQuestions.map((q, idx) => (
               <button
                 key={idx}
-                onClick={() => handleAsk(q)}
+                onClick={() => void handleAsk(q)}
                 className="fu-suggestion flex items-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] px-4 py-2 text-sm text-[#fdfbf7]/70 transition-all hover:border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-400"
               >
                 {q}
@@ -134,6 +166,29 @@ export const FollowUpPanel = () => {
                 }`}
               >
                 <p className="text-sm leading-relaxed font-serif">{msg.content}</p>
+                {msg.role === "assistant" && msg.type && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex items-center gap-1 rounded-sm border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
+                      msg.type === "grounded"
+                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                        : msg.type === "inference"
+                          ? "border-amber-500/20 bg-amber-500/10 text-amber-400"
+                          : "border-red-500/20 bg-red-500/10 text-red-400"
+                    }`}>
+                      {msg.type === "grounded" ? "Source-backed" : msg.type === "inference" ? "Inference" : "Insufficient data"}
+                    </span>
+                    {typeof msg.confidence === "number" && (
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
+                        {Math.round(msg.confidence * 100)}% confidence
+                      </span>
+                    )}
+                    {msg.citations && msg.citations.length > 0 && (
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
+                        Citations: {msg.citations.join(", ")}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -145,6 +200,16 @@ export const FollowUpPanel = () => {
               <div className="flex items-center rounded-sm bg-[#0c0b0a] border border-[#333] px-4 py-3">
                 <Loader2 className="h-3 w-3 animate-spin text-orange-400" />
                 <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">Synthesizing...</span>
+              </div>
+            </div>
+          )}
+          {error && (
+            <div className="flex gap-4">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-red-500/10 text-red-400 border border-red-500/20">
+                <AlertCircle className="h-4 w-4" />
+              </div>
+              <div className="max-w-[85%] rounded-sm p-4 border border-red-500/20 bg-red-500/5 text-red-300 text-sm">
+                {error}
               </div>
             </div>
           )}
@@ -160,7 +225,7 @@ export const FollowUpPanel = () => {
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                handleAsk(input);
+                void handleAsk(input);
               }
             }}
             placeholder="Ask anything about these products..."
@@ -177,7 +242,7 @@ export const FollowUpPanel = () => {
           </button>
         </div>
         <p className="mt-3 text-center text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
-          AI responses can be inaccurate. Cross-reference with official documentation.
+          AI responses are grounded in comparison facts. Cross-reference with official documentation.
         </p>
       </form>
     </div>

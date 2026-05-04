@@ -32,7 +32,7 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
         winner: cat.winner,
         rows
       };
-    }).filter(cat => cat.rows.length > 0); // Only keep categories that have matching rows
+    }).filter(cat => cat.rows.length > 0);
   }, [result.categories, filter]);
 
   useGSAP(() => {
@@ -78,7 +78,8 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
         </div>
       </div>
       
-      <div className="overflow-x-auto no-scrollbar relative">
+      {/* Desktop Table */}
+      <div className="hidden md:block overflow-x-auto no-scrollbar relative">
         <div className="min-w-[700px]">
           {/* Sticky Header */}
           <div className="grid grid-cols-[1.2fr_1fr_1fr] bg-[#0c0b0a] border-b border-[#2a2a2a] sticky top-0 z-30">
@@ -141,6 +142,48 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
             ))
           )}
         </div>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden">
+        {matrixData.length === 0 ? (
+          <div className="p-8 text-center text-sm text-[#fdfbf7]/40 font-serif italic">
+            No criteria matching "{filter}"
+          </div>
+        ) : (
+          <div className="divide-y divide-[#2a2a2a]">
+            {matrixData.map((cat, i) => (
+              <div key={i} className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/80">{cat.category}</span>
+                  {cat.winner !== 'tie' && (
+                    <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-orange-400 border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 rounded-sm">
+                      <Trophy className="h-2.5 w-2.5" />
+                      {cat.winner === 'a' ? result.entities.a.name : result.entities.b.name}
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  {cat.rows.map((row, j) => (
+                    <div key={j} className="matrix-row rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
+                      <p className="text-xs font-bold text-[#fdfbf7]/70 mb-2">{row.label}</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: result.entities.a.hex }}>{result.entities.a.name}</p>
+                          <p className="text-xs text-[#fdfbf7]/60 leading-relaxed">{row.factA?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: result.entities.b.hex }}>{result.entities.b.name}</p>
+                          <p className="text-xs text-[#fdfbf7]/60 leading-relaxed">{row.factB?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

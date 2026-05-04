@@ -5,12 +5,6 @@ const removeTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 const apiBaseUrl = removeTrailingSlash(
   normalizeEnv(import.meta.env.VITE_API_BASE_URL),
 );
-const supabaseUrl = removeTrailingSlash(
-  normalizeEnv(import.meta.env.VITE_SUPABASE_URL),
-);
-const supabasePublishableKey = normalizeEnv(
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-);
 const pexelsApiKey = normalizeEnv(import.meta.env.VITE_PEXELS_API_KEY);
 const clerkPublishableKey = normalizeEnv(
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
@@ -19,13 +13,9 @@ const clerkPublishableKey = normalizeEnv(
 
 export const envConfig = {
   apiBaseUrl,
-  supabaseUrl,
-  supabasePublishableKey,
   pexelsApiKey,
   clerkPublishableKey,
   hasApiBaseUrl: apiBaseUrl.length > 0,
-  hasSupabaseConfig:
-    supabaseUrl.length > 0 && supabasePublishableKey.length > 0,
   hasPexelsApiKey: pexelsApiKey.length > 0,
   hasClerkConfig: clerkPublishableKey.length > 0,
 } as const;

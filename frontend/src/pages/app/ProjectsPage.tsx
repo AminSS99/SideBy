@@ -218,7 +218,7 @@ const ProjectsPage = () => {
                     <div className="mt-6 flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
                       <span>Created</span>
                       <span className="h-1 w-1 rounded-full bg-[#444]" />
-                      <span>{new Date(project.created_at).toLocaleDateString()}</span>
+                      <span>{new Date(project.createdAt).toLocaleDateString()}</span>
                     </div>
                   </button>
                 );

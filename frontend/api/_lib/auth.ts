@@ -1,29 +1,61 @@
+/**
+ * SideBy auth layer for Vercel API functions.
+ * Extracts userId and optional orgId from Clerk session tokens.
+ */
 import { verifyToken } from "@clerk/backend";
 import type { VercelRequest } from "@vercel/node";
 
-const clerkSecretKey = () =>
-  process.env.CLERK_SECRET_KEY || "";
+const clerkSecretKey = () => process.env.CLERK_SECRET_KEY || "";
 
 const isProductionRuntime = () =>
   process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
 
-export const authenticateRequest = async (request: VercelRequest): Promise<string | null> => {
+export interface AuthContext {
+  userId: string | null;
+  orgId: string | null;
+  orgRole: string | null;
+}
+
+export const authenticateRequest = async (
+  request: VercelRequest,
+): Promise<AuthContext> => {
   const secretKey = clerkSecretKey();
-  if (!secretKey) return null;
+  if (!secretKey) return { userId: null, orgId: null, orgRole: null };
 
   const sessionToken =
     request.cookies?.__session ||
     request.headers.authorization?.replace("Bearer ", "") ||
     "";
 
-  if (!sessionToken) return null;
+  if (!sessionToken) return { userId: null, orgId: null, orgRole: null };
 
   try {
     const claims = await verifyToken(sessionToken, { secretKey });
-    return claims.sub || null;
+    return {
+      userId: claims.sub || null,
+      orgId: (claims.org_id as string) || null,
+      orgRole: (claims.org_role as string) || null,
+    };
   } catch {
-    return null;
+    return { userId: null, orgId: null, orgRole: null };
   }
 };
 
-export const isAuthEnabled = (): boolean => Boolean(clerkSecretKey()) || isProductionRuntime();
+export const requireAuth = async (
+  request: VercelRequest,
+): Promise<{ userId: string; orgId?: string; orgRole?: string }> => {
+  const auth = await authenticateRequest(request);
+  if (!auth.userId) {
+    const error = new Error("Authentication required.");
+    (error as Error & { statusCode: number }).statusCode = 401;
+    throw error;
+  }
+  return {
+    userId: auth.userId,
+    orgId: auth.orgId ?? undefined,
+    orgRole: auth.orgRole ?? undefined,
+  };
+};
+
+export const isAuthEnabled = (): boolean =>
+  Boolean(clerkSecretKey()) || isProductionRuntime();

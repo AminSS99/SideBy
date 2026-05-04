@@ -12,11 +12,8 @@ interface Message {
   content: string;
 }
 
-const mockIndexedFiles = [
-  { id: "1", name: "Q3_Competitor_Analysis.pdf", active: true },
-  { id: "2", name: "API_Latency_Benchmarks.csv", active: false },
-  { id: "3", name: "Enterprise_Pricing_Tiers.txt", active: true },
-];
+// Phase 1: No mock indexed files. Document upload/indexing comes in a later phase.
+const mockIndexedFiles: { id: string; name: string; active: boolean }[] = [];
 
 const ChatPage = () => {
   const { activeProject } = useProjects();

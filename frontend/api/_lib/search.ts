@@ -1,120 +1,148 @@
-const TAVILY_API_KEY = () => process.env.TAVILY_API_KEY;
+/**
+ * Tavily Search Adapter with Redis caching and source deduplication.
+ */
+import { redisGet, redisSet } from "./redis";
+import { logger } from "./log";
+
+const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
 const TAVILY_API_URL = process.env.TAVILY_API_URL || "https://api.tavily.com/search";
 
-type SearchResult = {
+export interface SearchResult {
   title: string;
   url: string;
   content: string;
   score: number;
-};
+  rawContent?: string;
+}
 
-type SearchParams = {
+export interface SearchParams {
   query: string;
   maxResults?: number;
   searchDepth?: "basic" | "advanced";
-};
+  includeRawContent?: boolean;
+}
 
-const searchTavily = async (params: SearchParams): Promise<SearchResult[]> => {
-  const apiKey = TAVILY_API_KEY();
-  if (!apiKey) { console.error("Tavily: no API key configured"); return []; }
+function hashQuery(query: string): string {
+  let h = 0;
+  for (let i = 0; i < query.length; i++) {
+    h = (Math.imul(31, h) + query.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h).toString(16);
+}
+
+function cacheKey(query: string, maxResults: number, depth: string): string {
+  return `search:${hashQuery(query.toLowerCase().trim())}:${maxResults}:${depth}`;
+}
+
+export async function searchTavily(params: SearchParams): Promise<SearchResult[]> {
+  if (!TAVILY_API_KEY) {
+    throw new Error("TAVILY_API_KEY not configured.");
+  }
+
+  const maxResults = params.maxResults || 6;
+  const depth = params.searchDepth || "basic";
+  const cache = cacheKey(params.query, maxResults, depth);
+
+  // Try cache first
+  const cached = await redisGet<SearchResult[]>(cache);
+  if (cached) {
+    logger.debug("Tavily cache hit", { query: params.query });
+    return cached;
+  }
 
   const response = await fetch(TAVILY_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${TAVILY_API_KEY}`,
     },
     body: JSON.stringify({
       query: params.query,
-      search_depth: params.searchDepth || "basic",
-      max_results: params.maxResults || 4,
+      search_depth: depth,
+      max_results: maxResults,
       include_answer: false,
-      include_raw_content: true,
+      include_raw_content: params.includeRawContent ?? true,
       include_images: false,
     }),
   });
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    console.error(`Tavily search error ${response.status} for "${params.query}": ${text.slice(0, 200)}`);
-    return [];
+    throw new Error(`Tavily search error ${response.status}: ${text.slice(0, 200)}`);
   }
 
   const data = (await response.json()) as {
-    results?: Array<{ title: string; url: string; content: string; score: number }>;
+    results?: Array<{
+      title: string;
+      url: string;
+      content: string;
+      raw_content?: string;
+      score: number;
+    }>;
   };
 
-  console.error(`Tavily found ${(data.results || []).length} results for "${params.query}"`);
-  return (data.results || []).map((r) => ({
+  const results: SearchResult[] = (data.results || []).map((r) => ({
     title: r.title,
-    url: r.url,
-    content: r.content.slice(0, 600),
+    url: normalizeUrl(r.url),
+    content: r.content.slice(0, 800),
     score: r.score,
+    rawContent: r.raw_content?.slice(0, 4000),
   }));
-};
 
-const searchGoogle = async (params: SearchParams): Promise<SearchResult[]> => {
-  const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
-  const cx = process.env.GOOGLE_SEARCH_CX;
-  if (!apiKey || !cx) return [];
+  // Cache for 1 hour
+  await redisSet(cache, results, 3600);
 
-  const url = new URL("https://www.googleapis.com/customsearch/v1");
-  url.searchParams.set("key", apiKey);
-  url.searchParams.set("cx", cx);
-  url.searchParams.set("q", params.query);
-  url.searchParams.set("num", String(params.maxResults || 4));
+  logger.info("Tavily search completed", {
+    query: params.query,
+    results: results.length,
+  });
 
-  const response = await fetch(url.toString());
-  if (!response.ok) return [];
+  return results;
+}
 
-  const data = (await response.json()) as {
-    items?: Array<{ title: string; link: string; snippet: string }>;
-  };
-
-  return (data.items || []).map((item) => ({
-    title: item.title,
-    url: item.link,
-    content: item.snippet,
-    score: 0.7,
-  }));
-};
-
-export const searchWeb = async (
-  query: string,
-  maxResults = 4,
-): Promise<SearchResult[]> => {
-  const params: SearchParams = { query, maxResults, searchDepth: "basic" };
-
-  const tavily = await searchTavily(params);
-  if (tavily.length > 0) return tavily;
-
-  const google = await searchGoogle(params);
-  if (google.length > 0) return google;
-
-  return [];
-};
-
-export const searchEntitySources = async (
+export async function searchEntitySources(
   entityName: string,
-): Promise<SearchResult[]> => {
+  context?: string,
+): Promise<SearchResult[]> {
   const queries = [
-    `${entityName} pricing plans official`,
-    `${entityName} features capabilities documentation`,
-    `${entityName} review comparison pros cons`,
-    `${entityName} integrations ecosystem`,
+    `${entityName} ${context || ""} pricing plans official`.trim(),
+    `${entityName} ${context || ""} features documentation`.trim(),
+    `${entityName} ${context || ""} review comparison`.trim(),
   ];
 
-  const results: SearchResult[] = [];
+  const allResults: SearchResult[] = [];
+  const seenUrls = new Set<string>();
+
   for (const q of queries) {
-    const batch = await searchWeb(q, 2);
-    for (const r of batch) {
-      if (!results.find((existing) => existing.url === r.url)) {
-        results.push(r);
+    try {
+      const batch = await searchTavily({ query: q, maxResults: 3, searchDepth: "basic" });
+      for (const r of batch) {
+        if (!seenUrls.has(r.url)) {
+          seenUrls.add(r.url);
+          allResults.push(r);
+        }
       }
+    } catch (e) {
+      logger.warn("Search query failed", {
+        query: q,
+        error: e instanceof Error ? e.message : "unknown",
+      });
     }
   }
 
-  return results.slice(0, 6);
-};
+  return allResults.slice(0, 8);
+}
 
-export type { SearchResult, SearchParams };
+function normalizeUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    // Remove tracking params
+    u.searchParams.delete("utm_source");
+    u.searchParams.delete("utm_medium");
+    u.searchParams.delete("utm_campaign");
+    u.searchParams.delete("ref");
+    return u.toString();
+  } catch {
+    return url;
+  }
+}

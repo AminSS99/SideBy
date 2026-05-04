@@ -12,12 +12,15 @@ import {
   Sparkles,
   XCircle,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, ApiError } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useProjects } from "@/contexts/ProjectsContext";
+import { captureEvent } from "@/lib/posthog";
 import { EmptyState } from "@/components/EmptyState";
 import { GlowCard } from "@/components/GlowCard";
 
@@ -99,6 +102,8 @@ const visibilityIcon = {
 const ComparisonsPage = () => {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { activeWorkspace } = useWorkspace();
+  const { activeProject } = useProjects();
   const [items, setItems] = useState<ComparisonHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,7 +117,7 @@ const ComparisonsPage = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const res = await apiFetch(buildApiUrl("/api/comparisons/list?limit=50"));
+      const res = await apiFetch(buildApiUrl("/api/comparisons?limit=50"));
       const contentType = res.headers.get("content-type");
       if (!res.ok || !contentType?.includes("application/json")) {
         throw new Error("Unable to load saved comparisons.");
@@ -121,35 +126,9 @@ const ComparisonsPage = () => {
       const data = (await res.json()) as { comparisons: ComparisonHistoryItem[] };
       setItems(data.comparisons);
     } catch (loadError) {
-      console.warn("Backend disconnected. Generating local mock history.", loadError);
-      setItems([
-        {
-          id: "mock-1",
-          query: "Supabase vs Firebase for a SaaS",
-          slug: "supabase-vs-firebase",
-          status: "completed",
-          visibility: "public",
-          sourceCount: 12,
-          progress: 100,
-          updatedAt: new Date().toISOString(),
-          summary: "Supabase has the edge when control, extensibility, and developer velocity matter. Firebase provides a solid managed fallback.",
-          entityA: "Supabase",
-          entityB: "Firebase"
-        },
-        {
-          id: "mock-2",
-          query: "Vercel vs Render",
-          slug: "vercel-vs-render",
-          status: "completed",
-          visibility: "private",
-          sourceCount: 8,
-          progress: 100,
-          updatedAt: new Date(Date.now() - 86400000).toISOString(),
-          summary: "Vercel excels for frontend frameworks, while Render is better for full-stack Docker deployments.",
-          entityA: "Vercel",
-          entityB: "Render"
-        }
-      ]);
+      console.error("Failed to load comparisons:", loadError);
+      setItems([]);
+      setError(loadError instanceof Error ? loadError.message : "Unable to load saved comparisons.");
     } finally {
       setIsLoading(false);
     }
@@ -158,6 +137,22 @@ const ComparisonsPage = () => {
   useEffect(() => {
     void load();
   }, []);
+
+  // Handle ?q= query param from landing page quick-start
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q) {
+      setNewComparison(q);
+      // Auto-focus the input
+      const input = document.querySelector<HTMLInputElement>("input[placeholder*='Start:']");
+      if (input) {
+        input.focus();
+      }
+      // Clear the param so refresh doesn't re-trigger
+      navigate("/app/comparisons", { replace: true });
+    }
+  }, [searchParams, navigate]);
 
   useEffect(() => {
     if (!items.some((item) => item.status === "running")) {
@@ -214,8 +209,10 @@ const ComparisonsPage = () => {
   const publish = async (item: ComparisonHistoryItem) => {
     try {
       setPublishingId(item.id);
-      const res = await apiFetch(buildApiUrl(`/api/comparisons/${item.id}/publish`), {
+      const res = await apiFetch(buildApiUrl(`/api/comparisons/${item.id}/visibility`), {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "publish" }),
       });
       if (!res.ok) {
         throw new Error("Unable to publish this comparison.");
@@ -232,14 +229,9 @@ const ComparisonsPage = () => {
         description: "The public compare page is now available.",
       });
     } catch (publishError) {
-      toast.success("Mock comparison published.");
-      setItems((current) =>
-        current.map((candidate) =>
-          candidate.id === item.id
-            ? { ...candidate, visibility: "public" }
-            : candidate,
-        ),
-      );
+      toast.error("Unable to publish this comparison.", {
+        description: publishError instanceof Error ? publishError.message : "Please try again.",
+      });
     } finally {
       setPublishingId(null);
     }
@@ -254,10 +246,14 @@ const ComparisonsPage = () => {
 
     try {
       setIsCreating(true);
-      const res = await apiFetch(buildApiUrl("/api/comparisons/create"), {
+      const res = await apiFetch(buildApiUrl("/api/comparisons"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: clean }),
+        body: JSON.stringify({
+          query: clean,
+          workspaceId: activeWorkspace?.id,
+          projectId: activeProject?.id,
+        }),
       });
       const contentType = res.headers.get("content-type");
       if (!res.ok || !contentType?.includes("application/json")) {
@@ -268,14 +264,30 @@ const ComparisonsPage = () => {
       const historyItem = jobToHistoryItem(job);
       setItems((current) => [historyItem, ...current.filter((item) => item.id !== job.id)]);
       setNewComparison("");
+      captureEvent("comparison_created_frontend", {
+        query: clean,
+        workspace_id: activeWorkspace?.id,
+        project_id: activeProject?.id,
+      });
       toast.success("Research started.", {
         description: "Opening the live comparison workbench.",
       });
       navigate(`/app/comparisons/${job.id}`);
     } catch (creationError) {
-      const mockId = "mock-" + Date.now();
-      toast.success("Mock research started.");
-      navigate(`/app/comparisons/${mockId}`);
+      captureEvent("comparison_created_failed", {
+        query: clean,
+        error: creationError instanceof Error ? creationError.message : "unknown",
+        status: creationError instanceof ApiError ? creationError.status : undefined,
+      });
+      if (creationError instanceof ApiError && creationError.status === 429) {
+        toast.error("Daily limit reached.", {
+          description: creationError.message || "Try again tomorrow.",
+        });
+      } else {
+        toast.error("Unable to start comparison research.", {
+          description: creationError instanceof Error ? creationError.message : "Please try again.",
+        });
+      }
     } finally {
       setIsCreating(false);
     }

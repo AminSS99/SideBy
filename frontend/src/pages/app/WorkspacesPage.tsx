@@ -87,7 +87,7 @@ const WorkspacesPage = () => {
                 </div>
                 <div className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
                   <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">Created</p>
-                  <p className="text-sm text-[#fdfbf7]">{new Date(workspace.created_at).toLocaleDateString()}</p>
+                  <p className="text-sm text-[#fdfbf7]">{new Date(workspace.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
               

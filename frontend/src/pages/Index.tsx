@@ -10,12 +10,20 @@ import { AmbientOrbs } from "@/components/AmbientOrbs";
 gsap.registerPlugin(ScrollTrigger);
 
 const featuredComparisons = [
+  { label: "React vs Vue", category: "Frontend" },
+  { label: "Supabase vs Firebase", category: "Backend" },
+  { label: "Cursor vs Windsurf", category: "AI Tools" },
+  { label: "Berlin vs Munich", category: "Cities" },
+  { label: "Tesla Model 3 vs BMW i4", category: "Cars" },
+  { label: "MacBook Air vs ThinkPad", category: "Laptops" },
+];
+
+const quickStartComparisons = [
+  "React vs Vue for a SaaS",
   "Supabase vs Firebase",
-  "Next.js vs Remix",
-  "PostgreSQL vs MongoDB",
-  "Tailwind vs CSS Modules",
-  "Vercel vs Render",
-  "Cursor vs Windsurf"
+  "Cursor vs Windsurf",
+  "Notion vs Linear",
+  "ChatGPT Plus vs Claude Pro",
 ];
 
 const Index = () => {
@@ -112,8 +120,11 @@ const Index = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
-    const slug = query.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    navigate(`/compare/${slug}`);
+    navigate(`/app/comparisons?q=${encodeURIComponent(query.trim())}`);
+  };
+
+  const handleQuickStart = (q: string) => {
+    navigate(`/app/comparisons?q=${encodeURIComponent(q)}`);
   };
 
   return (
@@ -160,15 +171,15 @@ const Index = () => {
         <div ref={heroRef} className="flex flex-col items-center text-center pb-24 relative perspective-1000">
           <div className="hero-badge mb-6 flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-400 transform-style-3d">
             <Sparkles className="h-3 w-3" />
-            AI-Powered Technical Research
+            Source-Backed AI Comparisons
           </div>
           
           <h1 className="parallax-title max-w-4xl font-serif text-5xl tracking-tight text-white md:text-7xl leading-[1.1] transform-style-3d will-change-transform">
-            The truth about your tech stack, <span className="bg-gradient-to-br from-orange-400 to-orange-600 bg-clip-text text-transparent italic font-light pr-2">side by side.</span>
+            Every claim cited. <span className="bg-gradient-to-br from-orange-400 to-orange-600 bg-clip-text text-transparent italic font-light pr-2">Every source verified.</span>
           </h1>
           
           <p className="parallax-desc mt-6 max-w-2xl text-lg text-white/50 font-light leading-relaxed transform-style-3d will-change-transform">
-            Stop digging through biased marketing pages and outdated Reddit threads. Generate deep, source-backed technical comparisons in seconds.
+            Stop digging through biased marketing pages and outdated Reddit threads. Generate deep, source-backed technical comparisons in seconds — with links to every primary source.
           </p>
 
           <form onSubmit={handleSearch} className="hero-search mt-10 w-full max-w-2xl relative group transform-translate-z-10">
@@ -190,18 +201,37 @@ const Index = () => {
             </button>
           </form>
 
+          {/* Quick-start one-click comparisons */}
           <div className="hero-featured mt-16 flex flex-col items-center">
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30 mb-4">Trending Comparisons</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30 mb-4">Try one-click research</p>
+            <div className="flex flex-wrap justify-center gap-3 max-w-3xl">
+              {quickStartComparisons.map((comp) => (
+                <button
+                  key={comp}
+                  type="button"
+                  onClick={() => handleQuickStart(comp)}
+                  className="rounded-full border border-white/[0.06] bg-[#111] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/40 transition-all hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-400"
+                >
+                  {comp}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Public demo comparisons */}
+          <div className="mt-12 flex flex-col items-center">
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/20 mb-4">Public demos</p>
             <div className="flex flex-wrap justify-center gap-3 max-w-3xl">
               {featuredComparisons.map((comp) => {
-                const slug = comp.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+                const [a, b] = comp.label.split(/\s+vs\s+/i);
+                const slug = `${a.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-vs-${b.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
                 return (
                   <Link
-                    key={comp}
+                    key={comp.label}
                     to={`/compare/${slug}`}
-                    className="rounded-full border border-white/[0.06] bg-[#111] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/40 transition-all hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-400"
+                    className="rounded-full border border-white/[0.04] bg-[#0c0b0a] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white/30 transition-all hover:border-white/10 hover:text-white/50"
                   >
-                    {comp}
+                    {comp.label}
                   </Link>
                 );
               })}
@@ -298,7 +328,7 @@ const Index = () => {
                 <span className="font-serif text-lg tracking-tight text-[#fdfbf7]">SideBy</span>
               </div>
               <p className="text-sm text-white/40 max-w-sm leading-relaxed mb-6">
-                The AI-powered technical research engine. We analyze documentation, pricing, and capabilities to give you the raw truth.
+                The source-backed AI comparison engine. Every claim is linked to a primary source so you can verify the information and trust the output.
               </p>
               <BrandFooter />
             </div>
