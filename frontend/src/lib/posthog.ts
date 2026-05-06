@@ -9,8 +9,6 @@ const POSTHOG_HOST =
 
 export function initPostHog() {
   if (!POSTHOG_KEY) {
-    // eslint-disable-next-line no-console
-    console.warn("[PostHog] Missing VITE_POSTHOG_KEY — analytics disabled.");
     return;
   }
 
