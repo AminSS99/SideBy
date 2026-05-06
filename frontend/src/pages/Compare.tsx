@@ -13,6 +13,7 @@ import {
   type ComparisonData,
   ComparisonHeader,
   CategorySection,
+  DecisionIntelligencePanel,
   VerdictPanel,
   SourcesPanel,
   FollowUpPanel,
@@ -143,6 +144,11 @@ const Compare = () => {
             <div className="compare-content-grid grid gap-10 lg:grid-cols-12 relative items-start">
               <div className="space-y-10 lg:col-span-8">
                 <ComparisonHeader result={result} onRefresh={handleRefresh} comparisonId={jobData.id} />
+                <DecisionIntelligencePanel
+                  result={result}
+                  activity={[]}
+                  comparisonId={jobData.id}
+                />
                 
                 <RadarChartPanel result={result} />
                 <ConsensusPanel result={result} />

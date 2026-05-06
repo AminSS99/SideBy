@@ -4,6 +4,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { panelClass } from "./constants";
+import type { ComparisonSource } from "./types";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -32,7 +33,7 @@ function getDomain(url?: string) {
   }
 }
 
-export const SourcesPanel = ({ sources }: { sources: any[] }) => {
+export const SourcesPanel = ({ sources }: { sources: ComparisonSource[] }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
@@ -64,7 +65,7 @@ export const SourcesPanel = ({ sources }: { sources: any[] }) => {
       </div>
 
       <ul className="space-y-3">
-        {sources.map((source: any, i: number) => {
+        {sources.map((source, i) => {
           const domain = getDomain(source.url);
           const rel = getReliabilityInfo(source.reliability);
           const RelIcon = rel.icon;

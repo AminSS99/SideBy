@@ -17,6 +17,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import type { WorkspaceRecord } from "@/contexts/WorkspaceContext";
 import { envConfig } from "@/config/env";
 import { GlowCard } from "@/components/GlowCard";
 
@@ -97,7 +98,7 @@ const SettingsPage = () => {
   );
 };
 
-const GeneralSettings = ({ workspace }: { workspace: any }) => {
+const GeneralSettings = ({ workspace }: { workspace: WorkspaceRecord | null }) => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <GlowCard className="p-8">

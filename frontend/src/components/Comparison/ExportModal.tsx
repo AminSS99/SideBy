@@ -9,6 +9,15 @@ interface ExportModalProps {
   result: ComparisonData;
 }
 
+interface ExportOptionProps {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+  badge?: string;
+  onClick: () => void;
+  isDownloading: boolean;
+}
+
 export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
   const [downloading, setDownloading] = useState<string | null>(null);
 
@@ -139,7 +148,7 @@ export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
   );
 };
 
-const ExportOption = ({ icon: Icon, title, description, badge, onClick, isDownloading }: any) => (
+const ExportOption = ({ icon: Icon, title, description, badge, onClick, isDownloading }: ExportOptionProps) => (
   <button
     onClick={onClick}
     disabled={isDownloading}

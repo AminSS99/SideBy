@@ -16,3 +16,4 @@ export * from "./TableOfContents";
 export * from "./ExportModal";
 export * from "./RunTelemetryPanel";
 export * from "./FeedbackPanel";
+export * from "./DecisionIntelligencePanel";

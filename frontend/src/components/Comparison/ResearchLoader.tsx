@@ -1,16 +1,17 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { cn } from "@/lib/utils";
 import { panelClass } from "./constants";
 import { Terminal } from "lucide-react";
-import type { ResearchStep } from "./types";
+import type { ComparisonActivityStep, ResearchStep } from "./types";
 
 interface ResearchLoaderProps {
   query: string;
   progress: number;
   activeStep: number;
   steps: ResearchStep[];
+  activity?: ComparisonActivityStep[];
 }
 
 const TERMINAL_LOGS = [
@@ -32,6 +33,7 @@ export const ResearchLoader = ({
   progress,
   activeStep,
   steps,
+  activity = [],
 }: ResearchLoaderProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -40,6 +42,18 @@ export const ResearchLoader = ({
   const terminalEndRef = useRef<HTMLDivElement>(null);
   
   const [activeLogs, setActiveLogs] = useState<string[]>([]);
+  const liveLogs = useMemo(() => {
+    return activity.map((step) => {
+      const timestamp = step.startedAt || step.completedAt || new Date().toISOString();
+      const summary = step.outputSummary || step.inputSummary || "working through source-backed evidence";
+      return {
+        id: step.id,
+        time: new Date(timestamp).toISOString().split("T")[1].slice(0, -1),
+        status: step.status,
+        message: `${step.task}/${step.stepName}: ${summary}`,
+      };
+    });
+  }, [activity]);
 
   // Simulate terminal logs trickling in based on progress
   useEffect(() => {
@@ -54,7 +68,7 @@ export const ResearchLoader = ({
   // Auto-scroll terminal
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeLogs]);
+  }, [activeLogs, liveLogs]);
 
   useGSAP(() => {
     // Smooth progress bar update
@@ -193,16 +207,32 @@ export const ResearchLoader = ({
       <div className="relative z-10 mt-auto flex-none border-t border-[#2a2a2a] bg-[#0c0b0a]/80 backdrop-blur-sm p-6 h-48 flex flex-col">
         <div className="flex items-center gap-2 mb-4">
           <Terminal className="h-4 w-4 text-[#fdfbf7]/30" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">Extraction Log</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
+            {liveLogs.length > 0 ? "Live Run Feed" : "Extraction Log"}
+          </span>
         </div>
         
         <div className="flex-1 overflow-y-auto no-scrollbar font-mono text-[10px] sm:text-xs text-emerald-500/70 space-y-2">
-          {activeLogs.map((log, i) => (
-            <div key={i} className="flex gap-3 items-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+          {(liveLogs.length > 0 ? liveLogs : activeLogs.map((message, i) => ({
+            id: `synthetic-${i}`,
+            time: new Date().toISOString().split('T')[1].slice(0, -1),
+            status: "running",
+            message,
+          }))).map((log) => (
+            <div key={log.id} className="flex gap-3 items-start animate-in fade-in slide-in-from-bottom-2 duration-300">
               <span className="text-emerald-500/30 opacity-50 select-none">
-                {new Date().toISOString().split('T')[1].slice(0, -1)}
+                {log.time}
               </span>
-              <span>{log}</span>
+              <span className={cn(
+                "rounded-sm border px-1.5 py-0.5 text-[8px] uppercase tracking-widest",
+                log.status === "completed" && "border-emerald-500/20 text-emerald-400/70",
+                log.status === "running" && "border-orange-500/20 text-orange-400/80",
+                log.status === "failed" && "border-red-500/20 text-red-400/80",
+                log.status !== "completed" && log.status !== "running" && log.status !== "failed" && "border-[#333] text-[#fdfbf7]/40",
+              )}>
+                {log.status}
+              </span>
+              <span>{log.message}</span>
             </div>
           ))}
           <div ref={terminalEndRef} className="h-2 flex items-center gap-2">

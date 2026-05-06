@@ -50,6 +50,31 @@ export type ComparisonTelemetry = {
   models: string[];
 };
 
+export type ComparisonActivityStep = {
+  id: string;
+  task: string;
+  stepName: string;
+  status: "queued" | "running" | "completed" | "failed" | string;
+  startedAt: string | null;
+  completedAt: string | null;
+  durationMs: number | null;
+  inputSummary: string | null;
+  outputSummary: string | null;
+  error: string | null;
+  model?: string | null;
+  estimatedCost?: number | null;
+};
+
+export type FollowUpEvidence = {
+  id: string;
+  label: string;
+  value: string;
+  confidence: number;
+  similarity: number;
+  sourceTitle: string | null;
+  sourceUrl: string | null;
+};
+
 export type ComparisonData = {
   slug: string;
   query: string;

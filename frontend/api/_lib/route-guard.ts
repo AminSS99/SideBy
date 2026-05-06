@@ -47,10 +47,7 @@ export async function withRateLimit(
   response.setHeader("X-RateLimit-Reset", String(Math.floor(limitResult.resetAt / 1000)));
 
   // Record usage after successful handler
-  try {
-    await handler();
-    await recordUsage(auth.userId, ip, action);
-  } catch (error) {
-    throw error;
-  }
+  const result = await handler();
+  await recordUsage(auth.userId, ip, action);
+  return result;
 }

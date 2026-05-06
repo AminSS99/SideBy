@@ -25,8 +25,20 @@ export const TableOfContents = ({ result }: { result: ComparisonData }) => {
       if (el) observer.observe(el);
     });
 
-    const matrix = document.getElementById('feature-matrix');
-    if (matrix) observer.observe(matrix);
+    [
+      'executive-brief',
+      'personalized-verdict',
+      'changed-facts',
+      'confidence-heatmap',
+      'evidence-graph',
+      'research-replay',
+      'source-quality',
+      'decision-board',
+      'feature-matrix',
+    ].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
 
     return () => observer.disconnect();
   }, [result.categories]);
@@ -45,15 +57,28 @@ export const TableOfContents = ({ result }: { result: ComparisonData }) => {
         <span className="text-[10px] font-bold uppercase tracking-widest">Contents</span>
       </div>
       <div className="space-y-1 border-l border-[#333] ml-2 pl-4">
-        <button
-          onClick={() => scrollTo('feature-matrix')}
-          className={cn(
-            "block text-left text-xs transition-colors hover:text-orange-400 py-1.5",
-            activeId === 'feature-matrix' ? "text-orange-400 font-bold" : "text-[#fdfbf7]/60"
-          )}
-        >
-          Feature Matrix
-        </button>
+        {[
+          ['executive-brief', 'Executive Brief'],
+          ['personalized-verdict', 'Weighted Verdict'],
+          ['changed-facts', 'Changed Facts'],
+          ['confidence-heatmap', 'Confidence'],
+          ['evidence-graph', 'Evidence Graph'],
+          ['research-replay', 'Research Replay'],
+          ['source-quality', 'Source Modes'],
+          ['decision-board', 'Decision Board'],
+          ['feature-matrix', 'Feature Matrix'],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => scrollTo(id)}
+            className={cn(
+              "block text-left text-xs transition-colors hover:text-orange-400 py-1.5",
+              activeId === id ? "text-orange-400 font-bold" : "text-[#fdfbf7]/60"
+            )}
+          >
+            {label}
+          </button>
+        ))}
         {result.categories.map((cat, i) => (
           <button
             key={i}

@@ -1,5 +1,5 @@
 import type { VercelResponse } from "@vercel/node";
-import { eq, desc, and, like } from "drizzle-orm";
+import { eq, desc, and, asc } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import { comparisons, aiRuns, aiRunSteps, queryAnalytics, entityKnowledge } from "../../src/db/schema.js";
 import { runComparisonJob } from "./job-engine.js";
@@ -21,6 +21,22 @@ export type ComparisonJob = {
   error?: string | null;
   failedStep?: string | null;
   retryable?: boolean;
+  activity?: ComparisonActivityStep[];
+};
+
+export type ComparisonActivityStep = {
+  id: string;
+  task: string;
+  stepName: string;
+  status: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  durationMs: number | null;
+  inputSummary: string | null;
+  outputSummary: string | null;
+  error: string | null;
+  model: string | null;
+  estimatedCost: number | null;
 };
 
 export type ComparisonResult = {
@@ -341,6 +357,112 @@ export const createComparisonJob = async (
   };
 };
 
+const summarizeSnapshot = (snapshot: unknown): string | null => {
+  if (snapshot === null || snapshot === undefined) return null;
+  if (typeof snapshot === "string") return snapshot.slice(0, 180);
+  if (typeof snapshot === "number" || typeof snapshot === "boolean") {
+    return String(snapshot);
+  }
+  if (Array.isArray(snapshot)) {
+    return `${snapshot.length} item${snapshot.length === 1 ? "" : "s"}`;
+  }
+  if (typeof snapshot !== "object") return null;
+
+  const record = snapshot as Record<string, unknown>;
+  const parts: string[] = [];
+  const pushNumber = (key: string, label: string) => {
+    const value = record[key];
+    if (typeof value === "number") parts.push(`${label}: ${value}`);
+  };
+  const pushString = (key: string, label: string) => {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) {
+      parts.push(`${label}: ${value.trim().slice(0, 80)}`);
+    }
+  };
+
+  pushNumber("sourceCount", "sources");
+  pushNumber("extractedCount", "extracted");
+  pushNumber("factCount", "facts");
+  pushNumber("scoreCount", "scores");
+  pushNumber("entityCount", "entities");
+  pushString("provider", "provider");
+  pushString("model", "model");
+  pushString("winner", "winner");
+
+  if (Array.isArray(record.entities)) {
+    const names = record.entities
+      .map((entity) =>
+        typeof entity === "object" && entity && "name" in entity
+          ? String((entity as { name?: unknown }).name || "")
+          : "",
+      )
+      .filter(Boolean);
+    if (names.length > 0) parts.push(`entities: ${names.join(" vs ")}`);
+  }
+
+  if (parts.length > 0) return parts.join(" | ");
+
+  try {
+    return JSON.stringify(snapshot).slice(0, 180);
+  } catch {
+    return null;
+  }
+};
+
+const isoOrNull = (value: Date | null | undefined) =>
+  value ? value.toISOString() : null;
+
+const getComparisonActivity = async (
+  db: ReturnType<typeof createDbClient>,
+  comparisonId: string,
+): Promise<ComparisonActivityStep[]> => {
+  const rows = await db
+    .select({
+      id: aiRunSteps.id,
+      stepName: aiRunSteps.stepName,
+      status: aiRunSteps.status,
+      inputSnapshot: aiRunSteps.inputSnapshot,
+      outputSnapshot: aiRunSteps.outputSnapshot,
+      errorTrace: aiRunSteps.errorTrace,
+      startedAt: aiRunSteps.startedAt,
+      completedAt: aiRunSteps.completedAt,
+      createdAt: aiRunSteps.createdAt,
+      task: aiRuns.task,
+      model: aiRuns.model,
+      estimatedCost: aiRuns.estimatedCost,
+      latencyMs: aiRuns.latencyMs,
+    })
+    .from(aiRunSteps)
+    .innerJoin(aiRuns, eq(aiRunSteps.aiRunId, aiRuns.id))
+    .where(eq(aiRuns.comparisonId, comparisonId))
+    .orderBy(asc(aiRunSteps.createdAt))
+    .limit(60);
+
+  return rows.map((row) => {
+    const startedAt = row.startedAt ?? row.createdAt ?? null;
+    const completedAt = row.completedAt ?? null;
+    const durationMs = startedAt && completedAt
+      ? Math.max(0, completedAt.getTime() - startedAt.getTime())
+      : row.latencyMs ?? null;
+
+    return {
+      id: row.id,
+      task: row.task,
+      stepName: row.stepName,
+      status: row.status,
+      startedAt: isoOrNull(startedAt),
+      completedAt: isoOrNull(completedAt),
+      durationMs,
+      inputSummary: summarizeSnapshot(row.inputSnapshot),
+      outputSummary: summarizeSnapshot(row.outputSnapshot),
+      error: row.errorTrace,
+      model: row.model === "unknown" ? null : row.model,
+      estimatedCost: row.estimatedCost === null ? null : Number(row.estimatedCost),
+    };
+  });
+};
+
 export const getComparisonJob = async (
   id: string,
   clerkUserId: string | null = null,
@@ -389,6 +511,7 @@ export const getComparisonJob = async (
   const status = isRunning || d.status === "queued" || d.status === "researching"
     ? "running"
     : d.status as "completed" | "failed";
+  const activity = await getComparisonActivity(db, id);
 
   return {
     id: d.id,
@@ -401,6 +524,7 @@ export const getComparisonJob = async (
     error: d.errorMessage,
     failedStep,
     retryable: d.status === "failed" && (d.retryCount || 0) < 2,
+    activity,
   };
 };
 

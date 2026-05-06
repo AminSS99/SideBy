@@ -18,9 +18,11 @@ import { buildApiUrl } from "@/config/env";
 import { researchSteps } from "@/lib/comparisonUtils";
 import { captureEvent } from "@/lib/posthog";
 import {
+  type ComparisonActivityStep,
   type ComparisonData,
   CategorySection,
   ComparisonHeader,
+  DecisionIntelligencePanel,
   FollowUpPanel,
   ResearchLoader,
   SourcesPanel,
@@ -45,6 +47,7 @@ type ComparisonJob = {
   error?: string | null;
   failedStep?: string | null;
   retryable?: boolean;
+  activity?: ComparisonActivityStep[];
 };
 
 const ComparisonDetailPage = () => {
@@ -365,6 +368,11 @@ const ComparisonDetailPage = () => {
                   onRefresh={() => void refresh()}
                   comparisonId={job.id}
                 />
+                <DecisionIntelligencePanel
+                  result={result}
+                  activity={job.activity}
+                  comparisonId={job.id}
+                />
                 <RadarChartPanel result={result} />
                 <ConsensusPanel result={result} />
                 <FeatureMatrixPanel result={result} />
@@ -397,6 +405,7 @@ const ComparisonDetailPage = () => {
           progress={job.progress}
           activeStep={job.activeStep}
           steps={researchSteps}
+          activity={job.activity}
         />
       ) : (
         <div className="wb-grid grid gap-10 xl:grid-cols-12 relative items-start">
@@ -404,6 +413,11 @@ const ComparisonDetailPage = () => {
             <ComparisonHeader
               result={result}
               onRefresh={() => void refresh()}
+              comparisonId={job.id}
+            />
+            <DecisionIntelligencePanel
+              result={result}
+              activity={job.activity}
               comparisonId={job.id}
             />
             

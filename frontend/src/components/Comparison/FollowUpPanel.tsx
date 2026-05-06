@@ -5,6 +5,7 @@ import { useGSAP } from "@gsap/react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { toast } from "sonner";
+import type { FollowUpEvidence } from "./types";
 
 interface Message {
   id: string;
@@ -13,6 +14,7 @@ interface Message {
   citations?: string[];
   confidence?: number;
   type?: "grounded" | "inference" | "insufficient";
+  evidence?: FollowUpEvidence[];
 }
 
 const suggestedQuestions = [
@@ -74,6 +76,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
         citations?: string[];
         confidence?: number;
         type?: "grounded" | "inference" | "insufficient";
+        evidence?: FollowUpEvidence[];
       };
 
       const assistantMessage: Message = {
@@ -83,6 +86,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
         citations: data.citations,
         confidence: data.confidence,
         type: data.type,
+        evidence: data.evidence,
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
@@ -167,27 +171,65 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
               >
                 <p className="text-sm leading-relaxed font-serif">{msg.content}</p>
                 {msg.role === "assistant" && msg.type && (
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className={`inline-flex items-center gap-1 rounded-sm border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
-                      msg.type === "grounded"
-                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-                        : msg.type === "inference"
-                          ? "border-amber-500/20 bg-amber-500/10 text-amber-400"
-                          : "border-red-500/20 bg-red-500/10 text-red-400"
-                    }`}>
-                      {msg.type === "grounded" ? "Source-backed" : msg.type === "inference" ? "Inference" : "Insufficient data"}
-                    </span>
-                    {typeof msg.confidence === "number" && (
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
-                        {Math.round(msg.confidence * 100)}% confidence
+                  <>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className={`inline-flex items-center gap-1 rounded-sm border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
+                        msg.type === "grounded"
+                          ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                          : msg.type === "inference"
+                            ? "border-amber-500/20 bg-amber-500/10 text-amber-400"
+                            : "border-red-500/20 bg-red-500/10 text-red-400"
+                      }`}>
+                        {msg.type === "grounded" ? "Source-backed" : msg.type === "inference" ? "Inference" : "Insufficient data"}
                       </span>
+                      {typeof msg.confidence === "number" && (
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
+                          {Math.round(msg.confidence * 100)}% confidence
+                        </span>
+                      )}
+                      {msg.citations && msg.citations.length > 0 && (
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
+                          Citations: {msg.citations.join(", ")}
+                        </span>
+                      )}
+                    </div>
+
+                    {msg.evidence && msg.evidence.length > 0 && (
+                      <div className="mt-4 space-y-2 border-t border-[#2a2a2a] pt-3">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-orange-400/70">
+                          Highlighted evidence
+                        </p>
+                        {msg.evidence.map((item) => (
+                          <div
+                            key={item.id}
+                            className="rounded-sm border border-orange-500/20 bg-orange-500/10 p-3"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="truncate text-[10px] font-bold uppercase tracking-widest text-orange-300">
+                                {item.label}
+                              </p>
+                              <span className="shrink-0 font-mono text-[10px] text-[#fdfbf7]/40">
+                                {Math.round(item.confidence * 100)}%
+                              </span>
+                            </div>
+                            <p className="mt-2 text-xs leading-relaxed text-[#fdfbf7]/70">
+                              {item.value}
+                            </p>
+                            {item.sourceUrl && (
+                              <a
+                                href={item.sourceUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2 inline-flex text-[10px] uppercase tracking-widest text-orange-300/70 hover:text-orange-300"
+                              >
+                                {item.sourceTitle || item.sourceUrl}
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     )}
-                    {msg.citations && msg.citations.length > 0 && (
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
-                        Citations: {msg.citations.join(", ")}
-                      </span>
-                    )}
-                  </div>
+                  </>
                 )}
               </div>
             </div>

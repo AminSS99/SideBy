@@ -188,6 +188,17 @@ Return valid JSON only with this structure:
     factsUsed: topFacts.length,
   });
 
+  const citedFactIndexes = new Set(
+    result.data.citations
+      .map((citation) => Number(citation.replace(/\D/g, "")) - 1)
+      .filter((index) => Number.isInteger(index) && index >= 0),
+  );
+  const evidenceFacts = topFacts
+    .filter((_, index) =>
+      citedFactIndexes.size > 0 ? citedFactIndexes.has(index) : index < 5,
+    )
+    .slice(0, 6);
+
   return {
     question,
     answer: result.data.answer,
@@ -195,6 +206,20 @@ Return valid JSON only with this structure:
     confidence: result.data.confidence,
     type: result.data.type,
     factsUsed: topFacts.length,
+    evidence: evidenceFacts.map((item) => {
+      const source = item.fact.citationSourceId
+        ? sourceMap.get(item.fact.citationSourceId)
+        : null;
+      return {
+        id: item.fact.id,
+        label: item.fact.label || "Supporting fact",
+        value: item.fact.value || "",
+        confidence: Number(item.fact.confidence || 0),
+        similarity: item.similarity,
+        sourceTitle: source?.title || null,
+        sourceUrl: source?.url || null,
+      };
+    }),
     answeredAt: new Date().toISOString(),
   };
 }
