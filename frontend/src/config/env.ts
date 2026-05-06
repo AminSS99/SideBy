@@ -10,6 +10,12 @@ const clerkPublishableKey = normalizeEnv(
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
     import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
 );
+const allowClerkTestKeyInProduction =
+  normalizeEnv(import.meta.env.VITE_ALLOW_CLERK_TEST_KEY_IN_PRODUCTION) === "true";
+const isClerkTestKey = clerkPublishableKey.startsWith("pk_test_");
+const hasClerkConfig =
+  clerkPublishableKey.length > 0 &&
+  (!import.meta.env.PROD || !isClerkTestKey || allowClerkTestKeyInProduction);
 
 export const envConfig = {
   apiBaseUrl,
@@ -17,7 +23,7 @@ export const envConfig = {
   clerkPublishableKey,
   hasApiBaseUrl: apiBaseUrl.length > 0,
   hasPexelsApiKey: pexelsApiKey.length > 0,
-  hasClerkConfig: clerkPublishableKey.length > 0,
+  hasClerkConfig,
 } as const;
 
 export const buildApiUrl = (path: string) => {
