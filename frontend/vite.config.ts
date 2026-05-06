@@ -5,6 +5,10 @@ import path from "path";
 
 export default defineConfig(() => ({
   envPrefix: ["VITE_", "NEXT_PUBLIC_"],
+  define: {
+    "process.env.NODE_ENV": JSON.stringify("production"),
+    __DEV__: "false",
+  },
   server: {
     host: "::",
     port: process.env.PORT ? parseInt(process.env.PORT) : 5173,
