@@ -3,17 +3,19 @@
  * Re-runs the comparison pipeline and detects what changed.
  */
 import { eq } from "drizzle-orm";
-import { createDbClient } from "../../../src/db/index";
+import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
-  comparisonFacts,
+  comparisonEntities,
+  comparisonDimensions,
   comparisonSources,
+  comparisonFacts,
   comparisonScores,
   comparisonVerdicts,
-} from "../../../src/db/schema";
-import { canMutateComparison } from "../../_lib/db-auth";
-import { runComparisonJob } from "../../_lib/job-engine";
-import { logger } from "../../_lib/log";
+} from "../../src/db/schema.js";
+import { canMutateComparison } from "./db-auth.js";
+import { runComparisonJob } from "./job-engine.js";
+import { logger } from "./log.js";
 
 export interface RefreshResult {
   comparisonId: string;

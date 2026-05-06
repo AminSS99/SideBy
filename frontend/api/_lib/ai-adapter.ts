@@ -75,7 +75,7 @@ export async function validateWithRepair<T>(
   if (first.success) return first.data;
 
   // Second attempt: repair with cheap model
-  console.warn("First parse failed, attempting repair:", first.error);
+  console.warn("First parse failed, attempting repair:", (first as { success: false; error: string }).error);
 
   const repairMessages = [
     {
@@ -85,7 +85,7 @@ export async function validateWithRepair<T>(
     },
     {
       role: "user" as const,
-      content: `Fix this broken JSON:\n\n${cleaned}\n\nErrors: ${first.error}`,
+      content: `Fix this broken JSON:\n\n${cleaned}\n\nErrors: ${(first as { success: false; error: string }).error}`,
     },
   ];
 
@@ -100,7 +100,7 @@ export async function validateWithRepair<T>(
   if (second.success) return second.data;
 
   throw new Error(
-    `Failed to validate AI output after repair. Errors: ${second.error}`,
+    `Failed to validate AI output after repair. Errors: ${(second as { success: false; error: string }).error}`,
   );
 }
 

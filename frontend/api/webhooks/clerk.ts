@@ -6,10 +6,10 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { Webhook } from "svix";
-import { createDbClient } from "../../src/db/index";
-import { users, organizations, memberships, workspaces } from "../../src/db/schema";
+import { createDbClient } from "../../src/db/index.js";
+import { users, organizations, memberships, workspaces } from "../../src/db/schema.js";
 import { eq } from "drizzle-orm";
-import { logger } from "./log";
+import { logger } from "../_lib/log.js";
 
 const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET || "";
 

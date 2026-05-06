@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { colors } from "@/config/brand";
@@ -13,6 +13,7 @@ interface EntityCardProps {
 
 export const EntityCard = ({ entity, side }: EntityCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [logoFailed, setLogoFailed] = useState(false);
   const accentColor = side === "a" ? colors.entityA : colors.entityB;
   const logo = resolveLogo(entity.name);
 
@@ -59,37 +60,38 @@ export const EntityCard = ({ entity, side }: EntityCardProps) => {
   return (
     <div
       ref={cardRef}
-      className={`${panelClass} overflow-hidden border-t-2 p-8 transition-shadow hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] transform-style-3d will-change-transform`}
+      className={`${panelClass} overflow-hidden border-t-2 p-6 sm:p-8 transition-shadow hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] transform-style-3d will-change-transform`}
       style={{ borderTopColor: accentColor }}
     >
-      <div className="mb-6 flex items-center gap-5 transform-translate-z-20">
-        {logo ? (
-          <div className="flex h-14 w-14 items-center justify-center rounded-sm overflow-hidden bg-[#1a1a1a] border border-[#333] shadow-lg">
+      <div className="mb-6 flex items-center gap-4 sm:gap-5 transform-translate-z-20">
+        {logo && !logoFailed ? (
+          <div 
+            className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-sm overflow-hidden bg-[#1a1a1a] border border-[#333] shadow-lg shrink-0"
+            style={{ background: `${accentColor}10` }}
+          >
             <img
               src={logo.url}
               alt={entity.name}
-              className="h-8 w-8 object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-                (e.target as HTMLImageElement).parentElement!.innerHTML = `<span class="font-serif text-2xl" style="color:${accentColor}">${entity.mark}</span>`;
-              }}
+              className="h-7 w-7 sm:h-8 sm:w-8 object-contain"
+              onError={() => setLogoFailed(true)}
+              loading="lazy"
             />
           </div>
         ) : (
           <div
-            className="flex h-14 w-14 items-center justify-center rounded-sm border font-serif text-2xl shadow-lg"
+            className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-sm border font-serif text-xl sm:text-2xl shadow-lg shrink-0"
             style={{
               borderColor: `${accentColor}40`,
               background: `${accentColor}10`,
               color: accentColor,
             }}
           >
-            {entity.mark}
+            {entity.mark || entity.name.charAt(0).toUpperCase()}
           </div>
         )}
-        <div>
-          <p className="font-serif text-2xl text-[#fdfbf7]">{entity.name}</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 mt-1">
+        <div className="min-w-0">
+          <p className="font-serif text-xl sm:text-2xl text-[#fdfbf7] truncate">{entity.name}</p>
+          <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 mt-1 truncate">
             {entity.subtitle}
           </p>
         </div>
@@ -97,11 +99,11 @@ export const EntityCard = ({ entity, side }: EntityCardProps) => {
 
       <div className="grid grid-cols-2 gap-px overflow-hidden border border-[#2a2a2a] bg-[#2a2a2a] transform-translate-z-10">
         {["Pricing", "Docs", "Capabilities", "Ecosystem"].map((label) => (
-          <div key={label} className="bg-[#0c0b0a] p-4 text-center transition-colors hover:bg-[#111]">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">
+          <div key={label} className="bg-[#0c0b0a] p-3 sm:p-4 text-center transition-colors hover:bg-[#111]">
+            <p className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">
               {label}
             </p>
-            <p className="text-xs font-semibold text-emerald-500">
+            <p className="text-[10px] sm:text-xs font-semibold text-emerald-500">
               Verified
             </p>
           </div>

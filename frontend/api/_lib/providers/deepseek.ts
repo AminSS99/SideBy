@@ -2,8 +2,8 @@
  * DeepSeek AI Provider Adapter
  */
 import { z } from "zod";
-import type { AIProvider, GenerateOptions, GenerateResult } from "./ai-adapter";
-import { estimateCost, estimateTokens, validateWithRepair } from "./ai-adapter";
+import type { AIProvider, GenerateOptions, GenerateResult } from "../ai-adapter.js";
+import { estimateCost, estimateTokens, validateWithRepair } from "../ai-adapter.js";
 
 const DEEPSEEK_API_URL = process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/v1/chat/completions";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;

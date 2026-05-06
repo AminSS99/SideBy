@@ -1,8 +1,8 @@
 /**
  * Tavily Search Adapter with Redis caching and source deduplication.
  */
-import { redisGet, redisSet } from "./redis";
-import { logger } from "./log";
+import { redisGet, redisSet } from "./redis.js";
+import { logger } from "./log.js";
 
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
 const TAVILY_API_URL = process.env.TAVILY_API_URL || "https://api.tavily.com/search";

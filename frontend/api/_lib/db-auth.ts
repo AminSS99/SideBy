@@ -3,14 +3,14 @@
  * All queries must go through these guards.
  */
 import { eq, and, or, inArray } from "drizzle-orm";
-import type { DbClient } from "../../src/db/index";
+import type { DbClient } from "../../src/db/index.js";
 import {
   workspaces,
   projects,
   comparisons,
   memberships,
   users,
-} from "../../src/db/schema";
+} from "../../src/db/schema.js";
 
 // ─── Workspace Access ───────────────────────────────────────────────────────
 

@@ -75,27 +75,27 @@ export const SourcesPanel = ({ sources }: { sources: any[] }) => {
                 href={source.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex flex-col gap-2 rounded-sm border border-[#2a2a2a] bg-[#111] p-4 transition-all hover:border-orange-500/40 hover:bg-[#1a110a]"
+                className="group flex flex-col gap-2.5 rounded-sm border border-[#2a2a2a] bg-[#111] p-4 transition-all hover:border-orange-500/40 hover:bg-[#1a110a]"
               >
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-sm font-serif text-[#fdfbf7] line-clamp-2 group-hover:text-orange-400 transition-colors leading-snug">
                     {source.title || "Reference Link"}
                   </span>
-                  <ExternalLink className="h-3 w-3 shrink-0 text-[#fdfbf7]/30 group-hover:text-orange-400 mt-1" />
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[#fdfbf7]/30 group-hover:text-orange-400 mt-0.5 transition-colors" />
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm border text-[9px] font-bold uppercase tracking-widest ${rel.bg} ${rel.color}`}>
-                    <RelIcon className="h-2.5 w-2.5" />
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-sm border text-[9px] font-bold uppercase tracking-widest ${rel.bg} ${rel.color}`}>
+                    <RelIcon className="h-3 w-3" />
                     {rel.label}
                   </span>
                   {domain && (
-                    <span className="text-[10px] text-[#fdfbf7]/30 uppercase tracking-widest truncate">
+                    <span className="text-[10px] text-[#fdfbf7]/30 uppercase tracking-widest truncate max-w-[150px]">
                       {domain}
                     </span>
                   )}
                   {source.confidence !== undefined && (
-                    <span className="ml-auto text-[9px] text-[#fdfbf7]/20 uppercase tracking-widest">
+                    <span className="ml-auto text-[9px] text-[#fdfbf7]/30 uppercase tracking-widest">
                       {Math.round((source.confidence || 0) * 100)}% confidence
                     </span>
                   )}

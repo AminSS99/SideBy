@@ -5,8 +5,8 @@
  * Enforces cost/time guardrails per job.
  */
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
-import { createDbClient } from "../../src/db/index";
+import { eq, and, sql } from "drizzle-orm";
+import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
   comparisonEntities,
@@ -18,15 +18,20 @@ import {
   aiRuns,
   aiRunSteps,
   usageEvents,
-} from "../../src/db/schema";
-import { getPrimaryProvider } from "./providers/index";
-import { searchEntitySources } from "./search";
-import { extractPage } from "./firecrawl";
-import { redisAcquireLock, redisReleaseLock } from "./redis";
-import { logger } from "./log";
+  queryAnalytics,
+  entityKnowledge,
+} from "../../src/db/schema.js";
+import { getPrimaryProvider } from "./providers/index.js";
+import { searchEntitySources } from "./search.js";
+import { extractPage } from "./firecrawl.js";
+import { redisAcquireLock, redisReleaseLock } from "./redis.js";
+import { logger } from "./log.js";
 import { embedText, embedTexts } from "./embeddings.js";
-import type { AIProvider } from "./ai-adapter";
+import type { AIProvider } from "./ai-adapter.js";
 import crypto from "crypto";
+import { buildDimensionPrompt, calibrateConfidence, getFreshnessClass, isReusableFact, normalizeEntityForReuse } from "./reuse-engine.js";
+import { normalizeQuery } from "./query-normalizer.js";
+import { hashPrompt } from "./cache-layer.js";
 
 // ─── Guardrails ─────────────────────────────────────────────────────────────
 
@@ -265,13 +270,14 @@ async function updateAiRun(
     latencyMs?: number;
     status?: "running" | "completed" | "failed";
     errorMessage?: string;
+    promptHash?: string;
   },
   isAiCall = true,
 ) {
   await ctx.db
     .update(aiRuns)
     .set({
-      ...updates,
+      ...updates as Record<string, unknown>,
       updatedAt: new Date(),
     })
     .where(eq(aiRuns.id, runId));
@@ -408,6 +414,27 @@ export async function runComparisonJob(
 
     // Step 8: Build result JSON and finalize
     const result = buildResultJson(parsed, sources, facts, scores, verdict, dimensions);
+
+    // Phase 11: Calibrate overall confidence
+    const normalized = normalizeQuery(ctx.query);
+    const freshnessClass = getFreshnessClass(normalized.category);
+    const reliabilityScores = sources.map((s) => {
+      // Compute reliability score from content
+      const url = (s as any).url || "";
+      if (/\.gov|\.edu|github\.com/i.test(url)) return 1.0;
+      if (/docs|documentation|api/i.test(url)) return 0.9;
+      if (/reddit|stackoverflow|quora/i.test(url)) return 0.6;
+      return 0.7;
+    });
+    const overallConfidence = calibrateConfidence({
+      sourceCount: sources.length,
+      sourceReliabilityScores: reliabilityScores,
+      factsCount: facts.length,
+      dimensionsCovered: dimensions.length,
+      totalDimensions: dimensions.length,
+      freshnessClass,
+    });
+
     await db
       .update(comparisons)
       .set({
@@ -415,8 +442,56 @@ export async function runComparisonJob(
         progress: 100,
         result: result,
         updatedAt: new Date(),
+        totalCost: String(ctx.guardrails.totalCost),
+        searchesUsed: ctx.guardrails.searchCalls,
+        overallConfidence: String(overallConfidence),
+        freshnessClass,
       })
       .where(eq(comparisons.id, comparisonId));
+
+    // Phase 11: Save reusable facts to entity knowledge base
+    for (const rawFact of facts) {
+      const fact = rawFact as { entity?: string; dimension?: string; value?: string; citation?: string; confidence?: number };
+      if (!isReusableFact({ value: fact.value || "", dimension: fact.dimension || "" })) continue;
+      const entityName = (fact.entity || "") as string;
+      const entitySlug = normalizeEntityForReuse(entityName);
+      if (!entitySlug || entitySlug.length < 2) continue;
+
+      await db
+        .insert(entityKnowledge)
+        .values({
+          entitySlug,
+          entityDisplayName: entityName,
+          dimension: (fact.dimension || "general") as string,
+          value: (fact.value || "") as string,
+          sourceUrl: (fact.citation || null) as string | null,
+          sourceTitle: null,
+          confidence: String(fact.confidence || 0.5),
+          freshnessClass,
+        })
+        .onConflictDoUpdate({
+          target: [entityKnowledge.entitySlug, entityKnowledge.dimension, entityKnowledge.value],
+          set: {
+            usageCount: sql`${entityKnowledge.usageCount} + 1`,
+            lastVerifiedAt: new Date(),
+            freshnessClass,
+          },
+        });
+    }
+
+    // Phase 10: Update query analytics with final data
+    await db
+      .update(queryAnalytics)
+      .set({
+        totalCost: String(ctx.guardrails.totalCost),
+        searchesUsed: ctx.guardrails.searchCalls,
+        sourcesFound: sources.length,
+        detectedEntities: JSON.stringify(parsed.entities?.map((e: { name: string; type?: string }) => ({
+          name: e.name.toLowerCase(),
+          type: e.type || null,
+        })) || []),
+      })
+      .where(eq(queryAnalytics.comparisonId, comparisonId));
 
     logger.info("Comparison job completed", {
       comparisonId,
@@ -470,6 +545,15 @@ export async function runComparisonJob(
           updatedAt: new Date(),
         })
         .where(eq(comparisons.id, comparisonId));
+
+      // Phase 10: Mark query analytics for failed job
+      await db
+        .update(queryAnalytics)
+        .set({
+          totalCost: "0",
+          searchesUsed: 0,
+        })
+        .where(eq(queryAnalytics.comparisonId, comparisonId));
 
       logger.info("Saved partial result for failed comparison", {
         comparisonId,
@@ -688,12 +772,16 @@ async function runDimensionStep(
   const stepId = await startStep(ctx, runId, "reason", { entities: parsed.entities });
 
   try {
+    // Phase 11: Category-aware dimension generation
+    const normalized = normalizeQuery(ctx.query);
+    const categoryPrompt = buildDimensionPrompt(
+      parsed.entities.map((e) => e.name),
+      parsed.context || "",
+      normalized.category,
+    );
+
     const messages = [
-      {
-        role: "system" as const,
-        content:
-          "You are a comparison analyst. Given the entities being compared, generate 4-6 relevant comparison dimensions with descriptions. Return valid JSON array only.",
-      },
+      { role: "system" as const, content: categoryPrompt },
       {
         role: "user" as const,
         content: `Generate comparison dimensions for: ${parsed.entities.map((e) => e.name).join(" vs ")}${parsed.context ? ` (context: ${parsed.context})` : ""}`,
@@ -712,6 +800,7 @@ async function runDimensionStep(
       estimatedCost: result.estimatedCost,
       latencyMs: result.latencyMs,
       status: "completed",
+      promptHash: hashPrompt(categoryPrompt),
     });
 
     await completeStep(ctx, stepId, result.data);
@@ -782,7 +871,7 @@ async function runFactStep(
 
     // Deduplicate facts by normalized hash
     const seenHashes = new Set<string>();
-    const uniqueFacts: typeof result.data = [];
+    const uniqueFacts: Array<Record<string, unknown>> = [];
 
     for (const fact of result.data) {
       const normalized = `${fact.entity}:${fact.dimension}:${fact.value.toLowerCase().trim().replace(/\s+/g, " ")}`;
@@ -813,13 +902,13 @@ async function runFactStep(
 
     // Store facts with embeddings
     for (let i = 0; i < uniqueFacts.length; i++) {
-      const fact = uniqueFacts[i];
+      const fact = uniqueFacts[i] as Record<string, unknown>;
       await ctx.db.insert(comparisonFacts).values({
         comparisonId: ctx.comparisonId,
-        value: fact.value,
+        value: fact.value as string,
         confidence: String(fact.confidence),
         citationSourceId: null,
-        factHash: (fact as unknown as Record<string, string>)._hash,
+        factHash: (fact as Record<string, string>)._hash,
         embedding: embeddings[i] || null,
       });
     }

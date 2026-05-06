@@ -1,5 +1,5 @@
-import { llmChat, isLLMAvailable } from "./llm";
-import type { LLMMessage } from "./llm";
+import { llmChat, isLLMAvailable } from "./llm.js";
+import type { LLMMessage } from "./llm.js";
 
 type EntityKey = "a" | "b";
 

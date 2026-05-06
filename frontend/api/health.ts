@@ -3,7 +3,7 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { neon } from "@neondatabase/serverless";
-import { getRedis } from "./_lib/redis";
+import { getRedis } from "./_lib/redis.js";
 
 export const config = {
   runtime: "nodejs",

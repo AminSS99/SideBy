@@ -3,10 +3,10 @@
  * POST /api/workspaces — create a new workspace (admin/owner only for org)
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireAuth } from "../_lib/auth";
-import { createDbClient } from "../../src/db/index";
-import { getAccessibleWorkspaces, canAccessWorkspace } from "../_lib/db-auth";
-import { workspaces } from "../../src/db/schema";
+import { requireAuth } from "./_lib/auth.js";
+import { createDbClient } from "../src/db/index.js";
+import { getAccessibleWorkspaces, canAccessWorkspace } from "./_lib/db-auth.js";
+import { workspaces } from "../src/db/schema.js";
 import { eq } from "drizzle-orm";
 
 export const config = {

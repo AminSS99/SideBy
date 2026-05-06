@@ -1,9 +1,12 @@
 import type { VercelResponse } from "@vercel/node";
-import { eq, desc, and } from "drizzle-orm";
-import { createDbClient } from "../../src/db/index";
-import { comparisons, aiRuns, aiRunSteps } from "../../src/db/schema";
-import { runComparisonJob } from "./job-engine";
-import { logger } from "./log";
+import { eq, desc, and, like } from "drizzle-orm";
+import { createDbClient } from "../../src/db/index.js";
+import { comparisons, aiRuns, aiRunSteps, queryAnalytics, entityKnowledge } from "../../src/db/schema.js";
+import { runComparisonJob } from "./job-engine.js";
+import { logger } from "./log.js";
+import { normalizeQuery } from "./query-normalizer.js";
+import { isFreshEnough, getFreshnessClass, freshnessLabel } from "./reuse-engine.js";
+import { comparisonCache, trackCacheHit } from "./cache-layer.js";
 
 export type EntityKey = "a" | "b";
 
@@ -47,6 +50,10 @@ export type ComparisonHistoryItem = {
   summary: string | null;
   entityA: string | null;
   entityB: string | null;
+  queryCategory?: string | null;
+  canonicalSlug?: string | null;
+  isVague?: boolean;
+  reusedFromId?: string | null;
 };
 
 type ResearchScheduler = (promise: Promise<void>) => void;
@@ -138,26 +145,180 @@ export const createComparisonJob = async (
   scheduleResearch?: ResearchScheduler,
 ): Promise<ComparisonJob> => {
   const parsed = parseQuery(input.query);
+  const normalized = normalizeQuery(input.query);
   const id = crypto.randomUUID();
   const comparisonSlug = uniqueSlug(slug(parsed.entityA, parsed.entityB));
 
   const db = createDbClient();
+  const freshnessClass = getFreshnessClass(normalized.category);
 
+  // ─── Phase 12: In-memory cache check (fastest) ───────────────────────
+  const memoryHit = comparisonCache.get<ComparisonResult>(normalized.canonicalSlug);
+  if (memoryHit) {
+    logger.info("Memory cache hit", { canonicalSlug: normalized.canonicalSlug });
+    return {
+      id: crypto.randomUUID(),
+      status: "completed",
+      progress: 100,
+      activeStep: 5,
+      query: parsed.normalizedQuery,
+      result: memoryHit,
+      visibility: "private",
+      error: null,
+    } as ComparisonJob;
+  }
+
+  // ─── Phase 11: True Result Reuse ──────────────────────────────────────
+  // Check for existing fresh public comparison with same canonical slug
+  const existingRows = await db
+    .select({
+      id: comparisons.id,
+      result: comparisons.result,
+      status: comparisons.status,
+      visibility: comparisons.visibility,
+      updatedAt: comparisons.updatedAt,
+      sourceCount: comparisons.sourceCount,
+      overallConfidence: comparisons.overallConfidence,
+      freshnessClass: comparisons.freshnessClass,
+    })
+    .from(comparisons)
+    .where(
+      and(
+        eq(comparisons.status, "completed"),
+        eq(comparisons.visibility, "public"),
+      ),
+    )
+    .orderBy(desc(comparisons.updatedAt))
+    .limit(5);
+
+  // Find the best reusable comparison
+  let reusedSource: typeof existingRows[0] | undefined;
+  for (const existing of existingRows) {
+    if (existing.result) {
+      const result = existing.result as ComparisonResult;
+      const existingA = result?.entities?.a?.name?.toLowerCase();
+      const existingB = result?.entities?.b?.name?.toLowerCase();
+      const queryA = parsed.entityA.toLowerCase();
+      const queryB = parsed.entityB.toLowerCase();
+
+      // Match if entities overlap (in any order)
+      const isMatch = (existingA === queryA && existingB === queryB) ||
+                      (existingA === queryB && existingB === queryA);
+
+      if (isMatch) {
+        reusedSource = existing;
+        break;
+      }
+    }
+  }
+
+  const isCached = reusedSource && isFreshEnough(reusedSource.updatedAt, normalized.category);
+
+  // Create the comparison record
   await db.insert(comparisons).values({
     id,
     query: parsed.normalizedQuery,
     slug: comparisonSlug,
-    status: "queued",
+    status: isCached ? "completed" : "queued",
     visibility: "private",
     clerkUserId: input.userId,
     clerkOrgId: input.orgId || null,
     workspaceId: input.workspaceId || null,
     projectId: input.projectId || null,
-    progress: 0,
-    activeStep: 0,
-    sourceCount: 0,
+    progress: isCached ? 100 : 0,
+    activeStep: isCached ? 5 : 0,
+    sourceCount: isCached ? (reusedSource?.sourceCount || 0) : 0,
+    result: isCached ? reusedSource?.result : null,
+    freshnessClass,
+    reuseSourceId: isCached ? reusedSource?.id : null,
   });
 
+  // Phase 10: Save query analytics
+  await db.insert(queryAnalytics).values({
+    comparisonId: id,
+    rawQuery: input.query,
+    normalizedQuery: normalized.normalizedQuery,
+    canonicalSlug: normalized.canonicalSlug,
+    detectedEntities: JSON.stringify([
+      { name: parsed.entityA, type: null },
+      { name: parsed.entityB, type: null },
+    ]),
+    queryCategory: normalized.category,
+    isVague: normalized.isVague,
+    reusedFromId: isCached ? reusedSource?.id : null,
+  });
+
+  // If we have a cached fresh result, return it immediately
+  if (isCached && reusedSource?.result) {
+    const cachedResult = reusedSource.result as ComparisonResult;
+
+    // Phase 12: Populate in-memory cache for next lookup
+    comparisonCache.set(normalized.canonicalSlug, cachedResult, 60000);
+
+    // Track cache hit for analytics
+    trackCacheHit(db, id, "reuse", 0).catch(() => {});
+
+    logger.info("Returning cached comparison", {
+      comparisonId: id,
+      sourceId: reusedSource.id,
+      category: normalized.category,
+      freshnessClass,
+    });
+
+    return {
+      id,
+      status: "completed",
+      progress: 100,
+      activeStep: 5,
+      query: parsed.normalizedQuery,
+      result: cachedResult,
+      visibility: "private",
+      error: null,
+      reuseSource: {
+        sourceId: reusedSource.id,
+        label: freshnessLabel(reusedSource.updatedAt!, normalized.category),
+        confidence: reusedSource.overallConfidence ? Number(reusedSource.overallConfidence) : null,
+      },
+    } as ComparisonJob & { reuseSource?: object };
+  }
+
+  // Phase 12: Background refresh for stale (but existing) comparisons
+  if (reusedSource && !isCached && reusedSource.result) {
+    const staleResult = reusedSource.result as ComparisonResult;
+
+    // Serve the stale result immediately
+    const freshJob = id; // This is the new record showing "completed"
+    // Start a background refresh for the original comparison
+    const bgRefresh = runComparisonJob(reusedSource.id, input.userId, input.query, input.orgId).catch((e) => {
+      logger.warn(`Background refresh failed for ${reusedSource!.id}`, { error: e instanceof Error ? e.message : String(e) });
+    });
+    if (scheduleResearch) scheduleResearch(bgRefresh);
+    else bgRefresh.catch(() => {});
+
+    logger.info("Serving stale comparison + enqueued background refresh", {
+      comparisonId: id,
+      sourceId: reusedSource.id,
+      freshnessClass,
+    });
+
+    return {
+      id,
+      status: "completed",
+      progress: 100,
+      activeStep: 5,
+      query: parsed.normalizedQuery,
+      result: staleResult,
+      visibility: "private",
+      error: null,
+      reuseSource: {
+        sourceId: reusedSource.id,
+        label: `Stale — refreshing in background (${freshnessLabel(reusedSource.updatedAt!, normalized.category)})`,
+        confidence: reusedSource.overallConfidence ? Number(reusedSource.overallConfidence) : null,
+      },
+    } as ComparisonJob & { reuseSource?: object };
+  }
+
+  // Otherwise, run the full research pipeline
   const research = runComparisonJob(id, input.userId, input.query, input.orgId).catch((e) => {
     logger.error(`Research job ${id} failed`, e instanceof Error ? e : undefined, { comparisonId: id });
   });
@@ -168,7 +329,16 @@ export const createComparisonJob = async (
     research.catch(() => {});
   }
 
-  return { id, status: "running", progress: 0, activeStep: 0, query: parsed.normalizedQuery, result: null, visibility: "private", error: null };
+  return {
+    id,
+    status: "running",
+    progress: 0,
+    activeStep: 0,
+    query: parsed.normalizedQuery,
+    result: null,
+    visibility: "private",
+    error: null,
+  };
 };
 
 export const getComparisonJob = async (
@@ -216,9 +386,13 @@ export const getComparisonJob = async (
     }
   }
 
+  const status = isRunning || d.status === "queued" || d.status === "researching"
+    ? "running"
+    : d.status as "completed" | "failed";
+
   return {
     id: d.id,
-    status: isRunning ? "running" : d.status,
+    status,
     progress: d.progress,
     activeStep: d.activeStep,
     query: d.query,
@@ -272,8 +446,23 @@ export const listComparisonHistory = async (
   const db = createDbClient();
 
   const rows = await db
-    .select()
+    .select({
+      id: comparisons.id,
+      query: comparisons.query,
+      slug: comparisons.slug,
+      status: comparisons.status,
+      visibility: comparisons.visibility,
+      sourceCount: comparisons.sourceCount,
+      progress: comparisons.progress,
+      updatedAt: comparisons.updatedAt,
+      result: comparisons.result,
+      queryCategory: queryAnalytics.queryCategory,
+      canonicalSlug: queryAnalytics.canonicalSlug,
+      isVague: queryAnalytics.isVague,
+      reusedFromId: queryAnalytics.reusedFromId,
+    })
     .from(comparisons)
+    .leftJoin(queryAnalytics, eq(comparisons.id, queryAnalytics.comparisonId))
     .where(eq(comparisons.clerkUserId, clerkUserId))
     .orderBy(desc(comparisons.updatedAt))
     .limit(safeLimit);
@@ -289,9 +478,13 @@ export const listComparisonHistory = async (
       sourceCount: row.sourceCount,
       progress: row.progress,
       updatedAt: row.updatedAt?.toISOString() || new Date().toISOString(),
-      summary: result?.verdict.summary || null,
-      entityA: result?.entities.a.name || null,
-      entityB: result?.entities.b.name || null,
+      summary: result?.verdict?.summary || null,
+      entityA: result?.entities?.a?.name || null,
+      entityB: result?.entities?.b?.name || null,
+      queryCategory: row.queryCategory,
+      canonicalSlug: row.canonicalSlug,
+      isVague: row.isVague ?? false,
+      reusedFromId: row.reusedFromId,
     };
   });
 };

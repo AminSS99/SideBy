@@ -1,8 +1,9 @@
 import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
-import * as schema from "./schema";
+import { drizzle } from "drizzle-orm/neon-http";
+import * as schema from "./schema.js";
 
 const databaseUrl =
+  process.env.DATABASE_URL_UNPOOLED ||
   process.env.DATABASE_URL ||
   process.env.POSTGRES_URL ||
   process.env.POSTGRES_PRISMA_URL ||

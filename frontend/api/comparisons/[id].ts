@@ -1,7 +1,7 @@
-import { getComparisonJob, sendJson } from "../_lib/sideby";
-import { requireAuth } from "../_lib/auth";
-import { createDbClient } from "../../src/db/index";
-import { feedback } from "../../src/db/schema";
+import { getComparisonJob, sendJson } from "../_lib/sideby.js";
+import { requireAuth } from "../_lib/auth.js";
+import { createDbClient } from "../../src/db/index.js";
+import { feedback } from "../../src/db/schema.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {

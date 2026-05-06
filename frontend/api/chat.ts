@@ -1,6 +1,6 @@
-import { sendJson } from "./_lib/sideby";
-import { authenticateRequest, isAuthEnabled } from "./_lib/auth";
-import { llmChat, type LLMMessage } from "./_lib/llm";
+import { sendJson } from "./_lib/sideby.js";
+import { authenticateRequest, isAuthEnabled } from "./_lib/auth.js";
+import { llmChat, type LLMMessage } from "./_lib/llm.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {

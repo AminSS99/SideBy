@@ -1,8 +1,8 @@
 /**
  * Firecrawl Page Extraction Adapter with Redis caching.
  */
-import { redisGet, redisSet } from "./redis";
-import { logger } from "./log";
+import { redisGet, redisSet } from "./redis.js";
+import { logger } from "./log.js";
 
 const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
 const FIRECRAWL_API_URL = process.env.FIRECRAWL_API_URL || "https://api.firecrawl.dev/v2/scrape";

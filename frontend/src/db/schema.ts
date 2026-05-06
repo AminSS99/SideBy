@@ -16,7 +16,7 @@ import {
 
 // ─── Custom Types ───────────────────────────────────────────────────────────
 
-const vector = customType<{ data: number[]; driverData: string }>({
+const vector = customType<{ data: number[]; driverData: string; config: { dimension: number } }>({
   dataType(config) {
     return `vector(${config?.dimension ?? 1536})`;
   },
@@ -197,6 +197,12 @@ export const comparisons = pgTable(
     result: jsonb("result"),
     errorMessage: text("error_message"),
     retryCount: integer("retry_count").default(0).notNull(),
+    totalCost: numeric("total_cost", { precision: 10, scale: 6 }),
+    aiTokensIn: integer("ai_tokens_in"),
+    aiTokensOut: integer("ai_tokens_out"),
+    searchesUsed: integer("searches_used").default(0),
+    freshnessClass: text("freshness_class").default("medium"),
+    reuseSourceId: uuid("reuse_source_id"),
     lastRefreshedAt: timestamp("last_refreshed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -288,6 +294,7 @@ export const comparisonFacts = pgTable(
     entityId: uuid("entity_id").references(() => comparisonEntities.id, { onDelete: "cascade" }),
     dimensionId: uuid("dimension_id").references(() => comparisonDimensions.id, { onDelete: "cascade" }),
     value: text("value"),
+    label: text("label"),
     confidence: numeric("confidence", { precision: 3, scale: 2 }),
     citationSourceId: uuid("citation_source_id").references(() => comparisonSources.id, { onDelete: "set null" }),
     factHash: text("fact_hash"), // sha256(entity + dimension + normalized value) for dedupe
@@ -384,6 +391,7 @@ export const aiRuns = pgTable(
     inputPayload: jsonb("input_payload"),
     outputPayload: jsonb("output_payload"),
     errorMessage: text("error_message"),
+    promptHash: text("prompt_hash"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -513,6 +521,64 @@ export const feedback = pgTable(
   },
   (table) => [
     index("feedback_comparison_idx").on(table.comparisonId),
+  ],
+);
+
+// ─── Query Analytics ─────────────────────────────────────────────────────────
+
+export const queryAnalytics = pgTable(
+  "query_analytics",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    comparisonId: uuid("comparison_id").references(() => comparisons.id, { onDelete: "cascade" }),
+    rawQuery: text("raw_query").notNull(),
+    normalizedQuery: text("normalized_query"),
+    canonicalSlug: text("canonical_slug"),
+    detectedEntities: jsonb("detected_entities"),
+    queryCategory: text("query_category"),
+    isVague: boolean("is_vague").default(false),
+    reusedFromId: uuid("reused_from_id"),
+    totalCost: numeric("total_cost", { precision: 10, scale: 6 }),
+    aiTokensIn: integer("ai_tokens_in"),
+    aiTokensOut: integer("ai_tokens_out"),
+    searchesUsed: integer("searches_used").default(0),
+    sourcesFound: integer("sources_found").default(0),
+    cacheHits: integer("cache_hits").default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("qa_comparison_idx").on(table.comparisonId),
+    index("qa_canonical_slug_idx").on(table.canonicalSlug),
+    index("qa_query_category_idx").on(table.queryCategory),
+    index("qa_is_vague_idx").on(table.isVague),
+    index("qa_created_at_idx").on(table.createdAt),
+  ],
+);
+
+// ─── Entity Knowledge Base — Fact Reuse Across Comparisons ───────────────────
+
+export const entityKnowledge = pgTable(
+  "entity_knowledge",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    entitySlug: text("entity_slug").notNull(),  // normalized entity name
+    entityDisplayName: text("entity_display_name").notNull(),
+    dimension: text("dimension").notNull(),
+    value: text("value").notNull(),
+    sourceUrl: text("source_url"),
+    sourceTitle: text("source_title"),
+    confidence: numeric("confidence", { precision: 3, scale: 2 }).notNull(),
+    freshnessClass: text("freshness_class").default("medium"),
+    usageCount: integer("usage_count").default(1),
+    lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }).defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("ek_entity_slug_idx").on(table.entitySlug),
+    index("ek_dimension_idx").on(table.dimension),
+    index("ek_usage_count_idx").on(table.usageCount),
+    uniqueIndex("ek_entity_dim_value_idx").on(table.entitySlug, table.dimension, table.value),
   ],
 );
 

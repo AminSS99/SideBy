@@ -4,19 +4,17 @@
  */
 import { z } from "zod";
 import { eq, inArray } from "drizzle-orm";
-import { createDbClient } from "../../../src/db/index.js";
+import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
-  comparisonFacts,
   comparisonSources,
+  comparisonFacts,
   comparisonQuestions,
-  aiRuns,
-  aiRunSteps,
-} from "../../../src/db/schema.js";
-import { canAccessComparison } from "../../_lib/db-auth.js";
-import { getPrimaryProvider } from "../../_lib/providers/index.js";
-import { embedText, cosineSimilarity } from "../../_lib/embeddings.js";
-import { logger } from "../../_lib/log.js";
+} from "../../src/db/schema.js";
+import { canAccessComparison } from "./db-auth.js";
+import { getPrimaryProvider } from "./providers/index.js";
+import { embedText, cosineSimilarity } from "./embeddings.js";
+import { logger } from "./log.js";
 
 const FollowUpSchema = z.object({
   answer: z.string(),

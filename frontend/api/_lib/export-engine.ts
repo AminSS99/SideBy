@@ -3,7 +3,7 @@
  * Supports Markdown and JSON exports.
  */
 import { eq } from "drizzle-orm";
-import { createDbClient } from "../../../src/db/index";
+import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
   comparisonEntities,
@@ -13,8 +13,8 @@ import {
   comparisonScores,
   comparisonVerdicts,
   comparisonQuestions,
-} from "../../../src/db/schema";
-import { canAccessComparison } from "../../_lib/db-auth";
+} from "../../src/db/schema.js";
+import { canAccessComparison } from "./db-auth.js";
 
 export async function exportComparison(
   comparisonId: string,

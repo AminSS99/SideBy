@@ -3,10 +3,10 @@
  * POST /api/projects — create project in workspace
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireAuth } from "../_lib/auth";
-import { createDbClient } from "../../src/db/index";
-import { canAccessWorkspace } from "../_lib/db-auth";
-import { projects } from "../../src/db/schema";
+import { requireAuth } from "./_lib/auth.js";
+import { createDbClient } from "../src/db/index.js";
+import { canAccessWorkspace } from "./_lib/db-auth.js";
+import { projects } from "../src/db/schema.js";
 import { eq } from "drizzle-orm";
 
 export const config = {

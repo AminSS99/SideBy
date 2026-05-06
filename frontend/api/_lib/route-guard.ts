@@ -3,10 +3,10 @@
  * Applies usage caps and burst protection to expensive routes.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { authenticateRequest } from "./auth";
-import { checkRouteLimit, recordUsage, formatLimitError } from "./rate-limit";
-import type { RateLimitAction } from "./rate-limit";
-import { sendJson } from "./sideby";
+import { authenticateRequest } from "./auth.js";
+import { checkRouteLimit, recordUsage, formatLimitError } from "./rate-limit.js";
+import type { RateLimitAction } from "./rate-limit.js";
+import { sendJson } from "./sideby.js";
 
 export function getClientIp(request: VercelRequest): string | null {
   const forwarded = request.headers["x-forwarded-for"];
@@ -23,8 +23,8 @@ export async function withRateLimit(
   request: VercelRequest,
   response: VercelResponse,
   action: RateLimitAction,
-  handler: () => Promise<void>,
-): Promise<void> {
+  handler: () => Promise<unknown>,
+): Promise<unknown> {
   const auth = await authenticateRequest(request);
   const ip = getClientIp(request);
 

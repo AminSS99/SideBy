@@ -31,6 +31,7 @@ import ResearchPage from "./pages/app/ResearchPage";
 import UploadsPage from "./pages/app/UploadsPage";
 import PromptsPage from "./pages/app/PromptsPage";
 import AnalyticsPage from "./pages/app/AnalyticsPage";
+import QualityPage from "./pages/app/QualityPage";
 import BillingPage from "./pages/app/BillingPage";
 import ProjectsPage from "./pages/app/ProjectsPage";
 import SettingsPage from "./pages/app/SettingsPage";
@@ -80,6 +81,7 @@ const App = () => {
                     <Route path="uploads" element={<UploadsPage />} />
                     <Route path="prompts" element={<PromptsPage />} />
                     <Route path="analytics" element={<AnalyticsPage />} />
+                    <Route path="quality" element={<QualityPage />} />
                     <Route path="billing" element={<BillingPage />} />
                     <Route path="team" element={<TeamPage />} />
                     <Route path="workspaces" element={<WorkspacesPage />} />

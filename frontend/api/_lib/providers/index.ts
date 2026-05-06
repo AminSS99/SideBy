@@ -4,7 +4,7 @@
  */
 import { DeepSeekAdapter } from "./deepseek.js";
 import { OpenRouterAdapter } from "./openrouter.js";
-import type { AIProvider } from "./ai-adapter.js";
+import type { AIProvider } from "../ai-adapter.js";
 
 const deepseek = new DeepSeekAdapter();
 const openrouter = new OpenRouterAdapter();

@@ -10,12 +10,13 @@ import { AmbientOrbs } from "@/components/AmbientOrbs";
 gsap.registerPlugin(ScrollTrigger);
 
 const featuredComparisons = [
-  { label: "React vs Vue", category: "Frontend" },
-  { label: "Supabase vs Firebase", category: "Backend" },
-  { label: "Cursor vs Windsurf", category: "AI Tools" },
-  { label: "Berlin vs Munich", category: "Cities" },
-  { label: "Tesla Model 3 vs BMW i4", category: "Cars" },
-  { label: "MacBook Air vs ThinkPad", category: "Laptops" },
+  { label: "React vs Vue", category: "Frontend", sources: 12, confidence: 94 },
+  { label: "Supabase vs Firebase", category: "Backend", sources: 10, confidence: 91 },
+  { label: "Neon vs Supabase", category: "Database", sources: 8, confidence: 89 },
+  { label: "Vercel vs Netlify", category: "Hosting", sources: 9, confidence: 92 },
+  { label: "Berlin vs Munich", category: "Cities", sources: 15, confidence: 87 },
+  { label: "Tesla Model 3 vs BMW i4", category: "Cars", sources: 11, confidence: 93 },
+  { label: "MacBook Air vs ThinkPad", category: "Laptops", sources: 10, confidence: 90 },
 ];
 
 const quickStartComparisons = [
@@ -137,11 +138,9 @@ const Index = () => {
 
       <header className="relative z-40 border-b border-white/[0.06] bg-[#030303]/80 backdrop-blur-xl sticky top-0">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-4 group cursor-default">
-            <div className="flex h-10 w-10 items-center justify-center border border-[#333] bg-[#111] font-serif text-xl text-[#fdfbf7] transition-all group-hover:border-orange-500/50 group-hover:text-orange-400">
-              S
-            </div>
-            <div>
+            <div className="flex items-center gap-4 group cursor-default">
+              <img src="/sideby-logo.jpg" alt="SideBy" className="h-9 w-9 object-contain transition-all group-hover:opacity-80" />
+              <div>
               <p className="font-serif text-sm tracking-tight text-[#fdfbf7]">SideBy</p>
               <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#fdfbf7]/40">Research Engine</p>
             </div>
@@ -179,7 +178,7 @@ const Index = () => {
           </h1>
           
           <p className="parallax-desc mt-6 max-w-2xl text-lg text-white/50 font-light leading-relaxed transform-style-3d will-change-transform">
-            Stop digging through biased marketing pages and outdated Reddit threads. Generate deep, source-backed technical comparisons in seconds — with links to every primary source.
+            Compare anything with cited sources. We research, extract facts, and score dimensions — so you get the full picture with links to every claim.
           </p>
 
           <form onSubmit={handleSearch} className="hero-search mt-10 w-full max-w-2xl relative group transform-translate-z-10">
@@ -219,9 +218,9 @@ const Index = () => {
           </div>
 
           {/* Public demo comparisons */}
-          <div className="mt-12 flex flex-col items-center">
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/20 mb-4">Public demos</p>
-            <div className="flex flex-wrap justify-center gap-3 max-w-3xl">
+          <div className="mt-16 flex flex-col items-center w-full max-w-4xl">
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30 mb-6">Public demos — click to explore</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
               {featuredComparisons.map((comp) => {
                 const [a, b] = comp.label.split(/\s+vs\s+/i);
                 const slug = `${a.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-vs-${b.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
@@ -229,9 +228,27 @@ const Index = () => {
                   <Link
                     key={comp.label}
                     to={`/compare/${slug}`}
-                    className="rounded-full border border-white/[0.04] bg-[#0c0b0a] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white/30 transition-all hover:border-white/10 hover:text-white/50"
+                    className="group relative overflow-hidden rounded-sm border border-white/[0.06] bg-[#0c0b0a] p-5 transition-all hover:border-orange-500/30 hover:bg-[#1a110a] hover:shadow-[0_0_30px_rgba(234,88,12,0.08)]"
                   >
-                    {comp.label}
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-orange-500/70">{comp.category}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-white/20">{comp.sources} sources</span>
+                    </div>
+                    <p className="font-serif text-lg text-[#fdfbf7] mb-2 group-hover:text-orange-400 transition-colors">
+                      {comp.label}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <div className="h-1 flex-1 bg-white/[0.06] rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all group-hover:from-orange-400 group-hover:to-orange-300"
+                          style={{ width: `${comp.confidence}%` }}
+                        />
+                      </div>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-white/30">{comp.confidence}%</span>
+                    </div>
+                    <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ArrowRight className="h-4 w-4 text-orange-400" />
+                    </div>
                   </Link>
                 );
               })}
@@ -296,9 +313,7 @@ const Index = () => {
               
               <div className="orch-card border border-orange-500/30 bg-[#1a110a] shadow-2xl p-8 rounded-sm text-center transform md:scale-110 z-20">
                 <div className="absolute top-0 inset-x-0 h-1 bg-orange-500" />
-                <div className="flex h-12 w-12 items-center justify-center border border-[#333] bg-[#0c0b0a] font-serif text-2xl text-[#fdfbf7] mx-auto mb-4">
-                  S
-                </div>
+                <img src="/sideby-logo.jpg" alt="SideBy Router" className="h-12 w-12 object-contain mx-auto mb-4" />
                 <h3 className="font-serif text-xl text-white mb-2">SideBy Router</h3>
                 <p className="text-xs text-orange-400 uppercase tracking-widest font-bold mb-3">Orchestration</p>
                 <p className="text-sm text-white/60">Evaluates the query and intelligently splits tasks across providers.</p>
@@ -322,9 +337,7 @@ const Index = () => {
           <div className="grid gap-12 md:grid-cols-4 mb-16">
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-6">
-                <div className="flex h-8 w-8 items-center justify-center border border-[#333] bg-[#111] font-serif text-lg text-[#fdfbf7]">
-                  S
-                </div>
+                <img src="/sideby-logo.jpg" alt="SideBy" className="h-7 w-7 object-contain" />
                 <span className="font-serif text-lg tracking-tight text-[#fdfbf7]">SideBy</span>
               </div>
               <p className="text-sm text-white/40 max-w-sm leading-relaxed mb-6">

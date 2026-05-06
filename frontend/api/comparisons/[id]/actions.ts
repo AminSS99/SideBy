@@ -2,12 +2,12 @@
  * POST /api/comparisons/:id/actions
  * Export or follow-up on a comparison.
  */
-import { sendJson } from "../../_lib/sideby";
-import { requireAuth } from "../../_lib/auth";
-import { withRateLimit } from "../../_lib/route-guard";
-import { exportComparison } from "../../_lib/export-engine";
-import { answerFollowUp } from "../../_lib/followup-engine";
-import { captureServerEvent } from "../../_lib/analytics";
+import { sendJson } from "../../_lib/sideby.js";
+import { requireAuth } from "../../_lib/auth.js";
+import { withRateLimit } from "../../_lib/route-guard.js";
+import { exportComparison } from "../../_lib/export-engine.js";
+import { answerFollowUp } from "../../_lib/followup-engine.js";
+import { captureServerEvent } from "../../_lib/analytics.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {

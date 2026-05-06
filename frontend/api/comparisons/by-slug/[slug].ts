@@ -3,10 +3,10 @@
  * Public comparison lookup by slug.
  */
 import { eq, and, desc } from "drizzle-orm";
-import { createDbClient } from "../../../src/db/index";
-import { comparisons } from "../../../src/db/schema";
-import { sendJson } from "../../_lib/sideby";
-import { authenticateRequest } from "../../_lib/auth";
+import { createDbClient } from "../../../src/db/index.js";
+import { comparisons } from "../../../src/db/schema.js";
+import { sendJson } from "../../_lib/sideby.js";
+import { authenticateRequest } from "../../_lib/auth.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {

@@ -2,9 +2,9 @@
  * POST /api/comparisons/:id/visibility
  * Toggle comparison visibility (publish/unpublish).
  */
-import { sendJson } from "../../_lib/sideby";
-import { requireAuth } from "../../_lib/auth";
-import { publishComparison, unpublishComparison } from "../../_lib/sideby";
+import { sendJson } from "../../_lib/sideby.js";
+import { requireAuth } from "../../_lib/auth.js";
+import { publishComparison, unpublishComparison } from "../../_lib/sideby.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {

@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   GitCompareArrows, LayoutDashboard, Layers3, FolderKanban, Settings, 
   LogOut, MessageSquare, Microscope, Database, Activity, CreditCard, 
-  Search, Terminal, Users, Menu, X 
+  Search, Terminal, Users, Menu, X, AlertCircle 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
@@ -24,6 +24,7 @@ const navItems = [
   { to: "/app/uploads", label: "Knowledge Base", icon: Database },
   { to: "/app/prompts", label: "Prompt Studio", icon: Terminal },
   { to: "/app/analytics", label: "Analytics", icon: Activity },
+  { to: "/app/quality", label: "Quality", icon: AlertCircle },
   { to: "/app/team", label: "Team", icon: Users },
   { to: "/app/billing", label: "Billing", icon: CreditCard },
   { to: "/app/workspaces", label: "Workspaces", icon: Layers3 },
@@ -96,9 +97,7 @@ const AppShell = () => {
               <Menu className="h-6 w-6" />
             </button>
             <Link to="/" className="flex items-center gap-4 group">
-              <div className="flex h-10 w-10 items-center justify-center border border-[#333] bg-[#111] font-serif text-xl text-[#fdfbf7] group-hover:border-orange-500/50 group-hover:text-orange-400 transition-all">
-                S
-              </div>
+              <img src="/sideby-logo.jpg" alt="SideBy" className="h-9 w-9 object-contain group-hover:opacity-80 transition-all" />
               <div className="hidden sm:block">
                 <span className="font-serif text-lg tracking-tight text-white group-hover:text-orange-50 transition-colors">
                   {brand.productName}

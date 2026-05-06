@@ -2,10 +2,10 @@
  * GET /api/comparisons — list comparisons
  * POST /api/comparisons — create comparison
  */
-import { createComparisonJob, listComparisonHistory, sendJson } from "../_lib/sideby";
-import { requireAuth } from "../_lib/auth";
-import { withRateLimit } from "../_lib/route-guard";
-import { captureServerEvent } from "../_lib/analytics";
+import { createComparisonJob, listComparisonHistory, sendJson } from "../_lib/sideby.js";
+import { requireAuth } from "../_lib/auth.js";
+import { withRateLimit } from "../_lib/route-guard.js";
+import { captureServerEvent } from "../_lib/analytics.js";
 import { waitUntil } from "@vercel/functions";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 

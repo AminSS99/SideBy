@@ -101,27 +101,27 @@ export const ComparisonHeader = ({
 
   return (
     <div ref={container} className="relative break-inside-avoid">
-      <div className="mb-12 flex flex-wrap items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
-        <div className="flex flex-wrap items-center gap-4">
-          <span className="ch-top-item flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
+      <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <span className="ch-top-item flex items-center gap-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
             Fresh {result.updatedAt}
           </span>
-          <span className="ch-top-item text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
+          <span className="ch-top-item text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
             {result.sourceCount} verified sources
           </span>
         </div>
-        <div className="flex items-center gap-3 print-hidden">
+        <div className="flex items-center gap-2 sm:gap-3 print-hidden">
           <button
             onClick={() => setExportOpen(true)}
-            className="ch-top-item flex items-center gap-2 rounded-sm border border-[#2a2a2a] bg-[#111] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#1a1a1a] hover:border-[#444] hidden sm:flex"
+            className="ch-top-item flex items-center gap-2 rounded-sm border border-[#2a2a2a] bg-[#111] px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#1a1a1a] hover:border-[#444]"
             title="Export Report"
           >
             <Download className="h-3 w-3" />
-            Export
+            <span className="hidden sm:inline">Export</span>
           </button>
           <div className="ch-top-item">
             <ShareButton
@@ -134,23 +134,23 @@ export const ComparisonHeader = ({
           </div>
           <button
             onClick={onRefresh}
-            className="ch-top-item flex items-center gap-2 rounded-sm border border-[#2a2a2a] bg-[#111] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#1a1a1a] hover:border-[#444] hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+            className="ch-top-item flex items-center gap-2 rounded-sm border border-[#2a2a2a] bg-[#111] px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#1a1a1a] hover:border-[#444] hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
           >
             <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
             </svg>
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
       </div>
 
-      <div className="mb-12 flex flex-col md:flex-row md:items-baseline md:justify-between overflow-hidden py-4 perspective-1000">
-        <h2 className="font-serif text-5xl text-[#fdfbf7] sm:text-6xl md:text-7xl lg:text-[5.5rem] leading-none tracking-tight flex flex-wrap items-baseline gap-y-4">
+      <div className="mb-8 sm:mb-12 flex flex-col md:flex-row md:items-baseline md:justify-between overflow-hidden py-4 perspective-1000">
+        <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-[5rem] leading-none tracking-tight flex flex-col sm:flex-row sm:flex-wrap items-baseline gap-y-2 sm:gap-y-4">
           <SplitTextChars 
             text={result.entities.a.name} 
             className="ch-entity-a inline-block" 
           />
-          <span className="ch-vs mx-6 font-serif italic font-light text-[#fdfbf7]/20 text-4xl sm:text-5xl lg:text-6xl inline-block">
+          <span className="ch-vs mx-0 sm:mx-6 my-1 sm:my-0 font-serif italic font-light text-[#fdfbf7]/20 text-3xl sm:text-4xl lg:text-5xl inline-block">
             vs
           </span>
           <SplitTextChars 
@@ -174,7 +174,7 @@ export const ComparisonHeader = ({
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 mb-10 break-inside-avoid">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 mb-8 sm:mb-10 break-inside-avoid">
         <div className="ch-card perspective-1000"><EntityCard entity={result.entities.a} side="a" /></div>
         <div className="ch-card perspective-1000"><EntityCard entity={result.entities.b} side="b" /></div>
       </div>

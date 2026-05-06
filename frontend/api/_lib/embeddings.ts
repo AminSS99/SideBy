@@ -3,7 +3,7 @@
  * Uses OpenAI text-embedding-3-small (1536 dims) by default.
  * Falls back to other providers if OpenAI key is not available.
  */
-import { logger } from "./log";
+import { logger } from "./log.js";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const EMBEDDING_MODEL = "text-embedding-3-small";

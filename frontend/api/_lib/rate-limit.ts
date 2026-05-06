@@ -3,8 +3,8 @@
  * Redis-backed sliding window rate limiting + daily usage caps.
  * No Paddle. Everyone is on the free plan with hard daily limits.
  */
-import { redisGet, redisSet, redisIncrement, getRedis } from "./redis";
-import { logger } from "./log";
+import { redisGet, redisSet, redisIncrement, getRedis } from "./redis.js";
+import { logger } from "./log.js";
 
 // Warn once if Redis is not configured — rate limits will not be enforced
 const redisAvailable = !!getRedis();

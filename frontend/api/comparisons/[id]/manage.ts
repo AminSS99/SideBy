@@ -2,15 +2,15 @@
  * POST /api/comparisons/:id/manage
  * Refresh or retry a comparison.
  */
-import { sendJson } from "../../_lib/sideby";
-import { requireAuth } from "../../_lib/auth";
-import { withRateLimit } from "../../_lib/route-guard";
-import { refreshComparison } from "../../_lib/refresh-engine";
-import { createDbClient } from "../../../src/db/index";
-import { comparisons } from "../../../src/db/schema";
+import { sendJson } from "../../_lib/sideby.js";
+import { requireAuth } from "../../_lib/auth.js";
+import { withRateLimit } from "../../_lib/route-guard.js";
+import { refreshComparison } from "../../_lib/refresh-engine.js";
+import { createDbClient } from "../../../src/db/index.js";
+import { comparisons } from "../../../src/db/schema.js";
 import { eq } from "drizzle-orm";
-import { runComparisonJob } from "../../_lib/job-engine";
-import { captureServerEvent } from "../../_lib/analytics";
+import { runComparisonJob } from "../../_lib/job-engine.js";
+import { captureServerEvent } from "../../_lib/analytics.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
