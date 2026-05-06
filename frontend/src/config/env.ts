@@ -6,16 +6,17 @@ const apiBaseUrl = removeTrailingSlash(
   normalizeEnv(import.meta.env.VITE_API_BASE_URL),
 );
 const pexelsApiKey = normalizeEnv(import.meta.env.VITE_PEXELS_API_KEY);
-const clerkPublishableKey = normalizeEnv(
+const rawClerkPublishableKey = normalizeEnv(
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
     import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
 );
 const allowClerkTestKeyInProduction =
   normalizeEnv(import.meta.env.VITE_ALLOW_CLERK_TEST_KEY_IN_PRODUCTION) === "true";
-const isClerkTestKey = clerkPublishableKey.startsWith("pk_test_");
-const hasClerkConfig =
-  clerkPublishableKey.length > 0 &&
-  (!import.meta.env.PROD || !isClerkTestKey || allowClerkTestKeyInProduction);
+const isClerkTestKey = rawClerkPublishableKey.startsWith("pk_test_");
+const shouldBlockClerkTestKey =
+  import.meta.env.PROD && isClerkTestKey && !allowClerkTestKeyInProduction;
+const clerkPublishableKey = shouldBlockClerkTestKey ? "" : rawClerkPublishableKey;
+const hasClerkConfig = clerkPublishableKey.length > 0;
 
 export const envConfig = {
   apiBaseUrl,
@@ -24,6 +25,7 @@ export const envConfig = {
   hasApiBaseUrl: apiBaseUrl.length > 0,
   hasPexelsApiKey: pexelsApiKey.length > 0,
   hasClerkConfig,
+  isClerkTestKeyBlocked: shouldBlockClerkTestKey,
 } as const;
 
 export const buildApiUrl = (path: string) => {
