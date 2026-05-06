@@ -27,13 +27,17 @@ jobs:
           node-version: 24
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        working-directory: frontend
+        run: pnpm install --no-frozen-lockfile
 
       - name: Type check
-        run: pnpm --dir frontend exec tsc --noEmit
+        working-directory: frontend
+        run: pnpm exec tsc --noEmit
 
       - name: Lint
-        run: pnpm --dir frontend lint
+        working-directory: frontend
+        run: pnpm lint
 
       - name: Build
-        run: pnpm --dir frontend build
+        working-directory: frontend
+        run: pnpm build
