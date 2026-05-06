@@ -40,6 +40,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/comparisons/create",
+      "destination": "/api/comparisons"
+    },
+    {
       "source": "/((?!api(?:/|$)|assets(?:/|$)|favicon\\.ico$|robots\\.txt$|sitemap\\.xml$).*)",
       "destination": "/index.html"
     }
