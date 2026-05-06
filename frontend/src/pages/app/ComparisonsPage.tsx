@@ -23,6 +23,7 @@ import { useProjects } from "@/contexts/ProjectsContext";
 import { captureEvent } from "@/lib/posthog";
 import { EmptyState } from "@/components/EmptyState";
 import { GlowCard } from "@/components/GlowCard";
+import { analyzeQueryIntent } from "@/lib/queryIntent";
 
 type ComparisonStatus = "running" | "completed" | "failed";
 type ComparisonVisibility = "private" | "team" | "public";
@@ -112,6 +113,10 @@ const ComparisonsPage = () => {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [isCreating, setIsCreating] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const newComparisonIntent = useMemo(
+    () => analyzeQueryIntent(newComparison),
+    [newComparison],
+  );
 
   const load = async () => {
     try {
@@ -244,6 +249,14 @@ const ComparisonsPage = () => {
       return;
     }
 
+    const intent = analyzeQueryIntent(clean);
+    if (!intent.canStart) {
+      toast.error("Comparison needs two concrete options.", {
+        description: intent.message,
+      });
+      return;
+    }
+
     try {
       setIsCreating(true);
       const res = await apiFetch(buildApiUrl("/api/comparisons"), {
@@ -282,6 +295,10 @@ const ComparisonsPage = () => {
       if (creationError instanceof ApiError && creationError.status === 429) {
         toast.error("Daily limit reached.", {
           description: creationError.message || "Try again tomorrow.",
+        });
+      } else if (creationError instanceof ApiError && creationError.status === 422) {
+        toast.error("Comparison needs a clearer shape.", {
+          description: creationError.message,
         });
       } else {
         toast.error("Unable to start comparison research.", {
@@ -327,12 +344,41 @@ const ComparisonsPage = () => {
             <button
               type="button"
               onClick={() => void startComparison()}
-              disabled={isCreating}
+              disabled={isCreating || (Boolean(newComparison.trim()) && !newComparisonIntent.canStart)}
               className="inline-flex h-10 items-center justify-center rounded-sm bg-[#fdfbf7] px-6 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] disabled:opacity-50"
             >
               {isCreating ? "Starting..." : "Start"}
             </button>
           </div>
+          {newComparison.trim() && (
+            <div className={[
+              "mt-3 rounded-sm border px-3 py-2 text-xs leading-relaxed",
+              newComparisonIntent.canStart
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200/80"
+                : "border-amber-500/25 bg-amber-500/10 text-amber-100/80",
+            ].join(" ")}>
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-[9px] font-bold uppercase tracking-widest">
+                  AI preflight - {Math.round(newComparisonIntent.confidence * 100)}%
+                </span>
+                {newComparisonIntent.category && (
+                  <span className="text-[9px] uppercase tracking-widest opacity-70">
+                    {newComparisonIntent.category}
+                  </span>
+                )}
+              </div>
+              <p className="mt-1">{newComparisonIntent.message}</p>
+              {newComparisonIntent.suggestion && (
+                <button
+                  type="button"
+                  onClick={() => setNewComparison(newComparisonIntent.suggestion || "")}
+                  className="mt-2 text-[10px] font-bold uppercase tracking-widest text-white/70 underline decoration-white/20 underline-offset-4 hover:text-white"
+                >
+                  Try: {newComparisonIntent.suggestion}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

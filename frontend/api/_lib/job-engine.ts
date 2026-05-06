@@ -306,6 +306,18 @@ async function logUsageEvent(
   });
 }
 
+async function updateComparisonProgress(
+  ctx: JobContext,
+  progress: number,
+  activeStep: number,
+  extra: Partial<typeof comparisons.$inferInsert> = {},
+) {
+  await ctx.db
+    .update(comparisons)
+    .set({ ...extra, progress, activeStep, updatedAt: new Date() })
+    .where(eq(comparisons.id, ctx.comparisonId));
+}
+
 // ─── Core Pipeline Steps ────────────────────────────────────────────────────
 
 const MAX_RETRIES = 2;
@@ -358,59 +370,35 @@ export async function runComparisonJob(
     };
 
     // Update comparison status
-    await db
-      .update(comparisons)
-      .set({ status: "researching", progress: 5, updatedAt: new Date() })
-      .where(eq(comparisons.id, comparisonId));
+    await updateComparisonProgress(ctx, 5, 0, { status: "researching" });
 
     // Step 1: Parse query
     const parsed = await runParseStep(ctx);
-    await db
-      .update(comparisons)
-      .set({ progress: 15 })
-      .where(eq(comparisons.id, comparisonId));
+    await updateComparisonProgress(ctx, 15, 1);
 
     // Step 2: Search for sources
     const sources = await runSearchStep(ctx, parsed.entities);
-    await db
-      .update(comparisons)
-      .set({ progress: 35, sourceCount: sources.length })
-      .where(eq(comparisons.id, comparisonId));
+    await updateComparisonProgress(ctx, 35, 2, { sourceCount: sources.length });
 
     // Step 3: Extract pages
     const extracted = await runExtractionStep(ctx, sources);
-    await db
-      .update(comparisons)
-      .set({ progress: 50 })
-      .where(eq(comparisons.id, comparisonId));
+    await updateComparisonProgress(ctx, 50, 3);
 
     // Step 4: Generate dimensions
     const dimensions = await runDimensionStep(ctx, parsed);
-    await db
-      .update(comparisons)
-      .set({ progress: 60 })
-      .where(eq(comparisons.id, comparisonId));
+    await updateComparisonProgress(ctx, 60, 4);
 
     // Step 5: Extract facts
     const facts = await runFactStep(ctx, parsed, extracted, dimensions);
-    await db
-      .update(comparisons)
-      .set({ progress: 75 })
-      .where(eq(comparisons.id, comparisonId));
+    await updateComparisonProgress(ctx, 75, 4);
 
     // Step 6: Score
     const scores = await runScoreStep(ctx, parsed, facts, dimensions);
-    await db
-      .update(comparisons)
-      .set({ progress: 85 })
-      .where(eq(comparisons.id, comparisonId));
+    await updateComparisonProgress(ctx, 85, 5);
 
     // Step 7: Verdict
     const verdict = await runVerdictStep(ctx, parsed, scores, facts);
-    await db
-      .update(comparisons)
-      .set({ progress: 95 })
-      .where(eq(comparisons.id, comparisonId));
+    await updateComparisonProgress(ctx, 95, 5);
 
     // Step 8: Build result JSON and finalize
     const result = buildResultJson(parsed, sources, facts, scores, verdict, dimensions);
@@ -420,7 +408,7 @@ export async function runComparisonJob(
     const freshnessClass = getFreshnessClass(normalized.category);
     const reliabilityScores = sources.map((s) => {
       // Compute reliability score from content
-      const url = (s as any).url || "";
+      const url = s.url || "";
       if (/\.gov|\.edu|github\.com/i.test(url)) return 1.0;
       if (/docs|documentation|api/i.test(url)) return 0.9;
       if (/reddit|stackoverflow|quora/i.test(url)) return 0.6;
@@ -440,6 +428,7 @@ export async function runComparisonJob(
       .set({
         status: "completed",
         progress: 100,
+        activeStep: 5,
         result: result,
         updatedAt: new Date(),
         totalCost: String(ctx.guardrails.totalCost),

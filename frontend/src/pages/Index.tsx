@@ -6,6 +6,7 @@ import { useGSAP } from "@gsap/react";
 import { Search, Sparkles, Zap, ArrowRight, ShieldCheck, Scale, Cpu, Network, BookOpenText } from "lucide-react";
 import { BrandFooter } from "@/components/brand/BrandFooter";
 import { AmbientOrbs } from "@/components/AmbientOrbs";
+import { analyzeQueryIntent } from "@/lib/queryIntent";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -29,6 +30,7 @@ const quickStartComparisons = [
 
 const Index = () => {
   const [query, setQuery] = useState("");
+  const queryIntent = analyzeQueryIntent(query);
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -120,7 +122,7 @@ const Index = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() || !queryIntent.canStart) return;
     navigate(`/app/comparisons?q=${encodeURIComponent(query.trim())}`);
   };
 
@@ -181,23 +183,55 @@ const Index = () => {
             Compare anything with cited sources. We research, extract facts, and score dimensions — so you get the full picture with links to every claim.
           </p>
 
-          <form onSubmit={handleSearch} className="hero-search mt-10 w-full max-w-2xl relative group transform-translate-z-10">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none">
-              <Search className="h-5 w-5 text-white/30 group-focus-within:text-orange-500 transition-colors" />
+          <form onSubmit={handleSearch} className="hero-search mt-10 w-full max-w-2xl group transform-translate-z-10">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none">
+                <Search className="h-5 w-5 text-white/30 group-focus-within:text-orange-500 transition-colors" />
+              </div>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="e.g., Supabase vs Firebase..."
+                className="w-full rounded-sm border border-[#333] bg-[#0c0b0a]/80 backdrop-blur-md py-5 pl-14 pr-36 text-lg text-white placeholder:text-white/20 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all shadow-[0_20px_40px_rgba(0,0,0,0.4)]"
+              />
+              <button
+                type="submit"
+                disabled={Boolean(query.trim()) && !queryIntent.canStart}
+                className="absolute inset-y-2 right-2 flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-6 font-bold uppercase tracking-widest text-xs text-black hover:bg-[#e0e0e0] transition-colors active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Compare <ArrowRight className="h-3.5 w-3.5" />
+              </button>
             </div>
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="e.g., Supabase vs Firebase..."
-              className="w-full rounded-sm border border-[#333] bg-[#0c0b0a]/80 backdrop-blur-md py-5 pl-14 pr-36 text-lg text-white placeholder:text-white/20 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all shadow-[0_20px_40px_rgba(0,0,0,0.4)]"
-            />
-            <button
-              type="submit"
-              className="absolute inset-y-2 right-2 flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-6 font-bold uppercase tracking-widest text-xs text-black hover:bg-[#e0e0e0] transition-colors active:scale-[0.98]"
-            >
-              Compare <ArrowRight className="h-3.5 w-3.5" />
-            </button>
+            {query.trim() && (
+              <div className={[
+                "mt-3 rounded-sm border px-4 py-3 text-left text-xs leading-relaxed",
+                queryIntent.canStart
+                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200/80"
+                  : "border-amber-500/25 bg-amber-500/10 text-amber-100/80",
+              ].join(" ")}>
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="font-bold uppercase tracking-widest text-[9px]">
+                    AI preflight - {Math.round(queryIntent.confidence * 100)}%
+                  </span>
+                  {queryIntent.category && (
+                    <span className="text-[9px] uppercase tracking-widest opacity-70">
+                      {queryIntent.category}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1">{queryIntent.message}</p>
+                {queryIntent.suggestion && (
+                  <button
+                    type="button"
+                    onClick={() => setQuery(queryIntent.suggestion || "")}
+                    className="mt-2 text-[10px] font-bold uppercase tracking-widest text-white/70 underline decoration-white/20 underline-offset-4 hover:text-white"
+                  >
+                    Try: {queryIntent.suggestion}
+                  </button>
+                )}
+              </div>
+            )}
           </form>
 
           {/* Quick-start one-click comparisons */}
@@ -217,17 +251,16 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Public demo comparisons */}
+          {/* Starter comparisons */}
           <div className="mt-16 flex flex-col items-center w-full max-w-4xl">
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30 mb-6">Public demos — click to explore</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30 mb-6">Starter comparisons - click to research</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
               {featuredComparisons.map((comp) => {
-                const [a, b] = comp.label.split(/\s+vs\s+/i);
-                const slug = `${a.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-vs-${b.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
                 return (
-                  <Link
+                  <button
                     key={comp.label}
-                    to={`/compare/${slug}`}
+                    type="button"
+                    onClick={() => handleQuickStart(comp.label)}
                     className="group relative overflow-hidden rounded-sm border border-white/[0.06] bg-[#0c0b0a] p-5 transition-all hover:border-orange-500/30 hover:bg-[#1a110a] hover:shadow-[0_0_30px_rgba(234,88,12,0.08)]"
                   >
                     <div className="flex items-center justify-between mb-3">
@@ -249,7 +282,7 @@ const Index = () => {
                     <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
                       <ArrowRight className="h-4 w-4 text-orange-400" />
                     </div>
-                  </Link>
+                  </button>
                 );
               })}
             </div>

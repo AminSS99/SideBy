@@ -1,11 +1,12 @@
 /**
- * GET /api/comparisons — list comparisons
- * POST /api/comparisons — create comparison
+ * GET /api/comparisons - list comparisons
+ * POST /api/comparisons - create comparison
  */
 import { createComparisonJob, listComparisonHistory, sendJson } from "../_lib/sideby.js";
 import { requireAuth } from "../_lib/auth.js";
 import { withRateLimit } from "../_lib/route-guard.js";
 import { captureServerEvent } from "../_lib/analytics.js";
+import { analyzeQueryIntent } from "../../src/lib/queryIntent.js";
 import { waitUntil } from "@vercel/functions";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
@@ -44,14 +45,28 @@ export default async function handler(
 
   if (request.method === "POST") {
     try {
+      const body = request.body as { query?: string; workspaceId?: string; projectId?: string };
+      const query = body.query?.trim();
+
+      if (!query) {
+        return sendJson(response, { error: "Query is required." }, 400);
+      }
+
+      const intent = analyzeQueryIntent(query);
+      if (!intent.canStart) {
+        return sendJson(
+          response,
+          {
+            error: intent.message,
+            code: "QUERY_NOT_COMPARABLE",
+            intent,
+          },
+          422,
+        );
+      }
+
       return await withRateLimit(request, response, "comparison", async () => {
         const auth = await requireAuth(request);
-        const body = request.body as { query?: string; workspaceId?: string; projectId?: string };
-        const query = body.query?.trim();
-
-        if (!query) {
-          return sendJson(response, { error: "Query is required." }, 400);
-        }
 
         const result = await createComparisonJob({
           query,

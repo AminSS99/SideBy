@@ -169,10 +169,8 @@ const Compare = () => {
               <p className="mb-6 text-center text-sm text-white/25">Try another comparison</p>
               <div className="flex flex-wrap justify-center gap-3">
                 {["Supabase vs Firebase", "Cursor vs Windsurf", "ChatGPT Plus vs Claude Pro", "Vercel vs Render"].map((q) => {
-                  const [a, b] = q.split(/\s+vs\s+/i);
-                  const link = `/compare/${a.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-vs-${b.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
                   return (
-                    <Link key={q} to={link} className="rounded-full border border-white/[0.06] bg-[#111] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/40 transition-all hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-400">
+                    <Link key={q} to={`/app/comparisons?q=${encodeURIComponent(q)}`} className="rounded-full border border-white/[0.06] bg-[#111] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/40 transition-all hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-400">
                       {q}
                     </Link>
                   );
