@@ -227,6 +227,26 @@ function normalizeParsedQuery(
   };
 }
 
+function parseQueryFallback(query: string): ParsedQuery {
+  const [leftRaw, rightRaw = ""] = query.split(/\s+vs\.?\s+/i);
+  const [rightEntityRaw, contextTail] = rightRaw.split(/\s+for\s+/i);
+  const cleanName = (value: string, fallback: string) =>
+    value
+      .replace(/\b(for|with|inside|on|because|when)\b.*$/i, "")
+      .replace(/[^a-z0-9\s+./-]/gi, "")
+      .replace(/\s+/g, " ")
+      .trim() || fallback;
+
+  return {
+    entities: [
+      { name: cleanName(leftRaw, "Option A") },
+      { name: cleanName(rightEntityRaw, "Option B") },
+    ],
+    context: contextTail?.trim() || undefined,
+    comparisonType: contextTail?.trim() || undefined,
+  };
+}
+
 // ─── Step Tracking ──────────────────────────────────────────────────────────
 
 async function startStep(
@@ -660,6 +680,33 @@ async function runParseStep(ctx: JobContext) {
     return parsed;
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Parse failed";
+    const parsed = parseQueryFallback(ctx.query);
+
+    if (parsed.entities.length >= 2) {
+      logger.warn("AI parse failed, using deterministic query fallback", {
+        comparisonId: ctx.comparisonId,
+        error: msg,
+      });
+      await completeStep(ctx, stepId, { ...parsed, parser: "fallback" });
+      await updateAiRun(ctx, runId, { status: "completed", errorMessage: msg });
+      await logUsageEvent(ctx, "comparison", 1, {
+        step: "parse_fallback",
+        comparisonId: ctx.comparisonId,
+      });
+
+      for (const [index, entity] of parsed.entities.entries()) {
+        await ctx.db.insert(comparisonEntities).values({
+          comparisonId: ctx.comparisonId,
+          position: index + 1,
+          name: entity.name,
+          normalizedName: entity.name,
+          metadata: entity.type ? { detectedType: entity.type } : {},
+        });
+      }
+
+      return parsed;
+    }
+
     await failStep(ctx, stepId, msg);
     await updateAiRun(ctx, runId, { status: "failed", errorMessage: msg });
     throw error;
