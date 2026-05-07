@@ -591,12 +591,13 @@ async function runParseStep(ctx: JobContext) {
     await logUsageEvent(ctx, "comparison", 1, { step: "parse", comparisonId: ctx.comparisonId });
 
     // Store entities
-    for (const entity of result.data.entities) {
+    for (const [index, entity] of result.data.entities.entries()) {
       await ctx.db.insert(comparisonEntities).values({
         comparisonId: ctx.comparisonId,
-        position: result.data.entities.indexOf(entity),
+        position: index + 1,
+        name: entity.name,
         normalizedName: entity.name,
-        detectedType: entity.type || null,
+        metadata: entity.type ? { detectedType: entity.type } : {},
       });
     }
 
@@ -658,9 +659,13 @@ async function runSearchStep(
         title: source.title,
         sourceType: "web",
         reliability: reliabilityScore >= 0.9 ? "official" : reliabilityScore >= 0.7 ? "docs" : "review",
-        reliabilityScore: String(reliabilityScore),
-        extractionStatus: "completed",
-        summary: source.content.slice(0, 500),
+        extractionMethod: "tavily",
+        fetchedAt: new Date(),
+        metadata: {
+          reliabilityScore,
+          summary: source.content.slice(0, 500),
+          entityName: source.entityName,
+        },
       });
     }
 
@@ -722,7 +727,6 @@ async function runExtractionStep(
         await ctx.db
           .update(comparisonSources)
           .set({
-            extractionStatus: "completed",
             contentHash: page.contentHash,
           })
           .where(
@@ -903,28 +907,49 @@ async function runFactStep(
       comparisonId: ctx.comparisonId,
     });
 
-    // Generate embeddings for unique facts (batch)
-    const factTexts = uniqueFacts.map((f) => `${f.entity} ${f.dimension}: ${f.value}`);
-    let embeddings: number[][] = [];
-    try {
-      embeddings = await embedTexts(factTexts);
-    } catch (embedError) {
-      logger.warn("Embedding generation failed, continuing without", {
-        comparisonId: ctx.comparisonId,
-        error: embedError instanceof Error ? embedError.message : "unknown",
-      });
-    }
+    const entityRows = await ctx.db
+      .select()
+      .from(comparisonEntities)
+      .where(eq(comparisonEntities.comparisonId, ctx.comparisonId));
+    const dimensionRows = await ctx.db
+      .select()
+      .from(comparisonDimensions)
+      .where(eq(comparisonDimensions.comparisonId, ctx.comparisonId));
+    const sourceRows = await ctx.db
+      .select()
+      .from(comparisonSources)
+      .where(eq(comparisonSources.comparisonId, ctx.comparisonId));
 
-    // Store facts with embeddings
-    for (let i = 0; i < uniqueFacts.length; i++) {
-      const fact = uniqueFacts[i] as Record<string, unknown>;
+    // Store facts in the production schema. Embeddings remain optional for
+    // follow-ups; the answer engine can fall back to confidence/source ranking.
+    for (const fact of uniqueFacts as Array<Record<string, unknown>>) {
+      const entityName = String(fact.entity || "");
+      const dimensionName = String(fact.dimension || "General");
+      const citation = String(fact.citation || "");
+      const entityRow =
+        entityRows.find((entity) => entity.normalizedName === entityName) ||
+        entityRows[0];
+      if (!entityRow) continue;
+      const dimensionRow = dimensionRows.find((dimension) => dimension.name === dimensionName);
+      const sourceRow =
+        sourceRows.find((source) => source.url === citation) ||
+        sourceRows.find((source) => citation && citation.includes(source.url)) ||
+        sourceRows[0];
+
       await ctx.db.insert(comparisonFacts).values({
         comparisonId: ctx.comparisonId,
-        value: fact.value as string,
-        confidence: String(fact.confidence),
-        citationSourceId: null,
-        factHash: (fact as Record<string, string>)._hash,
-        embedding: embeddings[i] || null,
+        entityId: entityRow.id,
+        categoryId: dimensionRow?.id || null,
+        sourceId: sourceRow?.id || null,
+        entity: entityName,
+        category: dimensionName,
+        label: dimensionName,
+        value: String(fact.value || ""),
+        sourceUrl: citation || sourceRow?.url || "#",
+        sourceTitle: sourceRow?.title || "Web source",
+        confidence: String(fact.confidence || 0.7),
+        freshnessClass: "product",
+        metadata: { factHash: fact._hash, citation },
       });
     }
 
@@ -954,7 +979,10 @@ async function runScoreStep(
       .where(eq(comparisonSources.comparisonId, ctx.comparisonId));
 
     const reliabilityMap = new Map(
-      sourceRows.map((s) => [s.url, Number(s.reliabilityScore || 0.7)]),
+      sourceRows.map((s) => {
+        const metadata = (s.metadata || {}) as { reliabilityScore?: number };
+        return [s.url, Number(metadata.reliabilityScore || 0.7)] as const;
+      }),
     );
 
     const factSummary = facts
@@ -992,12 +1020,28 @@ async function runScoreStep(
 
     await completeStep(ctx, stepId, { scoreCount: result.data.length });
 
+    const entityRows = await ctx.db
+      .select()
+      .from(comparisonEntities)
+      .where(eq(comparisonEntities.comparisonId, ctx.comparisonId));
+    const dimensionRows = await ctx.db
+      .select()
+      .from(comparisonDimensions)
+      .where(eq(comparisonDimensions.comparisonId, ctx.comparisonId));
+
     // Store scores
     for (const score of result.data) {
+      const entityRow =
+        entityRows.find((entity) => entity.normalizedName === score.entity) ||
+        entityRows[0];
+      const dimensionRow =
+        dimensionRows.find((dimension) => dimension.name === score.dimension) ||
+        dimensionRows[0];
+      if (!entityRow || !dimensionRow) continue;
       await ctx.db.insert(comparisonScores).values({
         comparisonId: ctx.comparisonId,
-        entityId: null, // Link to entities in future
-        dimensionId: null, // Link to dimensions in future
+        entityId: entityRow.id,
+        dimensionId: dimensionRow.id,
         score: String(score.score),
         rationale: score.rationale,
       });
@@ -1053,14 +1097,24 @@ async function runVerdictStep(
 
     await completeStep(ctx, stepId, result.data);
 
+    const entityRows = await ctx.db
+      .select()
+      .from(comparisonEntities)
+      .where(eq(comparisonEntities.comparisonId, ctx.comparisonId));
+    const winnerEntity = entityRows.find((entity) => entity.normalizedName === result.data.winner);
+
     // Store verdict
     await ctx.db.insert(comparisonVerdicts).values({
       comparisonId: ctx.comparisonId,
-      overallVerdict: result.data.overall,
-      personaWinners: result.data.personas ?? null,
-      tradeoffs: result.data.tradeoffs,
+      verdictType: "overall",
+      winnerEntityId: winnerEntity?.id || null,
+      title: result.data.winner ? `${result.data.winner} leads overall` : "Comparison verdict",
+      body: [
+        result.data.overall,
+        result.data.tradeoffs ? `Tradeoffs: ${result.data.tradeoffs}` : "",
+        result.data.caveats ? `Caveats: ${result.data.caveats}` : "",
+      ].filter(Boolean).join("\n\n"),
       confidence: String(result.data.confidence),
-      caveats: result.data.caveats || null,
     });
 
     return result.data;
@@ -1235,9 +1289,7 @@ async function buildPartialResult(
     // Group facts by dimension for categories
     const factsByDim = new Map<string, typeof facts>();
     for (const f of facts) {
-      const dimName = f.dimensionId
-        ? dims.find((d) => d.id === f.dimensionId)?.name || "General"
-        : "General";
+      const dimName = f.category || "General";
       if (!factsByDim.has(dimName)) factsByDim.set(dimName, []);
       factsByDim.get(dimName)!.push(f);
     }
@@ -1257,17 +1309,17 @@ async function buildPartialResult(
           entity: f.entityId === entityA.id ? "a" : "b",
           label: f.label || "Fact",
           value: f.value || "No value extracted",
-          source: "Web sources",
-          sourceUrl: "#",
-          sourceTitle: "Source",
-          confidence: f.confidence ?? 0.5,
+          source: f.sourceTitle || "Web sources",
+          sourceUrl: f.sourceUrl || "#",
+          sourceTitle: f.sourceTitle || "Source",
+          confidence: Number(f.confidence ?? 0.5),
           freshness: "Fresh" as const,
           changed: false,
         })),
       };
     });
 
-    const overallVerdict = verdicts.find((v) => v.overallVerdict)?.overallVerdict ||
+    const overallVerdict = verdicts.find((v) => v.body)?.body ||
       `Partial comparison: ${entityA.normalizedName} vs ${entityB.normalizedName}`;
 
     return {
@@ -1317,13 +1369,13 @@ async function buildPartialResult(
       sources: sources.map((s) => ({
         title: s.title || s.url,
         url: s.url,
-        reliability: (s.reliability ?? "review") as "Official" | "Docs" | "Community",
+        reliability: (s.reliability === "official" ? "Official" : s.reliability === "docs" ? "Docs" : "Community") as "Official" | "Docs" | "Community",
         sourceType: s.sourceType || "web",
-        extractionMethod: "tavily",
+        extractionMethod: s.extractionMethod || "tavily",
         fetchedAt: s.fetchedAt?.toISOString() || new Date().toISOString(),
-        confidence: s.reliabilityScore ? Number(s.reliabilityScore) : 0.7,
+        confidence: Number(((s.metadata || {}) as { reliabilityScore?: number }).reliabilityScore || 0.7),
         contentHash: s.contentHash || "",
-        summary: s.summary || "",
+        summary: String(((s.metadata || {}) as { summary?: string }).summary || ""),
       })),
       completeness: "partial",
       confidence: 0.3,

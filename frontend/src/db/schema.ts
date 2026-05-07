@@ -227,9 +227,13 @@ export const comparisonEntities = pgTable(
       .notNull()
       .references(() => comparisons.id, { onDelete: "cascade" }),
     position: integer("position").notNull(),
+    name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
-    aliases: text("aliases").array(),
-    detectedType: text("detected_type"),
+    description: text("description"),
+    officialUrl: text("official_url"),
+    logoUrl: text("logo_url"),
+    logoSource: text("logo_source"),
+    metadata: jsonb("metadata").default({}).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
@@ -265,15 +269,17 @@ export const comparisonSources = pgTable(
     comparisonId: uuid("comparison_id")
       .notNull()
       .references(() => comparisons.id, { onDelete: "cascade" }),
+    entityId: uuid("entity_id").references(() => comparisonEntities.id, { onDelete: "set null" }),
     url: text("url").notNull(),
+    canonicalUrl: text("canonical_url"),
     title: text("title"),
-    sourceType: text("source_type"),
-    reliability: sourceReliabilityEnum("reliability"),
-    extractionStatus: text("extraction_status").default("pending"),
+    sourceType: text("source_type").default("web").notNull(),
+    reliability: text("reliability").default("review").notNull(),
+    extractionMethod: text("extraction_method").default("tavily").notNull(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+    snapshotPath: text("snapshot_path"),
     contentHash: text("content_hash"),
-    summary: text("summary"),
-    reliabilityScore: numeric("reliability_score", { precision: 3, scale: 2 }).default("0.70"), // 0.5-1.0 weight for scoring
-    fetchedAt: timestamp("fetched_at", { withTimezone: true }),
+    metadata: jsonb("metadata").default({}).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
@@ -291,20 +297,27 @@ export const comparisonFacts = pgTable(
     comparisonId: uuid("comparison_id")
       .notNull()
       .references(() => comparisons.id, { onDelete: "cascade" }),
-    entityId: uuid("entity_id").references(() => comparisonEntities.id, { onDelete: "cascade" }),
-    dimensionId: uuid("dimension_id").references(() => comparisonDimensions.id, { onDelete: "cascade" }),
-    value: text("value"),
+    entityId: uuid("entity_id").notNull().references(() => comparisonEntities.id, { onDelete: "cascade" }),
+    categoryId: uuid("category_id").references(() => comparisonDimensions.id, { onDelete: "set null" }),
+    sourceId: uuid("source_id").references(() => comparisonSources.id, { onDelete: "set null" }),
+    entity: text("entity").notNull(),
+    category: text("category").notNull(),
     label: text("label"),
-    confidence: numeric("confidence", { precision: 3, scale: 2 }),
-    citationSourceId: uuid("citation_source_id").references(() => comparisonSources.id, { onDelete: "set null" }),
-    factHash: text("fact_hash"), // sha256(entity + dimension + normalized value) for dedupe
-    embedding: vector("embedding", { dimension: 1536 }), // pgvector for semantic search
+    value: text("value").notNull(),
+    normalizedValue: jsonb("normalized_value"),
+    sourceUrl: text("source_url").notNull(),
+    sourceTitle: text("source_title"),
+    confidence: numeric("confidence", { precision: 3, scale: 2 }).notNull(),
+    freshnessClass: text("freshness_class").default("product").notNull(),
+    extractedAt: timestamp("extracted_at", { withTimezone: true }).defaultNow().notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    previousValue: text("previous_value"),
+    changedAt: timestamp("changed_at", { withTimezone: true }),
+    metadata: jsonb("metadata").default({}).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("comparison_facts_comparison_idx").on(table.comparisonId),
-    index("comparison_facts_hash_idx").on(table.factHash),
-    index("comparison_facts_embedding_idx").on(table.embedding),
   ],
 );
 
@@ -341,11 +354,11 @@ export const comparisonVerdicts = pgTable(
     comparisonId: uuid("comparison_id")
       .notNull()
       .references(() => comparisons.id, { onDelete: "cascade" }),
-    overallVerdict: text("overall_verdict"),
-    personaWinners: jsonb("persona_winners"), // { student: "X", founder: "Y" }
-    tradeoffs: text("tradeoffs"),
+    verdictType: text("verdict_type").default("overall").notNull(),
+    winnerEntityId: uuid("winner_entity_id").references(() => comparisonEntities.id, { onDelete: "set null" }),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
     confidence: numeric("confidence", { precision: 4, scale: 3 }),
-    caveats: text("caveats"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [

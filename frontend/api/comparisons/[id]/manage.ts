@@ -7,7 +7,16 @@ import { requireAuth } from "../../_lib/auth.js";
 import { withRateLimit } from "../../_lib/route-guard.js";
 import { refreshComparison } from "../../_lib/refresh-engine.js";
 import { createDbClient } from "../../../src/db/index.js";
-import { comparisons } from "../../../src/db/schema.js";
+import {
+  aiRuns,
+  comparisonDimensions,
+  comparisonEntities,
+  comparisonFacts,
+  comparisonScores,
+  comparisonSources,
+  comparisonVerdicts,
+  comparisons,
+} from "../../../src/db/schema.js";
 import { eq } from "drizzle-orm";
 import { runComparisonJob } from "../../_lib/job-engine.js";
 import { captureServerEvent } from "../../_lib/analytics.js";
@@ -60,6 +69,14 @@ export default async function handler(
       if (comp.status !== "failed") {
         return sendJson(response, { error: "Only failed comparisons can be retried." }, 400);
       }
+
+      await db.delete(comparisonFacts).where(eq(comparisonFacts.comparisonId, id));
+      await db.delete(comparisonScores).where(eq(comparisonScores.comparisonId, id));
+      await db.delete(comparisonVerdicts).where(eq(comparisonVerdicts.comparisonId, id));
+      await db.delete(comparisonSources).where(eq(comparisonSources.comparisonId, id));
+      await db.delete(comparisonDimensions).where(eq(comparisonDimensions.comparisonId, id));
+      await db.delete(comparisonEntities).where(eq(comparisonEntities.comparisonId, id));
+      await db.delete(aiRuns).where(eq(aiRuns.comparisonId, id));
 
       await db
         .update(comparisons)
