@@ -188,10 +188,13 @@ const ScoreSchema = z.object({
 });
 
 const VerdictSchema = z.object({
-  overall: z.string(),
+  overall: z.string().optional(),
+  summary: z.string().optional(),
+  verdict: z.string().optional(),
+  recommendation: z.string().optional(),
   winner: z.string().optional(),
-  tradeoffs: z.string(),
-  confidence: z.number().min(0).max(1),
+  tradeoffs: z.string().optional(),
+  confidence: z.number().min(0).max(1).optional(),
   caveats: z.string().optional(),
   personas: z.record(z.string()).optional(),
 });
@@ -1244,6 +1247,7 @@ async function runVerdictStep(
       .from(comparisonEntities)
       .where(eq(comparisonEntities.comparisonId, ctx.comparisonId));
     const winnerEntity = entityRows.find((entity) => entity.normalizedName === result.data.winner);
+    const verdictText = getVerdictText(result.data);
 
     // Store verdict
     await ctx.db.insert(comparisonVerdicts).values({
@@ -1252,11 +1256,11 @@ async function runVerdictStep(
       winnerEntityId: winnerEntity?.id || null,
       title: result.data.winner ? `${result.data.winner} leads overall` : "Comparison verdict",
       body: [
-        result.data.overall,
+        verdictText,
         result.data.tradeoffs ? `Tradeoffs: ${result.data.tradeoffs}` : "",
         result.data.caveats ? `Caveats: ${result.data.caveats}` : "",
       ].filter(Boolean).join("\n\n"),
-      confidence: String(result.data.confidence),
+      confidence: String(result.data.confidence ?? 0.6),
     });
 
     return result.data;
@@ -1266,6 +1270,18 @@ async function runVerdictStep(
     await updateAiRun(ctx, runId, { status: "failed", errorMessage: msg });
     throw error;
   }
+}
+
+function getVerdictText(verdict: z.infer<typeof VerdictSchema>): string {
+  return (
+    verdict.overall ||
+    verdict.summary ||
+    verdict.verdict ||
+    verdict.recommendation ||
+    (verdict.winner
+      ? `${verdict.winner} is the stronger option based on the available evidence.`
+      : "The available evidence does not identify a clear winner.")
+  );
 }
 
 // ─── Result Builder ─────────────────────────────────────────────────────────
@@ -1322,14 +1338,14 @@ function buildResultJson(
     sourceCount: sources.length,
     updatedAt: new Date().toISOString(),
     verdict: {
-      bestOverall: verdict.winner || "",
-      bestValue: verdict.winner || "",
-      developers: verdict.winner || "",
-      teams: verdict.winner || "",
+      bestOverall: verdict.winner || "Depends on priorities",
+      bestValue: verdict.winner || "Depends on usage",
+      developers: verdict.winner || "Depends on stack",
+      teams: verdict.winner || "Depends on team needs",
       students: "Depends on usage",
-      powerUsers: verdict.winner || "",
-      ecosystem: verdict.winner || "",
-      summary: verdict.overall,
+      powerUsers: verdict.winner || "Depends on workflow",
+      ecosystem: verdict.winner || "Depends on integrations",
+      summary: getVerdictText(verdict),
     },
     categories: dimensions.map((dim) => {
       const dimScores = scores.filter((s) => s.dimension === dim.name);
