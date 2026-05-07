@@ -22,6 +22,22 @@ export interface SearchParams {
   includeRawContent?: boolean;
 }
 
+const OFFICIAL_DOMAIN_HINTS: Record<string, string[]> = {
+  paddle: ["paddle.com", "developer.paddle.com"],
+  stripe: ["stripe.com", "docs.stripe.com"],
+  supabase: ["supabase.com"],
+  firebase: ["firebase.google.com", "cloud.google.com"],
+  react: ["react.dev"],
+  vue: ["vuejs.org"],
+  cursor: ["cursor.com", "docs.cursor.com"],
+  windsurf: ["windsurf.com", "docs.windsurf.com"],
+  vercel: ["vercel.com"],
+  render: ["render.com"],
+  chatgpt: ["openai.com", "help.openai.com"],
+  openai: ["openai.com", "platform.openai.com"],
+  claude: ["anthropic.com", "support.anthropic.com"],
+};
+
 function hashQuery(query: string): string {
   let h = 0;
   for (let i = 0; i < query.length; i++) {
@@ -105,10 +121,11 @@ export async function searchEntitySources(
   context?: string,
 ): Promise<SearchResult[]> {
   const scopedContext = context?.trim();
+  const quotedEntity = `"${entityName}"`;
   const queries = [
-    `${entityName} official documentation features`.trim(),
-    `${entityName} ${scopedContext || ""} performance developer experience ecosystem`.trim(),
-    `${entityName} ${scopedContext || ""} pricing review comparison`.trim(),
+    `${quotedEntity} ${scopedContext || ""} official documentation features`.trim(),
+    `${quotedEntity} ${scopedContext || ""} official pricing plans`.trim(),
+    `${quotedEntity} ${scopedContext || ""} review comparison`.trim(),
   ];
 
   const allResults: SearchResult[] = [];
@@ -131,7 +148,26 @@ export async function searchEntitySources(
     }
   }
 
-  return allResults.slice(0, 8);
+  return allResults
+    .sort((a, b) => sourcePriority(entityName, b) - sourcePriority(entityName, a))
+    .slice(0, 8);
+}
+
+function sourcePriority(entityName: string, result: SearchResult): number {
+  const normalizedEntity = entityName.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const hints = OFFICIAL_DOMAIN_HINTS[normalizedEntity] || [];
+  const url = result.url.toLowerCase();
+  const title = result.title.toLowerCase();
+  let priority = result.score;
+
+  if (hints.some((domain) => url.includes(domain))) priority += 5;
+  if (title.includes(entityName.toLowerCase())) priority += 1;
+
+  if (normalizedEntity === "paddle" && /paddlepaddle|paddle\.readthedocs|drupal/.test(url)) {
+    priority -= 5;
+  }
+
+  return priority;
 }
 
 function normalizeUrl(url: string): string {
