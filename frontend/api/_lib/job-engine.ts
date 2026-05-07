@@ -370,7 +370,7 @@ export async function runComparisonJob(
     };
 
     // Update comparison status
-    await updateComparisonProgress(ctx, 5, 0, { status: "researching" });
+    await updateComparisonProgress(ctx, 5, 0, { status: "running" });
 
     // Step 1: Parse query
     const parsed = await runParseStep(ctx);

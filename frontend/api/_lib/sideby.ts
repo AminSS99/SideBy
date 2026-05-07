@@ -481,7 +481,7 @@ export const getComparisonJob = async (
     throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
   }
 
-  const isRunning = d.status === "researching" || d.status === "queued";
+  const isRunning = d.status === "running" || d.status === "queued";
 
   // Fetch latest failed step for failed jobs
   let failedStep: string | null = null;
@@ -508,7 +508,7 @@ export const getComparisonJob = async (
     }
   }
 
-  const status = isRunning || d.status === "queued" || d.status === "researching"
+  const status = isRunning || d.status === "queued" || d.status === "running"
     ? "running"
     : d.status as "completed" | "failed";
   const activity = await getComparisonActivity(db, id);
@@ -597,7 +597,7 @@ export const listComparisonHistory = async (
       id: row.id,
       query: row.query,
       slug: row.slug,
-      status: row.status === "queued" || row.status === "researching" ? "running" : row.status,
+      status: row.status === "queued" || row.status === "running" ? "running" : row.status,
       visibility: row.visibility,
       sourceCount: row.sourceCount,
       progress: row.progress,

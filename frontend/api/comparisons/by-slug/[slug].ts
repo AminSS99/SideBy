@@ -84,7 +84,7 @@ export default async function handler(
     const d = privateRows[0];
     return sendJson(response, {
       id: d.id,
-      status: d.status === "researching" || d.status === "queued" ? "running" : d.status,
+      status: d.status === "running" || d.status === "queued" ? "running" : d.status,
       progress: d.progress,
       activeStep: d.activeStep,
       query: d.query,

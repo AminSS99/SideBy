@@ -32,7 +32,7 @@ const vector = customType<{ data: number[]; driverData: string; config: { dimens
 
 export const comparisonStatusEnum = pgEnum("comparison_status", [
   "queued",
-  "researching",
+  "running",
   "completed",
   "failed",
 ]);
