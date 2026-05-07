@@ -13,7 +13,6 @@ import {
 } from "../../src/db/schema.js";
 import { canAccessComparison } from "./db-auth.js";
 import { getPrimaryProvider } from "./providers/index.js";
-import { embedText, cosineSimilarity } from "./embeddings.js";
 import { logger } from "./log.js";
 
 const FollowUpSchema = z.object({
@@ -58,18 +57,7 @@ export async function answerFollowUp(
     };
   }
 
-  // Step 1: Try to embed the question (fallback to keyword matching if embeddings fail)
-  let questionEmbedding: number[] | null = null;
-  try {
-    questionEmbedding = await embedText(question);
-  } catch (embedError) {
-    logger.warn("Embedding failed, falling back to keyword matching", {
-      comparisonId,
-      error: embedError instanceof Error ? embedError.message : "unknown",
-    });
-  }
-
-  // Step 2: Fetch all facts for this comparison
+  // Step 1: Fetch all facts for this comparison
   const facts = await db
     .select()
     .from(comparisonFacts)
@@ -86,37 +74,19 @@ export async function answerFollowUp(
     };
   }
 
-  // Step 3: Find top-K most similar facts
-  let topFacts: Array<{ fact: typeof facts[0]; similarity: number }> = [];
+  // Step 2: Find top-K relevant facts with keyword scoring.
+  const questionWords = question.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+  const scoredFacts = facts.map((f) => {
+    const text = `${f.entity || ""} ${f.category || ""} ${f.label || ""} ${f.value || ""}`.toLowerCase();
+    const matches = questionWords.filter((w) => text.includes(w)).length;
+    return { fact: f, similarity: matches / Math.max(questionWords.length, 1) };
+  });
+  scoredFacts.sort((a, b) => b.similarity - a.similarity);
+  const topFacts: Array<{ fact: typeof facts[0]; similarity: number }> = scoredFacts.slice(0, 15);
 
-  if (questionEmbedding) {
-    // Vector similarity path
-    const factsWithEmbeddings = facts
-      .filter((f) => f.embedding && Array.isArray(f.embedding))
-      .map((f) => ({
-        fact: f,
-        similarity: cosineSimilarity(questionEmbedding, f.embedding as number[]),
-      }));
-
-    factsWithEmbeddings.sort((a, b) => b.similarity - a.similarity);
-    topFacts = factsWithEmbeddings.slice(0, 15);
-  }
-
-  // Fallback: if no embeddings matched, use keyword matching
-  if (topFacts.length === 0) {
-    const questionWords = question.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
-    const scoredFacts = facts.map((f) => {
-      const text = `${f.label || ""} ${f.value || ""}`.toLowerCase();
-      const matches = questionWords.filter((w) => text.includes(w)).length;
-      return { fact: f, similarity: matches / Math.max(questionWords.length, 1) };
-    });
-    scoredFacts.sort((a, b) => b.similarity - a.similarity);
-    topFacts = scoredFacts.slice(0, 15);
-  }
-
-  // Step 4: Fetch sources for citations
+  // Step 3: Fetch sources for citations
   const sourceIds = topFacts
-    .map((f) => f.fact.citationSourceId)
+    .map((f) => f.fact.sourceId)
     .filter((id): id is string => id !== null);
 
   const sources = sourceIds.length > 0
@@ -128,11 +98,11 @@ export async function answerFollowUp(
 
   const sourceMap = new Map(sources.map((s) => [s.id, s]));
 
-  // Step 5: Build grounded prompt
+  // Step 4: Build grounded prompt
   const factContext = topFacts
     .map((f, i) => {
-      const source = f.fact.citationSourceId
-        ? sourceMap.get(f.fact.citationSourceId)
+      const source = f.fact.sourceId
+        ? sourceMap.get(f.fact.sourceId)
         : null;
       return `[${i + 1}] ${f.fact.value} (confidence: ${f.fact.confidence}, similarity: ${f.similarity.toFixed(3)})${source ? ` Source: ${source.title} (${source.url})` : ""}`;
     })
@@ -164,14 +134,14 @@ Return valid JSON only with this structure:
     },
   ];
 
-  // Step 6: Generate answer
+  // Step 5: Generate answer
   const provider = getPrimaryProvider();
   const result = await provider.generateObject(messages, FollowUpSchema, {
     maxTokens: 2000,
     temperature: 0.2,
   });
 
-  // Step 7: Store in comparison_questions
+  // Step 6: Store in comparison_questions
   await db.insert(comparisonQuestions).values({
     comparisonId,
     question,
@@ -207,8 +177,8 @@ Return valid JSON only with this structure:
     type: result.data.type,
     factsUsed: topFacts.length,
     evidence: evidenceFacts.map((item) => {
-      const source = item.fact.citationSourceId
-        ? sourceMap.get(item.fact.citationSourceId)
+      const source = item.fact.sourceId
+        ? sourceMap.get(item.fact.sourceId)
         : null;
       return {
         id: item.fact.id,

@@ -71,7 +71,13 @@ export async function refreshComparison(
     .from(comparisonSources)
     .where(eq(comparisonSources.comparisonId, comparisonId));
 
-  const oldFactMap = new Map(oldFacts.map((f) => [f.factHash || f.id, f]));
+  type FactRow = typeof oldFacts[number];
+  const factKey = (fact: FactRow) => {
+    const metadata = (fact.metadata || {}) as { factHash?: string };
+    return metadata.factHash || fact.id;
+  };
+
+  const oldFactMap = new Map(oldFacts.map((f) => [factKey(f), f]));
   const oldScoreMap = new Map(
     oldScores.map((s) => [`${s.entityId}:${s.dimensionId}`, s]),
   );
@@ -114,13 +120,13 @@ export async function refreshComparison(
     .where(eq(comparisonSources.comparisonId, comparisonId));
 
   // Detect changes
-  const newFactHashes = new Set(newFacts.map((f) => f.factHash || f.id));
-  const oldFactHashes = new Set(oldFacts.map((f) => f.factHash || f.id));
+  const newFactHashes = new Set(newFacts.map((f) => factKey(f)));
+  const oldFactHashes = new Set(oldFacts.map((f) => factKey(f)));
 
-  const addedFacts = newFacts.filter((f) => !oldFactHashes.has(f.factHash || f.id));
-  const removedFacts = oldFacts.filter((f) => !newFactHashes.has(f.factHash || f.id));
+  const addedFacts = newFacts.filter((f) => !oldFactHashes.has(factKey(f)));
+  const removedFacts = oldFacts.filter((f) => !newFactHashes.has(factKey(f)));
   const updatedFacts = newFacts.filter((f) => {
-    const old = oldFactMap.get(f.factHash || f.id);
+    const old = oldFactMap.get(factKey(f));
     return old && old.confidence !== f.confidence;
   });
 

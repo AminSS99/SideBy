@@ -97,15 +97,13 @@ export async function exportComparison(
   md += `**Exported:** ${new Date().toLocaleString()}\n\n`;
 
   if (verdict) {
-    md += `## Verdict\n\n${verdict.overallVerdict || "No verdict available."}\n\n`;
-    if (verdict.tradeoffs) {
-      md += `**Tradeoffs:** ${verdict.tradeoffs}\n\n`;
+    md += `## Verdict\n\n`;
+    if (verdict.title) {
+      md += `### ${verdict.title}\n\n`;
     }
+    md += `${verdict.body || "No verdict available."}\n\n`;
     if (verdict.confidence) {
       md += `**Confidence:** ${verdict.confidence}\n\n`;
-    }
-    if (verdict.caveats) {
-      md += `**Caveats:** ${verdict.caveats}\n\n`;
     }
   }
 
