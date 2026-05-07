@@ -153,6 +153,19 @@ const EntitySchema = z.object({
   type: z.string().optional(),
 });
 
+const EntityInputSchema = z.union([EntitySchema, z.string().min(1)]);
+
+interface ParsedEntity {
+  name: string;
+  type?: string;
+}
+
+interface ParsedQuery {
+  entities: ParsedEntity[];
+  context?: string;
+  comparisonType?: string;
+}
+
 const DimensionSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
@@ -184,10 +197,24 @@ const VerdictSchema = z.object({
 });
 
 const ParseQuerySchema = z.object({
-  entities: z.array(EntitySchema).min(2).max(5),
+  entities: z.array(EntityInputSchema).min(2).max(5),
   context: z.string().optional(),
   comparisonType: z.string().optional(),
 });
+
+function normalizeParsedQuery(
+  data: z.infer<typeof ParseQuerySchema>,
+): ParsedQuery {
+  return {
+    context: data.context,
+    comparisonType: data.comparisonType,
+    entities: data.entities.map((entity) =>
+      typeof entity === "string"
+        ? { name: entity }
+        : { name: entity.name, type: entity.type },
+    ),
+  };
+}
 
 // ─── Step Tracking ──────────────────────────────────────────────────────────
 
@@ -316,6 +343,19 @@ async function updateComparisonProgress(
     .update(comparisons)
     .set({ ...extra, progress, activeStep, updatedAt: new Date() })
     .where(eq(comparisons.id, ctx.comparisonId));
+}
+
+async function clearDerivedComparisonData(
+  db: ReturnType<typeof createDbClient>,
+  comparisonId: string,
+) {
+  await db.delete(comparisonFacts).where(eq(comparisonFacts.comparisonId, comparisonId));
+  await db.delete(comparisonScores).where(eq(comparisonScores.comparisonId, comparisonId));
+  await db.delete(comparisonVerdicts).where(eq(comparisonVerdicts.comparisonId, comparisonId));
+  await db.delete(comparisonSources).where(eq(comparisonSources.comparisonId, comparisonId));
+  await db.delete(comparisonDimensions).where(eq(comparisonDimensions.comparisonId, comparisonId));
+  await db.delete(comparisonEntities).where(eq(comparisonEntities.comparisonId, comparisonId));
+  await db.delete(aiRuns).where(eq(aiRuns.comparisonId, comparisonId));
 }
 
 // ─── Core Pipeline Steps ────────────────────────────────────────────────────
@@ -507,6 +547,8 @@ export async function runComparisonJob(
       const backoffMs = Math.pow(2, currentRetries) * 1000;
       logger.info("Scheduling retry", { comparisonId, retry: currentRetries + 1, backoffMs });
 
+      await clearDerivedComparisonData(db, comparisonId);
+
       await db
         .update(comparisons)
         .set({
@@ -587,11 +629,13 @@ async function runParseStep(ctx: JobContext) {
       status: "completed",
     });
 
-    await completeStep(ctx, stepId, result.data);
+    const parsed = normalizeParsedQuery(result.data);
+
+    await completeStep(ctx, stepId, parsed);
     await logUsageEvent(ctx, "comparison", 1, { step: "parse", comparisonId: ctx.comparisonId });
 
     // Store entities
-    for (const [index, entity] of result.data.entities.entries()) {
+    for (const [index, entity] of parsed.entities.entries()) {
       await ctx.db.insert(comparisonEntities).values({
         comparisonId: ctx.comparisonId,
         position: index + 1,
@@ -601,7 +645,7 @@ async function runParseStep(ctx: JobContext) {
       });
     }
 
-    return result.data;
+    return parsed;
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Parse failed";
     await failStep(ctx, stepId, msg);
@@ -612,7 +656,7 @@ async function runParseStep(ctx: JobContext) {
 
 async function runSearchStep(
   ctx: JobContext,
-  entities: z.infer<typeof ParseQuerySchema>["entities"],
+  entities: ParsedEntity[],
 ) {
   const runId = await createAiRun(ctx, "search");
   const stepId = await startStep(ctx, runId, "search", { entities });
@@ -785,7 +829,7 @@ async function runExtractionStep(
 
 async function runDimensionStep(
   ctx: JobContext,
-  parsed: z.infer<typeof ParseQuerySchema>,
+  parsed: ParsedQuery,
 ) {
   const runId = await createAiRun(ctx, "dimensions");
   const stepId = await startStep(ctx, runId, "reason", { entities: parsed.entities });
@@ -845,7 +889,7 @@ async function runDimensionStep(
 
 async function runFactStep(
   ctx: JobContext,
-  parsed: z.infer<typeof ParseQuerySchema>,
+  parsed: ParsedQuery,
   extracted: Array<{ url: string; title: string; markdown: string; entityName: string }>,
   dimensions: z.infer<typeof DimensionArraySchema>,
 ) {
@@ -964,7 +1008,7 @@ async function runFactStep(
 
 async function runScoreStep(
   ctx: JobContext,
-  parsed: z.infer<typeof ParseQuerySchema>,
+  parsed: ParsedQuery,
   facts: z.infer<typeof FactArraySchema>,
   dimensions: z.infer<typeof DimensionArraySchema>,
 ) {
@@ -1058,7 +1102,7 @@ async function runScoreStep(
 
 async function runVerdictStep(
   ctx: JobContext,
-  parsed: z.infer<typeof ParseQuerySchema>,
+  parsed: ParsedQuery,
   scores: z.infer<typeof ScoreArraySchema>,
   facts: z.infer<typeof FactArraySchema>,
 ) {
@@ -1140,7 +1184,7 @@ function entityHex(name: string): string {
 }
 
 function buildResultJson(
-  parsed: z.infer<typeof ParseQuerySchema>,
+  parsed: ParsedQuery,
   sources: Array<{ url: string; title: string; content: string }>,
   facts: z.infer<typeof FactArraySchema>,
   scores: z.infer<typeof ScoreArraySchema>,
