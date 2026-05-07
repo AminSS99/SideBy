@@ -110,8 +110,7 @@ function cleanJson(raw: string): string {
     .replace(/```\s*/g, "")
     .trim();
 
-  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-  if (jsonMatch) cleaned = jsonMatch[0];
+  cleaned = extractFirstJsonValue(cleaned) || cleaned;
 
   cleaned = cleaned
     .replace(/,(\s*[}\]])/g, "$1")
@@ -121,6 +120,54 @@ function cleanJson(raw: string): string {
     );
 
   return cleaned;
+}
+
+function extractFirstJsonValue(text: string): string | null {
+  for (let start = 0; start < text.length; start++) {
+    const firstChar = text[start];
+    if (firstChar !== "{" && firstChar !== "[") continue;
+
+    const stack = [firstChar];
+    let inString = false;
+    let escaped = false;
+
+    for (let index = start + 1; index < text.length; index++) {
+      const char = text[index];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (char === "\\") {
+          escaped = true;
+        } else if (char === "\"") {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === "\"") {
+        inString = true;
+        continue;
+      }
+
+      if (char === "{" || char === "[") {
+        stack.push(char);
+        continue;
+      }
+
+      if (char !== "}" && char !== "]") continue;
+
+      const expectedOpen = char === "}" ? "{" : "[";
+      if (stack[stack.length - 1] !== expectedOpen) break;
+
+      stack.pop();
+      if (stack.length === 0) {
+        return text.slice(start, index + 1);
+      }
+    }
+  }
+
+  return null;
 }
 
 function tryParse<T>(
@@ -133,6 +180,16 @@ function tryParse<T>(
     if (result.success) {
       return { success: true, data: result.data };
     }
+
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      for (const value of Object.values(parsed as Record<string, unknown>)) {
+        const nestedResult = schema.safeParse(value);
+        if (nestedResult.success) {
+          return { success: true, data: nestedResult.data };
+        }
+      }
+    }
+
     return { success: false, error: result.error.message };
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : "Invalid JSON" };
