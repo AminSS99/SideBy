@@ -20,6 +20,7 @@ interface ExportOptionProps {
 
 export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
   const [downloading, setDownloading] = useState<string | null>(null);
+  const filenameSlug = result.slug || "sideby-comparison";
 
   const downloadFile = (content: string, filename: string, type: string) => {
     const blob = new Blob([content], { type });
@@ -38,7 +39,7 @@ export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
     setTimeout(() => {
       downloadFile(
         JSON.stringify(result, null, 2),
-        `${result.slug}.json`,
+        `${filenameSlug}.json`,
         "application/json"
       );
       setDownloading(null);
@@ -70,7 +71,7 @@ export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
         });
       });
 
-      downloadFile(md, `${result.slug}.md`, "text/markdown");
+      downloadFile(md, `${filenameSlug}.md`, "text/markdown");
       setDownloading(null);
     }, 600);
   };

@@ -10,16 +10,17 @@ interface ShareModalProps {
   onClose: () => void;
   entityA: string;
   entityB: string;
-  slug: string;
+  slug?: string | null;
   comparisonId?: string | null;
 }
 
-const resolveShareUrl = (slug: string) => {
+const resolveShareUrl = (slug?: string | null) => {
+  const safeSlug = slug?.replace(/^\/+/, "") || "comparison";
   if (typeof window !== "undefined" && window.location.hostname !== "snapsolve.ink") {
-    return `${window.location.origin}/compare/${slug.replace(/^\/+/, "")}`;
+    return `${window.location.origin}/compare/${safeSlug}`;
   }
 
-  return buildShareUrl(slug);
+  return buildShareUrl(safeSlug);
 };
 
 const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId }: ShareModalProps) => {

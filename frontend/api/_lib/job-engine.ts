@@ -470,6 +470,7 @@ export async function runComparisonJob(
         progress: 100,
         activeStep: 5,
         result: result,
+        errorMessage: null,
         updatedAt: new Date(),
         totalCost: String(ctx.guardrails.totalCost),
         searchesUsed: ctx.guardrails.searchCalls,
@@ -1183,6 +1184,13 @@ function entityHex(name: string): string {
   return ENTITY_COLORS[idx];
 }
 
+function makeResultSlug(a: string, b: string): string {
+  return `${a}-vs-${b}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "") || "comparison";
+}
+
 function buildResultJson(
   parsed: ParsedQuery,
   sources: Array<{ url: string; title: string; content: string }>,
@@ -1197,6 +1205,7 @@ function buildResultJson(
   const nameB = entityB?.name || "B";
 
   return {
+    slug: makeResultSlug(nameA, nameB),
     query: parsed.entities.map((e) => e.name).join(" vs "),
     context: parsed.context || "",
     entities: {

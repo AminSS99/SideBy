@@ -29,6 +29,12 @@ const SplitTextChars = ({ text, className }: { text: string; className?: string 
   );
 };
 
+const fallbackSlug = (a: string, b: string) =>
+  `${a}-vs-${b}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "") || "comparison";
+
 export const ComparisonHeader = ({
   result,
   onRefresh,
@@ -36,6 +42,7 @@ export const ComparisonHeader = ({
 }: ComparisonHeaderProps) => {
   const container = useRef<HTMLDivElement>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const shareSlug = result.slug || fallbackSlug(result.entities.a.name, result.entities.b.name);
 
   useGSAP(() => {
     const tl = gsap.timeline();
@@ -127,7 +134,7 @@ export const ComparisonHeader = ({
             <ShareButton
               entityA={result.entities.a.name}
               entityB={result.entities.b.name}
-              slug={result.slug}
+              slug={shareSlug}
               comparisonId={comparisonId}
               className="rounded-sm border border-[#2a2a2a] bg-[#111] hover:bg-[#1a1a1a] hover:border-[#444] text-[#fdfbf7]"
             />
