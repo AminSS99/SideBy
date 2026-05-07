@@ -351,7 +351,7 @@ export async function runComparisonJob(
         .update(comparisons)
         .set({
           status: "failed",
-          errorMessage: `Failed after ${MAX_RETRIES} retry attempts.`,
+          errorMessage: sql`coalesce(${comparisons.errorMessage}, ${`Failed after ${MAX_RETRIES} retry attempts.`})`,
           updatedAt: new Date(),
         })
         .where(eq(comparisons.id, comparisonId));
@@ -517,10 +517,11 @@ export async function runComparisonJob(
         })
         .where(eq(comparisons.id, comparisonId));
 
-      // Schedule retry
-      setTimeout(() => {
-        runComparisonJob(comparisonId, userId, query, orgId).catch(() => {});
-      }, backoffMs);
+      // Keep retries inside the same awaited background task. Serverless
+      // platforms can stop loose timers after the function responds.
+      await redisReleaseLock(lockKey);
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      return runComparisonJob(comparisonId, userId, query, orgId);
     } else {
       // Build partial result from whatever data exists
       const partialResult = await buildPartialResult(db, comparisonId);
@@ -700,14 +701,16 @@ async function runExtractionStep(
   }> = [];
 
   try {
-    // Extract top sources with Firecrawl
+    // Extract top sources with Firecrawl. If Firecrawl is not configured or a
+    // scrape fails, keep the job moving with Tavily snippets instead of
+    // sending the fact extractor an empty source packet.
     const topUrls = sources.slice(0, 4).map((s) => s.url);
 
     for (const url of topUrls) {
       checkGuardrails(ctx.guardrails);
       const page = await extractPage(url);
+      const source = sources.find((s) => s.url === url);
       if (page) {
-        const source = sources.find((s) => s.url === url);
         extracted.push({
           url: page.url,
           title: page.title || source?.title || "",
@@ -728,7 +731,30 @@ async function runExtractionStep(
               eq(comparisonSources.url, url),
             ),
           );
+      } else if (source?.content) {
+        extracted.push({
+          url: source.url,
+          title: source.title || source.url,
+          markdown: source.content,
+          entityName: source.entityName || "",
+        });
       }
+    }
+
+    if (extracted.length === 0 && sources.length > 0) {
+      for (const source of sources.slice(0, 6)) {
+        if (!source.content) continue;
+        extracted.push({
+          url: source.url,
+          title: source.title || source.url,
+          markdown: source.content,
+          entityName: source.entityName || "",
+        });
+      }
+    }
+
+    if (extracted.length === 0) {
+      throw new Error("No source content could be extracted from search results.");
     }
 
     await updateAiRun(ctx, runId, {

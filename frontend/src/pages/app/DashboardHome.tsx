@@ -75,10 +75,13 @@ const DashboardHome = () => {
   useGSAP(() => {
     if (!comparisonsLoading) {
       const tl = gsap.timeline();
+      const listItems = gsap.utils.toArray(".dash-list-item");
       tl.from(".dash-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
         .from(".dash-action", { y: 20, opacity: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }, "-=0.6")
-        .from(".dash-card", { y: 20, opacity: 0, duration: 0.8, stagger: 0.1, ease: "power3.out" }, "-=0.4")
-        .from(".dash-list-item", { x: -20, opacity: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }, "-=0.4");
+        .from(".dash-card", { y: 20, opacity: 0, duration: 0.8, stagger: 0.1, ease: "power3.out" }, "-=0.4");
+      if (listItems.length) {
+        tl.from(listItems, { x: -20, opacity: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }, "-=0.4");
+      }
     }
   }, [comparisonsLoading]);
 

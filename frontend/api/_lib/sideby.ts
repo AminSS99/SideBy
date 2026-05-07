@@ -523,7 +523,7 @@ export const getComparisonJob = async (
     visibility: d.visibility,
     error: d.errorMessage,
     failedStep,
-    retryable: d.status === "failed" && (d.retryCount || 0) < 2,
+    retryable: d.status === "failed",
     activity,
   };
 };

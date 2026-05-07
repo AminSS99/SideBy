@@ -44,7 +44,7 @@
       "destination": "/api/comparisons"
     },
     {
-      "source": "/((?!api(?:/|$)|assets(?:/|$)|favicon\\.ico$|robots\\.txt$|sitemap\\.xml$).*)",
+      "source": "/((?!api(?:/|$)|assets(?:/|$)|favicon\\.ico$|sideby\\.ico$|robots\\.txt$|sitemap\\.xml$).*)",
       "destination": "/index.html"
     }
   ]

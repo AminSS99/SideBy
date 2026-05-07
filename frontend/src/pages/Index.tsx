@@ -141,7 +141,7 @@ const Index = () => {
       <header className="relative z-40 border-b border-white/[0.06] bg-[#030303]/80 backdrop-blur-xl sticky top-0">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
             <div className="flex items-center gap-4 group cursor-default">
-              <img src="/sideby-logo.jpg" alt="SideBy" className="h-9 w-9 object-contain transition-all group-hover:opacity-80" />
+              <img src="/sideby.ico" alt="SideBy" className="h-9 w-9 object-contain transition-all group-hover:opacity-80" />
               <div>
               <p className="font-serif text-sm tracking-tight text-[#fdfbf7]">SideBy</p>
               <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#fdfbf7]/40">Research Engine</p>
@@ -346,7 +346,7 @@ const Index = () => {
               
               <div className="orch-card border border-orange-500/30 bg-[#1a110a] shadow-2xl p-8 rounded-sm text-center transform md:scale-110 z-20">
                 <div className="absolute top-0 inset-x-0 h-1 bg-orange-500" />
-                <img src="/sideby-logo.jpg" alt="SideBy Router" className="h-12 w-12 object-contain mx-auto mb-4" />
+                <img src="/sideby.ico" alt="SideBy Router" className="h-12 w-12 object-contain mx-auto mb-4" />
                 <h3 className="font-serif text-xl text-white mb-2">SideBy Router</h3>
                 <p className="text-xs text-orange-400 uppercase tracking-widest font-bold mb-3">Orchestration</p>
                 <p className="text-sm text-white/60">Evaluates the query and intelligently splits tasks across providers.</p>
@@ -370,7 +370,7 @@ const Index = () => {
           <div className="grid gap-12 md:grid-cols-4 mb-16">
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-6">
-                <img src="/sideby-logo.jpg" alt="SideBy" className="h-7 w-7 object-contain" />
+                <img src="/sideby.ico" alt="SideBy" className="h-7 w-7 object-contain" />
                 <span className="font-serif text-lg tracking-tight text-[#fdfbf7]">SideBy</span>
               </div>
               <p className="text-sm text-white/40 max-w-sm leading-relaxed mb-6">

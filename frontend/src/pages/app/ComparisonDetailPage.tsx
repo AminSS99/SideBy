@@ -68,11 +68,16 @@ const ComparisonDetailPage = () => {
       return (await res.json()) as ComparisonJob;
     },
     enabled: Boolean(id),
-    refetchInterval: (query) => (query.state.data?.status === "running" ? 1200 : false),
+    refetchInterval: (query) => (query.state.data?.status === "running" ? 2500 : false),
+    refetchOnWindowFocus: false,
+    staleTime: 1500,
   });
 
   const job = comparisonQuery.data;
   const result = job?.result;
+  const latestActivityError = useMemo(() => {
+    return job?.activity?.find((step) => step.status === "failed" && step.error)?.error ?? null;
+  }, [job?.activity]);
 
   const entityFacts = useMemo(() => {
     if (!result) return { a: [] as { category: string }[], b: [] as { category: string }[] };
@@ -215,9 +220,15 @@ const ComparisonDetailPage = () => {
   useGSAP(() => {
     if (!comparisonQuery.isLoading && result) {
       const tl = gsap.timeline();
-      tl.from(".wb-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
-        .from(".wb-actions", { x: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6")
-        .from(".wb-grid", { y: 60, opacity: 0, duration: 1.2, ease: "expo.out" }, "-=0.4");
+      const actions = gsap.utils.toArray(".wb-actions");
+      const grid = gsap.utils.toArray(".wb-grid");
+      tl.from(".wb-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" });
+      if (actions.length) {
+        tl.from(actions, { x: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6");
+      }
+      if (grid.length) {
+        tl.from(grid, { y: 60, opacity: 0, duration: 1.2, ease: "expo.out" }, "-=0.4");
+      }
     }
   }, [comparisonQuery.isLoading, result]);
 
@@ -311,8 +322,13 @@ const ComparisonDetailPage = () => {
             </div>
             <h2 className="text-xl font-bold text-white">Research failed</h2>
             <p className="mt-2 text-sm text-red-100/75">
-              {job.error || "The comparison job failed before a result was saved."}
+              {job.error || latestActivityError || "The comparison job failed before a result was saved."}
             </p>
+            {latestActivityError && latestActivityError !== job.error && (
+              <p className="mt-3 rounded-2xl border border-red-300/15 bg-black/20 p-3 font-mono text-xs leading-relaxed text-red-100/65">
+                {latestActivityError}
+              </p>
+            )}
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {job.retryable !== false && (
                 <button

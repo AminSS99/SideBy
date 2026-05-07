@@ -11,6 +11,7 @@ import { comparisons } from "../../../src/db/schema.js";
 import { eq } from "drizzle-orm";
 import { runComparisonJob } from "../../_lib/job-engine.js";
 import { captureServerEvent } from "../../_lib/analytics.js";
+import { waitUntil } from "@vercel/functions";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
@@ -72,7 +73,7 @@ export default async function handler(
         })
         .where(eq(comparisons.id, id));
 
-      runComparisonJob(id, auth.userId, comp.query, auth.orgId).catch(() => {});
+      waitUntil(runComparisonJob(id, auth.userId, comp.query, auth.orgId).catch(() => {}));
 
       captureServerEvent(auth.userId, "comparison_retried", { comparison_id: id });
       return sendJson(response, { success: true, message: "Comparison research restarted." });
