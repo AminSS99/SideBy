@@ -202,6 +202,14 @@ const ParseQuerySchema = z.object({
   comparisonType: z.string().optional(),
 });
 
+type ExtractedFact = z.infer<typeof FactSchema>;
+type ExtractedSource = {
+  url: string;
+  title: string;
+  markdown: string;
+  entityName: string;
+};
+
 function normalizeParsedQuery(
   data: z.infer<typeof ParseQuerySchema>,
 ): ParsedQuery {
@@ -417,7 +425,7 @@ export async function runComparisonJob(
     await updateComparisonProgress(ctx, 15, 1);
 
     // Step 2: Search for sources
-    const sources = await runSearchStep(ctx, parsed.entities);
+    const sources = await runSearchStep(ctx, parsed.entities, parsed.context || ctx.query);
     await updateComparisonProgress(ctx, 35, 2, { sourceCount: sources.length });
 
     // Step 3: Extract pages
@@ -658,6 +666,7 @@ async function runParseStep(ctx: JobContext) {
 async function runSearchStep(
   ctx: JobContext,
   entities: ParsedEntity[],
+  context?: string,
 ) {
   const runId = await createAiRun(ctx, "search");
   const stepId = await startStep(ctx, runId, "search", { entities });
@@ -675,7 +684,7 @@ async function runSearchStep(
       checkGuardrails(ctx.guardrails);
       ctx.guardrails.searchCalls++;
 
-      const results = await searchEntitySources(entity.name);
+      const results = await searchEntitySources(entity.name, context);
       for (const r of results) {
         allSources.push({
           title: r.title,
@@ -754,7 +763,26 @@ async function runExtractionStep(
     // Extract top sources with Firecrawl. If Firecrawl is not configured or a
     // scrape fails, keep the job moving with Tavily snippets instead of
     // sending the fact extractor an empty source packet.
-    const topUrls = sources.slice(0, 4).map((s) => s.url);
+    const selectedSources: Array<typeof sources[number]> = [];
+    const selectedUrls = new Set<string>();
+    const entityNames = Array.from(new Set(sources.map((s) => s.entityName).filter(Boolean)));
+
+    for (const entityName of entityNames) {
+      for (const source of sources.filter((s) => s.entityName === entityName).slice(0, 3)) {
+        if (selectedUrls.has(source.url)) continue;
+        selectedUrls.add(source.url);
+        selectedSources.push(source);
+      }
+    }
+
+    for (const source of sources) {
+      if (selectedSources.length >= 8) break;
+      if (selectedUrls.has(source.url)) continue;
+      selectedUrls.add(source.url);
+      selectedSources.push(source);
+    }
+
+    const topUrls = selectedSources.map((s) => s.url);
 
     for (const url of topUrls) {
       checkGuardrails(ctx.guardrails);
@@ -891,7 +919,7 @@ async function runDimensionStep(
 async function runFactStep(
   ctx: JobContext,
   parsed: ParsedQuery,
-  extracted: Array<{ url: string; title: string; markdown: string; entityName: string }>,
+  extracted: ExtractedSource[],
   dimensions: z.infer<typeof DimensionArraySchema>,
 ) {
   const runId = await createAiRun(ctx, "facts");
@@ -933,11 +961,18 @@ async function runFactStep(
 
     await completeStep(ctx, stepId, { factCount: result.data.length });
 
+    const coveredFacts = ensureFactCoverage(
+      result.data.filter((fact) => fact.value.trim().length > 0),
+      parsed,
+      dimensions,
+      extracted,
+    );
+
     // Deduplicate facts by normalized hash
     const seenHashes = new Set<string>();
-    const uniqueFacts: Array<Record<string, unknown>> = [];
+    const uniqueFacts: Array<ExtractedFact & { _hash: string }> = [];
 
-    for (const fact of result.data) {
+    for (const fact of coveredFacts) {
       const normalized = `${fact.entity}:${fact.dimension}:${fact.value.toLowerCase().trim().replace(/\s+/g, " ")}`;
       const hash = crypto.createHash("sha256").update(normalized).digest("hex");
       if (!seenHashes.has(hash)) {
@@ -967,10 +1002,10 @@ async function runFactStep(
 
     // Store facts in the production schema. Embeddings remain optional for
     // follow-ups; the answer engine can fall back to confidence/source ranking.
-    for (const fact of uniqueFacts as Array<Record<string, unknown>>) {
-      const entityName = String(fact.entity || "");
-      const dimensionName = String(fact.dimension || "General");
-      const citation = String(fact.citation || "");
+    for (const fact of uniqueFacts) {
+      const entityName = fact.entity;
+      const dimensionName = fact.dimension || "General";
+      const citation = fact.citation || "";
       const entityRow =
         entityRows.find((entity) => entity.normalizedName === entityName) ||
         entityRows[0];
@@ -989,7 +1024,7 @@ async function runFactStep(
         entity: entityName,
         category: dimensionName,
         label: dimensionName,
-        value: String(fact.value || ""),
+        value: fact.value,
         sourceUrl: citation || sourceRow?.url || "#",
         sourceTitle: sourceRow?.title || "Web source",
         confidence: String(fact.confidence || 0.7),
@@ -1005,6 +1040,68 @@ async function runFactStep(
     await updateAiRun(ctx, runId, { status: "failed", errorMessage: msg });
     throw error;
   }
+}
+
+function ensureFactCoverage(
+  facts: ExtractedFact[],
+  parsed: ParsedQuery,
+  dimensions: z.infer<typeof DimensionArraySchema>,
+  extracted: ExtractedSource[],
+): ExtractedFact[] {
+  const completeFacts = [...facts];
+  const hasFact = (entity: string, dimension: string) =>
+    completeFacts.some(
+      (fact) =>
+        fact.entity.toLowerCase() === entity.toLowerCase() &&
+        fact.dimension.toLowerCase() === dimension.toLowerCase() &&
+        fact.value.trim().length > 0,
+    );
+
+  for (const entity of parsed.entities.slice(0, 2)) {
+    for (const dimension of dimensions) {
+      if (hasFact(entity.name, dimension.name)) continue;
+      const fallback = buildFallbackFact(entity.name, dimension.name, extracted);
+      if (fallback) completeFacts.push(fallback);
+    }
+  }
+
+  return completeFacts;
+}
+
+function buildFallbackFact(
+  entityName: string,
+  dimensionName: string,
+  extracted: ExtractedSource[],
+): ExtractedFact | null {
+  const entityNeedle = entityName.toLowerCase();
+  const dimensionNeedle = dimensionName.toLowerCase().split(/\s+/)[0] || "";
+  const source =
+    extracted.find((item) => item.entityName.toLowerCase() === entityNeedle) ||
+    extracted.find((item) => item.title.toLowerCase().includes(entityNeedle)) ||
+    extracted.find((item) => item.markdown.toLowerCase().includes(entityNeedle));
+
+  if (!source) return null;
+
+  const sentences = source.markdown
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length > 40);
+  const sentence =
+    sentences.find((item) => item.toLowerCase().includes(dimensionNeedle)) ||
+    sentences.find((item) => item.toLowerCase().includes(entityNeedle)) ||
+    sentences[0] ||
+    source.markdown.replace(/\s+/g, " ").trim().slice(0, 240);
+
+  if (!sentence) return null;
+
+  return {
+    entity: entityName,
+    dimension: dimensionName,
+    value: sentence.slice(0, 420),
+    confidence: 0.55,
+    citation: source.url,
+  };
 }
 
 async function runScoreStep(

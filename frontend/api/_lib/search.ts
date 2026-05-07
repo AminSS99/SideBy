@@ -104,10 +104,11 @@ export async function searchEntitySources(
   entityName: string,
   context?: string,
 ): Promise<SearchResult[]> {
+  const scopedContext = context?.trim();
   const queries = [
-    `${entityName} ${context || ""} pricing plans official`.trim(),
-    `${entityName} ${context || ""} features documentation`.trim(),
-    `${entityName} ${context || ""} review comparison`.trim(),
+    `${entityName} official documentation features`.trim(),
+    `${entityName} ${scopedContext || ""} performance developer experience ecosystem`.trim(),
+    `${entityName} ${scopedContext || ""} pricing review comparison`.trim(),
   ];
 
   const allResults: SearchResult[] = [];
