@@ -12,6 +12,7 @@ import {
   comparisonFacts,
   comparisonScores,
   comparisonVerdicts,
+  aiRuns,
 } from "../../src/db/schema.js";
 import { canMutateComparison } from "./db-auth.js";
 import { runComparisonJob } from "./job-engine.js";
@@ -87,6 +88,9 @@ export async function refreshComparison(
   await db.delete(comparisonScores).where(eq(comparisonScores.comparisonId, comparisonId));
   await db.delete(comparisonVerdicts).where(eq(comparisonVerdicts.comparisonId, comparisonId));
   await db.delete(comparisonSources).where(eq(comparisonSources.comparisonId, comparisonId));
+  await db.delete(comparisonDimensions).where(eq(comparisonDimensions.comparisonId, comparisonId));
+  await db.delete(comparisonEntities).where(eq(comparisonEntities.comparisonId, comparisonId));
+  await db.delete(aiRuns).where(eq(aiRuns.comparisonId, comparisonId));
 
   // Reset comparison to queued
   await db
