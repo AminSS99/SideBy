@@ -247,6 +247,13 @@ function parseQueryFallback(query: string): ParsedQuery {
   };
 }
 
+function normalizeDimensionWeight(weight: number | undefined): string {
+  const numericWeight = Number(weight);
+  if (!Number.isFinite(numericWeight) || numericWeight <= 0) return "1.00";
+  const normalized = numericWeight > 1 ? numericWeight / 100 : numericWeight;
+  return Math.min(Math.max(normalized, 0.01), 1).toFixed(2);
+}
+
 // ─── Step Tracking ──────────────────────────────────────────────────────────
 
 async function startStep(
@@ -953,7 +960,7 @@ async function runDimensionStep(
         comparisonId: ctx.comparisonId,
         name: dim.name,
         description: dim.description || null,
-        weight: String(dim.weight || 1),
+        weight: normalizeDimensionWeight(dim.weight),
       });
     }
 
