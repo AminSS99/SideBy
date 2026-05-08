@@ -187,7 +187,9 @@ const TeamPage = () => {
               <form onSubmit={handleInvite} className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="flex-1 w-full relative">
                   <input
-                    type="email"
+                    type="text"
+                    inputMode="email"
+                    pattern="^[^@\s]+@[^@\s]+\.[^@\s]+$"
                     required
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
