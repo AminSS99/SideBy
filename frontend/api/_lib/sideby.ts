@@ -513,13 +513,17 @@ export const getComparisonJob = async (
     : d.status as "completed" | "failed";
   const activity = await getComparisonActivity(db, id);
 
+  const result = d.result
+    ? ({ ...(d.result as ComparisonResult), slug: d.slug } satisfies ComparisonResult)
+    : null;
+
   return {
     id: d.id,
     status,
     progress: d.progress,
     activeStep: d.activeStep,
     query: d.query,
-    result: d.result as ComparisonResult | null,
+    result,
     visibility: d.visibility,
     error: d.errorMessage,
     failedStep,

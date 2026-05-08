@@ -479,7 +479,20 @@ export async function runComparisonJob(
     await updateComparisonProgress(ctx, 95, 5);
 
     // Step 8: Build result JSON and finalize
-    const result = buildResultJson(parsed, sources, facts, scores, verdict, dimensions);
+    const [comparisonRow] = await db
+      .select({ slug: comparisons.slug })
+      .from(comparisons)
+      .where(eq(comparisons.id, comparisonId))
+      .limit(1);
+    const result = buildResultJson(
+      parsed,
+      sources,
+      facts,
+      scores,
+      verdict,
+      dimensions,
+      comparisonRow?.slug,
+    );
 
     // Phase 11: Calibrate overall confidence
     const normalized = normalizeQuery(ctx.query);
@@ -1365,6 +1378,7 @@ function buildResultJson(
   scores: z.infer<typeof ScoreArraySchema>,
   verdict: z.infer<typeof VerdictSchema>,
   dimensions: z.infer<typeof DimensionArraySchema>,
+  slugOverride?: string,
 ) {
   const entityA = parsed.entities[0];
   const entityB = parsed.entities[1];
@@ -1372,7 +1386,7 @@ function buildResultJson(
   const nameB = entityB?.name || "B";
 
   return {
-    slug: makeResultSlug(nameA, nameB),
+    slug: slugOverride || makeResultSlug(nameA, nameB),
     query: parsed.entities.map((e) => e.name).join(" vs "),
     context: parsed.context || "",
     entities: {

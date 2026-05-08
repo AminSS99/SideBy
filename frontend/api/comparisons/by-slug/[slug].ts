@@ -48,13 +48,14 @@ export default async function handler(
 
     if (publicRows[0]?.result) {
       const d = publicRows[0];
+      const result = { ...(d.result as Record<string, unknown>), slug: d.slug };
       return sendJson(response, {
         id: d.id,
         status: "completed",
         progress: 100,
         activeStep: d.activeStep,
         query: d.query,
-        result: d.result,
+        result,
         error: null,
       });
     }
@@ -82,13 +83,14 @@ export default async function handler(
     }
 
     const d = privateRows[0];
+    const result = { ...(d.result as Record<string, unknown>), slug: d.slug };
     return sendJson(response, {
       id: d.id,
       status: d.status === "running" || d.status === "queued" ? "running" : d.status,
       progress: d.progress,
       activeStep: d.activeStep,
       query: d.query,
-      result: d.result,
+      result,
       error: d.errorMessage,
     });
   } catch (error) {
