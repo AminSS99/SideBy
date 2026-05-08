@@ -4,6 +4,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { copyText } from "@/lib/clipboard";
 import { GlowCard } from "@/components/GlowCard";
 
 interface PromptTemplate {
@@ -64,9 +65,13 @@ const PromptsPage = () => {
     p.description.toLowerCase().includes(search.toLowerCase())
   );
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Prompt copied to clipboard");
+  const copyToClipboard = async (text: string) => {
+    const ok = await copyText(text);
+    if (ok) {
+      toast.success("Prompt copied to clipboard");
+    } else {
+      toast.error("Clipboard permission is blocked.");
+    }
   };
 
   const handleOpenEditor = (prompt?: PromptTemplate) => {

@@ -4,6 +4,7 @@ import { Check, Copy, ExternalLink, Share2, X } from "lucide-react";
 import { buildShareUrl } from "@/config/brand";
 import { buildApiUrl } from "@/config/env";
 import { apiFetch } from "@/lib/api";
+import { copyText } from "@/lib/clipboard";
 
 interface ShareModalProps {
   opens: boolean;
@@ -58,19 +59,12 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId }: Sh
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(url);
+    const ok = await copyText(url);
+    if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      const input = document.createElement("input");
-      input.value = url;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand("copy");
-      document.body.removeChild(input);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    } else {
+      setPublishError("Clipboard permission is blocked. Select and copy the URL manually.");
     }
   }, [publish, url]);
 

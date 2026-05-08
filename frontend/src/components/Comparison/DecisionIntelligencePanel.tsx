@@ -14,6 +14,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { copyText } from "@/lib/clipboard";
 import { panelClass } from "./constants";
 import type {
   Category,
@@ -228,9 +229,9 @@ const ExecutiveBriefPanel = ({ result }: { result: ComparisonData }) => {
   }, [citedSources, result, topCategories]);
 
   const copyMemo = async () => {
-    await navigator.clipboard.writeText(memo);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
+    const ok = await copyText(memo);
+    setCopied(ok);
+    if (ok) window.setTimeout(() => setCopied(false), 1800);
   };
 
   return (

@@ -4,6 +4,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { Copy, Check } from "lucide-react";
 import type { ComparisonFact, Entity } from "./types";
+import { copyText } from "@/lib/clipboard";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -54,10 +55,10 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
     }
   }, { scope: cardRef });
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(`${fact.label} for ${entity.name}: ${fact.value}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    const ok = await copyText(`${fact.label} for ${entity.name}: ${fact.value}`);
+    setCopied(ok);
+    if (ok) setTimeout(() => setCopied(false), 2000);
   };
 
   return (
