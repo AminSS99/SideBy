@@ -328,7 +328,7 @@ const Index = () => {
             </p>
             <h2 className="font-serif text-4xl text-[#fdfbf7] md:text-5xl tracking-tight">The Right Engine for the Task</h2>
             <p className="mt-6 max-w-2xl mx-auto text-white/50 leading-relaxed">
-              SideBy doesn't rely on a single model. We route your research queries dynamically across the best available AI models to balance speed, cost, and reasoning depth.
+              SideBy routes research across Gemini 3.1 Pro and DeepSeek V4 Pro so each step gets the right mix of reasoning, extraction, and synthesis.
             </p>
           </div>
           
@@ -339,9 +339,9 @@ const Index = () => {
               <div className="orch-card border border-[#2a2a2a] bg-[#111] p-8 rounded-sm text-center relative overflow-hidden group">
                 <div className="absolute top-0 inset-x-0 h-1 bg-blue-500/50 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
                 <Cpu className="h-8 w-8 text-blue-400 mx-auto mb-4" />
-                <h3 className="font-serif text-xl text-white mb-2">DeepSeek V3</h3>
+                <h3 className="font-serif text-xl text-white mb-2">DeepSeek V4 Pro</h3>
                 <p className="text-xs text-white/40 uppercase tracking-widest font-bold mb-3">Logic & Extraction</p>
-                <p className="text-sm text-white/50">Used for fast, highly accurate data extraction from raw HTML sources.</p>
+                <p className="text-sm text-white/50">Used for fast, highly accurate logic, extraction, and source normalization from raw web evidence.</p>
               </div>
               
               <div className="orch-card border border-orange-500/30 bg-[#1a110a] shadow-2xl p-8 rounded-sm text-center transform md:scale-110 z-20">
@@ -355,9 +355,9 @@ const Index = () => {
               <div className="orch-card border border-[#2a2a2a] bg-[#111] p-8 rounded-sm text-center relative overflow-hidden group">
                 <div className="absolute top-0 inset-x-0 h-1 bg-purple-500/50 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
                 <BookOpenText className="h-8 w-8 text-purple-400 mx-auto mb-4" />
-                <h3 className="font-serif text-xl text-white mb-2">Gemini 2.0</h3>
+                <h3 className="font-serif text-xl text-white mb-2">Gemini 3.1 Pro</h3>
                 <p className="text-xs text-white/40 uppercase tracking-widest font-bold mb-3">Synthesis & Prose</p>
-                <p className="text-sm text-white/50">Used for writing the final, nuanced executive verdicts and summaries.</p>
+                <p className="text-sm text-white/50">Used for deep synthesis, tradeoff analysis, and final executive verdicts.</p>
               </div>
             </div>
           </div>

@@ -77,7 +77,7 @@ export const buildResult = (query: string, refreshCount: number, previousResult?
       inputTokens: 18450,
       outputTokens: 2150,
       estimatedCost: 0.024,
-      models: ["DeepSeek V3", "Gemini 2.0 Flash"]
+      models: ["DeepSeek V4 Pro", "Gemini 3.1 Pro"]
     },
     dimensions: [
       { subject: "Pricing Value", a: 85, b: 92, fullMark: 100 },

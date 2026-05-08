@@ -1,9 +1,10 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Users, Mail, Shield, ShieldAlert, ShieldCheck, User, Trash2, Edit2, Activity, GitCompareArrows, Search, Database } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { GlowCard } from "@/components/GlowCard";
 
 interface TeamMember {
@@ -50,8 +51,19 @@ type Tab = "members" | "activity";
 
 const TeamPage = () => {
   const { activeWorkspace } = useWorkspace();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("members");
-  const [members, setMembers] = useState<TeamMember[]>(initialMembers);
+  const [members, setMembers] = useState<TeamMember[]>(() => {
+    const raw = localStorage.getItem("sideby.teamMembers");
+    if (raw) {
+      try {
+        return JSON.parse(raw) as TeamMember[];
+      } catch {
+        return initialMembers;
+      }
+    }
+    return initialMembers;
+  });
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<TeamMember["role"]>("member");
   const [isInviting, setIsInviting] = useState(false);
@@ -64,14 +76,51 @@ const TeamPage = () => {
       .from(".team-content", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.4");
   }, { scope: containerRef });
 
+  useEffect(() => {
+    localStorage.setItem("sideby.teamMembers", JSON.stringify(members));
+  }, [members]);
+
+  const directoryMembers = useMemo<TeamMember[]>(() => {
+    if (!user?.email) return members;
+    const owner: TeamMember = {
+      id: user.id,
+      name: user.fullName || user.email.split("@")[0],
+      email: user.email,
+      role: "owner",
+      status: "active",
+      joinedAt: activeWorkspace?.createdAt || new Date().toISOString(),
+    };
+
+    return [owner, ...members.filter((member) => member.email !== owner.email)];
+  }, [activeWorkspace?.createdAt, members, user?.email, user?.fullName, user?.id]);
+
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
 
-    // Phase 2: Wire to Clerk organization invitations.
-    toast.info("Team invites are not yet available.", {
-      description: "This feature will be enabled in Phase 2 with Clerk organizations.",
+    setIsInviting(true);
+    const email = inviteEmail.trim().toLowerCase();
+    if (directoryMembers.some((member) => member.email.toLowerCase() === email)) {
+      toast.warning("That person already has access.");
+      setIsInviting(false);
+      return;
+    }
+
+    const pendingMember: TeamMember = {
+      id: crypto.randomUUID(),
+      name: "",
+      email,
+      role: inviteRole,
+      status: "invited",
+      joinedAt: new Date().toISOString(),
+    };
+
+    setMembers((current) => [pendingMember, ...current]);
+    setInviteEmail("");
+    toast.success("Invite staged.", {
+      description: `${email} was added as a pending ${inviteRole}.`,
     });
+    setIsInviting(false);
   };
 
   const removeMember = (id: string, name: string, email: string) => {
@@ -175,12 +224,16 @@ const TeamPage = () => {
                   <h2 className="font-serif text-xl text-[#fdfbf7]">Workspace Members</h2>
                 </div>
                 <span className="rounded-sm border border-[#333] bg-[#1a1a1a] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
-                  {members.length} Total
+                  {directoryMembers.length} Total
                 </span>
               </div>
 
               <div className="divide-y divide-[#2a2a2a]">
-                {members.map((member) => (
+                {directoryMembers.length === 0 ? (
+                  <div className="p-10 text-center text-sm text-[#fdfbf7]/40">
+                    No members yet. Send the first invite to start a shared workspace.
+                  </div>
+                ) : directoryMembers.map((member) => (
                   <div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:px-8 hover:bg-[#151515] transition-colors group">
                     <div className="flex items-center gap-4">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] font-serif text-lg text-[#fdfbf7]/50">
@@ -250,7 +303,11 @@ const TeamPage = () => {
 
             <div className="rounded-sm border border-[#2a2a2a] bg-[#111] overflow-hidden">
               <div className="divide-y divide-[#2a2a2a]">
-                {mockActivity.map((activity) => (
+                {mockActivity.length === 0 ? (
+                  <div className="p-10 text-center text-sm text-[#fdfbf7]/40">
+                    No workspace activity yet. Completed comparisons, invites, and knowledge-base changes will appear here.
+                  </div>
+                ) : mockActivity.map((activity) => (
                   <div key={activity.id} className="flex items-center gap-4 p-5 hover:bg-[#151515] transition-colors">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333]">
                       <ActionIcon type={activity.type} />

@@ -26,7 +26,7 @@ const Features = () => {
     {
       icon: Network,
       title: "Multi-Model Orchestration",
-      description: "We don't rely on one LLM. SideBy dynamically routes tasks to the best model—using DeepSeek for extraction and Gemini for synthesis.",
+      description: "We don't rely on one LLM. SideBy routes extraction and reasoning across DeepSeek V4 Pro and Gemini 3.1 Pro.",
       color: "text-blue-500"
     },
     {

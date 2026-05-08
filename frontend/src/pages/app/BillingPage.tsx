@@ -4,6 +4,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
+import { toast } from "sonner";
 
 type UsageStatus = {
   plan: string;
@@ -54,6 +55,16 @@ const BillingPage = () => {
     { key: "refresh", label: "Refreshes", icon: RefreshCw, color: "text-purple-400" },
     { key: "export", label: "Exports", icon: Download, color: "text-emerald-400" },
   ];
+
+  const requestUpgrade = (plan: string) => {
+    localStorage.setItem(
+      "sideby.upgradeRequest",
+      JSON.stringify({ plan, requestedAt: new Date().toISOString() }),
+    );
+    toast.success(`${plan} request saved.`, {
+      description: "We will use this signal when paid plan checkout is enabled.",
+    });
+  };
 
   return (
     <div ref={containerRef} className="space-y-8">
@@ -144,6 +155,20 @@ const BillingPage = () => {
             </p>
             <div className="rounded-sm border border-dashed border-[#333] bg-[#0c0b0a] p-4 text-center">
               <p className="text-xs text-[#fdfbf7]/40">No paid plans available yet.</p>
+            </div>
+            <div className="mt-4 grid gap-2">
+              <button
+                onClick={() => requestUpgrade("Pro")}
+                className="rounded-sm bg-[#fdfbf7] px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]"
+              >
+                Request Pro Access
+              </button>
+              <a
+                href="mailto:hello@snapsolve.ink?subject=SideBy%20Team%20Plan"
+                className="rounded-sm border border-[#333] px-4 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-orange-500/40 hover:text-orange-300"
+              >
+                Contact Sales
+              </a>
             </div>
           </div>
 

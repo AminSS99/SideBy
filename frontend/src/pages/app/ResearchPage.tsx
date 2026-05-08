@@ -191,8 +191,8 @@ const ResearchPage = () => {
                       className="w-full h-10 rounded-sm border border-[#333] bg-[#111] px-3 text-sm text-[#fdfbf7] outline-none focus:border-emerald-500 cursor-pointer"
                     >
                       <option value="auto">Auto Orchestration (Best)</option>
-                      <option value="deepseek">Force DeepSeek V3</option>
-                      <option value="gemini">Force Gemini 2.0 Flash</option>
+                      <option value="deepseek">Force DeepSeek V4 Pro</option>
+                      <option value="gemini">Force Gemini 3.1 Pro</option>
                       <option value="claude">Force Claude 3.5 Sonnet</option>
                     </select>
                   </div>
