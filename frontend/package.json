@@ -104,5 +104,14 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^6.3.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@clerk/shared",
+      "@swc/core",
+      "esbuild",
+      "core-js",
+      "protobufjs"
+    ]
   }
 }
