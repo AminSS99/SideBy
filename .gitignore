@@ -65,7 +65,7 @@ frontend/src/hooks/
 
 # Lock files (regenerated on install)
 frontend/package-lock.json
-frontend/pnpm-lock.yaml
+# frontend/pnpm-lock.yaml — committed to fix CI build script approvals
 
 # ===== BACKEND - Ignore generated files =====
 backend/.mvn/
