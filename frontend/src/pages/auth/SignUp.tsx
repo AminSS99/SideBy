@@ -4,8 +4,10 @@ import { AlertCircle } from "lucide-react";
 import AuthPageShell from "@/components/auth/AuthPageShell";
 import { envConfig } from "@/config/env";
 import { brand } from "@/config/brand";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const SignUp = () => {
+  usePageTitle("Sign Up");
   return (
     <AuthPageShell
       eyebrow="Workspace access"

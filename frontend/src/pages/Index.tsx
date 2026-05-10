@@ -7,6 +7,7 @@ import { Search, Sparkles, Zap, ArrowRight, ShieldCheck, Scale, Cpu, Network, Bo
 import { BrandFooter } from "@/components/brand/BrandFooter";
 import { AmbientOrbs } from "@/components/AmbientOrbs";
 import { analyzeQueryIntent } from "@/lib/queryIntent";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -29,6 +30,7 @@ const quickStartComparisons = [
 ];
 
 const Index = () => {
+  usePageTitle("AI-Powered Comparisons");
   const [query, setQuery] = useState("");
   const queryIntent = analyzeQueryIntent(query);
   const navigate = useNavigate();

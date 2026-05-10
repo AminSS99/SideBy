@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate, useLocation, Navigate } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,6 +15,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { CommandMenu } from "@/components/CommandMenu";
 import { BrandFooter } from "@/components/brand/BrandFooter";
 import { AmbientOrbs } from "@/components/AmbientOrbs";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const navItems = [
   { to: "/app", label: "Overview", icon: LayoutDashboard, end: true },
@@ -33,6 +34,7 @@ const navItems = [
 ];
 
 const AppShell = () => {
+  usePageTitle("Dashboard");
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut, user } = useAuth();
@@ -40,6 +42,7 @@ const AppShell = () => {
     activeWorkspace,
     error: workspaceError,
     isLoading: workspaceLoading,
+    needsOnboarding,
   } = useWorkspace();
   const shellRef = useRef<HTMLDivElement>(null);
   const [commandOpen, setCommandOpen] = useState(false);
@@ -81,6 +84,11 @@ const AppShell = () => {
       console.error("Failed to sign out.", error);
     }
   };
+
+  // Redirect new users without workspaces to onboarding
+  if (needsOnboarding) {
+    return <Navigate to="/onboarding" replace />;
+  }
 
   return (
     <div ref={shellRef} className="min-h-screen bg-[#050505] text-white selection:bg-orange-500/30 relative flex flex-col">

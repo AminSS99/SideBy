@@ -1,7 +1,18 @@
-import React, { createContext, useContext, useEffect, useMemo } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { useClerk, useUser } from "@clerk/clerk-react";
 import { envConfig } from "@/config/env";
 import { identifyUser, resetPostHog } from "@/lib/posthog";
+
+const AUTH_CACHE_KEY = "sideby.auth.cache";
+const AUTH_CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
+
+interface CachedAuthState {
+  userId: string;
+  email: string | null;
+  fullName: string | null;
+  imageUrl: string | null;
+  timestamp: number;
+}
 
 export interface AppUser {
   id: string;
@@ -26,6 +37,40 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+function readCachedAuth(): CachedAuthState | null {
+  try {
+    const raw = localStorage.getItem(AUTH_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CachedAuthState;
+    if (Date.now() - parsed.timestamp > AUTH_CACHE_TTL_MS) {
+      localStorage.removeItem(AUTH_CACHE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedAuth(user: AppUser | null) {
+  try {
+    if (user) {
+      const cache: CachedAuthState = {
+        userId: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        imageUrl: user.imageUrl,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(cache));
+    } else {
+      localStorage.removeItem(AUTH_CACHE_KEY);
+    }
+  } catch {
+    // Storage might be full or unavailable
+  }
+}
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   if (!envConfig.hasClerkConfig) {
@@ -64,8 +109,13 @@ const UnconfiguredAuthProvider = ({ children }: { children: React.ReactNode }) =
 const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { isLoaded, isSignedIn, user: clerkUser } = useUser();
   const { signOut: clerkSignOut } = useClerk();
+  const [cachedUser, setCachedUser] = useState<AppUser | null>(readCachedAuth);
 
   const user = useMemo<AppUser | null>(() => {
+    if (!isLoaded) {
+      // While Clerk is loading, show cached user to prevent flicker
+      return cachedUser;
+    }
     if (!isSignedIn || !clerkUser) {
       return null;
     }
@@ -76,7 +126,31 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
       fullName: clerkUser.fullName,
       imageUrl: clerkUser.imageUrl,
     };
-  }, [clerkUser, isSignedIn]);
+  }, [clerkUser, isSignedIn, isLoaded, cachedUser]);
+
+  // Sync user to cache whenever it changes
+  useEffect(() => {
+    if (isLoaded) {
+      writeCachedAuth(user);
+      setCachedUser(user);
+    }
+  }, [user, isLoaded]);
+
+  // Clear cache on sign-out
+  const handleSignOut = useCallback(async () => {
+    writeCachedAuth(null);
+    setCachedUser(null);
+    // Clear workspace and project selections to prevent stale data on next login
+    try {
+      localStorage.removeItem("sideby.activeWorkspaceId");
+      localStorage.removeItem("sideby.activeProjectId");
+      localStorage.removeItem("sideby.preferences");
+      localStorage.removeItem("sideby.workspaceDraft");
+    } catch {
+      // Ignore storage errors
+    }
+    await clerkSignOut();
+  }, [clerkSignOut]);
 
   useEffect(() => {
     if (user) {
@@ -93,7 +167,8 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
     () => ({
       session: user ? { userId: user.id } : null,
       user,
-      isLoading: !isLoaded,
+      // If we have a cached user, we can consider auth "loaded" even before Clerk finishes
+      isLoading: !isLoaded && !cachedUser,
       isConfigured: true,
       async signInWithPassword() {
         throw new Error("Use the Clerk sign-in form to authenticate.");
@@ -105,10 +180,10 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error("Use the Clerk sign-in form to authenticate.");
       },
       async signOut() {
-        await clerkSignOut();
+        await handleSignOut();
       },
     }),
-    [clerkSignOut, isLoaded, user],
+    [handleSignOut, isLoaded, user, cachedUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

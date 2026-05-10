@@ -11,6 +11,8 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 
+const ACTIVE_PROJECT_KEY = "sideby.activeProjectId";
+
 export interface ProjectRecord {
   id: string;
   workspaceId: string;
@@ -38,22 +40,44 @@ interface ProjectsContextValue {
 
 const ProjectsContext = createContext<ProjectsContextValue | undefined>(undefined);
 
+function readStoredProjectId(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_PROJECT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function storeProjectId(id: string | null) {
+  try {
+    if (id) {
+      localStorage.setItem(ACTIVE_PROJECT_KEY, id);
+    } else {
+      localStorage.removeItem(ACTIVE_PROJECT_KEY);
+    }
+  } catch {
+    // Storage might be unavailable
+  }
+}
+
 export const ProjectsProvider = ({ children }: { children: React.ReactNode }) => {
   const { session, isLoading: authLoading } = useAuth();
   const { activeWorkspace } = useWorkspace();
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
+  const [activeProjectId, setActiveProjectIdState] = useState<string | null>(readStoredProjectId);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const persistActiveProjectId = useCallback((projectId: string | null) => {
+  const setActiveProjectId = useCallback((projectId: string | null) => {
     setActiveProjectIdState(projectId);
+    storeProjectId(projectId);
   }, []);
 
   const refresh = useCallback(async () => {
     if (!session || !activeWorkspace) {
       setProjects([]);
       setActiveProjectIdState(null);
+      storeProjectId(null);
       setError(null);
       setIsLoading(false);
       return;
@@ -73,18 +97,28 @@ export const ProjectsProvider = ({ children }: { children: React.ReactNode }) =>
       const data = (await res.json()) as { projects: ProjectRecord[] };
       setProjects(data.projects);
 
-      // Auto-select first project if none selected
-      if (!activeProjectId && data.projects.length > 0) {
+      // Validate stored active project ID against fetched projects
+      const storedId = readStoredProjectId();
+      const validStored = data.projects.find((p) => p.id === storedId);
+      if (validStored) {
+        setActiveProjectIdState(storedId);
+      } else if (data.projects.length > 0) {
+        // Auto-select first project if none stored or stored no longer valid
         setActiveProjectIdState(data.projects[0].id);
+        storeProjectId(data.projects[0].id);
+      } else {
+        setActiveProjectIdState(null);
+        storeProjectId(null);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load projects.");
       setProjects([]);
       setActiveProjectIdState(null);
+      storeProjectId(null);
     } finally {
       setIsLoading(false);
     }
-  }, [activeWorkspace, activeProjectId, session]);
+  }, [activeWorkspace, session]);
 
   const createProject = useCallback(async ({ name, description }: CreateProjectValues) => {
     if (!activeWorkspace) {
@@ -109,6 +143,7 @@ export const ProjectsProvider = ({ children }: { children: React.ReactNode }) =>
     const data = (await res.json()) as { project: ProjectRecord };
     setProjects((current) => [data.project, ...current]);
     setActiveProjectIdState(data.project.id);
+    storeProjectId(data.project.id);
     setError(null);
 
     return data.project;
@@ -133,9 +168,9 @@ export const ProjectsProvider = ({ children }: { children: React.ReactNode }) =>
       error,
       refresh,
       createProject,
-      setActiveProjectId: persistActiveProjectId,
+      setActiveProjectId,
     }),
-    [activeProject, createProject, error, isLoading, persistActiveProjectId, projects, refresh],
+    [activeProject, createProject, error, isLoading, projects, refresh, setActiveProjectId],
   );
 
   return (
