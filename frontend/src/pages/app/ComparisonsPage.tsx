@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
   CheckCircle2,
   Clock3,
@@ -118,7 +118,7 @@ const ComparisonsPage = () => {
     [newComparison],
   );
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -137,11 +137,11 @@ const ComparisonsPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   // Handle ?q= query param from landing page quick-start
   const [searchParams] = useSearchParams();
@@ -159,17 +159,21 @@ const ComparisonsPage = () => {
     }
   }, [searchParams, navigate]);
 
-  useEffect(() => {
-    if (!items.some((item) => item.status === "running")) {
-      return;
-    }
+  const hasRunningRef = useRef(false);
 
+  useEffect(() => {
+    hasRunningRef.current = items.some((item) => item.status === "running");
+  }, [items]);
+
+  useEffect(() => {
     const interval = window.setInterval(() => {
-      void load();
+      if (hasRunningRef.current) {
+        void load();
+      }
     }, 3000);
 
     return () => window.clearInterval(interval);
-  }, [items]);
+  }, [load]);
 
   useGSAP(() => {
     if (!isLoading) {
