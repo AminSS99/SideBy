@@ -1,4 +1,5 @@
 import React from "react";
+import type { ComparisonTaxonomySummary } from "@/lib/comparisonTaxonomy";
 
 export type EntityKey = "a" | "b";
 
@@ -79,6 +80,7 @@ export type ComparisonData = {
   slug: string;
   query: string;
   context: string;
+  taxonomy?: ComparisonTaxonomySummary;
   entities: { a: Entity; b: Entity };
   sourceCount: number;
   updatedAt: string;

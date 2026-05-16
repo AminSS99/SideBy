@@ -6,7 +6,7 @@ type ClerkGlobal = {
   session?: ClerkSession | null;
 };
 
-const getClerkToken = async () => {
+export const getClerkToken = async () => {
   if (typeof window === "undefined") {
     return null;
   }

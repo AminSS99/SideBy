@@ -24,6 +24,7 @@ import { captureEvent } from "@/lib/posthog";
 import { EmptyState } from "@/components/EmptyState";
 import { GlowCard } from "@/components/GlowCard";
 import { analyzeQueryIntent } from "@/lib/queryIntent";
+import { SUPPORTED_COMPARISON_CATEGORIES } from "@/lib/comparisonTaxonomy";
 
 type ComparisonStatus = "running" | "completed" | "failed";
 type ComparisonVisibility = "private" | "team" | "public";
@@ -40,6 +41,9 @@ type ComparisonHistoryItem = {
   summary: string | null;
   entityA: string | null;
   entityB: string | null;
+  queryCategory?: string | null;
+  taxonomyStatus?: string | null;
+  safetyLevel?: string | null;
 };
 
 type ComparisonJob = {
@@ -51,6 +55,7 @@ type ComparisonJob = {
     slug: string;
     sourceCount: number;
     verdict: { summary: string };
+    taxonomy?: { category: string; label: string; status: string; safetyLevel: string };
     entities: {
       a: { name: string };
       b: { name: string };
@@ -60,12 +65,9 @@ type ComparisonJob = {
 
 type FilterKey = "all" | ComparisonStatus | ComparisonVisibility;
 
-const examples = [
-  "ChatGPT Plus vs Claude Pro",
-  "Supabase vs Firebase for a SaaS",
-  "Cursor vs Windsurf",
-  "Vercel vs Render",
-];
+const examples = SUPPORTED_COMPARISON_CATEGORIES
+  .flatMap((category) => category.examples.slice(0, 1))
+  .slice(0, 6);
 
 const filters: Array<{ key: FilterKey; label: string }> = [
   { key: "all", label: "All" },
@@ -365,9 +367,9 @@ const ComparisonsPage = () => {
                 <span className="text-[9px] font-bold uppercase tracking-widest">
                   AI preflight - {Math.round(newComparisonIntent.confidence * 100)}%
                 </span>
-                {newComparisonIntent.category && (
+                {newComparisonIntent.categoryLabel && (
                   <span className="text-[9px] uppercase tracking-widest opacity-70">
-                    {newComparisonIntent.category}
+                    {newComparisonIntent.categoryLabel}
                   </span>
                 )}
               </div>
@@ -502,6 +504,9 @@ const jobToHistoryItem = (job: ComparisonJob): ComparisonHistoryItem => ({
   summary: job.result?.verdict.summary || null,
   entityA: job.result?.entities.a.name || null,
   entityB: job.result?.entities.b.name || null,
+  queryCategory: job.result?.taxonomy?.label || null,
+  taxonomyStatus: job.result?.taxonomy?.status || null,
+  safetyLevel: job.result?.taxonomy?.safetyLevel || null,
 });
 
 const slugFromQuery = (query: string) => {
@@ -525,6 +530,9 @@ const ComparisonRow = ({
   const StatusIcon = statusIcon[item.status];
   const VisibilityIcon = visibilityIcon[item.visibility];
   const title = [item.entityA, item.entityB].filter(Boolean).join(" vs ") || item.query;
+  const categoryLabel = item.queryCategory
+    ? item.queryCategory.replace(/_/g, " ")
+    : null;
 
   return (
     <GlowCard containerClassName="comp-row" className="p-8">
@@ -539,6 +547,11 @@ const ComparisonRow = ({
               <VisibilityIcon className="h-3 w-3" />
               {item.visibility}
             </span>
+            {categoryLabel && (
+              <span className="inline-flex items-center gap-1.5 rounded-sm border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-orange-300">
+                {categoryLabel}
+              </span>
+            )}
           </div>
 
           <h2 className="mt-5 font-serif text-2xl text-[#fdfbf7] tracking-tight">

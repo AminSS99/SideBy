@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Bot, User, LoaderCircle, Sparkles, Database, FolderKanban, Check, ToggleRight, ToggleLeft } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { useProjects } from "@/contexts/ProjectsContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface Message {
   id: string;
@@ -12,10 +13,22 @@ interface Message {
   content: string;
 }
 
-// Phase 1: No mock indexed files. Document upload/indexing comes in a later phase.
-const mockIndexedFiles: { id: string; name: string; active: boolean }[] = [];
+interface KnowledgeDocument {
+  id: string;
+  filename: string;
+  status: "indexing" | "indexed" | "error" | "deleted";
+  chunkCount: number;
+}
+
+interface ActiveKnowledgeFile {
+  id: string;
+  filename: string;
+  chunkCount: number;
+  active: boolean;
+}
 
 const ChatPage = () => {
+  const { activeWorkspace } = useWorkspace();
   const { activeProject } = useProjects();
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -26,7 +39,9 @@ const ChatPage = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [activeFiles, setActiveFiles] = useState(mockIndexedFiles);
+  const [activeFiles, setActiveFiles] = useState<ActiveKnowledgeFile[]>([]);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(true);
+  const [filesError, setFilesError] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -44,6 +59,47 @@ const ChatPage = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  const loadKnowledgeFiles = useCallback(async () => {
+    if (!activeWorkspace) {
+      setActiveFiles([]);
+      setIsLoadingFiles(false);
+      setFilesError(null);
+      return;
+    }
+
+    try {
+      setIsLoadingFiles(true);
+      setFilesError(null);
+      const params = new URLSearchParams({ workspaceId: activeWorkspace.id });
+      if (activeProject) params.set("projectId", activeProject.id);
+
+      const res = await apiFetch(buildApiUrl(`/api/knowledge/documents?${params.toString()}`));
+      const data = (await res.json()) as { documents: KnowledgeDocument[] };
+      const indexedDocuments = data.documents.filter((document) => document.status === "indexed");
+
+      setActiveFiles((current) =>
+        indexedDocuments.map((document) => {
+          const existing = current.find((file) => file.id === document.id);
+          return {
+            id: document.id,
+            filename: document.filename,
+            chunkCount: document.chunkCount,
+            active: existing?.active ?? true,
+          };
+        }),
+      );
+    } catch (error) {
+      setFilesError(error instanceof Error ? error.message : "Unable to load knowledge files.");
+      setActiveFiles([]);
+    } finally {
+      setIsLoadingFiles(false);
+    }
+  }, [activeProject, activeWorkspace]);
+
+  useEffect(() => {
+    void loadKnowledgeFiles();
+  }, [loadKnowledgeFiles]);
 
   const toggleFile = (id: string) => {
     setActiveFiles(files => 
@@ -71,11 +127,19 @@ const ChatPage = () => {
         role: m.role,
         content: m.content,
       }));
+      const selectedDocumentIds = activeFiles
+        .filter((file) => file.active)
+        .map((file) => file.id);
 
       const res = await apiFetch(buildApiUrl("/api/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({
+          messages: apiMessages,
+          workspaceId: activeWorkspace?.id,
+          projectId: activeProject?.id ?? null,
+          documentIds: selectedDocumentIds,
+        }),
       });
 
       if (!res.ok) {
@@ -228,16 +292,35 @@ const ChatPage = () => {
                 Knowledge Base
               </h3>
               <span className="text-[9px] font-bold uppercase tracking-widest bg-[#1a1a1a] border border-[#333] px-2 py-0.5 rounded-sm">
-                RAG Active
+                {activeFiles.some((file) => file.active) ? "RAG Active" : "General"}
               </span>
             </div>
             
             <p className="text-[10px] text-[#fdfbf7]/50 uppercase tracking-widest font-bold mb-4">
-              Ground AI in uploaded files:
+              Ground AI in indexed files:
             </p>
 
             <div className="space-y-2 flex-1">
-              {activeFiles.map(file => (
+              {isLoadingFiles && (
+                <div className="flex items-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] p-3 text-xs text-[#fdfbf7]/45">
+                  <LoaderCircle className="h-3.5 w-3.5 animate-spin text-orange-400" />
+                  Loading documents...
+                </div>
+              )}
+
+              {!isLoadingFiles && filesError && (
+                <div className="rounded-sm border border-red-500/20 bg-red-500/10 p-3 text-xs leading-relaxed text-red-200/80">
+                  {filesError}
+                </div>
+              )}
+
+              {!isLoadingFiles && !filesError && activeFiles.length === 0 && (
+                <div className="rounded-sm border border-[#333] bg-[#0c0b0a] p-3 text-xs leading-relaxed text-[#fdfbf7]/45">
+                  No indexed documents in this scope.
+                </div>
+              )}
+
+              {!isLoadingFiles && activeFiles.map(file => (
                 <button
                   key={file.id}
                   onClick={() => toggleFile(file.id)}
@@ -254,7 +337,7 @@ const ChatPage = () => {
                       <Check className="h-3.5 w-3.5" />
                     </div>
                     <span className={`text-xs truncate text-left ${file.active ? "text-[#fdfbf7]" : "text-[#fdfbf7]/50"}`}>
-                      {file.name}
+                      {file.filename}
                     </span>
                   </div>
                   {file.active ? (
@@ -268,9 +351,9 @@ const ChatPage = () => {
 
             <div className="mt-4 pt-4 border-t border-[#2a2a2a]">
               <p className="text-[9px] text-[#fdfbf7]/40 leading-relaxed">
-                Tokens used by context: <strong className="text-[#fdfbf7]/70">~4,200</strong>
+                Active context: <strong className="text-[#fdfbf7]/70">{activeFiles.filter((file) => file.active).length} documents</strong>
                 <br />
-                The model will prioritize facts found in active documents.
+                Available chunks: <strong className="text-[#fdfbf7]/70">{activeFiles.reduce((sum, file) => sum + (file.active ? file.chunkCount : 0), 0)}</strong>
               </p>
             </div>
           </div>

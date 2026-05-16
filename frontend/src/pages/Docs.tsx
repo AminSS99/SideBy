@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { Book, Code, Key, Zap, Layers, FileSearch } from "lucide-react";
+import { Book, Code, Key, Zap, Layers, FileSearch, Search, ShieldCheck } from "lucide-react";
 import { brand } from "@/config/brand";
 import { BrandFooter } from "@/components/brand/BrandFooter";
 
@@ -11,13 +11,19 @@ const docCategories = [
     icon: Zap,
     title: "Quickstart",
     description: "Get up and running with SideBy in your workspace in under 5 minutes.",
-    links: ["Creating an account", "Running your first comparison", "Understanding the Verdict Panel"]
+    links: ["Creating an account", "Running your first comparison", "Understanding category badges"]
   },
   {
     icon: Code,
     title: "API Reference",
     description: "Integrate the SideBy extraction and orchestration engine directly into your app.",
-    links: ["Authentication", "POST /api/comparisons/create", "Webhooks"]
+    links: ["Authentication", "POST /api/comparisons", "GET /api/comparisons/taxonomy"]
+  },
+  {
+    icon: ShieldCheck,
+    title: "Comparison Taxonomy",
+    description: "Supported categories, source requirements, safety policy, and result templates.",
+    links: ["Supported categories", "Blocked comparisons", "Category-specific dimensions"]
   },
   {
     icon: Layers,
@@ -88,9 +94,9 @@ const Docs = () => {
 
         <div className="docs-search max-w-2xl mx-auto mb-20 relative">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/30" />
-          <input 
-            type="text" 
-            placeholder="Search documentation..." 
+          <input
+            type="text"
+            placeholder="Search documentation..."
             className="w-full h-14 rounded-sm border border-[#333] bg-[#111] pl-12 pr-4 text-white placeholder:text-white/30 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all"
           />
         </div>
@@ -131,10 +137,5 @@ const Docs = () => {
     </div>
   );
 };
-
-// Extracted search icon for simplicity inside file
-const Search = ({ className }: { className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-);
 
 export default Docs;

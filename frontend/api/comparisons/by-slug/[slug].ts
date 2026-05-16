@@ -7,6 +7,7 @@ import { createDbClient } from "../../../src/db/index.js";
 import { comparisons } from "../../../src/db/schema.js";
 import { sendJson } from "../../_lib/sideby.js";
 import { authenticateRequest } from "../../_lib/auth.js";
+import { analyzeComparisonQuery, summarizeComparisonTaxonomy } from "../../../src/lib/comparisonTaxonomy.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
@@ -48,7 +49,12 @@ export default async function handler(
 
     if (publicRows[0]?.result) {
       const d = publicRows[0];
-      const result = { ...(d.result as Record<string, unknown>), slug: d.slug };
+      const result = {
+        ...(d.result as Record<string, unknown>),
+        slug: d.slug,
+        taxonomy: (d.result as { taxonomy?: unknown }).taxonomy ||
+          summarizeComparisonTaxonomy(analyzeComparisonQuery(d.query)),
+      };
       return sendJson(response, {
         id: d.id,
         status: "completed",
@@ -83,7 +89,12 @@ export default async function handler(
     }
 
     const d = privateRows[0];
-    const result = { ...(d.result as Record<string, unknown>), slug: d.slug };
+    const result = {
+      ...(d.result as Record<string, unknown>),
+      slug: d.slug,
+      taxonomy: (d.result as { taxonomy?: unknown }).taxonomy ||
+        summarizeComparisonTaxonomy(analyzeComparisonQuery(d.query)),
+    };
     return sendJson(response, {
       id: d.id,
       status: d.status === "running" || d.status === "queued" ? "running" : d.status,

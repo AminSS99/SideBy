@@ -270,7 +270,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
                 void handleAsk(input);
               }
             }}
-            placeholder="Ask anything about these products..."
+            placeholder="Ask about this comparison..."
             className="max-h-32 min-h-[44px] w-full resize-none bg-transparent px-3 py-3 text-sm text-[#fdfbf7] placeholder:text-[#fdfbf7]/30 outline-none font-serif"
             rows={1}
             disabled={isTyping}

@@ -7,6 +7,10 @@
  * 3. Confidence calibration (multi-factor)
  * 4. Entity knowledge base for fact reuse
  */
+import {
+  getComparisonCategoryDefinition,
+  type DimensionTemplate,
+} from "../../src/lib/comparisonTaxonomy.js";
 import type { QueryCategory } from "./query-normalizer.js";
 
 // ─── Freshness System ────────────────────────────────────────────────────────
@@ -14,23 +18,22 @@ import type { QueryCategory } from "./query-normalizer.js";
 export type FreshnessClass = "volatile" | "medium" | "stable";
 
 /** How quickly different categories age */
-const freshnessMap: Record<QueryCategory, FreshnessClass> = {
-  ai_llm: "volatile",
-  frontend: "volatile",
-  framework: "volatile",
-  hosting: "volatile",
-  backend: "medium",
-  database: "medium",
-  language: "medium",
-  tool: "medium",
-  security: "medium",
-  os: "medium",
-  laptop: "medium",
-  phone: "medium",
-  car: "medium",
-  city: "stable",
-  general: "medium",
-  vague: "medium",
+const freshnessMap: Record<string, FreshnessClass> = {
+  software: "volatile",
+  developer_tool: "volatile",
+  ai_tool: "volatile",
+  product: "medium",
+  company_service: "medium",
+  place: "stable",
+  education: "medium",
+  career: "medium",
+  finance_info: "medium",
+  health_fitness: "medium",
+  method_framework: "stable",
+  technical_standard: "medium",
+  general_research: "medium",
+  unsupported: "medium",
+  sensitive: "medium",
 };
 
 /** Max age in days before a comparison should be refreshed */
@@ -55,6 +58,17 @@ export function isFreshEnough(
   return ageDays < maxAge;
 }
 
+export function isStaleButUsable(
+  lastUpdated: Date | string | undefined,
+  category: QueryCategory,
+): boolean {
+  if (!lastUpdated) return false;
+  const updated = typeof lastUpdated === "string" ? new Date(lastUpdated) : lastUpdated;
+  const ageDays = (Date.now() - updated.getTime()) / (1000 * 60 * 60 * 24);
+  const maxAge = freshnessMaxAge[getFreshnessClass(category)];
+  return ageDays < maxAge * 2;
+}
+
 export function freshnessLabel(lastUpdated: Date | string, category: QueryCategory): string {
   const updated = typeof lastUpdated === "string" ? new Date(lastUpdated) : lastUpdated;
   const ageDays = Math.round((Date.now() - updated.getTime()) / (1000 * 60 * 60 * 24));
@@ -66,13 +80,7 @@ export function freshnessLabel(lastUpdated: Date | string, category: QueryCatego
 
 // ─── Category-Aware Dimension Templates ──────────────────────────────────────
 
-export type DimensionTemplate = {
-  name: string;
-  description: string;
-  weight: number;
-};
-
-const dimensionTemplates: Record<QueryCategory, DimensionTemplate[]> = {
+const dimensionTemplates: Record<string, DimensionTemplate[]> = {
   frontend: [
     { name: "Performance", description: "Bundle size, rendering speed, runtime performance", weight: 1.2 },
     { name: "Developer Experience", description: "Tooling, TypeScript support, hot-reload speed", weight: 1.0 },
@@ -204,7 +212,7 @@ const dimensionTemplates: Record<QueryCategory, DimensionTemplate[]> = {
 };
 
 export function getDimensionTemplate(category: QueryCategory): DimensionTemplate[] {
-  return dimensionTemplates[category] || dimensionTemplates.general;
+  return getComparisonCategoryDefinition(category).defaultDimensions;
 }
 
 /**
@@ -215,21 +223,31 @@ export function buildDimensionPrompt(
   context: string,
   category: QueryCategory,
 ): string {
+  const definition = getComparisonCategoryDefinition(category);
   const template = getDimensionTemplate(category);
   const suggestedDims = template
     .slice(0, 5)
     .map((d) => `  - ${d.name}: ${d.description}`)
     .join("\n");
+  const sourceRequirements = definition.sourceRequirements
+    .map((item) => `  - ${item}`)
+    .join("\n");
 
   return [
-    `You are a comparison analyst specializing in the "${category}" category.`,
+    `You are a comparison analyst specializing in the "${definition.label}" category.`,
     `Generate 4-6 comparison dimensions for: ${entities.join(" vs ")}`,
     context ? `Context: ${context}` : "",
     ``,
     `Suggested dimensions for this category:`,
     suggestedDims,
     ``,
-    `Choose the most relevant ones. Add 1-2 category-specific dimensions if needed.`,
+    `Source expectations for this category:`,
+    sourceRequirements || "  - primary and reputable secondary sources",
+    ``,
+    `Tone: ${definition.resultTone}`,
+    definition.disclaimer ? `Required caveat: ${definition.disclaimer}` : "",
+    ``,
+    `Choose the most relevant dimensions. Add 1 category-specific dimension only if the source evidence supports it.`,
     `Return valid JSON array with { name, description, weight } only.`,
   ].filter(Boolean).join("\n");
 }

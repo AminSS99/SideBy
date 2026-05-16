@@ -1,12 +1,17 @@
 import type { VercelResponse } from "@vercel/node";
-import { eq, desc, and, asc } from "drizzle-orm";
+import { eq, desc, and, asc, or, sql } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
-import { comparisons, aiRuns, aiRunSteps, queryAnalytics, entityKnowledge } from "../../src/db/schema.js";
+import { comparisons, aiRuns, aiRunSteps, queryAnalytics } from "../../src/db/schema.js";
 import { runComparisonJob } from "./job-engine.js";
 import { logger } from "./log.js";
 import { normalizeQuery } from "./query-normalizer.js";
-import { isFreshEnough, getFreshnessClass, freshnessLabel } from "./reuse-engine.js";
+import { isFreshEnough, isStaleButUsable, getFreshnessClass, freshnessLabel } from "./reuse-engine.js";
 import { comparisonCache, trackCacheHit } from "./cache-layer.js";
+import {
+  analyzeComparisonQuery,
+  summarizeComparisonTaxonomy,
+  type ComparisonTaxonomySummary,
+} from "../../src/lib/comparisonTaxonomy.js";
 
 export type EntityKey = "a" | "b";
 
@@ -22,6 +27,12 @@ export type ComparisonJob = {
   failedStep?: string | null;
   retryable?: boolean;
   activity?: ComparisonActivityStep[];
+  reuseSource?: {
+    sourceId: string | null;
+    type: "memory" | "database" | "stale";
+    label: string;
+    confidence: number | null;
+  };
 };
 
 export type ComparisonActivityStep = {
@@ -43,6 +54,7 @@ export type ComparisonResult = {
   slug: string;
   query: string;
   context: string;
+  taxonomy?: ComparisonTaxonomySummary;
   entities: { a: Entity; b: Entity };
   sourceCount: number;
   updatedAt: string;
@@ -67,6 +79,8 @@ export type ComparisonHistoryItem = {
   entityA: string | null;
   entityB: string | null;
   queryCategory?: string | null;
+  taxonomyStatus?: string | null;
+  safetyLevel?: string | null;
   canonicalSlug?: string | null;
   isVague?: boolean;
   reusedFromId?: string | null;
@@ -156,10 +170,161 @@ export interface CreateComparisonInput {
   projectId?: string;
 }
 
+type ReusableComparisonRow = {
+  id: string;
+  result: unknown;
+  visibility: "private" | "team" | "public";
+  clerkUserId: string | null;
+  clerkOrgId: string | null;
+  updatedAt: Date;
+  sourceCount: number;
+  overallConfidence: string | null;
+  freshnessClass: string | null;
+};
+
+const materializeCachedResult = (
+  result: ComparisonResult,
+  slugValue: string,
+  query: string,
+): ComparisonResult => ({
+  ...result,
+  slug: slugValue,
+  query,
+  taxonomy: result.taxonomy || summarizeComparisonTaxonomy(analyzeComparisonQuery(query)),
+  updatedAt: new Date().toISOString(),
+});
+
+const createCachedComparisonRecord = async (
+  db: ReturnType<typeof createDbClient>,
+  params: {
+    id: string;
+    input: CreateComparisonInput;
+    parsed: ParsedComparison;
+    normalized: ReturnType<typeof normalizeQuery>;
+    comparisonSlug: string;
+    result: ComparisonResult;
+    sourceCount: number;
+    freshnessClass: string;
+    reuseSourceId: string | null;
+    cacheHits: number;
+  },
+) => {
+  await db.insert(comparisons).values({
+    id: params.id,
+    query: params.parsed.normalizedQuery,
+    slug: params.comparisonSlug,
+    taxonomyCategory: params.normalized.category,
+    taxonomyStatus: params.normalized.taxonomyStatus,
+    taxonomyConfidence: String(params.normalized.confidence),
+    safetyLevel: params.normalized.safetyLevel,
+    policyNote: params.normalized.policyNote || null,
+    status: "completed",
+    visibility: "private",
+    clerkUserId: params.input.userId,
+    clerkOrgId: params.input.orgId || null,
+    workspaceId: params.input.workspaceId || null,
+    projectId: params.input.projectId || null,
+    progress: 100,
+    activeStep: 5,
+    sourceCount: params.sourceCount,
+    result: params.result,
+    freshnessClass: params.freshnessClass,
+    reuseSourceId: params.reuseSourceId,
+    totalCost: "0",
+  });
+
+  await db.insert(queryAnalytics).values({
+    comparisonId: params.id,
+    rawQuery: params.input.query,
+    normalizedQuery: params.normalized.normalizedQuery,
+    canonicalSlug: params.normalized.canonicalSlug,
+    detectedEntities: JSON.stringify([
+      { name: params.parsed.entityA, type: null },
+      { name: params.parsed.entityB, type: null },
+    ]),
+    queryCategory: params.normalized.category,
+    taxonomyStatus: params.normalized.taxonomyStatus,
+    safetyLevel: params.normalized.safetyLevel,
+    taxonomyConfidence: String(params.normalized.confidence),
+    policyNote: params.normalized.policyNote || null,
+    policySignals: null,
+    sourceStrategy: {
+      requirements: params.normalized.sourceRequirements,
+      disclaimer: params.normalized.disclaimer,
+    },
+    isVague: params.normalized.isVague,
+    reusedFromId: params.reuseSourceId,
+    totalCost: "0",
+    searchesUsed: 0,
+    sourcesFound: params.sourceCount,
+    cacheHits: params.cacheHits,
+  });
+};
+
+const findReusableComparison = async (
+  db: ReturnType<typeof createDbClient>,
+  input: CreateComparisonInput,
+  normalized: ReturnType<typeof normalizeQuery>,
+): Promise<ReusableComparisonRow | undefined> => {
+  const rows = await db
+    .select({
+      id: comparisons.id,
+      result: comparisons.result,
+      visibility: comparisons.visibility,
+      clerkUserId: comparisons.clerkUserId,
+      clerkOrgId: comparisons.clerkOrgId,
+      updatedAt: comparisons.updatedAt,
+      sourceCount: comparisons.sourceCount,
+      overallConfidence: comparisons.overallConfidence,
+      freshnessClass: comparisons.freshnessClass,
+    })
+    .from(comparisons)
+    .innerJoin(queryAnalytics, eq(comparisons.id, queryAnalytics.comparisonId))
+    .where(
+      and(
+        eq(comparisons.status, "completed"),
+        eq(queryAnalytics.canonicalSlug, normalized.canonicalSlug),
+        sql`${comparisons.result} IS NOT NULL`,
+        or(
+          eq(comparisons.clerkUserId, input.userId),
+          input.orgId
+            ? and(eq(comparisons.clerkOrgId, input.orgId), eq(comparisons.visibility, "team"))
+            : sql`false`,
+          eq(comparisons.visibility, "public"),
+        ),
+      ),
+    )
+    .orderBy(desc(comparisons.updatedAt))
+    .limit(25);
+
+  return rows
+    .map((row) => ({
+      ...row,
+      score:
+        row.clerkUserId === input.userId
+          ? 3
+          : input.orgId && row.clerkOrgId === input.orgId && row.visibility === "team"
+            ? 2
+            : row.visibility === "public"
+              ? 1
+              : 0,
+    }))
+    .filter((row) => row.score > 0)
+    .sort((a, b) => b.score - a.score || b.updatedAt.getTime() - a.updatedAt.getTime())[0];
+};
+
 export const createComparisonJob = async (
   input: CreateComparisonInput,
   scheduleResearch?: ResearchScheduler,
 ): Promise<ComparisonJob> => {
+  const intent = analyzeComparisonQuery(input.query);
+  if (!intent.canStart) {
+    throw Object.assign(new Error(intent.message), {
+      statusCode: 422,
+      code: intent.status === "sensitive" ? "QUERY_SENSITIVE" : "QUERY_NOT_COMPARABLE",
+    });
+  }
+
   const parsed = parseQuery(input.query);
   const normalized = normalizeQuery(input.query);
   const id = crypto.randomUUID();
@@ -172,81 +337,73 @@ export const createComparisonJob = async (
   const memoryHit = comparisonCache.get<ComparisonResult>(normalized.canonicalSlug);
   if (memoryHit) {
     logger.info("Memory cache hit", { canonicalSlug: normalized.canonicalSlug });
+    const result = materializeCachedResult(memoryHit, comparisonSlug, parsed.normalizedQuery);
+    await createCachedComparisonRecord(db, {
+      id,
+      input,
+      parsed,
+      normalized,
+      comparisonSlug,
+      result,
+      sourceCount: result.sourceCount || 0,
+      freshnessClass,
+      reuseSourceId: null,
+      cacheHits: 0,
+    });
+    await trackCacheHit(db, id, "memory", 0);
+
     return {
-      id: crypto.randomUUID(),
+      id,
       status: "completed",
       progress: 100,
       activeStep: 5,
       query: parsed.normalizedQuery,
-      result: memoryHit,
+      result,
       visibility: "private",
       error: null,
-    } as ComparisonJob;
+      reuseSource: {
+        sourceId: null,
+        type: "memory",
+        label: "Instant hot-cache result",
+        confidence: null,
+      },
+    };
   }
 
   // ─── Phase 11: True Result Reuse ──────────────────────────────────────
-  // Check for existing fresh public comparison with same canonical slug
-  const existingRows = await db
-    .select({
-      id: comparisons.id,
-      result: comparisons.result,
-      status: comparisons.status,
-      visibility: comparisons.visibility,
-      updatedAt: comparisons.updatedAt,
-      sourceCount: comparisons.sourceCount,
-      overallConfidence: comparisons.overallConfidence,
-      freshnessClass: comparisons.freshnessClass,
-    })
-    .from(comparisons)
-    .where(
-      and(
-        eq(comparisons.status, "completed"),
-        eq(comparisons.visibility, "public"),
-      ),
-    )
-    .orderBy(desc(comparisons.updatedAt))
-    .limit(5);
-
-  // Find the best reusable comparison
-  let reusedSource: typeof existingRows[0] | undefined;
-  for (const existing of existingRows) {
-    if (existing.result) {
-      const result = existing.result as ComparisonResult;
-      const existingA = result?.entities?.a?.name?.toLowerCase();
-      const existingB = result?.entities?.b?.name?.toLowerCase();
-      const queryA = parsed.entityA.toLowerCase();
-      const queryB = parsed.entityB.toLowerCase();
-
-      // Match if entities overlap (in any order)
-      const isMatch = (existingA === queryA && existingB === queryB) ||
-                      (existingA === queryB && existingB === queryA);
-
-      if (isMatch) {
-        reusedSource = existing;
-        break;
-      }
-    }
-  }
-
+  const reusedSource = await findReusableComparison(db, input, normalized);
   const isCached = reusedSource && isFreshEnough(reusedSource.updatedAt, normalized.category);
+  const canServeStale =
+    reusedSource && !isCached && isStaleButUsable(reusedSource.updatedAt, normalized.category);
 
   // Create the comparison record
   await db.insert(comparisons).values({
     id,
     query: parsed.normalizedQuery,
     slug: comparisonSlug,
-    status: isCached ? "completed" : "queued",
+    taxonomyCategory: normalized.category,
+    taxonomyStatus: normalized.taxonomyStatus,
+    taxonomyConfidence: String(normalized.confidence),
+    safetyLevel: normalized.safetyLevel,
+    policyNote: normalized.policyNote || null,
+    status: isCached || canServeStale ? "completed" : "queued",
     visibility: "private",
     clerkUserId: input.userId,
     clerkOrgId: input.orgId || null,
     workspaceId: input.workspaceId || null,
     projectId: input.projectId || null,
-    progress: isCached ? 100 : 0,
-    activeStep: isCached ? 5 : 0,
-    sourceCount: isCached ? (reusedSource?.sourceCount || 0) : 0,
-    result: isCached ? reusedSource?.result : null,
+    progress: isCached || canServeStale ? 100 : 0,
+    activeStep: isCached || canServeStale ? 5 : 0,
+    sourceCount: isCached || canServeStale ? (reusedSource?.sourceCount || 0) : 0,
+    result: isCached || canServeStale
+      ? materializeCachedResult(reusedSource?.result as ComparisonResult, comparisonSlug, parsed.normalizedQuery)
+      : null,
     freshnessClass,
-    reuseSourceId: isCached ? reusedSource?.id : null,
+    reuseSourceId: isCached || canServeStale ? reusedSource?.id : null,
+    overallConfidence: isCached || canServeStale
+      ? reusedSource?.overallConfidence || null
+      : null,
+    totalCost: isCached || canServeStale ? "0" : null,
   });
 
   // Phase 10: Save query analytics
@@ -260,19 +417,32 @@ export const createComparisonJob = async (
       { name: parsed.entityB, type: null },
     ]),
     queryCategory: normalized.category,
+    taxonomyStatus: normalized.taxonomyStatus,
+    safetyLevel: normalized.safetyLevel,
+    taxonomyConfidence: String(normalized.confidence),
+    policyNote: normalized.policyNote || null,
+    policySignals: null,
+    sourceStrategy: {
+      requirements: normalized.sourceRequirements,
+      disclaimer: normalized.disclaimer,
+    },
     isVague: normalized.isVague,
-    reusedFromId: isCached ? reusedSource?.id : null,
+    reusedFromId: isCached || canServeStale ? reusedSource?.id : null,
+    totalCost: isCached || canServeStale ? "0" : null,
+    searchesUsed: isCached || canServeStale ? 0 : undefined,
+    sourcesFound: isCached || canServeStale ? reusedSource?.sourceCount || 0 : undefined,
+    cacheHits: 0,
   });
 
   // If we have a cached fresh result, return it immediately
   if (isCached && reusedSource?.result) {
-    const cachedResult = reusedSource.result as ComparisonResult;
+    const cachedResult = materializeCachedResult(reusedSource.result as ComparisonResult, comparisonSlug, parsed.normalizedQuery);
 
     // Phase 12: Populate in-memory cache for next lookup
-    comparisonCache.set(normalized.canonicalSlug, cachedResult, 60000);
+    comparisonCache.set(normalized.canonicalSlug, cachedResult, 10 * 60 * 1000);
 
     // Track cache hit for analytics
-    trackCacheHit(db, id, "reuse", 0).catch(() => {});
+    trackCacheHit(db, id, "db", 0).catch(() => {});
 
     logger.info("Returning cached comparison", {
       comparisonId: id,
@@ -292,19 +462,19 @@ export const createComparisonJob = async (
       error: null,
       reuseSource: {
         sourceId: reusedSource.id,
+        type: "database",
         label: freshnessLabel(reusedSource.updatedAt!, normalized.category),
         confidence: reusedSource.overallConfidence ? Number(reusedSource.overallConfidence) : null,
       },
-    } as ComparisonJob & { reuseSource?: object };
+    };
   }
 
   // Phase 12: Background refresh for stale (but existing) comparisons
-  if (reusedSource && !isCached && reusedSource.result) {
-    const staleResult = reusedSource.result as ComparisonResult;
+  if (canServeStale && reusedSource?.result) {
+    const staleResult = materializeCachedResult(reusedSource.result as ComparisonResult, comparisonSlug, parsed.normalizedQuery);
+    trackCacheHit(db, id, "reuse", 0).catch(() => {});
 
-    // Serve the stale result immediately
-    const freshJob = id; // This is the new record showing "completed"
-    // Start a background refresh for the original comparison
+    // Serve the stale result immediately while refreshing the source record for future users.
     const bgRefresh = runComparisonJob(reusedSource.id, input.userId, input.query, input.orgId).catch((e) => {
       logger.warn(`Background refresh failed for ${reusedSource!.id}`, { error: e instanceof Error ? e.message : String(e) });
     });
@@ -328,10 +498,11 @@ export const createComparisonJob = async (
       error: null,
       reuseSource: {
         sourceId: reusedSource.id,
-        label: `Stale — refreshing in background (${freshnessLabel(reusedSource.updatedAt!, normalized.category)})`,
+        type: "stale",
+        label: `Stale; refreshing in background (${freshnessLabel(reusedSource.updatedAt!, normalized.category)})`,
         confidence: reusedSource.overallConfidence ? Number(reusedSource.overallConfidence) : null,
       },
-    } as ComparisonJob & { reuseSource?: object };
+    };
   }
 
   // Otherwise, run the full research pipeline
@@ -514,7 +685,12 @@ export const getComparisonJob = async (
   const activity = await getComparisonActivity(db, id);
 
   const result = d.result
-    ? ({ ...(d.result as ComparisonResult), slug: d.slug } satisfies ComparisonResult)
+    ? ({
+        ...(d.result as ComparisonResult),
+        slug: d.slug,
+        taxonomy: (d.result as ComparisonResult).taxonomy ||
+          summarizeComparisonTaxonomy(analyzeComparisonQuery(d.query)),
+      } satisfies ComparisonResult)
     : null;
 
   return {
@@ -585,6 +761,8 @@ export const listComparisonHistory = async (
       updatedAt: comparisons.updatedAt,
       result: comparisons.result,
       queryCategory: queryAnalytics.queryCategory,
+      taxonomyStatus: queryAnalytics.taxonomyStatus,
+      safetyLevel: queryAnalytics.safetyLevel,
       canonicalSlug: queryAnalytics.canonicalSlug,
       isVague: queryAnalytics.isVague,
       reusedFromId: queryAnalytics.reusedFromId,
@@ -610,6 +788,8 @@ export const listComparisonHistory = async (
       entityA: result?.entities?.a?.name || null,
       entityB: result?.entities?.b?.name || null,
       queryCategory: row.queryCategory,
+      taxonomyStatus: row.taxonomyStatus,
+      safetyLevel: row.safetyLevel,
       canonicalSlug: row.canonicalSlug,
       isVague: row.isVague ?? false,
       reusedFromId: row.reusedFromId,

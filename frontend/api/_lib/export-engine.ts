@@ -15,6 +15,7 @@ import {
   comparisonQuestions,
 } from "../../src/db/schema.js";
 import { canAccessComparison } from "./db-auth.js";
+import { analyzeComparisonQuery, summarizeComparisonTaxonomy } from "../../src/lib/comparisonTaxonomy.js";
 
 export async function exportComparison(
   comparisonId: string,
@@ -90,11 +91,17 @@ export async function exportComparison(
 
   // Markdown export
   const entityNames = entities.map((e) => e.normalizedName).join(" vs ");
+  const taxonomy = (comp.result as { taxonomy?: ReturnType<typeof summarizeComparisonTaxonomy> } | null)?.taxonomy ||
+    summarizeComparisonTaxonomy(analyzeComparisonQuery(comp.query));
   let md = `# SideBy Comparison: ${entityNames}\n\n`;
   md += `**Query:** ${comp.query}\n`;
+  md += `**Category:** ${taxonomy.label}\n`;
   md += `**Status:** ${comp.status}\n`;
   md += `**Sources:** ${sources.length}\n`;
   md += `**Exported:** ${new Date().toLocaleString()}\n\n`;
+  if (taxonomy.disclaimer) {
+    md += `> ${taxonomy.disclaimer}\n\n`;
+  }
 
   if (verdict) {
     md += `## Verdict\n\n`;

@@ -6,7 +6,10 @@ import { createComparisonJob, listComparisonHistory, sendJson } from "../_lib/si
 import { requireAuth } from "../_lib/auth.js";
 import { withRateLimit } from "../_lib/route-guard.js";
 import { captureServerEvent } from "../_lib/analytics.js";
-import { analyzeQueryIntent } from "../../src/lib/queryIntent.js";
+import { analyzeComparisonQuery } from "../../src/lib/comparisonTaxonomy.js";
+import { createDbClient } from "../../src/db/index.js";
+import { queryAnalytics } from "../../src/db/schema.js";
+import { normalizeQuery } from "../_lib/query-normalizer.js";
 import { waitUntil } from "@vercel/functions";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
@@ -52,13 +55,48 @@ export default async function handler(
         return sendJson(response, { error: "Query is required." }, 400);
       }
 
-      const intent = analyzeQueryIntent(query);
+      const auth = await requireAuth(request);
+      const intent = analyzeComparisonQuery(query);
       if (!intent.canStart) {
+        const normalized = normalizeQuery(query);
+        const db = createDbClient();
+        await db.insert(queryAnalytics).values({
+          rawQuery: query,
+          normalizedQuery: normalized.normalizedQuery,
+          canonicalSlug: normalized.canonicalSlug,
+          detectedEntities: JSON.stringify([
+            { name: intent.entityA, type: null },
+            { name: intent.entityB, type: null },
+          ].filter((entity) => entity.name)),
+          queryCategory: intent.category,
+          taxonomyStatus: intent.status,
+          safetyLevel: intent.safetyLevel,
+          taxonomyConfidence: String(intent.confidence),
+          policyNote: intent.policyNote || intent.signals[0]?.label || null,
+          policySignals: intent.signals,
+          sourceStrategy: {
+            requirements: intent.sourceRequirements,
+            disclaimer: intent.disclaimer,
+          },
+          isVague: intent.status === "needs_entities" || intent.status === "needs_context",
+          searchesUsed: 0,
+          sourcesFound: 0,
+          cacheHits: 0,
+        });
+
+        captureServerEvent(auth.userId, "comparison_rejected", {
+          query,
+          category: intent.category,
+          status: intent.status,
+          safety_level: intent.safetyLevel,
+          policy_note: intent.policyNote,
+        });
+
         return sendJson(
           response,
           {
             error: intent.message,
-            code: "QUERY_NOT_COMPARABLE",
+            code: intent.status === "sensitive" ? "QUERY_SENSITIVE" : "QUERY_NOT_COMPARABLE",
             intent,
           },
           422,
@@ -66,8 +104,6 @@ export default async function handler(
       }
 
       return await withRateLimit(request, response, "comparison", async () => {
-        const auth = await requireAuth(request);
-
         const result = await createComparisonJob({
           query,
           userId: auth.userId,

@@ -42,14 +42,59 @@ export const VerdictPanel = ({ result }: VerdictPanelProps) => {
     });
   }, { scope: containerRef });
 
+  const labelsByCategory: Record<string, Record<string, string>> = {
+    product: {
+      developers: "Daily Use",
+      teams: "Shared Use",
+      students: "Budget Buyers",
+      powerUsers: "Power Users",
+      ecosystem: "Support",
+    },
+    place: {
+      developers: "Work Setup",
+      teams: "Relocation",
+      students: "Students",
+      powerUsers: "Long Stays",
+      ecosystem: "Community",
+    },
+    finance_info: {
+      developers: "Caveat",
+      teams: "Account Rules",
+      students: "Risk Fit",
+      powerUsers: "Tax Notes",
+      ecosystem: "Official Rules",
+    },
+    health_fitness: {
+      developers: "Training Goal",
+      teams: "Support",
+      students: "Beginner Fit",
+      powerUsers: "Advanced Use",
+      ecosystem: "Safety",
+    },
+    education: {
+      developers: "Skill Fit",
+      teams: "Employer Signal",
+      students: "Learners",
+      powerUsers: "Long-Term Path",
+      ecosystem: "Market Demand",
+    },
+    career: {
+      developers: "Skill Fit",
+      teams: "Employer Signal",
+      students: "Entry Path",
+      powerUsers: "Long-Term Path",
+      ecosystem: "Market Demand",
+    },
+  };
+  const categoryLabels = labelsByCategory[result.taxonomy?.category || ""] || {};
   const rows = [
     { label: "Best Overall", value: result.verdict.bestOverall, key: "bestOverall", highlight: true },
     { label: "Best Value", value: result.verdict.bestValue, key: "bestValue" },
-    { label: "Developers", value: result.verdict.developers, key: "developers" },
-    { label: "Teams", value: result.verdict.teams, key: "teams" },
-    { label: "Students", value: result.verdict.students, key: "students" },
-    { label: "Power Users", value: result.verdict.powerUsers, key: "powerUsers" },
-    { label: "Ecosystem", value: result.verdict.ecosystem || "Depends on stack", key: "ecosystem" },
+    { label: categoryLabels.developers || "Developers", value: result.verdict.developers, key: "developers" },
+    { label: categoryLabels.teams || "Teams", value: result.verdict.teams, key: "teams" },
+    { label: categoryLabels.students || "Students", value: result.verdict.students, key: "students" },
+    { label: categoryLabels.powerUsers || "Power Users", value: result.verdict.powerUsers, key: "powerUsers" },
+    { label: categoryLabels.ecosystem || "Ecosystem", value: result.verdict.ecosystem || "Depends on stack", key: "ecosystem" },
   ];
 
   return (

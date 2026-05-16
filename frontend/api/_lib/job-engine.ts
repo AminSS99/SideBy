@@ -31,7 +31,13 @@ import type { AIProvider } from "./ai-adapter.js";
 import crypto from "crypto";
 import { buildDimensionPrompt, calibrateConfidence, getFreshnessClass, isReusableFact, normalizeEntityForReuse } from "./reuse-engine.js";
 import { normalizeQuery } from "./query-normalizer.js";
-import { hashPrompt } from "./cache-layer.js";
+import { comparisonCache, hashPrompt } from "./cache-layer.js";
+import {
+  analyzeComparisonQuery,
+  getComparisonCategoryDefinition,
+  summarizeComparisonTaxonomy,
+  type ComparisonIntent,
+} from "../../src/lib/comparisonTaxonomy.js";
 
 // ─── Guardrails ─────────────────────────────────────────────────────────────
 
@@ -144,6 +150,7 @@ interface JobContext {
   guardrails: GuardrailState;
   provider: AIProvider;
   db: ReturnType<typeof createDbClient>;
+  taxonomy: ComparisonIntent;
 }
 
 // ─── Zod Schemas for AI Outputs ─────────────────────────────────────────────
@@ -437,6 +444,11 @@ export async function runComparisonJob(
     }
 
     const provider = getPrimaryProvider();
+    const taxonomy = analyzeComparisonQuery(query);
+    if (!taxonomy.canStart) {
+      throw new Error(taxonomy.message);
+    }
+
     const ctx: JobContext = {
       comparisonId,
       userId,
@@ -445,7 +457,11 @@ export async function runComparisonJob(
       guardrails: createGuardrails(),
       provider,
       db,
+      taxonomy,
     };
+
+    // Clear previous derived rows when refreshing an existing completed/stale comparison.
+    await clearDerivedComparisonData(db, comparisonId);
 
     // Update comparison status
     await updateComparisonProgress(ctx, 5, 0, { status: "running" });
@@ -492,6 +508,7 @@ export async function runComparisonJob(
       verdict,
       dimensions,
       comparisonRow?.slug,
+      ctx.taxonomy,
     );
 
     // Phase 11: Calibrate overall confidence
@@ -521,6 +538,11 @@ export async function runComparisonJob(
         progress: 100,
         activeStep: 5,
         result: result,
+        taxonomyCategory: normalized.category,
+        taxonomyStatus: normalized.taxonomyStatus,
+        taxonomyConfidence: String(normalized.confidence),
+        safetyLevel: normalized.safetyLevel,
+        policyNote: normalized.policyNote || null,
         errorMessage: null,
         updatedAt: new Date(),
         totalCost: String(ctx.guardrails.totalCost),
@@ -529,6 +551,8 @@ export async function runComparisonJob(
         freshnessClass,
       })
       .where(eq(comparisons.id, comparisonId));
+
+    comparisonCache.set(normalized.canonicalSlug, result, 10 * 60 * 1000);
 
     // Phase 11: Save reusable facts to entity knowledge base
     for (const rawFact of facts) {
@@ -571,6 +595,14 @@ export async function runComparisonJob(
           name: e.name.toLowerCase(),
           type: e.type || null,
         })) || []),
+        taxonomyStatus: normalized.taxonomyStatus,
+        safetyLevel: normalized.safetyLevel,
+        taxonomyConfidence: String(normalized.confidence),
+        policyNote: normalized.policyNote || null,
+        sourceStrategy: {
+          requirements: normalized.sourceRequirements,
+          disclaimer: normalized.disclaimer,
+        },
       })
       .where(eq(queryAnalytics.comparisonId, comparisonId));
 
@@ -660,7 +692,12 @@ async function runParseStep(ctx: JobContext) {
       {
         role: "system" as const,
         content:
-          "You are a query parser. Extract the entities being compared, the context, and the comparison type from the user's query. Return valid JSON only.",
+          [
+            "You are a query parser for SideBy.",
+            "Extract only the entities being compared, the context, and the comparison type from the user's query.",
+            `The preflight taxonomy category is ${ctx.taxonomy.label}; do not override safety policy or invent extra entities.`,
+            "Return valid JSON only.",
+          ].join(" "),
       },
       {
         role: "user" as const,
@@ -754,7 +791,7 @@ async function runSearchStep(
       checkGuardrails(ctx.guardrails);
       ctx.guardrails.searchCalls++;
 
-      const results = await searchEntitySources(entity.name, context);
+      const results = await searchEntitySources(entity.name, context, ctx.taxonomy.category);
       for (const r of results) {
         allSources.push({
           title: r.title,
@@ -836,9 +873,11 @@ async function runExtractionStep(
     const selectedSources: Array<typeof sources[number]> = [];
     const selectedUrls = new Set<string>();
     const entityNames = Array.from(new Set(sources.map((s) => s.entityName).filter(Boolean)));
+    const reusableFactCounts = await getReusableFactCounts(ctx, entityNames);
 
     for (const entityName of entityNames) {
-      for (const source of sources.filter((s) => s.entityName === entityName).slice(0, 3)) {
+      const sourceLimit = (reusableFactCounts.get(normalizeEntityForReuse(entityName)) || 0) >= 4 ? 1 : 3;
+      for (const source of sources.filter((s) => s.entityName === entityName).slice(0, sourceLimit)) {
         if (selectedUrls.has(source.url)) continue;
         selectedUrls.add(source.url);
         selectedSources.push(source);
@@ -967,8 +1006,11 @@ async function runDimensionStep(
 
     await completeStep(ctx, stepId, result.data);
 
+    const templateDimensions = getComparisonCategoryDefinition(normalized.category).defaultDimensions;
+    const dimensionsToStore = result.data.length > 0 ? result.data : templateDimensions;
+
     // Store dimensions
-    for (const dim of result.data) {
+    for (const dim of dimensionsToStore) {
       await ctx.db.insert(comparisonDimensions).values({
         comparisonId: ctx.comparisonId,
         name: dim.name,
@@ -977,9 +1019,39 @@ async function runDimensionStep(
       });
     }
 
-    return result.data;
+    return dimensionsToStore;
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Dimension generation failed";
+    const fallbackDimensions = getComparisonCategoryDefinition(ctx.taxonomy.category)
+      .defaultDimensions
+      .slice(0, 6);
+
+    if (fallbackDimensions.length > 0) {
+      logger.warn("Dimension generation failed, using taxonomy template", {
+        comparisonId: ctx.comparisonId,
+        category: ctx.taxonomy.category,
+        error: msg,
+      });
+      await completeStep(ctx, stepId, {
+        fallback: true,
+        category: ctx.taxonomy.category,
+        dimensions: fallbackDimensions,
+        error: msg,
+      });
+      await updateAiRun(ctx, runId, { status: "completed", errorMessage: msg });
+
+      for (const dim of fallbackDimensions) {
+        await ctx.db.insert(comparisonDimensions).values({
+          comparisonId: ctx.comparisonId,
+          name: dim.name,
+          description: dim.description || null,
+          weight: normalizeDimensionWeight(dim.weight),
+        });
+      }
+
+      return fallbackDimensions;
+    }
+
     await failStep(ctx, stepId, msg);
     await updateAiRun(ctx, runId, { status: "failed", errorMessage: msg });
     throw error;
@@ -999,6 +1071,7 @@ async function runFactStep(
   });
 
   try {
+    const definition = getComparisonCategoryDefinition(ctx.taxonomy.category);
     const sourceContent = extracted
       .map((e) => `### Source: ${e.title}\nURL: ${e.url}\nContent:\n${e.markdown.slice(0, 3000)}`)
       .join("\n\n---\n\n");
@@ -1007,7 +1080,13 @@ async function runFactStep(
       {
         role: "system" as const,
         content:
-          "You are a fact extraction engine. Extract atomic facts from the provided sources for each entity and dimension. Each fact must have a citation to the source URL. Return valid JSON array only.",
+          [
+            `You are a fact extraction engine for SideBy's ${definition.label} category.`,
+            "Extract atomic, source-backed facts from the provided sources for each entity and dimension.",
+            `Preferred source types: ${definition.sourceRequirements.join(", ") || "primary and reputable secondary sources"}.`,
+            "Each fact must have a citation to the source URL.",
+            "Do not invent values, rankings, or unsupported claims. Return valid JSON array only.",
+          ].join(" "),
       },
       {
         role: "user" as const,
@@ -1031,8 +1110,12 @@ async function runFactStep(
 
     await completeStep(ctx, stepId, { factCount: result.data.length });
 
+    const reusableFacts = await loadReusableFacts(ctx, parsed, dimensions);
     const coveredFacts = ensureFactCoverage(
-      result.data.filter((fact) => fact.value.trim().length > 0),
+      [
+        ...result.data.filter((fact) => fact.value.trim().length > 0),
+        ...reusableFacts,
+      ],
       parsed,
       dimensions,
       extracted,
@@ -1174,6 +1257,67 @@ function buildFallbackFact(
   };
 }
 
+async function getReusableFactCounts(
+  ctx: JobContext,
+  entityNames: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+
+  for (const entityName of entityNames) {
+    const entitySlug = normalizeEntityForReuse(entityName);
+    if (!entitySlug) continue;
+
+    const [row] = await ctx.db
+      .select({ count: sql<number>`count(*)::integer` })
+      .from(entityKnowledge)
+      .where(eq(entityKnowledge.entitySlug, entitySlug));
+
+    counts.set(entitySlug, row?.count || 0);
+  }
+
+  return counts;
+}
+
+async function loadReusableFacts(
+  ctx: JobContext,
+  parsed: ParsedQuery,
+  dimensions: z.infer<typeof DimensionArraySchema>,
+): Promise<ExtractedFact[]> {
+  const dimensionNames = new Set(dimensions.map((dimension) => dimension.name.toLowerCase()));
+  const cachedFacts: ExtractedFact[] = [];
+
+  for (const entity of parsed.entities.slice(0, 2)) {
+    const entitySlug = normalizeEntityForReuse(entity.name);
+    if (!entitySlug) continue;
+
+    const rows = await ctx.db
+      .select({
+        dimension: entityKnowledge.dimension,
+        value: entityKnowledge.value,
+        sourceUrl: entityKnowledge.sourceUrl,
+        confidence: entityKnowledge.confidence,
+      })
+      .from(entityKnowledge)
+      .where(eq(entityKnowledge.entitySlug, entitySlug))
+      .orderBy(sql`${entityKnowledge.usageCount} DESC`, sql`${entityKnowledge.lastVerifiedAt} DESC NULLS LAST`)
+      .limit(12);
+
+    for (const row of rows) {
+      const dimension = row.dimension || "General";
+      if (dimensionNames.size > 0 && !dimensionNames.has(dimension.toLowerCase())) continue;
+      cachedFacts.push({
+        entity: entity.name,
+        dimension,
+        value: row.value,
+        confidence: Math.min(Number(row.confidence || 0.65), 0.85),
+        citation: row.sourceUrl || undefined,
+      });
+    }
+  }
+
+  return cachedFacts;
+}
+
 async function runScoreStep(
   ctx: JobContext,
   parsed: ParsedQuery,
@@ -1278,6 +1422,7 @@ async function runVerdictStep(
   const stepId = await startStep(ctx, runId, "reason", { scoreCount: scores.length });
 
   try {
+    const definition = getComparisonCategoryDefinition(ctx.taxonomy.category);
     const scoreSummary = scores
       .map((s) => `- ${s.entity} | ${s.dimension}: ${s.score}/100`)
       .join("\n");
@@ -1286,7 +1431,14 @@ async function runVerdictStep(
       {
         role: "system" as const,
         content:
-          "You are a comparison verdict engine. Based on the scores and facts, produce a final verdict with overall winner, tradeoffs, confidence, and caveats. Return valid JSON only.",
+          [
+            `You are a comparison verdict engine for SideBy's ${definition.label} category.`,
+            `Tone: ${definition.resultTone}`,
+            definition.disclaimer ? `Include this caveat in the caveats field: ${definition.disclaimer}` : "",
+            "Based on the scores and facts, produce a final verdict with overall winner, tradeoffs, confidence, and caveats.",
+            "Do not make personalized medical, legal, financial, identity, religion, or people-ranking claims.",
+            "Return valid JSON only.",
+          ].filter(Boolean).join(" "),
       },
       {
         role: "user" as const,
@@ -1371,6 +1523,83 @@ function makeResultSlug(a: string, b: string): string {
     .replace(/(^-|-$)/g, "") || "comparison";
 }
 
+function buildVerdictSlots(
+  category: string,
+  winner: string | undefined,
+) {
+  const lead = winner || "Depends on priorities";
+  const slots = {
+    bestOverall: lead,
+    bestValue: winner || "Depends on budget",
+    developers: winner || "Depends on technical needs",
+    teams: winner || "Depends on team needs",
+    students: winner || "Depends on learning goals",
+    powerUsers: winner || "Depends on advanced workflow",
+    ecosystem: winner || "Depends on integrations",
+  };
+
+  if (category === "product") {
+    return {
+      ...slots,
+      developers: winner || "Depends on daily use",
+      teams: winner || "Depends on household or team fit",
+      students: winner || "Depends on budget",
+      powerUsers: winner || "Depends on advanced features",
+      ecosystem: winner || "Depends on accessories and support",
+    };
+  }
+
+  if (category === "place") {
+    return {
+      ...slots,
+      bestValue: winner || "Depends on cost profile",
+      developers: winner || "Depends on work setup",
+      teams: winner || "Depends on relocation needs",
+      students: winner || "Depends on study goals",
+      powerUsers: winner || "Depends on long-stay logistics",
+      ecosystem: winner || "Depends on community fit",
+    };
+  }
+
+  if (category === "finance_info") {
+    return {
+      ...slots,
+      bestValue: winner || "Depends on fees and time horizon",
+      developers: winner || "Not personalized advice",
+      teams: winner || "Depends on account rules",
+      students: winner || "Depends on risk tolerance",
+      powerUsers: winner || "Depends on tax situation",
+      ecosystem: winner || "Verify official rules",
+    };
+  }
+
+  if (category === "health_fitness") {
+    return {
+      ...slots,
+      bestValue: winner || "Depends on access and adherence",
+      developers: winner || "Depends on training goal",
+      teams: winner || "Depends on coaching/support",
+      students: winner || "Depends on beginner fit",
+      powerUsers: winner || "Depends on intensity and recovery",
+      ecosystem: winner || "Check safety caveats",
+    };
+  }
+
+  if (category === "career" || category === "education") {
+    return {
+      ...slots,
+      bestValue: winner || "Depends on cost and goals",
+      developers: winner || "Depends on skill fit",
+      teams: winner || "Depends on employer signal",
+      students: winner || "Depends on learning path",
+      powerUsers: winner || "Depends on long-term optionality",
+      ecosystem: winner || "Depends on market demand",
+    };
+  }
+
+  return slots;
+}
+
 function buildResultJson(
   parsed: ParsedQuery,
   sources: Array<{ url: string; title: string; content: string }>,
@@ -1379,16 +1608,26 @@ function buildResultJson(
   verdict: z.infer<typeof VerdictSchema>,
   dimensions: z.infer<typeof DimensionArraySchema>,
   slugOverride?: string,
+  taxonomy: ComparisonIntent = analyzeComparisonQuery(parsed.entities.map((e) => e.name).join(" vs ")),
 ) {
   const entityA = parsed.entities[0];
   const entityB = parsed.entities[1];
   const nameA = entityA?.name || "A";
   const nameB = entityB?.name || "B";
+  const taxonomySummary = summarizeComparisonTaxonomy(taxonomy);
+  const verdictSlots = buildVerdictSlots(taxonomySummary.category, verdict.winner);
+  const sourceByUrl = new Map(sources.map((source) => [source.url, source]));
+  const findSource = (citation?: string) => {
+    if (!citation) return undefined;
+    return sourceByUrl.get(citation) ||
+      sources.find((source) => citation.includes(source.url) || source.url.includes(citation));
+  };
 
   return {
     slug: slugOverride || makeResultSlug(nameA, nameB),
     query: parsed.entities.map((e) => e.name).join(" vs "),
     context: parsed.context || "",
+    taxonomy: taxonomySummary,
     entities: {
       a: {
         name: nameA,
@@ -1406,13 +1645,7 @@ function buildResultJson(
     sourceCount: sources.length,
     updatedAt: new Date().toISOString(),
     verdict: {
-      bestOverall: verdict.winner || "Depends on priorities",
-      bestValue: verdict.winner || "Depends on usage",
-      developers: verdict.winner || "Depends on stack",
-      teams: verdict.winner || "Depends on team needs",
-      students: "Depends on usage",
-      powerUsers: verdict.winner || "Depends on workflow",
-      ecosystem: verdict.winner || "Depends on integrations",
+      ...verdictSlots,
       summary: getVerdictText(verdict),
     },
     categories: dimensions.map((dim) => {
@@ -1426,17 +1659,20 @@ function buildResultJson(
         verdict: `${dim.name} comparison based on source-backed facts.`,
         facts: facts
           .filter((f) => f.dimension === dim.name)
-          .map((f) => ({
-            entity: f.entity === entityA?.name ? "a" : "b",
-            label: f.dimension,
-            value: f.value,
-            source: f.citation || "Web sources",
-            sourceUrl: "#",
-            sourceTitle: "Source",
-            confidence: f.confidence,
-            freshness: "Fresh" as const,
-            changed: false,
-          })),
+          .map((f) => {
+            const matchedSource = findSource(f.citation);
+            return {
+              entity: f.entity === entityA?.name ? "a" : "b",
+              label: f.dimension,
+              value: f.value,
+              source: matchedSource?.title || f.citation || "Web sources",
+              sourceUrl: f.citation || matchedSource?.url || "#",
+              sourceTitle: matchedSource?.title || (f.citation ? "Cited source" : "Source"),
+              confidence: f.confidence,
+              freshness: taxonomySummary.safetyLevel === "informational" ? "Monitor" as const : "Fresh" as const,
+              changed: false,
+            };
+          }),
       };
     }),
     dimensions: dimensions.map((dim) => {
@@ -1448,16 +1684,20 @@ function buildResultJson(
         fullMark: 100,
       };
     }),
-    consensus: [],
+    consensus: taxonomySummary.disclaimer ? [taxonomySummary.disclaimer] : [],
     contradictions: [],
     sources: sources.map((s) => ({
       title: s.title,
       url: s.url,
-      reliability: "Official" as const,
+      reliability: computeSourceReliability(s.url, s.title) >= 0.9
+        ? "Official" as const
+        : computeSourceReliability(s.url, s.title) >= 0.7
+          ? "Docs" as const
+          : "Community" as const,
       sourceType: "web",
       extractionMethod: "tavily",
       fetchedAt: new Date().toISOString(),
-      confidence: 0.75,
+      confidence: computeSourceReliability(s.url, s.title),
       contentHash: "",
       summary: s.content.slice(0, 300),
     })),
@@ -1560,6 +1800,7 @@ async function buildPartialResult(
       slug: comp.slug,
       query: comp.query,
       context: "Partial result — research did not complete",
+      taxonomy: summarizeComparisonTaxonomy(analyzeComparisonQuery(comp.query)),
       entities: {
         a: {
           name: entityA.normalizedName,

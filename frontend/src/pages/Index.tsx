@@ -7,19 +7,18 @@ import { Search, Sparkles, Zap, ArrowRight, ShieldCheck, Scale, Cpu, Network, Bo
 import { BrandFooter } from "@/components/brand/BrandFooter";
 import { AmbientOrbs } from "@/components/AmbientOrbs";
 import { analyzeQueryIntent } from "@/lib/queryIntent";
+import { SUPPORTED_COMPARISON_CATEGORIES } from "@/lib/comparisonTaxonomy";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const featuredComparisons = [
-  { label: "React vs Vue", category: "Frontend", sources: 12, confidence: 94 },
-  { label: "Supabase vs Firebase", category: "Backend", sources: 10, confidence: 91 },
-  { label: "Neon vs Supabase", category: "Database", sources: 8, confidence: 89 },
-  { label: "Vercel vs Netlify", category: "Hosting", sources: 9, confidence: 92 },
-  { label: "Berlin vs Munich", category: "Cities", sources: 15, confidence: 87 },
-  { label: "Tesla Model 3 vs BMW i4", category: "Cars", sources: 11, confidence: 93 },
-  { label: "MacBook Air vs ThinkPad", category: "Laptops", sources: 10, confidence: 90 },
-];
+const featuredComparisons = SUPPORTED_COMPARISON_CATEGORIES.flatMap((category) =>
+  category.examples.slice(0, 1).map((label) => ({
+    label,
+    category: category.shortLabel,
+    sourceRequirement: category.sourceRequirements[0] || "Source-backed",
+  })),
+).slice(0, 9);
 
 const quickStartComparisons = [
   "React vs Vue for a SaaS",
@@ -27,6 +26,7 @@ const quickStartComparisons = [
   "Cursor vs Windsurf",
   "Notion vs Linear",
   "ChatGPT Plus vs Claude Pro",
+  "ETFs vs mutual funds",
 ];
 
 const Index = () => {
@@ -182,7 +182,7 @@ const Index = () => {
           </h1>
           
           <p className="parallax-desc mt-6 max-w-2xl text-lg text-white/50 font-light leading-relaxed transform-style-3d will-change-transform">
-            Compare anything with cited sources. We research, extract facts, and score dimensions — so you get the full picture with links to every claim.
+            Compare supported decisions with cited sources. SideBy classifies the category, applies the right evidence rules, extracts facts, and scores dimensions with links to every claim.
           </p>
 
           <form onSubmit={handleSearch} className="hero-search mt-10 w-full max-w-2xl group transform-translate-z-10">
@@ -216,9 +216,9 @@ const Index = () => {
                   <span className="font-bold uppercase tracking-widest text-[9px]">
                     AI preflight - {Math.round(queryIntent.confidence * 100)}%
                   </span>
-                  {queryIntent.category && (
+                  {queryIntent.categoryLabel && (
                     <span className="text-[9px] uppercase tracking-widest opacity-70">
-                      {queryIntent.category}
+                      {queryIntent.categoryLabel}
                     </span>
                   )}
                 </div>
@@ -267,20 +267,12 @@ const Index = () => {
                   >
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-[9px] font-bold uppercase tracking-widest text-orange-500/70">{comp.category}</span>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-white/20">{comp.sources} sources</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-white/20">Policy mapped</span>
                     </div>
                     <p className="font-serif text-lg text-[#fdfbf7] mb-2 group-hover:text-orange-400 transition-colors">
                       {comp.label}
                     </p>
-                    <div className="flex items-center gap-2">
-                      <div className="h-1 flex-1 bg-white/[0.06] rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all group-hover:from-orange-400 group-hover:to-orange-300"
-                          style={{ width: `${comp.confidence}%` }}
-                        />
-                      </div>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-white/30">{comp.confidence}%</span>
-                    </div>
+                    <p className="text-xs leading-relaxed text-white/35">{comp.sourceRequirement}</p>
                     <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
                       <ArrowRight className="h-4 w-4 text-orange-400" />
                     </div>

@@ -101,7 +101,8 @@ async function trackCacheHit(
     await db
       .update(queryAnalytics)
       .set({
-        totalCost: sql`${queryAnalytics.totalCost} - ${String(costSaved)}`,
+        cacheHits: sql`coalesce(${queryAnalytics.cacheHits}, 0) + 1`,
+        totalCost: sql`greatest(coalesce(${queryAnalytics.totalCost}, 0) - ${String(costSaved)}, 0)`,
       })
       .where(eq(queryAnalytics.comparisonId, comparisonId));
   } catch (e) {

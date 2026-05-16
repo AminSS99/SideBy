@@ -15,6 +15,10 @@ import {
   feedback as feedbackTable,
 } from "../src/db/schema.js";
 import { comparisonCache } from "./_lib/cache-layer.js";
+import {
+  getComparisonCategoryDefinition,
+  type ComparisonCategory,
+} from "../src/lib/comparisonTaxonomy.js";
 
 export const config = {
   runtime: "nodejs",
@@ -91,12 +95,45 @@ export default async function handler(
       const categories = await db
         .select({
           category: queryAnalytics.queryCategory,
+          status: queryAnalytics.taxonomyStatus,
+          safetyLevel: queryAnalytics.safetyLevel,
           count: sql<number>`count(*)::integer`,
         })
         .from(queryAnalytics)
         .where(sql`${queryAnalytics.queryCategory} IS NOT NULL`)
-        .groupBy(queryAnalytics.queryCategory)
+        .groupBy(queryAnalytics.queryCategory, queryAnalytics.taxonomyStatus, queryAnalytics.safetyLevel)
         .orderBy(desc(sql`count(*)`));
+
+      const safetyLevels = await db
+        .select({
+          safetyLevel: queryAnalytics.safetyLevel,
+          count: sql<number>`count(*)::integer`,
+        })
+        .from(queryAnalytics)
+        .where(sql`${queryAnalytics.safetyLevel} IS NOT NULL`)
+        .groupBy(queryAnalytics.safetyLevel)
+        .orderBy(desc(sql`count(*)`));
+
+      const taxonomyStatuses = await db
+        .select({
+          status: queryAnalytics.taxonomyStatus,
+          count: sql<number>`count(*)::integer`,
+        })
+        .from(queryAnalytics)
+        .where(sql`${queryAnalytics.taxonomyStatus} IS NOT NULL`)
+        .groupBy(queryAnalytics.taxonomyStatus)
+        .orderBy(desc(sql`count(*)`));
+
+      const policyNotes = await db
+        .select({
+          note: queryAnalytics.policyNote,
+          count: sql<number>`count(*)::integer`,
+        })
+        .from(queryAnalytics)
+        .where(sql`${queryAnalytics.policyNote} IS NOT NULL`)
+        .groupBy(queryAnalytics.policyNote)
+        .orderBy(desc(sql`count(*)`))
+        .limit(20);
 
       const [vagueCount] = await db
         .select({ count: sql<number>`count(*)::integer` })
@@ -138,6 +175,11 @@ export default async function handler(
         .select({ count: sql<number>`count(*)::integer` })
         .from(queryAnalytics);
 
+      const [totalBlocked] = await db
+        .select({ count: sql<number>`count(*)::integer` })
+        .from(queryAnalytics)
+        .where(sql`${queryAnalytics.safetyLevel} = 'blocked' OR ${queryAnalytics.taxonomyStatus} IN ('sensitive', 'unsupported')`);
+
       const providerSpend = await db
         .select({
           provider: aiRuns.provider,
@@ -154,6 +196,7 @@ export default async function handler(
           totalCompleted: totalCompleted?.count || 0,
           totalFailed: totalFailed?.count || 0,
           totalVague: vagueCount?.count || 0,
+          totalBlocked: totalBlocked?.count || 0,
           avgCost: avgCost?.avg ? Math.round(avgCost.avg * 10000) / 10000 : null,
         },
         // Phase 12: Cache and reuse stats
@@ -198,8 +241,25 @@ export default async function handler(
         })),
         categories: categories.map((c) => ({
           category: c.category,
+          label: c.category ? getComparisonCategoryDefinition(c.category as ComparisonCategory).label : "Unknown",
+          status: c.status,
+          safetyLevel: c.safetyLevel,
           count: c.count,
         })),
+        taxonomy: {
+          safetyLevels: safetyLevels.map((item) => ({
+            safetyLevel: item.safetyLevel,
+            count: item.count,
+          })),
+          statuses: taxonomyStatuses.map((item) => ({
+            status: item.status,
+            count: item.count,
+          })),
+          policyNotes: policyNotes.map((item) => ({
+            note: item.note,
+            count: item.count,
+          })),
+        },
         feedback: feedbackSummary.map((f) => ({
           rating: f.rating,
           count: f.count,

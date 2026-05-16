@@ -42,6 +42,10 @@ export const serverEnv = {
   redisUrl: optional("REDIS_URL") || optional("KV_URL"),
   redisToken: optional("REDIS_TOKEN") || optional("KV_REST_API_TOKEN"),
 
+  // File storage / knowledge base
+  blobReadWriteToken: optional("BLOB_READ_WRITE_TOKEN"),
+  knowledgeMaxUploadBytes: Number(optional("KNOWLEDGE_MAX_UPLOAD_BYTES") || "26214400"),
+
   // Billing
   paddleApiKey: optional("PADDLE_API_KEY"),
   paddleWebhookSecret: optional("PADDLE_WEBHOOK_SECRET"),

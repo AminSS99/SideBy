@@ -183,6 +183,11 @@ export const comparisons = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     query: text("query").notNull(),
     mode: text("mode").default("default"), // default, multi, chat
+    taxonomyCategory: text("taxonomy_category").default("general_research").notNull(),
+    taxonomyStatus: text("taxonomy_status").default("ready").notNull(),
+    taxonomyConfidence: numeric("taxonomy_confidence", { precision: 4, scale: 3 }),
+    safetyLevel: text("safety_level").default("standard").notNull(),
+    policyNote: text("policy_note"),
     status: comparisonStatusEnum("status").default("queued").notNull(),
     visibility: visibilityEnum("visibility").default("private").notNull(),
     clerkUserId: text("clerk_user_id"),
@@ -213,6 +218,8 @@ export const comparisons = pgTable(
     index("comparisons_workspace_idx").on(table.workspaceId),
     index("comparisons_project_idx").on(table.projectId),
     index("comparisons_status_idx").on(table.status),
+    index("comparisons_taxonomy_category_idx").on(table.taxonomyCategory),
+    index("comparisons_safety_level_idx").on(table.safetyLevel),
     index("comparisons_slug_idx").on(table.slug),
   ],
 );
@@ -475,6 +482,70 @@ export const rateLimitEvents = pgTable(
   ],
 );
 
+// ─── Knowledge Base ─────────────────────────────────────────────────────────
+
+export const knowledgeDocuments = pgTable(
+  "knowledge_documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+    uploadedBy: text("uploaded_by").notNull(),
+    filename: text("filename").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    blobUrl: text("blob_url").notNull(),
+    blobKey: text("blob_key").notNull(),
+    status: text("status").default("indexing").notNull(),
+    errorMessage: text("error_message"),
+    chunkCount: integer("chunk_count").default(0).notNull(),
+    metadata: jsonb("metadata").default({}).notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("knowledge_documents_workspace_idx").on(table.workspaceId),
+    index("knowledge_documents_project_idx").on(table.projectId),
+    index("knowledge_documents_workspace_project_status_idx").on(
+      table.workspaceId,
+      table.projectId,
+      table.status,
+    ),
+    index("knowledge_documents_uploaded_by_idx").on(table.uploadedBy),
+    index("knowledge_documents_blob_key_idx").on(table.blobKey),
+  ],
+);
+
+export const knowledgeChunks = pgTable(
+  "knowledge_chunks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => knowledgeDocuments.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+    chunkIndex: integer("chunk_index").notNull(),
+    text: text("text").notNull(),
+    tokenEstimate: integer("token_estimate").notNull(),
+    embedding: vector("embedding", { dimension: 1536 }).notNull(),
+    metadata: jsonb("metadata").default({}).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("knowledge_chunks_document_idx").on(table.documentId),
+    index("knowledge_chunks_workspace_idx").on(table.workspaceId),
+    index("knowledge_chunks_project_idx").on(table.projectId),
+    index("knowledge_chunks_workspace_document_idx").on(table.workspaceId, table.documentId),
+    uniqueIndex("knowledge_chunks_document_chunk_idx").on(table.documentId, table.chunkIndex),
+  ],
+);
+
 // ─── Subscriptions ──────────────────────────────────────────────────────────
 
 export const subscriptions = pgTable(
@@ -549,6 +620,12 @@ export const queryAnalytics = pgTable(
     canonicalSlug: text("canonical_slug"),
     detectedEntities: jsonb("detected_entities"),
     queryCategory: text("query_category"),
+    taxonomyStatus: text("taxonomy_status"),
+    safetyLevel: text("safety_level"),
+    taxonomyConfidence: numeric("taxonomy_confidence", { precision: 4, scale: 3 }),
+    policyNote: text("policy_note"),
+    policySignals: jsonb("policy_signals"),
+    sourceStrategy: jsonb("source_strategy"),
     isVague: boolean("is_vague").default(false),
     reusedFromId: uuid("reused_from_id"),
     totalCost: numeric("total_cost", { precision: 10, scale: 6 }),
@@ -563,6 +640,8 @@ export const queryAnalytics = pgTable(
     index("qa_comparison_idx").on(table.comparisonId),
     index("qa_canonical_slug_idx").on(table.canonicalSlug),
     index("qa_query_category_idx").on(table.queryCategory),
+    index("qa_taxonomy_status_idx").on(table.taxonomyStatus),
+    index("qa_safety_level_idx").on(table.safetyLevel),
     index("qa_is_vague_idx").on(table.isVague),
     index("qa_created_at_idx").on(table.createdAt),
   ],

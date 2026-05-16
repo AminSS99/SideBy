@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { Download } from "lucide-react";
+import { Download, Info, ShieldCheck } from "lucide-react";
 import { ShareButton } from "@/components/ShareModal";
 import { ExportModal } from "./ExportModal";
 import { EntityCard } from "./EntityCard";
@@ -120,6 +120,12 @@ export const ComparisonHeader = ({
           <span className="ch-top-item text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
             {result.sourceCount} verified sources
           </span>
+          {result.taxonomy && (
+            <span className="ch-top-item inline-flex items-center gap-1.5 rounded-sm border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-orange-300">
+              <ShieldCheck className="h-3 w-3" />
+              {result.taxonomy.label}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 sm:gap-3 print-hidden">
           <button
@@ -180,6 +186,13 @@ export const ComparisonHeader = ({
           </p>
         </div>
       </div>
+
+      {result.taxonomy?.disclaimer && (
+        <div className="mb-10 flex gap-3 rounded-sm border border-amber-500/20 bg-amber-500/10 p-4 text-sm leading-relaxed text-amber-100/80">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+          <p>{result.taxonomy.disclaimer}</p>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 mb-8 sm:mb-10 break-inside-avoid">
         <div className="ch-card perspective-1000"><EntityCard entity={result.entities.a} side="a" /></div>

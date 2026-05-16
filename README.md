@@ -54,6 +54,15 @@ pnpm run dev
 npx vercel dev
 ```
 
+Neon migrations are applied from the checked-in SQL files:
+
+```bash
+cd frontend
+export DATABASE_URL="your-neon-url"
+pnpm db:neon:migrate
+pnpm db:neon:check
+```
+
 The legacy Spring Boot backend still exists while the product migrates to the Vercel beta architecture.
 
 ## Docker

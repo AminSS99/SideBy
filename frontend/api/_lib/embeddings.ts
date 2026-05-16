@@ -39,6 +39,10 @@ export async function embedText(text: string): Promise<number[]> {
 }
 
 export async function embedTexts(texts: string[]): Promise<number[][]> {
+  if (!OPENAI_API_KEY) {
+    throw new Error("OpenAI API key required for embeddings. Set OPENAI_API_KEY.");
+  }
+
   // Batch embeddings - process in chunks of 100
   const results: number[][] = [];
   const chunkSize = 100;

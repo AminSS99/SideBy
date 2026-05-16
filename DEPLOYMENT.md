@@ -6,6 +6,7 @@
 - Clerk account (application created)
 - Neon Postgres database
 - Upstash Redis instance (or Vercel KV)
+- Vercel Blob store for Knowledge Base uploads
 - API keys for: DeepSeek, Tavily, Firecrawl (optional), OpenAI (for embeddings)
 
 ## Step 1: Database Setup
@@ -25,6 +26,7 @@ CLERK_SECRET_KEY=sk_test_...
 DATABASE_URL=postgres://.../db?sslmode=require
 REDIS_URL=https://...upstash.io
 REDIS_TOKEN=... (Upstash REST API token)
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
 
 # AI Providers (at least one LLM + OpenAI for embeddings)
 DEEPSEEK_API_KEY=sk-...
@@ -49,6 +51,8 @@ POSTHOG_KEY=phc_...
 - **DATABASE_URL**: Use Neon's pooled connection string for serverless. The `@neondatabase/serverless` driver handles pooling internally.
 - **REDIS_URL**: Must be an HTTP REST API URL (Upstash or Vercel KV). `redis://localhost:6379` will NOT work because SideBy uses `@upstash/redis`. For local development, create a free Upstash database or use Vercel KV.
 - **OPENAI_API_KEY**: Required even if using DeepSeek as the primary LLM, because OpenAI `text-embedding-3-small` is used for fact embeddings.
+- **BLOB_READ_WRITE_TOKEN**: Required for Knowledge Base originals in Vercel Blob. Keep it server-side only.
+- **KNOWLEDGE_MAX_UPLOAD_BYTES**: Optional backend upload limit override. The UI copy says 50MB; the server defaults to 25MB for Vercel function safety unless overridden.
 
 ## Step 3: Deploy to Vercel
 
@@ -69,13 +73,23 @@ vercel
 ```bash
 cd frontend
 export DATABASE_URL="your-neon-url"
-pnpm db:push
+pnpm db:neon:migrate
+pnpm db:neon:check
 ```
 
 If `db:push` fails with an error about the `vector` extension:
 1. Go to Neon Dashboard → SQL Editor
 2. Run: `CREATE EXTENSION IF NOT EXISTS vector;`
-3. Re-run `pnpm db:push`
+3. Re-run `pnpm db:neon:migrate`
+
+For local schema iteration you can still use Drizzle:
+
+```bash
+cd frontend
+pnpm db:generate
+```
+
+Production and staging should apply the checked-in `neon/migrations/*.sql` files with `pnpm db:neon:migrate` so the database has an auditable migration ledger.
 
 ## Step 5: Seed Example Comparisons
 
@@ -127,6 +141,7 @@ Or manually test these flows:
 - [ ] Ask follow-up question
 - [ ] Export as Markdown
 - [ ] Refresh comparison
+- [ ] Upload PDF/TXT/CSV knowledge-base files and ask chat with selected documents
 - [ ] Publish comparison
 - [ ] View public compare page
 

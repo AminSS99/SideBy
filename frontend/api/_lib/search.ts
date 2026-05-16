@@ -3,6 +3,10 @@
  */
 import { redisGet, redisSet } from "./redis.js";
 import { logger } from "./log.js";
+import {
+  getComparisonCategoryDefinition,
+  type ComparisonCategory,
+} from "../../src/lib/comparisonTaxonomy.js";
 
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
 const TAVILY_API_URL = process.env.TAVILY_API_URL || "https://api.tavily.com/search";
@@ -119,14 +123,17 @@ export async function searchTavily(params: SearchParams): Promise<SearchResult[]
 export async function searchEntitySources(
   entityName: string,
   context?: string,
+  category: ComparisonCategory = "general_research",
 ): Promise<SearchResult[]> {
   const scopedContext = context?.trim();
   const quotedEntity = `"${entityName}"`;
-  const queries = [
-    `${quotedEntity} ${scopedContext || ""} official documentation features`.trim(),
-    `${quotedEntity} ${scopedContext || ""} official pricing plans`.trim(),
-    `${quotedEntity} ${scopedContext || ""} review comparison`.trim(),
-  ];
+  const definition = getComparisonCategoryDefinition(category);
+  const queryAngles = definition.searchAngles.length > 0
+    ? definition.searchAngles.slice(0, 4)
+    : ["official information", "pricing details", "review comparison"];
+  const queries = queryAngles.map((angle) =>
+    `${quotedEntity} ${scopedContext || ""} ${angle}`.trim(),
+  );
 
   const allResults: SearchResult[] = [];
   const seenUrls = new Set<string>();
@@ -149,11 +156,15 @@ export async function searchEntitySources(
   }
 
   return allResults
-    .sort((a, b) => sourcePriority(entityName, b) - sourcePriority(entityName, a))
+    .sort((a, b) => sourcePriority(entityName, b, category) - sourcePriority(entityName, a, category))
     .slice(0, 8);
 }
 
-function sourcePriority(entityName: string, result: SearchResult): number {
+function sourcePriority(
+  entityName: string,
+  result: SearchResult,
+  category: ComparisonCategory,
+): number {
   const normalizedEntity = entityName.toLowerCase().replace(/[^a-z0-9]+/g, "");
   const hints = OFFICIAL_DOMAIN_HINTS[normalizedEntity] || [];
   const url = result.url.toLowerCase();
@@ -162,6 +173,16 @@ function sourcePriority(entityName: string, result: SearchResult): number {
 
   if (hints.some((domain) => url.includes(domain))) priority += 5;
   if (title.includes(entityName.toLowerCase())) priority += 1;
+  if (/\/(docs?|documentation|pricing|features|security|trust|compliance|status)\b/.test(url)) priority += 1.5;
+  if (/\.(gov|edu)\b/.test(url)) priority += category === "place" || category === "finance_info" || category === "health_fitness" ? 3 : 1;
+  if (/investor\.gov|sec\.gov|irs\.gov/.test(url)) priority += category === "finance_info" ? 4 : 0;
+  if (/nih\.gov|cdc\.gov|who\.int|mayoclinic\.org|health\.harvard\.edu/.test(url)) {
+    priority += category === "health_fitness" ? 4 : 0;
+  }
+  if (/stackoverflow\.com|github\.com|developer\.|docs\./.test(url)) {
+    priority += category === "software" || category === "developer_tool" || category === "technical_standard" ? 2 : 0;
+  }
+  if (/reddit\.com|quora\.com/.test(url)) priority -= 0.75;
 
   if (normalizedEntity === "paddle" && /paddlepaddle|paddle\.readthedocs|drupal/.test(url)) {
     priority -= 5;
