@@ -1467,7 +1467,7 @@ function buildResultJson(
         name: dim.name,
         winner: aScore > bScore ? "a" : bScore > aScore ? "b" : "tie",
         verdict: `${dim.name} comparison based on source-backed facts.`,
-        facts: dimFacts.map((f: any) => ({
+        facts: dimFacts.map((f) => ({
           entity: f.entity === entityA?.name ? "a" : "b",
           label: f.dimension,
           value: f.value,
