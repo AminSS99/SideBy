@@ -1,4 +1,5 @@
 import React from "react";
+import { AuthenticateWithRedirectCallback } from "@clerk/clerk-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -117,6 +118,28 @@ const App = () => {
                       }
                     />
                     <Route path="/auth/callback" element={<AuthCallback />} />
+                    <Route
+                      path="/auth/sign-in/sso-callback"
+                      element={
+                        <AuthenticateWithRedirectCallback
+                          signInUrl="/auth/sign-in"
+                          signUpUrl="/auth/sign-up"
+                          signInFallbackRedirectUrl="/app"
+                          signUpFallbackRedirectUrl="/app"
+                        />
+                      }
+                    />
+                    <Route
+                      path="/auth/sign-up/sso-callback"
+                      element={
+                        <AuthenticateWithRedirectCallback
+                          signInUrl="/auth/sign-in"
+                          signUpUrl="/auth/sign-up"
+                          signInFallbackRedirectUrl="/app"
+                          signUpFallbackRedirectUrl="/app"
+                        />
+                      }
+                    />
 
                     {/* Onboarding — for new users without workspaces */}
                     <Route
