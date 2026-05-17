@@ -6,7 +6,10 @@ import { createComparisonJob, listComparisonHistory, sendJson } from "../_lib/si
 import { requireAuth } from "../_lib/auth.js";
 import { withRateLimit } from "../_lib/route-guard.js";
 import { captureServerEvent } from "../_lib/analytics.js";
-import { analyzeComparisonQuery } from "../../src/lib/comparisonTaxonomy.js";
+import {
+  SUPPORTED_COMPARISON_CATEGORIES,
+  analyzeComparisonQuery,
+} from "../../src/lib/comparisonTaxonomy.js";
 import { createDbClient } from "../../src/db/index.js";
 import { queryAnalytics } from "../../src/db/schema.js";
 import { normalizeQuery } from "../_lib/query-normalizer.js";
@@ -24,6 +27,27 @@ export default async function handler(
 ) {
   if (request.method === "GET") {
     try {
+      const action = Array.isArray(request.query.action)
+        ? request.query.action[0]
+        : request.query.action;
+      if (action === "taxonomy") {
+        return sendJson(response, {
+          categories: SUPPORTED_COMPARISON_CATEGORIES.map((category) => ({
+            id: category.id,
+            label: category.label,
+            shortLabel: category.shortLabel,
+            description: category.description,
+            examples: category.examples,
+            blockedExamples: category.blockedExamples,
+            dimensions: category.defaultDimensions,
+            sourceRequirements: category.sourceRequirements,
+            disclaimer: category.disclaimer,
+            safetyLevel: category.safetyLevel,
+            freshnessClass: category.freshnessClass,
+          })),
+        });
+      }
+
       const auth = await requireAuth(request);
       const limitParam = Array.isArray(request.query.limit)
         ? request.query.limit[0]

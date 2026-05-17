@@ -1,23 +1,33 @@
 /**
- * POST /api/knowledge/upload — authenticated multipart upload + synchronous indexing.
+ * Consolidated Knowledge Base API for Hobby-plan function limits.
+ * Rewrites preserve:
+ * - GET /api/knowledge/documents
+ * - POST /api/knowledge/upload
+ * - POST /api/knowledge/search
+ * - DELETE /api/knowledge/documents/:id
  */
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { put } from "@vercel/blob";
+import { del, put } from "@vercel/blob";
+import { eq } from "drizzle-orm";
 import formidable from "formidable";
 import type { File as FormidableFile } from "formidable";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createDbClient } from "../../src/db/index.js";
-import { knowledgeDocuments } from "../../src/db/schema.js";
-import { captureServerEvent } from "../_lib/analytics.js";
-import { requireAuth } from "../_lib/auth.js";
+import { createDbClient } from "../src/db/index.js";
+import { knowledgeDocuments } from "../src/db/schema.js";
+import { captureServerEvent } from "./_lib/analytics.js";
+import { requireAuth } from "./_lib/auth.js";
+import { serverEnv } from "./_lib/env.js";
 import {
   KnowledgeApiError,
   assertKnowledgeScopeAccess,
+  getKnowledgeDocumentForMutation,
+  listKnowledgeDocuments,
   markKnowledgeDocumentError,
   persistKnowledgeChunks,
+  searchKnowledgeChunks,
   toKnowledgeDocumentDto,
-} from "../_lib/knowledge.js";
+} from "./_lib/knowledge.js";
 import {
   KnowledgeProcessingError,
   buildKnowledgeBlobKey,
@@ -25,9 +35,8 @@ import {
   extractTextFromKnowledgeFile,
   getKnowledgeMaxUploadBytes,
   validateKnowledgeFile,
-} from "../_lib/knowledge-processing.js";
-import { serverEnv } from "../_lib/env.js";
-import { sendJson } from "../_lib/sideby.js";
+} from "./_lib/knowledge-processing.js";
+import { sendJson } from "./_lib/sideby.js";
 
 export const config = {
   runtime: "nodejs",
@@ -43,14 +52,160 @@ type ParsedUpload = {
   file: FormidableFile;
 };
 
+type SearchBody = {
+  query?: string;
+  workspaceId?: string;
+  projectId?: string | null;
+  documentIds?: string[];
+  topK?: number;
+};
+
 export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ) {
-  if (request.method !== "POST") {
-    return sendJson(response, { error: "Method not allowed" }, 405);
+  const action = getQueryValue(request.query.action);
+
+  if (action === "documents" && request.method === "GET") {
+    return listDocuments(request, response);
   }
 
+  if (action === "document" && request.method === "DELETE") {
+    return deleteDocument(request, response);
+  }
+
+  if (action === "search" && request.method === "POST") {
+    return searchDocuments(request, response);
+  }
+
+  if (action === "upload" && request.method === "POST") {
+    return uploadDocument(request, response);
+  }
+
+  return sendJson(response, { error: "Method not allowed" }, 405);
+}
+
+async function listDocuments(
+  request: VercelRequest,
+  response: VercelResponse,
+) {
+  try {
+    const auth = await requireAuth(request);
+    const workspaceId = getQueryValue(request.query.workspaceId);
+    const projectId = getQueryValue(request.query.projectId);
+
+    if (!workspaceId) {
+      return sendJson(response, { error: "workspaceId query parameter is required." }, 400);
+    }
+
+    const db = createDbClient();
+    const documents = await listKnowledgeDocuments(db, {
+      userId: auth.userId,
+      workspaceId,
+      projectId,
+    });
+
+    return sendJson(response, { documents });
+  } catch (error) {
+    return sendJson(
+      response,
+      { error: error instanceof Error ? error.message : "Failed to load documents." },
+      getErrorStatus(error),
+    );
+  }
+}
+
+async function searchDocuments(
+  request: VercelRequest,
+  response: VercelResponse,
+) {
+  try {
+    const auth = await requireAuth(request);
+    const body = request.body as SearchBody;
+
+    if (!body.query?.trim()) {
+      return sendJson(response, { error: "query is required." }, 400);
+    }
+    if (!body.workspaceId) {
+      return sendJson(response, { error: "workspaceId is required." }, 400);
+    }
+
+    const db = createDbClient();
+    const chunks = await searchKnowledgeChunks(db, {
+      userId: auth.userId,
+      workspaceId: body.workspaceId,
+      projectId: body.projectId || null,
+      documentIds: Array.isArray(body.documentIds) ? body.documentIds : undefined,
+      query: body.query,
+      topK: body.topK,
+    });
+
+    return sendJson(response, { chunks });
+  } catch (error) {
+    return sendJson(
+      response,
+      { error: error instanceof Error ? error.message : "Knowledge search failed." },
+      getErrorStatus(error),
+    );
+  }
+}
+
+async function deleteDocument(
+  request: VercelRequest,
+  response: VercelResponse,
+) {
+  try {
+    const auth = await requireAuth(request);
+    const id = getQueryValue(request.query.id);
+
+    if (!id) {
+      return sendJson(response, { error: "Document id is required." }, 400);
+    }
+
+    const db = createDbClient();
+    const document = await getKnowledgeDocumentForMutation(db, {
+      userId: auth.userId,
+      documentId: id,
+    });
+
+    const [deletedDocument] = await db
+      .update(knowledgeDocuments)
+      .set({
+        status: "deleted",
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(knowledgeDocuments.id, id))
+      .returning();
+
+    if (serverEnv.blobReadWriteToken) {
+      await del(document.blobUrl, { token: serverEnv.blobReadWriteToken }).catch((error) => {
+        console.warn("Failed to delete Vercel Blob object", error);
+      });
+    }
+
+    captureServerEvent(auth.userId, "knowledge_document_deleted", {
+      document_id: document.id,
+      workspace_id: document.workspaceId,
+      project_id: document.projectId,
+    });
+
+    return sendJson(response, {
+      document: toKnowledgeDocumentDto(deletedDocument),
+    });
+  } catch (error) {
+    return sendJson(
+      response,
+      { error: error instanceof Error ? error.message : "Document delete failed." },
+      getErrorStatus(error),
+    );
+  }
+}
+
+async function uploadDocument(
+  request: VercelRequest,
+  response: VercelResponse,
+) {
   let documentId: string | null = null;
   let authUserId: string | null = null;
   let eventBase: Record<string, unknown> = {};
@@ -200,6 +355,10 @@ function getFormValue(value: string[] | undefined) {
 }
 
 function getFormFile(value: FormidableFile | FormidableFile[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function getQueryValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
