@@ -641,10 +641,12 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[]) => {
     edges.push({ from: "verdict", to: id, color: "#f97316" });
   });
 
+  const categoryIndexMap = new Map(result.categories.map((c, i) => [c.name, i]));
+
   facts.forEach((fact, index) => {
     const id = `fact-${index}`;
     const entityId = fact.entity === "a" ? "entity-a" : "entity-b";
-    const dimIndex = result.categories.findIndex((category) => category.name === fact.category);
+    const dimIndex = categoryIndexMap.get(fact.category) ?? -1;
     nodes.push({
       id,
       type: "fact",
@@ -660,7 +662,21 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[]) => {
     }
   });
 
-  Array.from(sourceMap.values()).slice(0, 5).forEach((source, index) => {
+  const sourceList = Array.from(sourceMap.values());
+  const sourceIndexByUrl = new Map<string, number>();
+  const sourceIndexByTitle = new Map<string, number>();
+  const sourceIndexByHost = new Map<string, number>();
+
+  sourceList.forEach((source, index) => {
+    sourceIndexByUrl.set(source.url, index);
+    sourceIndexByTitle.set(source.title, index);
+    const host = safeHostname(source.url);
+    if (host && !sourceIndexByHost.has(host)) {
+      sourceIndexByHost.set(host, index);
+    }
+  });
+
+  sourceList.slice(0, 5).forEach((source, index) => {
     const id = `source-${index}`;
     nodes.push({
       id,
@@ -674,12 +690,15 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[]) => {
   });
 
   facts.forEach((fact, factIndex) => {
-    const sourceIndex = Array.from(sourceMap.values()).findIndex((source) => (
-      source.url === fact.sourceUrl ||
-      source.title === fact.sourceTitle ||
-      safeHostname(source.url) === safeHostname(fact.sourceUrl)
-    ));
-    if (sourceIndex >= 0) {
+    let sourceIndex = sourceIndexByUrl.get(fact.sourceUrl);
+    if (sourceIndex === undefined) {
+      sourceIndex = sourceIndexByTitle.get(fact.sourceTitle);
+    }
+    if (sourceIndex === undefined) {
+      sourceIndex = sourceIndexByHost.get(safeHostname(fact.sourceUrl));
+    }
+
+    if (sourceIndex !== undefined && sourceIndex >= 0) {
       edges.push({ from: `fact-${factIndex}`, to: `source-${sourceIndex}`, color: "#525252" });
     }
   });

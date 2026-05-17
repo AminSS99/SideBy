@@ -1153,6 +1153,11 @@ async function runFactStep(
       .from(comparisonSources)
       .where(eq(comparisonSources.comparisonId, ctx.comparisonId));
 
+    const entityRowsMap = new Map(entityRows.map(row => [row.normalizedName, row]));
+    const dimensionRowsMap = new Map(dimensionRows.map(row => [row.name, row]));
+    const sourceRowsByUrlMap = new Map(sourceRows.map(row => [row.url, row]));
+    const sourceRowsFallback = sourceRows.map(row => ({ url: row.url, row }));
+
     // Store facts in the production schema. Embeddings remain optional for
     // follow-ups; the answer engine can fall back to confidence/source ranking.
     for (const fact of uniqueFacts) {
@@ -1160,14 +1165,15 @@ async function runFactStep(
       const dimensionName = fact.dimension || "General";
       const citation = fact.citation || "";
       const entityRow =
-        entityRows.find((entity) => entity.normalizedName === entityName) ||
+        entityRowsMap.get(entityName) ||
         entityRows[0];
       if (!entityRow) continue;
-      const dimensionRow = dimensionRows.find((dimension) => dimension.name === dimensionName);
-      const sourceRow =
-        sourceRows.find((source) => source.url === citation) ||
-        sourceRows.find((source) => citation && citation.includes(source.url)) ||
-        sourceRows[0];
+      const dimensionRow = dimensionRowsMap.get(dimensionName);
+      let sourceRow = sourceRowsByUrlMap.get(citation);
+      if (!sourceRow && citation) {
+        sourceRow = sourceRowsFallback.find(s => citation.includes(s.url))?.row;
+      }
+      sourceRow = sourceRow || sourceRows[0];
 
       await ctx.db.insert(comparisonFacts).values({
         comparisonId: ctx.comparisonId,
@@ -1385,13 +1391,16 @@ async function runScoreStep(
       .from(comparisonDimensions)
       .where(eq(comparisonDimensions.comparisonId, ctx.comparisonId));
 
+    const entityRowsMap = new Map(entityRows.map(row => [row.normalizedName, row]));
+    const dimensionRowsMap = new Map(dimensionRows.map(row => [row.name, row]));
+
     // Store scores
     for (const score of result.data) {
       const entityRow =
-        entityRows.find((entity) => entity.normalizedName === score.entity) ||
+        entityRowsMap.get(score.entity) ||
         entityRows[0];
       const dimensionRow =
-        dimensionRows.find((dimension) => dimension.name === score.dimension) ||
+        dimensionRowsMap.get(score.dimension) ||
         dimensionRows[0];
       if (!entityRow || !dimensionRow) continue;
       await ctx.db.insert(comparisonScores).values({
