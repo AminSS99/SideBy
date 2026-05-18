@@ -462,6 +462,6 @@ For responsible disclosure, see [SECURITY.md](./SECURITY.md).
 ---
 
 <p align="center">
-  <strong>Made with ❤️ by the SideBy team</strong><br/>
+  <strong>Made with ❤️ by the SnapSolve team</strong><br/>
   <a href="https://snapsolve.ink">snapsolve.ink</a>
 </p>
