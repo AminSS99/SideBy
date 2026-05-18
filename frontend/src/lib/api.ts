@@ -32,7 +32,12 @@ const isRetryableError = (error: unknown): boolean => {
     // Don't retry 4xx client errors (except 408/429)
     return error.status >= 500 || error.status === 408 || error.status === 429;
   }
-  // Network errors are retryable
+  // Don't retry CORS/DNS errors — they are persistent.
+  // In most browsers these surface as TypeError: "Failed to fetch".
+  if (error instanceof TypeError) {
+    return !error.message.includes("Failed to fetch");
+  }
+  // Retry other network errors (timeouts, connection resets, etc.)
   return true;
 };
 

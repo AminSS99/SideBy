@@ -12,7 +12,15 @@ export default defineConfig(() => ({
   server: {
     host: "::",
     port: process.env.PORT ? parseInt(process.env.PORT) : 5173,
-    allowedHosts: "all"
+    allowedHosts: "all",
+    proxy: process.env.VITE_API_BASE_URL
+      ? undefined
+      : {
+          "/api": {
+            target: "http://localhost:3000",
+            changeOrigin: true,
+          },
+        },
   },
   plugins: [dyadComponentTagger(), react()],
   resolve: {

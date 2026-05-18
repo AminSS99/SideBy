@@ -68,10 +68,6 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
       setError(null);
 
       const res = await apiFetch(buildApiUrl("/api/workspaces"));
-      if (!res.ok) {
-        throw new Error("Unable to load workspaces.");
-      }
-
       const data = (await res.json()) as { workspaces: WorkspaceRecord[] };
       setWorkspaces(data.workspaces);
 

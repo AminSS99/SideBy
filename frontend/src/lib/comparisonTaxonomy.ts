@@ -812,23 +812,45 @@ export const analyzeComparisonQuery = (rawQuery: string): ComparisonIntent => {
   }
 
   const { entityA, entityB } = extractComparisonEntities(query);
+
+  // Run policy signals early so harmful content is blocked regardless of entity shape.
+  const signals = detectPolicySignals(query, entityA || "", entityB || "");
+  const blockingSignal = signals.find((signal) => signal.severity === "block");
+  if (blockingSignal) {
+    return {
+      category: "sensitive",
+      label: COMPARISON_CATEGORIES.sensitive.label,
+      status: "sensitive",
+      canStart: false,
+      safetyLevel: "blocked",
+      confidence: 0.96,
+      entityA: entityA ? titleCase(entityA) : null,
+      entityB: entityB ? titleCase(entityB) : null,
+      message: blockingSignal.message,
+      policyNote: blockingSignal.label,
+      suggestion: "Try a source-backed product, software, place, education, career, finance concept, fitness concept, or method comparison.",
+      sourceRequirements: [],
+      signals,
+    };
+  }
+
   if (!entityA || !entityB) {
-    const { category, confidence } = detectComparisonCategory(query, entityA, entityB);
+    const { category, confidence } = detectComparisonCategory(query, "", "");
     const definition = getComparisonCategoryDefinition(category);
     return {
       category,
       label: definition.label,
-      status: "needs_entities",
-      canStart: false,
+      status: "ready",
+      canStart: true,
       safetyLevel: definition.safetyLevel,
-      confidence: Math.min(confidence, 0.4),
+      confidence: Math.min(confidence, 0.55),
       entityA: entityA ? titleCase(entityA) : null,
       entityB: entityB ? titleCase(entityB) : null,
-      message: "Use a clear A vs B shape so research can target the right sources.",
+      message: "SideBy will try to extract comparable options from your query.",
       suggestion: suggestionFor(category, entityA),
       disclaimer: definition.disclaimer,
       sourceRequirements: definition.sourceRequirements,
-      signals: [],
+      signals,
     };
   }
 
@@ -851,26 +873,6 @@ export const analyzeComparisonQuery = (rawQuery: string): ComparisonIntent => {
       disclaimer: definition.disclaimer,
       sourceRequirements: definition.sourceRequirements,
       signals: [],
-    };
-  }
-
-  const signals = detectPolicySignals(query, entityA, entityB);
-  const blockingSignal = signals.find((signal) => signal.severity === "block");
-  if (blockingSignal) {
-    return {
-      category: "sensitive",
-      label: COMPARISON_CATEGORIES.sensitive.label,
-      status: "sensitive",
-      canStart: false,
-      safetyLevel: "blocked",
-      confidence: 0.96,
-      entityA: titleCase(entityA),
-      entityB: titleCase(entityB),
-      message: blockingSignal.message,
-      policyNote: blockingSignal.label,
-      suggestion: "Try a source-backed product, software, place, education, career, finance concept, fitness concept, or method comparison.",
-      sourceRequirements: [],
-      signals,
     };
   }
 

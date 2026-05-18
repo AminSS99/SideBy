@@ -90,10 +90,6 @@ export const ProjectsProvider = ({ children }: { children: React.ReactNode }) =>
       const res = await apiFetch(
         buildApiUrl(`/api/projects?workspaceId=${encodeURIComponent(activeWorkspace.id)}`),
       );
-      if (!res.ok) {
-        throw new Error("Unable to load projects.");
-      }
-
       const data = (await res.json()) as { projects: ProjectRecord[] };
       setProjects(data.projects);
 
@@ -134,11 +130,6 @@ export const ProjectsProvider = ({ children }: { children: React.ReactNode }) =>
         description,
       }),
     });
-
-    if (!res.ok) {
-      const errorData = (await res.json().catch(() => ({}))) as { error?: string };
-      throw new Error(errorData.error || "Failed to create project.");
-    }
 
     const data = (await res.json()) as { project: ProjectRecord };
     setProjects((current) => [data.project, ...current]);

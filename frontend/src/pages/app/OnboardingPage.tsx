@@ -50,10 +50,7 @@ const OnboardingPage = () => {
         }),
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to create workspace.");
-      }
+      const data = (await res.json()) as { workspace?: { id: string } };
 
       toast.success("Workspace created!", {
         description: "Redirecting to your dashboard...",

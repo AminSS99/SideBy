@@ -14,10 +14,24 @@ export const config = {
   maxDuration: 15,
 };
 
+function setCorsHeaders(res: VercelResponse, req: VercelRequest) {
+  const origin = req.headers.origin || "*";
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+}
+
 export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ) {
+  setCorsHeaders(response, request);
+
+  if (request.method === "OPTIONS") {
+    return response.status(204).end();
+  }
+
   const resource = getQueryValue(request.query.resource);
 
   if (resource === "projects") {

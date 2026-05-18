@@ -1,9 +1,16 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "sideby",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "AI-powered research and comparison platform with source-backed results",
   "type": "module",
   "packageManager": "pnpm@10.33.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AminSS99/SideBy.git"
+  },
+  "homepage": "https://snapsolve.ink",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

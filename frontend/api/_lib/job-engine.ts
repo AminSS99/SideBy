@@ -235,7 +235,19 @@ function normalizeParsedQuery(
 }
 
 function parseQueryFallback(query: string): ParsedQuery {
-  const [leftRaw, rightRaw = ""] = query.split(/\s+vs\.?\s+/i);
+  const parts = query.split(/\s+vs\.?\s+/i);
+
+  // If no explicit "vs" separator was found, don't invent a second entity.
+  // Let the job fail gracefully with a clear error.
+  if (parts.length < 2) {
+    return {
+      entities: [{ name: query.trim() }],
+      context: undefined,
+      comparisonType: undefined,
+    };
+  }
+
+  const [leftRaw, rightRaw = ""] = parts;
   const [rightEntityRaw, contextTail] = rightRaw.split(/\s+for\s+/i);
   const cleanName = (value: string, fallback: string) =>
     value
@@ -764,9 +776,10 @@ async function runParseStep(ctx: JobContext) {
       return parsed;
     }
 
-    await failStep(ctx, stepId, msg);
-    await updateAiRun(ctx, runId, { status: "failed", errorMessage: msg });
-    throw error;
+    const userMessage = "Could not identify two distinct options to compare. Try a query like 'A vs B'.";
+    await failStep(ctx, stepId, userMessage);
+    await updateAiRun(ctx, runId, { status: "failed", errorMessage: userMessage });
+    throw new Error(userMessage);
   }
 }
 
