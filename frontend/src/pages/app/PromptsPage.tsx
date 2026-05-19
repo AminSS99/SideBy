@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { Terminal, Plus, Search, Play, Copy, Edit3, Trash2, X, Save, Variable } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -6,6 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { copyText } from "@/lib/clipboard";
 import { GlowCard } from "@/components/GlowCard";
+import { apiFetch } from "@/lib/api";
+import { buildApiUrl } from "@/config/env";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface PromptTemplate {
   id: string;
@@ -44,7 +47,8 @@ const extractVariables = (text: string): string[] => {
 };
 
 const PromptsPage = () => {
-  const [prompts, setPrompts] = useState<PromptTemplate[]>(initialPrompts);
+  const { activeWorkspace } = useWorkspace();
+  const [prompts, setPrompts] = useState<PromptTemplate[]>([]);
   const [search, setSearch] = useState("");
   
   // Modal state
@@ -59,6 +63,40 @@ const PromptsPage = () => {
       .from(".prompt-controls", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6")
       .from(".prompt-card", { y: 20, opacity: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }, "-=0.4");
   }, { scope: containerRef });
+
+  useEffect(() => {
+    const loadPrompts = async () => {
+      const query = activeWorkspace?.id ? `?workspaceId=${activeWorkspace.id}` : "";
+      const response = await apiFetch(buildApiUrl(`/api/prompts${query}`));
+      const data = (await response.json()) as {
+        prompts: Array<{
+          id: string;
+          name: string;
+          description: string;
+          systemPrompt: string;
+          variablesSchema: Record<string, unknown>;
+          updatedAt: string;
+        }>;
+      };
+      setPrompts(data.prompts.map((prompt) => ({
+        id: prompt.id,
+        name: prompt.name,
+        description: prompt.description,
+        content: prompt.systemPrompt,
+        variables: Array.isArray(prompt.variablesSchema?.variables)
+          ? prompt.variablesSchema.variables as string[]
+          : extractVariables(prompt.systemPrompt),
+        lastEdited: prompt.updatedAt,
+      })));
+    };
+
+    void loadPrompts().catch((error) => {
+      toast.error("Unable to load prompts", {
+        description: error instanceof Error ? error.message : "Try again shortly.",
+      });
+      setPrompts(initialPrompts);
+    });
+  }, [activeWorkspace?.id]);
 
   const filteredPrompts = prompts.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -90,18 +128,36 @@ const PromptsPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    await apiFetch(buildApiUrl(`/api/prompts?id=${id}`), { method: "DELETE" });
     setPrompts(prev => prev.filter(p => p.id !== id));
     toast.success("Prompt deleted");
   };
 
-  const handleSave = (savedPrompt: PromptTemplate) => {
+  const handleSave = async (savedPrompt: PromptTemplate) => {
+    const exists = prompts.some(p => p.id === savedPrompt.id);
+    const response = await apiFetch(buildApiUrl("/api/prompts"), {
+      method: exists ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: exists ? savedPrompt.id : undefined,
+        workspaceId: activeWorkspace?.id,
+        name: savedPrompt.name,
+        description: savedPrompt.description,
+        systemPrompt: savedPrompt.content,
+        variablesSchema: { variables: savedPrompt.variables },
+      }),
+    });
+    const data = (await response.json()) as {
+      prompt: { id: string; updatedAt: string };
+    };
+
     setPrompts(prev => {
       const exists = prev.some(p => p.id === savedPrompt.id);
       if (exists) {
-        return prev.map(p => p.id === savedPrompt.id ? { ...savedPrompt, lastEdited: new Date().toISOString() } : p);
+        return prev.map(p => p.id === savedPrompt.id ? { ...savedPrompt, id: data.prompt.id, lastEdited: data.prompt.updatedAt } : p);
       } else {
-        return [{ ...savedPrompt, lastEdited: new Date().toISOString() }, ...prev];
+        return [{ ...savedPrompt, id: data.prompt.id, lastEdited: data.prompt.updatedAt }, ...prev];
       }
     });
     setIsModalOpen(false);
@@ -203,7 +259,7 @@ const PromptsPage = () => {
                   <Edit3 className="h-4 w-4" />
                 </button>
                 <button 
-                  onClick={() => handleDelete(prompt.id)}
+                  onClick={() => void handleDelete(prompt.id).catch((error) => toast.error("Delete failed", { description: error instanceof Error ? error.message : "Try again shortly." }))}
                   className="p-2 text-[#fdfbf7]/40 hover:text-red-400 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -230,7 +286,7 @@ const PromptsPage = () => {
           <PromptEditorModal 
             prompt={editingPrompt} 
             onClose={() => setIsModalOpen(false)} 
-            onSave={handleSave} 
+            onSave={(prompt) => void handleSave(prompt).catch((error) => toast.error("Save failed", { description: error instanceof Error ? error.message : "Try again shortly." }))} 
           />
         )}
       </AnimatePresence>

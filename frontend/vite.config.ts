@@ -28,4 +28,42 @@ export default defineConfig(() => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("@clerk")) {
+              return "vendor-clerk";
+            }
+            if (id.includes("recharts") || id.includes("d3")) {
+              return "vendor-charts";
+            }
+            if (id.includes("gsap")) {
+              return "vendor-gsap";
+            }
+            if (id.includes("framer-motion")) {
+              return "vendor-motion";
+            }
+            if (id.includes("lucide-react")) {
+              return "vendor-icons";
+            }
+            if (id.includes("@radix-ui")) {
+              return "vendor-radix";
+            }
+            if (id.includes("@sentry")) {
+              return "vendor-sentry";
+            }
+            if (id.includes("@tanstack")) {
+              return "vendor-tanstack";
+            }
+            if (id.includes("react") || id.includes("scheduler")) {
+              return "vendor-react-core";
+            }
+            return "vendor";
+          }
+        },
+      },
+    },
+  },
 }));

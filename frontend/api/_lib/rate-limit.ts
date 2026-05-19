@@ -5,6 +5,9 @@
  */
 import { redisGet, redisSet, redisIncrement, getRedis } from "./redis.js";
 import { logger } from "./log.js";
+import { and, eq, inArray, or } from "drizzle-orm";
+import { createDbClient } from "../../src/db/index.js";
+import { organizations, subscriptions } from "../../src/db/schema.js";
 
 // Warn once if Redis is not configured — rate limits will not be enforced
 const redisAvailable = !!getRedis();
@@ -19,6 +22,7 @@ const FREE_LIMITS = {
   followUpsPerDay: Number(process.env.FREE_FOLLOWUPS_PER_DAY || "10"),
   refreshesPerDay: Number(process.env.FREE_REFRESHES_PER_DAY || "3"),
   exportsPerDay: Number(process.env.FREE_EXPORTS_PER_DAY || "10"),
+  watchlistsPerDay: Number(process.env.FREE_WATCHLISTS_PER_DAY || "5"),
 };
 
 // ─── Rate Limit Types ───────────────────────────────────────────────────────
@@ -27,7 +31,8 @@ export type RateLimitAction =
   | "comparison"
   | "followUp"
   | "refresh"
-  | "export";
+  | "export"
+  | "watchlist";
 
 interface RateLimitResult {
   allowed: boolean;
@@ -35,6 +40,58 @@ interface RateLimitResult {
   remaining: number;
   resetAt: number; // Unix timestamp
   window: string;
+}
+
+type BillingPlan = "free" | "pro" | "team" | "business";
+
+async function getEffectiveBillingPlan(
+  userId: string | null,
+  orgId: string | null,
+): Promise<BillingPlan> {
+  if (!userId && !orgId) return "free";
+
+  try {
+    const db = createDbClient();
+
+    if (orgId) {
+      const [org] = await db
+        .select({ plan: organizations.plan })
+        .from(organizations)
+        .where(eq(organizations.id, orgId))
+        .limit(1);
+      if (org?.plan && org.plan !== "free") return org.plan;
+    }
+
+    const rows = await db
+      .select({ status: subscriptions.status, organizationId: subscriptions.organizationId })
+      .from(subscriptions)
+      .where(
+        and(
+          inArray(subscriptions.status, ["active", "trialing"]),
+          orgId
+            ? or(eq(subscriptions.organizationId, orgId), eq(subscriptions.userId, userId || ""))
+            : eq(subscriptions.userId, userId || ""),
+        ),
+      )
+      .limit(1);
+
+    return rows.length > 0 ? "pro" : "free";
+  } catch (error) {
+    logger.warn("Unable to resolve billing plan; falling back to free limits", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return "free";
+  }
+}
+
+function unlimitedResult(): RateLimitResult {
+  return {
+    allowed: true,
+    limit: Number.MAX_SAFE_INTEGER,
+    remaining: Number.MAX_SAFE_INTEGER,
+    resetAt: Date.now() + 86400000,
+    window: "plan",
+  };
 }
 
 // ─── Daily Usage Caps ───────────────────────────────────────────────────────
@@ -93,7 +150,7 @@ export async function getUsageStatus(
   keyType: "user" | "ip" | "org",
   keyValue: string,
 ): Promise<Record<RateLimitAction, { used: number; limit: number; remaining: number }>> {
-  const actions: RateLimitAction[] = ["comparison", "followUp", "refresh", "export"];
+  const actions: RateLimitAction[] = ["comparison", "followUp", "refresh", "export", "watchlist"];
   const status = {} as Record<RateLimitAction, { used: number; limit: number; remaining: number }>;
 
   for (const action of actions) {
@@ -147,7 +204,19 @@ export async function checkRouteLimit(
   userId: string | null,
   ip: string | null,
   action: RateLimitAction,
+  orgId: string | null = null,
 ): Promise<RateLimitResult> {
+  const plan = await getEffectiveBillingPlan(userId, orgId);
+  if (plan !== "free") {
+    const burst = userId
+      ? await checkRateLimit("user", userId, action, 60)
+      : ip
+        ? await checkRateLimit("ip", ip, action, 30)
+        : null;
+    if (burst && !burst.allowed) return burst;
+    return unlimitedResult();
+  }
+
   // Check user limit first (if authenticated)
   if (userId) {
     const userLimit = await checkUsageLimit("user", userId, action);

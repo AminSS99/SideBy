@@ -92,6 +92,7 @@ export const users = pgTable(
     email: text("email"),
     name: text("name"),
     avatarUrl: text("avatar_url"),
+    paddleCustomerId: text("paddle_customer_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -208,6 +209,7 @@ export const comparisons = pgTable(
     searchesUsed: integer("searches_used").default(0),
     freshnessClass: text("freshness_class").default("medium"),
     reuseSourceId: uuid("reuse_source_id"),
+    queryEmbedding: vector("query_embedding", { dimension: 1536 }),
     lastRefreshedAt: timestamp("last_refreshed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -221,6 +223,29 @@ export const comparisons = pgTable(
     index("comparisons_taxonomy_category_idx").on(table.taxonomyCategory),
     index("comparisons_safety_level_idx").on(table.safetyLevel),
     index("comparisons_slug_idx").on(table.slug),
+  ],
+);
+
+// ─── Comparison Versions ───────────────────────────────────────────────────
+
+export const comparisonVersions = pgTable(
+  "comparison_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    comparisonId: uuid("comparison_id")
+      .notNull()
+      .references(() => comparisons.id, { onDelete: "cascade" }),
+    versionNumber: integer("version_number").notNull(),
+    result: jsonb("result"),
+    sourceCount: integer("source_count").default(0).notNull(),
+    overallConfidence: numeric("overall_confidence", { precision: 4, scale: 3 }),
+    changeSummary: jsonb("change_summary").default({}).notNull(),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("comparison_versions_comparison_idx").on(table.comparisonId),
+    uniqueIndex("comparison_versions_number_idx").on(table.comparisonId, table.versionNumber),
   ],
 );
 
@@ -320,6 +345,7 @@ export const comparisonFacts = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     previousValue: text("previous_value"),
     changedAt: timestamp("changed_at", { withTimezone: true }),
+    embedding: vector("embedding", { dimension: 1536 }),
     metadata: jsonb("metadata").default({}).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -570,6 +596,176 @@ export const subscriptions = pgTable(
   ],
 );
 
+// ─── Durable User/Workspace Settings ───────────────────────────────────────
+
+export const userSettings = pgTable(
+  "user_settings",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    preferences: jsonb("preferences").default({}).notNull(),
+    notificationPrefs: jsonb("notification_prefs").default({}).notNull(),
+    defaultAiModel: text("default_ai_model"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+);
+
+export const workspaceSettings = pgTable(
+  "workspace_settings",
+  {
+    workspaceId: uuid("workspace_id")
+      .primaryKey()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    branding: jsonb("branding").default({}).notNull(),
+    defaultDimensions: jsonb("default_dimensions").default([]).notNull(),
+    notificationPrefs: jsonb("notification_prefs").default({}).notNull(),
+    defaultVisibility: visibilityEnum("default_visibility").default("private").notNull(),
+    sharedKnowledgeBase: boolean("shared_knowledge_base").default(true).notNull(),
+    updatedBy: text("updated_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+);
+
+// ─── Developer API Keys ─────────────────────────────────────────────────────
+
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    keyPrefix: text("key_prefix").notNull(),
+    keyHash: text("key_hash").notNull().unique(),
+    scopes: jsonb("scopes").default([]).notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("api_keys_user_idx").on(table.userId),
+    index("api_keys_org_idx").on(table.organizationId),
+    index("api_keys_workspace_idx").on(table.workspaceId),
+    index("api_keys_prefix_idx").on(table.keyPrefix),
+  ],
+);
+
+// ─── Prompt Studio ──────────────────────────────────────────────────────────
+
+export const promptTemplates = pgTable(
+  "prompt_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+    createdBy: text("created_by").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    systemPrompt: text("system_prompt").notNull(),
+    userPromptTemplate: text("user_prompt_template"),
+    variablesSchema: jsonb("variables_schema").default({}).notNull(),
+    isDefault: boolean("is_default").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("prompt_templates_workspace_idx").on(table.workspaceId),
+    index("prompt_templates_org_idx").on(table.organizationId),
+    index("prompt_templates_created_by_idx").on(table.createdBy),
+  ],
+);
+
+// ─── Team Invitations ───────────────────────────────────────────────────────
+
+export const teamInvitations = pgTable(
+  "team_invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: roleEnum("role").default("member").notNull(),
+    status: text("status").default("pending").notNull(),
+    clerkInvitationId: text("clerk_invitation_id"),
+    invitedBy: text("invited_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("team_invitations_org_idx").on(table.organizationId),
+    index("team_invitations_workspace_idx").on(table.workspaceId),
+    index("team_invitations_email_idx").on(table.email),
+  ],
+);
+
+// ─── Monitoring, Decision Matrices, Source Reliability ──────────────────────
+
+export const watchlists = pgTable(
+  "watchlists",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    comparisonId: uuid("comparison_id").references(() => comparisons.id, { onDelete: "cascade" }),
+    createdBy: text("created_by").notNull(),
+    name: text("name").notNull(),
+    query: text("query").notNull(),
+    cadence: text("cadence").default("weekly").notNull(),
+    alertThreshold: numeric("alert_threshold", { precision: 4, scale: 3 }).default("0.100").notNull(),
+    channels: jsonb("channels").default({}).notNull(),
+    status: text("status").default("active").notNull(),
+    lastRunAt: timestamp("last_run_at", { withTimezone: true }),
+    nextRunAt: timestamp("next_run_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("watchlists_workspace_idx").on(table.workspaceId),
+    index("watchlists_comparison_idx").on(table.comparisonId),
+    index("watchlists_created_by_idx").on(table.createdBy),
+    index("watchlists_next_run_idx").on(table.nextRunAt),
+  ],
+);
+
+export const decisionMatrices = pgTable(
+  "decision_matrices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    comparisonId: uuid("comparison_id").references(() => comparisons.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    weights: jsonb("weights").default({}).notNull(),
+    result: jsonb("result").default({}).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("decision_matrices_comparison_idx").on(table.comparisonId),
+    index("decision_matrices_user_idx").on(table.userId),
+  ],
+);
+
+export const sourceFeedback = pgTable(
+  "source_feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    comparisonId: uuid("comparison_id").references(() => comparisons.id, { onDelete: "cascade" }),
+    userId: text("user_id"),
+    sourceUrl: text("source_url").notNull(),
+    vote: integer("vote").notNull(),
+    reason: text("reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("source_feedback_comparison_idx").on(table.comparisonId),
+    index("source_feedback_url_idx").on(table.sourceUrl),
+  ],
+);
+
 // ─── Webhook Events ─────────────────────────────────────────────────────────
 
 export const webhookEvents = pgTable(
@@ -697,3 +893,27 @@ export const auditLogs = pgTable(
     index("audit_logs_created_at_idx").on(table.createdAt),
   ],
 );
+
+// ─── Webhook Subscriptions ──────────────────────────────────────────────────
+
+export const webhookSubscriptions = pgTable(
+  "webhook_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    secret: text("secret").notNull(),
+    eventTypes: jsonb("event_types").default([]).notNull(),
+    active: boolean("active").default(true).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("webhook_subscriptions_user_idx").on(table.userId),
+    index("webhook_subscriptions_org_idx").on(table.organizationId),
+    index("webhook_subscriptions_workspace_idx").on(table.workspaceId),
+  ],
+);
+

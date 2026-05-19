@@ -6,6 +6,8 @@ type ClerkGlobal = {
   session?: ClerkSession | null;
 };
 
+let csrfTokenPromise: Promise<string | null> | null = null;
+
 export const getClerkToken = async () => {
   if (typeof window === "undefined") {
     return null;
@@ -13,6 +15,36 @@ export const getClerkToken = async () => {
 
   const clerk = (window as unknown as { Clerk?: ClerkGlobal }).Clerk;
   return (await clerk?.session?.getToken()) ?? null;
+};
+
+const isUnsafeMethod = (method?: string) => {
+  const normalized = (method || "GET").toUpperCase();
+  return normalized === "POST" || normalized === "PUT" || normalized === "PATCH" || normalized === "DELETE";
+};
+
+const isCsrfEndpoint = (input: RequestInfo | URL) => {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+  return url.includes("/api/csrf");
+};
+
+const getCsrfToken = async (authorizationToken: string | null) => {
+  if (typeof window === "undefined") return null;
+  if (!csrfTokenPromise) {
+    csrfTokenPromise = fetch("/api/csrf", {
+      method: "GET",
+      credentials: "include",
+      headers: authorizationToken
+        ? { Authorization: `Bearer ${authorizationToken}` }
+        : undefined,
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const data = (await response.json()) as { csrfToken?: string };
+        return data.csrfToken || null;
+      })
+      .catch(() => null);
+  }
+  return csrfTokenPromise;
 };
 
 export class ApiError extends Error {
@@ -60,6 +92,13 @@ export const apiFetch = async (
 
       if (token && !headers.has("Authorization")) {
         headers.set("Authorization", `Bearer ${token}`);
+      }
+
+      if (isUnsafeMethod(init.method) && !isCsrfEndpoint(input) && !headers.has("X-SideBy-CSRF")) {
+        const csrfToken = await getCsrfToken(token);
+        if (csrfToken) {
+          headers.set("X-SideBy-CSRF", csrfToken);
+        }
       }
 
       const response = await fetch(input, {

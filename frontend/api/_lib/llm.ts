@@ -143,6 +143,83 @@ const callDeepSeek = async (messages: LLMMessage[]): Promise<string> => {
   return data.choices[0].message.content;
 };
 
+const openAiCompatibleConfig = (provider: Extract<LLMProvider, "openai" | "deepseek">) => {
+  if (provider === "openai") {
+    return {
+      key: process.env.OPENAI_API_KEY!,
+      url: process.env.OPENAI_API_URL || "https://api.openai.com/v1/chat/completions",
+      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    };
+  }
+
+  return {
+    key: process.env.DEEPSEEK_API_KEY!,
+    url: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/v1/chat/completions",
+    model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+  };
+};
+
+const callOpenAICompatibleStream = async (
+  provider: Extract<LLMProvider, "openai" | "deepseek">,
+  messages: LLMMessage[],
+  onToken: (token: string) => void,
+): Promise<string> => {
+  const config = openAiCompatibleConfig(provider);
+  const response = await fetch(config.url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.key}`,
+    },
+    body: JSON.stringify({
+      model: config.model,
+      messages,
+      temperature: 0.3,
+      max_tokens: 4000,
+      stream: true,
+    }),
+  });
+
+  if (!response.ok || !response.body) {
+    throw new Error(`${provider} stream error: ${response.status} ${await response.text()}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let fullContent = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("data:")) continue;
+      const payload = trimmed.slice(5).trim();
+      if (!payload || payload === "[DONE]") continue;
+
+      try {
+        const data = JSON.parse(payload) as {
+          choices?: Array<{ delta?: { content?: string } }>;
+        };
+        const token = data.choices?.[0]?.delta?.content || "";
+        if (!token) continue;
+        fullContent += token;
+        onToken(token);
+      } catch {
+        // Ignore malformed provider heartbeat chunks.
+      }
+    }
+  }
+
+  return fullContent;
+};
+
 const providers: Record<
   LLMProvider,
   (messages: LLMMessage[]) => Promise<string>
@@ -171,6 +248,34 @@ export const llmChat = async (messages: LLMMessage[]): Promise<LLMResponse> => {
   };
 
   return { content, model: models[provider], provider };
+};
+
+export const llmChatStream = async (
+  messages: LLMMessage[],
+  onToken: (token: string) => void,
+): Promise<LLMResponse> => {
+  const provider = detectProvider();
+  if (!provider) {
+    throw new Error(
+      "No LLM provider configured. Set OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or DEEPSEEK_API_KEY.",
+    );
+  }
+
+  const models: Record<LLMProvider, string> = {
+    openai: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    anthropic: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
+    gemini: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+    deepseek: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+  };
+
+  if (provider === "openai" || provider === "deepseek") {
+    const content = await callOpenAICompatibleStream(provider, messages, onToken);
+    return { content, model: models[provider], provider };
+  }
+
+  const result = await llmChat(messages);
+  if (result.content) onToken(result.content);
+  return result;
 };
 
 export const isLLMAvailable = (): boolean => detectProvider() !== null;

@@ -2,12 +2,25 @@ import { getComparisonJob, sendJson } from "../_lib/sideby.js";
 import { requireAuth } from "../_lib/auth.js";
 import { createDbClient } from "../../src/db/index.js";
 import { feedback } from "../../src/db/schema.js";
+import { canAccessComparison } from "../_lib/db-auth.js";
+import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
   runtime: "nodejs",
   maxDuration: 15,
+  api: {
+    bodyParser: {
+      sizeLimit: "512kb",
+    },
+  },
 };
+
+const FeedbackBodySchema = z.object({
+  rating: z.number().int().min(1).max(5).optional(),
+  correction: z.string().trim().max(4000).optional(),
+  sourceReport: z.string().trim().max(4000).optional(),
+});
 
 export default async function handler(
   request: VercelRequest,
@@ -48,13 +61,14 @@ export default async function handler(
         return sendJson(response, { error: "Comparison id is required." }, 400);
       }
 
-      const body = request.body as {
-        rating?: number;
-        correction?: string;
-        sourceReport?: string;
-      };
+      const body = FeedbackBodySchema.parse(request.body || {});
 
       const db = createDbClient();
+      const hasAccess = await canAccessComparison(db, auth.userId, id);
+      if (!hasAccess) {
+        return sendJson(response, { error: "Comparison not found." }, 404);
+      }
+
       await db.insert(feedback).values({
         comparisonId: id,
         clerkUserId: auth.userId,
@@ -65,10 +79,15 @@ export default async function handler(
 
       return sendJson(response, { success: true });
     } catch (error) {
+      const status = error instanceof z.ZodError ? 400 : 500;
       return sendJson(
         response,
-        { error: error instanceof Error ? error.message : "Unable to submit feedback." },
-        500,
+        {
+          error: error instanceof z.ZodError
+            ? error.errors[0]?.message || "Invalid request body."
+            : error instanceof Error ? error.message : "Unable to submit feedback.",
+        },
+        status,
       );
     }
   }

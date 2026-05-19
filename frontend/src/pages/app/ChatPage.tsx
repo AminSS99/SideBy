@@ -118,7 +118,15 @@ const ChatPage = () => {
     };
 
     const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+    const assistantId = (Date.now() + 1).toString();
+    setMessages([
+      ...newMessages,
+      {
+        id: assistantId,
+        role: "assistant",
+        content: "",
+      },
+    ]);
     setInput("");
     setIsLoading(true);
 
@@ -133,36 +141,104 @@ const ChatPage = () => {
 
       const res = await apiFetch(buildApiUrl("/api/chat"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
         body: JSON.stringify({
           messages: apiMessages,
           workspaceId: activeWorkspace?.id,
           projectId: activeProject?.id ?? null,
           documentIds: selectedDocumentIds,
+          stream: true,
         }),
       });
 
-      if (!res.ok) {
-        throw new Error("Failed to get response");
+      if (!res.body) {
+        const data = await res.json();
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantId
+              ? { ...message, content: data.answer || "Sorry, I couldn't generate a response." }
+              : message,
+          ),
+        );
+        return;
       }
 
-      const data = await res.json();
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let streamedContent = "";
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: data.answer || "Sorry, I couldn't generate a response.",
+      const applyAssistantContent = (content: string, append = false) => {
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantId
+              ? { ...message, content: append ? message.content + content : content }
+              : message,
+          ),
+        );
       };
-      setMessages((prev) => [...prev, assistantMessage]);
+
+      const handleSseBlock = (block: string) => {
+        const event = block
+          .split("\n")
+          .find((line) => line.startsWith("event:"))
+          ?.slice("event:".length)
+          .trim();
+        const dataLine = block
+          .split("\n")
+          .find((line) => line.startsWith("data:"));
+        if (!event || !dataLine) return;
+
+        const payload = JSON.parse(dataLine.slice("data:".length).trim()) as {
+          token?: string;
+          answer?: string;
+        };
+
+        if (event === "token" && payload.token) {
+          streamedContent += payload.token;
+          applyAssistantContent(payload.token, true);
+          setIsLoading(false);
+        }
+        if (event === "final" && payload.answer && streamedContent.trim().length === 0) {
+          applyAssistantContent(payload.answer);
+        }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split("\n\n");
+        buffer = blocks.pop() || "";
+        for (const block of blocks) {
+          try {
+            handleSseBlock(block);
+          } catch {
+            // Ignore malformed stream chunks and keep reading.
+          }
+        }
+      }
+
+      if (buffer.trim()) {
+        try {
+          handleSseBlock(buffer);
+        } catch {
+          // Ignore trailing malformed stream chunks.
+        }
+      }
     } catch (err) {
       console.error(err);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content:
-          "I encountered an error connecting to the orchestrator. Please check your API keys or try again later.",
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === assistantId
+            ? {
+                ...message,
+                content:
+                  "I encountered an error connecting to the orchestrator. Please check your API keys or try again later.",
+              }
+            : message,
+        ),
+      );
     } finally {
       setIsLoading(false);
     }

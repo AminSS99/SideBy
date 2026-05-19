@@ -12,7 +12,8 @@ import {
   AlertTriangle,
   Bell,
   ShieldCheck,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Webhook
 } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -21,14 +22,26 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import type { WorkspaceRecord } from "@/contexts/WorkspaceContext";
 import { GlowCard } from "@/components/GlowCard";
 import { copyText } from "@/lib/clipboard";
+import { apiFetch } from "@/lib/api";
+import { buildApiUrl } from "@/config/env";
 
-type Tab = "general" | "preferences" | "providers" | "api-keys";
+type Tab = "general" | "preferences" | "providers" | "api-keys" | "webhooks";
 type PreferencesState = {
   emailDigest: boolean;
   jobAlerts: boolean;
   publicLinkWarnings: boolean;
   compactMode: boolean;
-  defaultVisibility: "private" | "public";
+  defaultVisibility: "private" | "team" | "public";
+};
+
+type ApiKeyRecord = {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: unknown;
+  workspaceId: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
 };
 
 const providerStyles = {
@@ -112,15 +125,33 @@ const SettingsPage = () => {
             <Key className="h-4 w-4" />
             Developer API
           </button>
+          <button
+            onClick={() => setActiveTab("webhooks")}
+            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-widest rounded-sm transition-all ${
+              activeTab === "webhooks" 
+                ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" 
+                : "text-[#fdfbf7]/50 hover:bg-[#111] hover:text-[#fdfbf7] border border-transparent"
+            }`}
+          >
+            <Webhook className="h-4 w-4" />
+            Webhooks
+          </button>
         </aside>
 
         {/* Settings Content Area */}
         <div className="set-content flex-1 w-full min-w-0">
           {activeTab === "general" && <GeneralSettings workspace={activeWorkspace} />}
-          {activeTab === "preferences" && <PreferenceSettings />}
+          {activeTab === "preferences" && <PreferenceSettings workspaceId={activeWorkspace?.id} />}
           {activeTab === "providers" && <ProviderSettings />}
-          {activeTab === "api-keys" && <ApiKeysSettings />}
+          {activeTab === "api-keys" && <ApiKeysSettings workspaceId={activeWorkspace?.id} />}
+          {activeTab === "webhooks" && <WebhooksSettings workspaceId={activeWorkspace?.id} />}
         </div>
+      </div>
+
+      <div className="mt-12 pt-6 border-t border-[#1f1f1f] text-center text-xs text-[#fdfbf7]/30">
+        <a href="https://snapsolve.ink" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
+          Made by SnapSolve Ink
+        </a>
       </div>
     </div>
   );
@@ -135,14 +166,14 @@ const GeneralSettings = ({ workspace }: { workspace: WorkspaceRecord | null }) =
     setSlug(workspace?.slug || "");
   }, [workspace?.name, workspace?.slug]);
 
-  const save = () => {
-    localStorage.setItem(
-      "sideby.workspaceDraft",
-      JSON.stringify({ name, slug, savedAt: new Date().toISOString() }),
-    );
-    toast.success("Workspace profile saved.", {
-      description: "Your local workspace draft is ready for the next synced settings release.",
+  const save = async () => {
+    if (!workspace?.id) return;
+    await apiFetch(buildApiUrl("/api/workspaces"), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspaceId: workspace.id, name, slug }),
     });
+    toast.success("Workspace profile saved.");
   };
 
   return (
@@ -173,7 +204,7 @@ const GeneralSettings = ({ workspace }: { workspace: WorkspaceRecord | null }) =
               />
             </div>
           </div>
-          <button onClick={save} className="flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]">
+          <button onClick={() => void save().catch((error) => toast.error("Unable to save workspace", { description: error instanceof Error ? error.message : "Try again shortly." }))} className="flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]">
             <Save className="h-3.5 w-3.5" />
             Save Changes
           </button>
@@ -202,29 +233,57 @@ const GeneralSettings = ({ workspace }: { workspace: WorkspaceRecord | null }) =
   );
 };
 
-const PreferenceSettings = () => {
-  const [preferences, setPreferences] = useState<PreferencesState>(() => {
-    const raw = localStorage.getItem("sideby.preferences");
-    if (raw) {
-      try {
-        return JSON.parse(raw) as PreferencesState;
-      } catch {
-        // Fall through to defaults.
-      }
-    }
+const defaultPreferences: PreferencesState = {
+  emailDigest: true,
+  jobAlerts: true,
+  publicLinkWarnings: true,
+  compactMode: false,
+  defaultVisibility: "private",
+};
 
-    return {
-      emailDigest: true,
-      jobAlerts: true,
-      publicLinkWarnings: true,
-      compactMode: false,
-      defaultVisibility: "private",
+const PreferenceSettings = ({ workspaceId }: { workspaceId?: string }) => {
+  const [preferences, setPreferences] = useState<PreferencesState>(defaultPreferences);
+
+  useEffect(() => {
+    const load = async () => {
+      const query = workspaceId ? `?workspaceId=${workspaceId}` : "";
+      const response = await apiFetch(buildApiUrl(`/api/settings${query}`));
+      const data = (await response.json()) as {
+        userSettings?: { preferences?: Partial<PreferencesState> } | null;
+        workspaceSettings?: { defaultVisibility?: PreferencesState["defaultVisibility"] } | null;
+      };
+      setPreferences({
+        ...defaultPreferences,
+        ...(data.userSettings?.preferences || {}),
+        defaultVisibility: data.workspaceSettings?.defaultVisibility || defaultPreferences.defaultVisibility,
+      });
     };
-  });
+    void load().catch((error) => {
+      toast.error("Unable to load preferences", {
+        description: error instanceof Error ? error.message : "Try again shortly.",
+      });
+    });
+  }, [workspaceId]);
 
   const update = (next: PreferencesState) => {
     setPreferences(next);
-    localStorage.setItem("sideby.preferences", JSON.stringify(next));
+    apiFetch(buildApiUrl("/api/settings"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        workspaceId,
+        preferences: next,
+        notificationPrefs: {
+          emailDigest: next.emailDigest,
+          jobAlerts: next.jobAlerts,
+        },
+        defaultVisibility: next.defaultVisibility,
+      }),
+    }).catch((error) => {
+      toast.error("Preference sync failed", {
+        description: error instanceof Error ? error.message : "Try again shortly.",
+      });
+    });
   };
 
   const toggle = (key: keyof Omit<PreferencesState, "defaultVisibility">) => {
@@ -371,38 +430,38 @@ const ProviderSettings = () => {
   );
 };
 
-const ApiKeysSettings = () => {
-  const [keys, setKeys] = useState(() => {
-    const raw = localStorage.getItem("sideby.apiKeys");
-    if (raw) {
-      try {
-        return JSON.parse(raw) as Array<{ id: string; name: string; prefix: string; created: string; lastUsed: string }>;
-      } catch {
-        // Fall through to defaults.
-      }
-    }
-    return [
-    { id: "1", name: "Production CI/CD", prefix: "sb_prod_...", created: "2024-03-01", lastUsed: "2 hours ago" },
-    { id: "2", name: "Local Development", prefix: "sb_dev_...", created: "2024-03-05", lastUsed: "Never" }
-    ];
-  });
+const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
+  const [keys, setKeys] = useState<ApiKeyRecord[]>([]);
+  const [newSecret, setNewSecret] = useState<string | null>(null);
 
-  const persistKeys = (next: typeof keys) => {
-    setKeys(next);
-    localStorage.setItem("sideby.apiKeys", JSON.stringify(next));
+  const loadKeys = async () => {
+    const response = await apiFetch(buildApiUrl("/api/api-keys"));
+    const data = (await response.json()) as { keys: ApiKeyRecord[] };
+    setKeys(data.keys);
   };
 
-  const createKey = () => {
-    const key = {
-      id: crypto.randomUUID(),
-      name: `Workspace key ${keys.length + 1}`,
-      prefix: `sb_live_${Math.random().toString(36).slice(2, 8)}...`,
-      created: new Date().toISOString().slice(0, 10),
-      lastUsed: "Never",
-    };
-    persistKeys([key, ...keys]);
+  useEffect(() => {
+    void loadKeys().catch((error) => {
+      toast.error("Unable to load API keys", {
+        description: error instanceof Error ? error.message : "Try again shortly.",
+      });
+    });
+  }, []);
+
+  const createKey = async () => {
+    const response = await apiFetch(buildApiUrl("/api/api-keys"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: `Workspace key ${keys.length + 1}`,
+        workspaceId,
+      }),
+    });
+    const data = (await response.json()) as { key: ApiKeyRecord; secret: string };
+    setKeys((current) => [data.key, ...current]);
+    setNewSecret(data.secret);
     toast.success("API key created.", {
-      description: "Only the key prefix is stored in this workspace view.",
+      description: "Copy the full secret now. It will not be shown again.",
     });
   };
 
@@ -420,6 +479,28 @@ const ApiKeysSettings = () => {
           </button>
         </div>
 
+        {newSecret && (
+          <div className="mb-4 rounded-sm border border-emerald-500/25 bg-emerald-500/10 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-300">
+              New key secret
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <code className="min-w-0 flex-1 truncate rounded-sm border border-emerald-500/20 bg-black/30 px-3 py-2 text-xs text-emerald-100">
+                {newSecret}
+              </code>
+              <button
+                onClick={async () => {
+                  const ok = await copyText(newSecret);
+                  toast[ok ? "success" : "error"](ok ? "Secret copied." : "Clipboard permission is blocked.");
+                }}
+                className="rounded-sm border border-emerald-500/25 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-300"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-4">
           {keys.map(key => (
             <div key={key.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-sm border border-[#333] bg-[#0c0b0a] p-5">
@@ -430,14 +511,14 @@ const ApiKeysSettings = () => {
                     {key.prefix}
                   </code>
                   <span className="text-[10px] text-[#fdfbf7]/30 uppercase tracking-widest">
-                    Created {key.created}
+                    Created {new Date(key.createdAt).toLocaleDateString()}
                   </span>
                 </div>
               </div>
               <div className="flex items-center gap-6">
                 <div className="text-right hidden sm:block">
                   <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-0.5">Last Used</p>
-                  <p className="text-xs text-[#fdfbf7]/60">{key.lastUsed}</p>
+                  <p className="text-xs text-[#fdfbf7]/60">{key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString() : "Never"}</p>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -451,8 +532,18 @@ const ApiKeysSettings = () => {
                   </button>
                   <button
                     onClick={() => {
-                      persistKeys(keys.filter((item) => item.id !== key.id));
-                      toast.success("API key revoked.");
+                      apiFetch(buildApiUrl(`/api/api-keys/${key.id}`), {
+                        method: "DELETE",
+                      })
+                        .then(() => {
+                          setKeys((current) => current.filter((item) => item.id !== key.id));
+                          toast.success("API key revoked.");
+                        })
+                        .catch((error) => {
+                          toast.error("Unable to revoke API key", {
+                            description: error instanceof Error ? error.message : "Try again shortly.",
+                          });
+                        });
                     }}
                     className="p-2 text-[#fdfbf7]/40 hover:text-red-400 transition-colors rounded-sm hover:bg-red-500/10"
                   >
@@ -462,6 +553,239 @@ const ApiKeysSettings = () => {
               </div>
             </div>
           ))}
+        </div>
+      </GlowCard>
+    </div>
+  );
+};
+
+type WebhookRecord = {
+  id: string;
+  url: string;
+  eventTypes: string[];
+  active: boolean;
+  workspaceId: string | null;
+  secret: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
+  const [subs, setSubs] = useState<WebhookRecord[]>([]);
+  const [url, setUrl] = useState("");
+  const [selectedEvents, setSelectedEvents] = useState<string[]>(["comparison.completed", "comparison.failed"]);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const loadSubs = async () => {
+    const response = await apiFetch(buildApiUrl("/api/webhooks/subscriptions"));
+    const data = (await response.json()) as { subscriptions: WebhookRecord[] };
+    setSubs(data.subscriptions);
+  };
+
+  useEffect(() => {
+    void loadSubs().catch((error) => {
+      toast.error("Unable to load webhooks", {
+        description: error instanceof Error ? error.message : "Try again shortly.",
+      });
+    });
+  }, []);
+
+  const createSub = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!url) {
+      toast.error("Please provide a webhook endpoint URL.");
+      return;
+    }
+    try {
+      const response = await apiFetch(buildApiUrl("/api/webhooks/subscriptions"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url,
+          workspaceId,
+          eventTypes: selectedEvents,
+        }),
+      });
+      const data = (await response.json()) as { subscription: WebhookRecord; error?: string };
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      setSubs((current) => [data.subscription, ...current]);
+      setUrl("");
+      setIsCreating(false);
+      toast.success("Webhook subscription created successfully.");
+    } catch (error) {
+      toast.error("Unable to create webhook subscription", {
+        description: error instanceof Error ? error.message : "Try again shortly.",
+      });
+    }
+  };
+
+  const toggleActive = async (sub: WebhookRecord) => {
+    try {
+      const nextActive = !sub.active;
+      const response = await apiFetch(buildApiUrl(`/api/webhooks/subscriptions/${sub.id}`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: nextActive }),
+      });
+      const data = (await response.json()) as { subscription: WebhookRecord; error?: string };
+      if (data.error) throw new Error(data.error);
+      setSubs((current) =>
+        current.map((item) => (item.id === sub.id ? data.subscription : item))
+      );
+      toast.success(nextActive ? "Webhook activated." : "Webhook deactivated.");
+    } catch (error) {
+      toast.error("Failed to update status", {
+        description: error instanceof Error ? error.message : "Try again shortly.",
+      });
+    }
+  };
+
+  const deleteSub = async (id: string) => {
+    try {
+      await apiFetch(buildApiUrl(`/api/webhooks/subscriptions/${id}`), {
+        method: "DELETE",
+      });
+      setSubs((current) => current.filter((item) => item.id !== id));
+      toast.success("Webhook subscription deleted.");
+    } catch (error) {
+      toast.error("Unable to delete webhook subscription", {
+        description: error instanceof Error ? error.message : "Try again shortly.",
+      });
+    }
+  };
+
+  const toggleEvent = (event: string) => {
+    setSelectedEvents((prev) =>
+      prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event]
+    );
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <GlowCard className="p-8" glowColor="rgba(249, 115, 22, 0.15)">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6 mb-6">
+          <div>
+            <h2 className="font-serif text-2xl text-[#fdfbf7] mb-1">Webhook Subscriptions</h2>
+            <p className="text-sm text-[#fdfbf7]/50">Receive real-time notifications on comparison jobs directly in your server.</p>
+          </div>
+          <button 
+            onClick={() => setIsCreating(!isCreating)} 
+            className="flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] shrink-0"
+          >
+            {isCreating ? "Cancel" : <><Plus className="h-3.5 w-3.5" /> Add Endpoint</>}
+          </button>
+        </div>
+
+        {isCreating && (
+          <form onSubmit={createSub} className="mb-8 rounded-sm border border-[#333] bg-[#0c0b0a] p-6 space-y-4 animate-in fade-in duration-300">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-orange-400">New Webhook Subscription</h3>
+            
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">Endpoint URL</label>
+              <input 
+                type="url"
+                required
+                placeholder="https://yourdomain.com/webhooks/sideby"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="w-full rounded-sm border border-[#333] bg-black px-4 py-3 text-sm text-[#fdfbf7] outline-none transition-colors focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 block">Event Subscriptions</label>
+              <div className="flex flex-col sm:flex-row gap-6">
+                <label className="flex items-center gap-3 cursor-pointer text-sm text-[#fdfbf7]/70 hover:text-[#fdfbf7] transition-colors">
+                  <input 
+                    type="checkbox"
+                    checked={selectedEvents.includes("comparison.completed")}
+                    onChange={() => toggleEvent("comparison.completed")}
+                    className="rounded border-[#333] bg-black text-orange-500 focus:ring-orange-500/50"
+                  />
+                  <span>comparison.completed</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer text-sm text-[#fdfbf7]/70 hover:text-[#fdfbf7] transition-colors">
+                  <input 
+                    type="checkbox"
+                    checked={selectedEvents.includes("comparison.failed")}
+                    onChange={() => toggleEvent("comparison.failed")}
+                    className="rounded border-[#333] bg-black text-orange-500 focus:ring-orange-500/50"
+                  />
+                  <span>comparison.failed</span>
+                </label>
+              </div>
+            </div>
+
+            <button type="submit" className="flex items-center gap-2 rounded-sm bg-orange-600 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700">
+              <Save className="h-3.5 w-3.5" />
+              Save Endpoint
+            </button>
+          </form>
+        )}
+
+        <div className="space-y-4">
+          {subs.length === 0 ? (
+            <p className="text-sm text-[#fdfbf7]/30 text-center py-6">No active webhook subscriptions configured.</p>
+          ) : (
+            subs.map((sub) => (
+              <div key={sub.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-sm border border-[#333] bg-[#0c0b0a] p-5">
+                <div className="space-y-2 max-w-xl min-w-0 flex-1">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-sm font-bold text-[#fdfbf7] truncate max-w-md block">{sub.url}</span>
+                    <button 
+                      onClick={() => toggleActive(sub)}
+                      className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border transition-colors ${
+                        sub.active 
+                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20"
+                          : "bg-zinc-500/10 border-zinc-500/20 text-zinc-400 hover:bg-zinc-500/20"
+                      }`}
+                    >
+                      {sub.active ? "Active" : "Inactive"}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {sub.eventTypes.map((et) => (
+                      <span key={et} className="text-[10px] font-mono text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
+                        {et}
+                      </span>
+                    ))}
+                    <span className="text-[10px] text-[#fdfbf7]/30 uppercase tracking-widest">
+                      Created {new Date(sub.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  
+                  {/* Signing Secret */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-[10px] text-[#fdfbf7]/40 uppercase tracking-widest">Secret:</span>
+                    <code className="text-xs font-mono text-cyan-400 bg-cyan-500/5 px-2 py-0.5 rounded">
+                      {sub.secret}
+                    </code>
+                    <button
+                      onClick={async () => {
+                        const ok = await copyText(sub.secret);
+                        toast[ok ? "success" : "error"](ok ? "Secret copied." : "Clipboard permission is blocked.");
+                      }}
+                      className="text-[#fdfbf7]/40 hover:text-cyan-400 transition-colors p-1"
+                      title="Copy signing secret"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-end md:self-center">
+                  <button
+                    onClick={() => deleteSub(sub.id)}
+                    className="p-2 text-[#fdfbf7]/40 hover:text-red-400 transition-colors rounded-sm hover:bg-red-500/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </GlowCard>
     </div>

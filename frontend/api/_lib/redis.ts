@@ -6,6 +6,13 @@ import { Redis } from "@upstash/redis";
 import { randomUUID } from "crypto";
 
 let redisInstance: Redis | null = null;
+let redisWarned = false;
+
+const isProductionRuntime = () =>
+  process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
+
+const allowDevRedisFallback = () =>
+  !isProductionRuntime() && process.env.DEV_ALLOW_REDIS_FALLBACK === "true";
 
 export function getRedis(): Redis | null {
   if (redisInstance) return redisInstance;
@@ -19,6 +26,28 @@ export function getRedis(): Redis | null {
 
   redisInstance = new Redis({ url, token });
   return redisInstance;
+}
+
+export function isRedisConfigured(): boolean {
+  return getRedis() !== null;
+}
+
+export async function assertRedisAvailable(): Promise<void> {
+  const redis = getRedis();
+  if (!redis) {
+    if (allowDevRedisFallback()) return;
+    throw Object.assign(new Error("Redis is required for locks and rate limits."), {
+      statusCode: 503,
+    });
+  }
+
+  try {
+    await redis.set("__sideby:redis-health", "1", { ex: 30 });
+  } catch {
+    throw Object.assign(new Error("Redis is unavailable. Please try again shortly."), {
+      statusCode: 503,
+    });
+  }
 }
 
 export async function redisGet<T>(key: string): Promise<T | null> {
@@ -49,11 +78,24 @@ export async function redisAcquireLock(
   ttlSeconds = 30,
 ): Promise<boolean> {
   const redis = getRedis();
-  if (!redis) return true; // No redis = no locking
+  if (!redis) {
+    if (allowDevRedisFallback()) {
+      if (!redisWarned) {
+        redisWarned = true;
+        console.warn("Redis lock fallback enabled for local development.");
+      }
+      return true;
+    }
+    return false;
+  }
 
   const token = randomUUID();
-  const acquired = await redis.set(lockKey, token, { nx: true, ex: ttlSeconds });
-  return acquired === "OK";
+  try {
+    const acquired = await redis.set(lockKey, token, { nx: true, ex: ttlSeconds });
+    return acquired === "OK";
+  } catch {
+    return false;
+  }
 }
 
 export async function redisReleaseLock(lockKey: string): Promise<void> {

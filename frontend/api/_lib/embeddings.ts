@@ -115,3 +115,7 @@ export function findTopK<T>(
   scored.sort((a, b) => b.similarity - a.similarity);
   return scored.slice(0, k);
 }
+
+export function toVectorLiteral(values: number[]) {
+  return `[${values.map((value) => Number(value).toFixed(8)).join(",")}]`;
+}

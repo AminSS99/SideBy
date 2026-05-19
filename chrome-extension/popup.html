@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SideBy Browser Companion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c0b0a;
+      --panel: #11100f;
+      --border: #2a2a2a;
+      --text: #fdfbf7;
+      --orange: #f97316;
+      --cyan: #06b6d4;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 320px;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 16px;
+      overflow-x: hidden;
+    }
+
+    /* Glassmorphic settings */
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-b: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-badge {
+      background-color: rgba(249, 115, 22, 0.1);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      color: var(--orange);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .card {
+      background-color: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(253, 251, 247, 0.4);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    input, select {
+      width: 100%;
+      height: 36px;
+      background-color: #000;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      padding: 0 10px;
+      border-radius: 4px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-color: var(--orange);
+    }
+
+    button {
+      width: 100%;
+      height: 36px;
+      background-color: var(--orange);
+      border: none;
+      color: #fff;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #ea580c;
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      border: 1px solid var(--border);
+      color: rgba(253, 251, 247, 0.6);
+    }
+
+    .btn-secondary:hover {
+      background-color: rgba(253, 251, 247, 0.05);
+      color: var(--text);
+    }
+
+    /* API Settings Toggle */
+    .settings-toggle {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .settings-link {
+      font-size: 10px;
+      color: rgba(253, 251, 247, 0.4);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .settings-link:hover {
+      color: var(--orange);
+    }
+
+    #settings-form {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(42, 42, 42, 0.5);
+      padding-bottom: 6px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .history-query {
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 190px;
+    }
+
+    .history-status {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .status-completed {
+      background-color: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+    }
+
+    .status-running {
+      background-color: rgba(6, 182, 212, 0.1);
+      color: #06b6d4;
+    }
+
+    /* Branding Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      margin-top: 8px;
+      text-align: center;
+      font-size: 10px;
+      color: rgba(253, 251, 247, 0.2);
+    }
+
+    footer a {
+      color: inherit;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    footer a:hover {
+      color: var(--orange);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo-container">
+        <h1>SideBy</h1>
+        <span class="logo-badge">AI</span>
+      </div>
+      <div class="settings-toggle">
+        <span id="toggle-settings-btn" class="settings-link">Configure Key</span>
+      </div>
+    </header>
+
+    <!-- Settings Pane -->
+    <div id="settings-form" class="card">
+      <span class="section-title">API Settings</span>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <input type="password" id="api-key-input" placeholder="Paste API Key (sb_...)">
+        <input type="text" id="host-url-input" placeholder="https://snapsolve.ink" value="https://snapsolve.ink">
+        <button type="button" id="save-settings-btn">Save Configurations</button>
+      </div>
+    </div>
+
+    <!-- Search / Research Pane -->
+    <div id="search-pane" class="card">
+      <span class="section-title">Run New Comparison</span>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <input type="text" id="query-input" placeholder="e.g. Next.js vs Remix">
+        <button type="button" id="compare-btn">Compare Entities</button>
+      </div>
+    </div>
+
+    <!-- History Panel -->
+    <div id="history-pane" class="card" style="display: none;">
+      <span class="section-title">Recent Comparisons</span>
+      <div id="history-list" class="history-list">
+        <!-- populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://snapsolve.ink" target="_blank" id="brand-link">Made by SnapSolve Ink</a>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

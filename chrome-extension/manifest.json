@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "SideBy Browser Companion",
+  "version": "1.0.0",
+  "description": "Source-backed AI comparisons on the fly. Compare anything, check scorecards, and watch competitive drift.",
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.snapsolve.ink/*",
+    "http://localhost:3000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

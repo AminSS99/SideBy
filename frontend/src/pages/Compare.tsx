@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Sparkles, Search, Loader2, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -24,6 +24,8 @@ import {
   TableOfContents,
   RunTelemetryPanel,
   FeedbackPanel,
+  DecisionMatrixPanel,
+  WatchlistPanel,
 } from "@/components/Comparison/ComparisonEngine";
 
 const Compare = () => {
@@ -55,6 +57,74 @@ const Compare = () => {
   const handleRefresh = () => {
     window.location.reload();
   };
+
+  useEffect(() => {
+    if (isLoading || !result) return;
+
+    // 1. Update document title
+    const prevTitle = document.title;
+    document.title = `${result.entities.a.name} vs ${result.entities.b.name} Scorecard & Comparison | SideBy`;
+
+    // 2. Helper to set/create meta tag
+    const setMetaTag = (nameOrProperty: string, content: string, isProperty = false) => {
+      const attribute = isProperty ? "property" : "name";
+      let element = document.querySelector(`meta[${attribute}="${nameOrProperty}"]`);
+      if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute(attribute, nameOrProperty);
+        document.head.appendChild(element);
+      }
+      element.setAttribute("content", content);
+      return element;
+    };
+
+    // Set standard metas
+    const desc = `Detailed, source-backed comparison of ${result.entities.a.name} vs ${result.entities.b.name}. Explore key features, dimension scores, and consensus verdicts.`;
+    const metaDescription = setMetaTag("description", desc);
+    const ogTitle = setMetaTag("og:title", `${result.entities.a.name} vs ${result.entities.b.name} Scorecard`, true);
+    const ogDesc = setMetaTag("og:description", desc, true);
+    const ogUrl = setMetaTag("og:url", window.location.href, true);
+    const twitterTitle = setMetaTag("twitter:title", `${result.entities.a.name} vs ${result.entities.b.name} Scorecard`);
+    const twitterDesc = setMetaTag("twitter:description", desc);
+
+    // 3. Inject JSON-LD Schema
+    let jsonLdScript = document.getElementById("jsonld-comparison") as HTMLScriptElement;
+    if (!jsonLdScript) {
+      jsonLdScript = document.createElement("script");
+      jsonLdScript.id = "jsonld-comparison";
+      jsonLdScript.type = "application/ld+json";
+      document.head.appendChild(jsonLdScript);
+    }
+    
+    const schemaData = {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": `${result.entities.a.name} vs ${result.entities.b.name} Comparison`,
+      "description": desc,
+      "brand": {
+        "@type": "Brand",
+        "name": "SideBy"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    };
+    jsonLdScript.textContent = JSON.stringify(schemaData);
+
+    // Cleanup on unmount/re-run
+    return () => {
+      document.title = prevTitle;
+      metaDescription.remove();
+      ogTitle.remove();
+      ogDesc.remove();
+      ogUrl.remove();
+      twitterTitle.remove();
+      twitterDesc.remove();
+      jsonLdScript.remove();
+    };
+  }, [isLoading, result]);
 
   useGSAP(() => {
     if (!isLoading && result) {
@@ -153,6 +223,7 @@ const Compare = () => {
                 <RadarChartPanel result={result} />
                 <ConsensusPanel result={result} />
                 <FeatureMatrixPanel result={result} />
+                <DecisionMatrixPanel result={result} comparisonId={jobData.id} />
 
                 <div className="space-y-10">
                   {result.categories.map((cat, i) => (
@@ -163,6 +234,7 @@ const Compare = () => {
               <aside className="space-y-6 lg:col-span-4 sticky top-24 self-start pb-8 h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar">
                 <TableOfContents result={result} />
                 <VerdictPanel result={result} />
+                <WatchlistPanel result={result} comparisonId={jobData.id} />
                 <EntityFactPanel result={result} facts={entityFacts} />
                 <SourcesPanel sources={result.sources} />
                 <RunTelemetryPanel result={result} />

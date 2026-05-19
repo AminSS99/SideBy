@@ -17,3 +17,6 @@ export * from "./ExportModal";
 export * from "./RunTelemetryPanel";
 export * from "./FeedbackPanel";
 export * from "./DecisionIntelligencePanel";
+export * from "./VersionHistoryUI";
+export * from "./DecisionMatrixPanel";
+export * from "./WatchlistPanel";

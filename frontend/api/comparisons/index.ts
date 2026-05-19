@@ -14,12 +14,25 @@ import { createDbClient } from "../../src/db/index.js";
 import { queryAnalytics } from "../../src/db/schema.js";
 import { normalizeQuery } from "../_lib/query-normalizer.js";
 import { waitUntil } from "@vercel/functions";
+import { z } from "zod";
+import { assertNoLikelySecrets } from "../_lib/secret-scan.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
   runtime: "nodejs",
   maxDuration: 120,
+  api: {
+    bodyParser: {
+      sizeLimit: "1mb",
+    },
+  },
 };
+
+const CreateComparisonBodySchema = z.object({
+  query: z.string().trim().min(1, "Query is required.").max(800, "Query is too long."),
+  workspaceId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
+});
 
 export default async function handler(
   request: VercelRequest,
@@ -72,12 +85,9 @@ export default async function handler(
 
   if (request.method === "POST") {
     try {
-      const body = request.body as { query?: string; workspaceId?: string; projectId?: string };
-      const query = body.query?.trim();
-
-      if (!query) {
-        return sendJson(response, { error: "Query is required." }, 400);
-      }
+      const body = CreateComparisonBodySchema.parse(request.body);
+      const query = body.query;
+      assertNoLikelySecrets(query);
 
       const auth = await requireAuth(request);
       const intent = analyzeComparisonQuery(query);
@@ -147,12 +157,18 @@ export default async function handler(
       });
     } catch (error) {
       const status =
-        error instanceof Error && "statusCode" in error
+        error instanceof z.ZodError
+          ? 400
+          : error instanceof Error && "statusCode" in error
           ? (error as Error & { statusCode: number }).statusCode
           : 500;
       return sendJson(
         response,
-        { error: error instanceof Error ? error.message : "Unable to create comparison." },
+        {
+          error: error instanceof z.ZodError
+            ? error.errors[0]?.message || "Invalid request body."
+            : error instanceof Error ? error.message : "Unable to create comparison.",
+        },
         status,
       );
     }

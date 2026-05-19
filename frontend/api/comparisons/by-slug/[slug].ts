@@ -19,6 +19,16 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ) {
+  // CORS Headers for public embeddable widget
+  response.setHeader("Access-Control-Allow-Origin", "*");
+  response.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (request.method === "OPTIONS") {
+    response.status(200).end();
+    return;
+  }
+
   if (request.method !== "GET") {
     return sendJson(response, { error: "Method not allowed" }, 405);
   }
@@ -55,6 +65,10 @@ export default async function handler(
         taxonomy: (d.result as { taxonomy?: unknown }).taxonomy ||
           summarizeComparisonTaxonomy(analyzeComparisonQuery(d.query)),
       };
+      response.setHeader(
+        "Cache-Control",
+        "public, s-maxage=3600, stale-while-revalidate=86400",
+      );
       return sendJson(response, {
         id: d.id,
         status: "completed",

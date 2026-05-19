@@ -3,7 +3,7 @@
  * Answers questions grounded in stored comparison facts.
  */
 import { z } from "zod";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
@@ -14,13 +14,108 @@ import {
 import { canAccessComparison } from "./db-auth.js";
 import { getPrimaryProvider } from "./providers/index.js";
 import { logger } from "./log.js";
+import { embedText, toVectorLiteral } from "./embeddings.js";
+import { sanitizeLlmStringArray, sanitizeLlmText } from "./sanitize.js";
 
 const FollowUpSchema = z.object({
-  answer: z.string(),
-  citations: z.array(z.string()),
+  answer: z.string().max(6000).transform((value) => sanitizeLlmText(value, 6000)),
+  citations: z.array(z.string().max(40)).transform((values) => sanitizeLlmStringArray(values, 40)),
   confidence: z.number().min(0).max(1),
   type: z.enum(["grounded", "inference", "insufficient"]),
 });
+
+type FactRow = typeof comparisonFacts.$inferSelect;
+
+type RetrievedFact = {
+  fact: Pick<
+    FactRow,
+    | "id"
+    | "sourceId"
+    | "entity"
+    | "category"
+    | "label"
+    | "value"
+    | "confidence"
+  >;
+  similarity: number;
+};
+
+type FactSearchRow = {
+  id: string;
+  source_id: string | null;
+  entity: string;
+  category: string;
+  label: string | null;
+  value: string;
+  confidence: string | number;
+  similarity: number | string;
+};
+
+function getExecuteRows<T>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[];
+  if (result && typeof result === "object" && "rows" in result) {
+    return (result as { rows: T[] }).rows;
+  }
+  return [];
+}
+
+function keywordTopFacts(facts: FactRow[], question: string): RetrievedFact[] {
+  const questionWords = question.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+  const scoredFacts = facts.map((fact) => {
+    const text = `${fact.entity || ""} ${fact.category || ""} ${fact.label || ""} ${fact.value || ""}`.toLowerCase();
+    const matches = questionWords.filter((word) => text.includes(word)).length;
+    return { fact, similarity: matches / Math.max(questionWords.length, 1) };
+  });
+
+  scoredFacts.sort((a, b) => b.similarity - a.similarity);
+  return scoredFacts.slice(0, 15);
+}
+
+async function vectorTopFacts(
+  db: ReturnType<typeof createDbClient>,
+  comparisonId: string,
+  question: string,
+): Promise<RetrievedFact[]> {
+  try {
+    const queryEmbedding = await embedText(question);
+    const vectorLiteral = toVectorLiteral(queryEmbedding);
+    const result = await db.execute(sql<FactSearchRow>`
+      select
+        cf.id,
+        cf.source_id,
+        cf.entity,
+        cf.category,
+        cf.label,
+        cf.value,
+        cf.confidence,
+        (1 - (cf.embedding <=> ${vectorLiteral}::vector))::float as similarity
+      from comparison_facts cf
+      where cf.comparison_id = ${comparisonId}
+        and cf.embedding is not null
+      order by cf.embedding <=> ${vectorLiteral}::vector
+      limit 15
+    `);
+
+    return getExecuteRows<FactSearchRow>(result).map((row) => ({
+      fact: {
+        id: row.id,
+        sourceId: row.source_id,
+        entity: row.entity,
+        category: row.category,
+        label: row.label,
+        value: row.value,
+        confidence: String(row.confidence),
+      },
+      similarity: Number(row.similarity),
+    }));
+  } catch (error) {
+    logger.warn("Vector follow-up retrieval failed; falling back to keyword retrieval", {
+      comparisonId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return [];
+  }
+}
 
 export async function answerFollowUp(
   comparisonId: string,
@@ -74,15 +169,10 @@ export async function answerFollowUp(
     };
   }
 
-  // Step 2: Find top-K relevant facts with keyword scoring.
-  const questionWords = question.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
-  const scoredFacts = facts.map((f) => {
-    const text = `${f.entity || ""} ${f.category || ""} ${f.label || ""} ${f.value || ""}`.toLowerCase();
-    const matches = questionWords.filter((w) => text.includes(w)).length;
-    return { fact: f, similarity: matches / Math.max(questionWords.length, 1) };
-  });
-  scoredFacts.sort((a, b) => b.similarity - a.similarity);
-  const topFacts: Array<{ fact: typeof facts[0]; similarity: number }> = scoredFacts.slice(0, 15);
+  // Step 2: Find top-K relevant facts with pgvector, falling back to keywords
+  // for older comparisons that do not have stored fact embeddings yet.
+  const vectorFacts = await vectorTopFacts(db, comparisonId, question);
+  const topFacts = vectorFacts.length > 0 ? vectorFacts : keywordTopFacts(facts, question);
 
   // Step 3: Fetch sources for citations
   const sourceIds = topFacts

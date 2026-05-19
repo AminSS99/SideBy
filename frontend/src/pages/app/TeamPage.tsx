@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { GlowCard } from "@/components/GlowCard";
+import { apiFetch } from "@/lib/api";
+import { buildApiUrl } from "@/config/env";
 
 interface TeamMember {
   id: string;
@@ -53,17 +55,9 @@ const TeamPage = () => {
   const { activeWorkspace } = useWorkspace();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("members");
-  const [members, setMembers] = useState<TeamMember[]>(() => {
-    const raw = localStorage.getItem("sideby.teamMembers");
-    if (raw) {
-      try {
-        return JSON.parse(raw) as TeamMember[];
-      } catch {
-        return initialMembers;
-      }
-    }
-    return initialMembers;
-  });
+  const [members, setMembers] = useState<TeamMember[]>(initialMembers);
+  const [invitations, setInvitations] = useState<TeamMember[]>([]);
+  const [teamError, setTeamError] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<TeamMember["role"]>("member");
   const [isInviting, setIsInviting] = useState(false);
@@ -77,8 +71,31 @@ const TeamPage = () => {
   }, { scope: containerRef });
 
   useEffect(() => {
-    localStorage.setItem("sideby.teamMembers", JSON.stringify(members));
-  }, [members]);
+    const loadTeam = async () => {
+      if (!activeWorkspace?.id) return;
+      setTeamError(null);
+      const response = await apiFetch(buildApiUrl(`/api/team?workspaceId=${activeWorkspace.id}`));
+      const data = (await response.json()) as {
+        members: TeamMember[];
+        invitations: Array<{ id: string; email: string; role: TeamMember["role"]; status: string; createdAt: string }>;
+      };
+      setMembers(data.members);
+      setInvitations(data.invitations.map((invite) => ({
+        id: invite.id,
+        name: "",
+        email: invite.email,
+        role: invite.role,
+        status: "invited",
+        joinedAt: invite.createdAt,
+      })));
+    };
+
+    void loadTeam().catch((error) => {
+      setMembers(initialMembers);
+      setInvitations([]);
+      setTeamError(error instanceof Error ? error.message : "Unable to load team.");
+    });
+  }, [activeWorkspace?.id]);
 
   const directoryMembers = useMemo<TeamMember[]>(() => {
     if (!user?.email) return members;
@@ -91,42 +108,59 @@ const TeamPage = () => {
       joinedAt: activeWorkspace?.createdAt || new Date().toISOString(),
     };
 
-    return [owner, ...members.filter((member) => member.email !== owner.email)];
-  }, [activeWorkspace?.createdAt, members, user?.email, user?.fullName, user?.id]);
+    return [...members, owner, ...invitations]
+      .filter((member, index, all) => all.findIndex((item) => item.email === member.email) === index);
+  }, [activeWorkspace?.createdAt, invitations, members, user?.email, user?.fullName, user?.id]);
 
-  const handleInvite = (e: React.FormEvent) => {
+  const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
 
     setIsInviting(true);
-    const email = inviteEmail.trim().toLowerCase();
-    if (directoryMembers.some((member) => member.email.toLowerCase() === email)) {
-      toast.warning("That person already has access.");
+    try {
+      const email = inviteEmail.trim().toLowerCase();
+      if (directoryMembers.some((member) => member.email.toLowerCase() === email)) {
+        toast.warning("That person already has access.");
+        return;
+      }
+      if (!activeWorkspace?.id) return;
+
+      const response = await apiFetch(buildApiUrl("/api/team"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId: activeWorkspace.id,
+          email,
+          role: inviteRole,
+        }),
+      });
+      const data = (await response.json()) as {
+        invitation: { id: string; email: string; role: TeamMember["role"]; createdAt: string };
+      };
+      setInvitations((current) => [{
+        id: data.invitation.id,
+        name: "",
+        email: data.invitation.email,
+        role: data.invitation.role,
+        status: "invited",
+        joinedAt: data.invitation.createdAt,
+      }, ...current]);
+      setInviteEmail("");
+      toast.success("Invite sent.", {
+        description: `${email} was invited as a ${inviteRole}.`,
+      });
+    } catch (error) {
+      toast.error("Invite failed", {
+        description: error instanceof Error ? error.message : "Try again shortly.",
+      });
+    } finally {
       setIsInviting(false);
-      return;
     }
-
-    const pendingMember: TeamMember = {
-      id: crypto.randomUUID(),
-      name: "",
-      email,
-      role: inviteRole,
-      status: "invited",
-      joinedAt: new Date().toISOString(),
-    };
-
-    setMembers((current) => [pendingMember, ...current]);
-    setInviteEmail("");
-    toast.success("Invite staged.", {
-      description: `${email} was added as a pending ${inviteRole}.`,
-    });
-    setIsInviting(false);
   };
 
   const removeMember = (id: string, name: string, email: string) => {
-    setMembers(members.filter(m => m.id !== id));
-    toast.success("Member removed", {
-      description: `${name || email} has been removed from the workspace.`,
+    toast.info("Member removal uses Clerk.", {
+      description: `Remove ${name || email} from the Clerk organization dashboard until the removal endpoint is enabled.`,
     });
   };
 
@@ -177,6 +211,11 @@ const TeamPage = () => {
       <div className="team-content">
         {activeTab === "members" ? (
           <div className="space-y-8 animate-in fade-in duration-500">
+            {teamError && (
+              <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200/80">
+                {teamError}
+              </div>
+            )}
             {/* Invite Form */}
             <GlowCard className="p-6 sm:p-8">
               <div className="mb-6 flex items-center gap-3 border-b border-[#2a2a2a] pb-4">
@@ -184,7 +223,7 @@ const TeamPage = () => {
                 <h2 className="font-serif text-xl text-[#fdfbf7]">Invite new members</h2>
               </div>
               
-              <form onSubmit={handleInvite} className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <form onSubmit={(event) => void handleInvite(event)} className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="flex-1 w-full relative">
                   <input
                     type="text"

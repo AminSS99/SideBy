@@ -5,7 +5,7 @@
  * Enforces cost/time guardrails per job.
  */
 import { z } from "zod";
-import { eq, and, sql } from "drizzle-orm";
+import { asc, eq, and, sql, or, lte } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
@@ -20,7 +20,10 @@ import {
   usageEvents,
   queryAnalytics,
   entityKnowledge,
+  comparisonVersions,
+  watchlists,
 } from "../../src/db/schema.js";
+import { computeResultDiff } from "./diff-engine.js";
 import { getPrimaryProvider } from "./providers/index.js";
 import { searchEntitySources } from "./search.js";
 import { extractPage } from "./firecrawl.js";
@@ -29,6 +32,8 @@ import { logger } from "./log.js";
 import { embedText, embedTexts } from "./embeddings.js";
 import type { AIProvider } from "./ai-adapter.js";
 import crypto from "crypto";
+import { sanitizeLlmText } from "./sanitize.js";
+import { sendComparisonCompleteEmail } from "./email.js";
 import { buildDimensionPrompt, calibrateConfidence, getFreshnessClass, isReusableFact, normalizeEntityForReuse } from "./reuse-engine.js";
 import { normalizeQuery } from "./query-normalizer.js";
 import { comparisonCache, hashPrompt } from "./cache-layer.js";
@@ -38,6 +43,7 @@ import {
   summarizeComparisonTaxonomy,
   type ComparisonIntent,
 } from "../../src/lib/comparisonTaxonomy.js";
+import { triggerWebhooks } from "./webhook-notifier.js";
 
 // ─── Guardrails ─────────────────────────────────────────────────────────────
 
@@ -155,12 +161,15 @@ interface JobContext {
 
 // ─── Zod Schemas for AI Outputs ─────────────────────────────────────────────
 
+const LlmStringSchema = (maxLength: number) =>
+  z.string().max(maxLength).transform((value) => sanitizeLlmText(value, maxLength));
+
 const EntitySchema = z.object({
-  name: z.string(),
-  type: z.string().optional(),
+  name: LlmStringSchema(160),
+  type: LlmStringSchema(80).optional(),
 });
 
-const EntityInputSchema = z.union([EntitySchema, z.string().min(1)]);
+const EntityInputSchema = z.union([EntitySchema, LlmStringSchema(160).pipe(z.string().min(1))]);
 
 interface ParsedEntity {
   name: string;
@@ -174,36 +183,36 @@ interface ParsedQuery {
 }
 
 const DimensionSchema = z.object({
-  name: z.string(),
-  description: z.string().optional(),
+  name: LlmStringSchema(160),
+  description: LlmStringSchema(1000).optional(),
   weight: z.number().default(1),
 });
 
 const FactSchema = z.object({
-  entity: z.string(),
-  dimension: z.string(),
-  value: z.string(),
+  entity: LlmStringSchema(160),
+  dimension: LlmStringSchema(160),
+  value: LlmStringSchema(2500),
   confidence: z.number().min(0).max(1),
-  citation: z.string().optional(),
+  citation: LlmStringSchema(2000).optional(),
 });
 
 const ScoreSchema = z.object({
-  entity: z.string(),
-  dimension: z.string(),
+  entity: LlmStringSchema(160),
+  dimension: LlmStringSchema(160),
   score: z.number().min(0).max(100),
-  rationale: z.string(),
+  rationale: LlmStringSchema(2500),
 });
 
 const VerdictSchema = z.object({
-  overall: z.string().optional(),
-  summary: z.string().optional(),
-  verdict: z.string().optional(),
-  recommendation: z.string().optional(),
-  winner: z.string().optional(),
-  tradeoffs: z.string().optional(),
+  overall: LlmStringSchema(4000).optional(),
+  summary: LlmStringSchema(4000).optional(),
+  verdict: LlmStringSchema(4000).optional(),
+  recommendation: LlmStringSchema(4000).optional(),
+  winner: LlmStringSchema(160).optional(),
+  tradeoffs: LlmStringSchema(4000).optional(),
   confidence: z.number().min(0).max(1).optional(),
-  caveats: z.string().optional(),
-  personas: z.record(z.string()).optional(),
+  caveats: LlmStringSchema(4000).optional(),
+  personas: z.record(LlmStringSchema(1200)).optional(),
 });
 
 const ParseQuerySchema = z.object({
@@ -442,7 +451,7 @@ export async function runComparisonJob(
       .where(eq(comparisons.id, comparisonId))
       .limit(1);
 
-    if (comp && comp.retryCount >= MAX_RETRIES) {
+    if (comp && comp.retryCount > MAX_RETRIES) {
       logger.warn("Max retries exceeded, marking as failed", { comparisonId, retries: comp.retryCount });
       await db
         .update(comparisons)
@@ -542,6 +551,20 @@ export async function runComparisonJob(
       totalDimensions: dimensions.length,
       freshnessClass,
     });
+    let queryEmbedding: number[] | null = null;
+    try {
+      queryEmbedding = await embedText([
+        ctx.query,
+        `Entities: ${parsed.entities.map((entity) => entity.name).join(" vs ")}`,
+        `Dimensions: ${dimensions.map((dimension) => dimension.name).join(", ")}`,
+        `Verdict: ${getVerdictText(verdict)}`,
+      ].join("\n"));
+    } catch (error) {
+      logger.warn("Comparison query embedding failed", {
+        comparisonId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     await db
       .update(comparisons)
@@ -561,6 +584,7 @@ export async function runComparisonJob(
         searchesUsed: ctx.guardrails.searchCalls,
         overallConfidence: String(overallConfidence),
         freshnessClass,
+        queryEmbedding,
       })
       .where(eq(comparisons.id, comparisonId));
 
@@ -623,6 +647,94 @@ export async function runComparisonJob(
       cost: ctx.guardrails.totalCost,
       time: Date.now() - ctx.guardrails.startTime,
     });
+
+    // Phase 12: Insert into comparison_versions for Time Travel history
+    try {
+      const [versionCounter] = await db
+        .select({ count: sql<number>`count(*)::integer` })
+        .from(comparisonVersions)
+        .where(eq(comparisonVersions.comparisonId, comparisonId));
+
+      const newVersionNum = (versionCounter?.count || 0) + 1;
+
+      let changeSummary: Record<string, unknown> = { reason: "completed_run" };
+      if (newVersionNum > 1) {
+        const [prevVersion] = await db
+          .select({ result: comparisonVersions.result })
+          .from(comparisonVersions)
+          .where(
+            and(
+              eq(comparisonVersions.comparisonId, comparisonId),
+              eq(comparisonVersions.versionNumber, newVersionNum - 1),
+            ),
+          )
+          .limit(1);
+
+        if (prevVersion?.result) {
+          // Find any active watchlists linked to this comparison
+          const linkedWatchlists = await db
+            .select({ alertThreshold: watchlists.alertThreshold })
+            .from(watchlists)
+            .where(
+              and(
+                eq(watchlists.comparisonId, comparisonId),
+                eq(watchlists.status, "active"),
+              ),
+            );
+
+          let alertThreshold = 0.1;
+          if (linkedWatchlists.length > 0) {
+            alertThreshold = Math.min(...linkedWatchlists.map((w) => Number(w.alertThreshold) || 0.1));
+          }
+
+          const diffResult = computeResultDiff(prevVersion.result, result, alertThreshold);
+          changeSummary = {
+            reason: "completed_run",
+            diff: diffResult.diff,
+            alert: diffResult.thresholdBreached ? {
+              threshold: alertThreshold,
+              message: `Score delta exceeded alert threshold of ${alertThreshold * 100} points.`,
+            } : null,
+          };
+        }
+      }
+
+      await db.insert(comparisonVersions).values({
+        comparisonId,
+        versionNumber: newVersionNum,
+        result: result,
+        sourceCount: sources.length,
+        overallConfidence: String(overallConfidence),
+        changeSummary: changeSummary,
+        createdBy: userId,
+      });
+
+      logger.info("Saved historical snapshot to comparisonVersions", {
+        comparisonId,
+        versionNumber: newVersionNum,
+      });
+    } catch (verr) {
+      logger.error("Failed to save version snapshot", verr instanceof Error ? verr : undefined, {
+        comparisonId,
+      });
+    }
+
+    sendComparisonCompleteEmail({
+      userId,
+      comparisonId,
+      query,
+      slug: comparisonRow?.slug || comparisonId,
+    }).catch((error) => {
+      logger.warn("Comparison completion email failed", {
+        comparisonId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+
+    // Phase 3: Trigger outgoing webhooks on success
+    triggerWebhooks(db, comparisonId, "comparison.completed", { result }, waitUntil).catch((err) => {
+      logger.error("Failed to trigger webhook on completion", { comparisonId, error: err });
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Job failed";
     logger.error("Comparison job failed", error instanceof Error ? error : undefined, {
@@ -639,9 +751,7 @@ export async function runComparisonJob(
     const currentRetries = comp?.retryCount || 0;
 
     if (currentRetries < MAX_RETRIES) {
-      // Schedule retry with exponential backoff
-      const backoffMs = Math.pow(2, currentRetries) * 1000;
-      logger.info("Scheduling retry", { comparisonId, retry: currentRetries + 1, backoffMs });
+      logger.info("Queueing retry", { comparisonId, retry: currentRetries + 1 });
 
       await clearDerivedComparisonData(db, comparisonId);
 
@@ -654,12 +764,6 @@ export async function runComparisonJob(
           updatedAt: new Date(),
         })
         .where(eq(comparisons.id, comparisonId));
-
-      // Keep retries inside the same awaited background task. Serverless
-      // platforms can stop loose timers after the function responds.
-      await redisReleaseLock(lockKey);
-      await new Promise((resolve) => setTimeout(resolve, backoffMs));
-      return runComparisonJob(comparisonId, userId, query, orgId);
     } else {
       // Build partial result from whatever data exists
       const partialResult = await buildPartialResult(db, comparisonId);
@@ -673,6 +777,17 @@ export async function runComparisonJob(
           updatedAt: new Date(),
         })
         .where(eq(comparisons.id, comparisonId));
+
+      // Phase 3: Trigger outgoing webhooks on failure
+      triggerWebhooks(
+        db,
+        comparisonId,
+        "comparison.failed",
+        { error: `Failed after ${MAX_RETRIES} retries: ${message}` },
+        waitUntil
+      ).catch((err) => {
+        logger.error("Failed to trigger webhook on failure", { comparisonId, error: err });
+      });
 
       // Phase 10: Mark query analytics for failed job
       await db
@@ -691,6 +806,113 @@ export async function runComparisonJob(
   } finally {
     await redisReleaseLock(lockKey);
   }
+}
+
+type QueuedJobScheduler = (promise: Promise<void>) => void;
+
+const retryBackoffMs = (retryCount: number) =>
+  Math.min(60_000, Math.pow(2, Math.max(retryCount - 1, 0)) * 1000);
+
+function isQueuedJobDue(row: { retryCount: number; updatedAt: Date }) {
+  if (row.retryCount <= 0) return true;
+  return Date.now() - row.updatedAt.getTime() >= retryBackoffMs(row.retryCount);
+}
+
+export async function drainQueuedComparisonJobs(
+  limit = 5,
+  scheduleJob?: QueuedJobScheduler,
+) {
+  const db = createDbClient();
+  const safeLimit = Math.max(1, Math.min(limit, 10));
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+  const rows = await db
+    .select({
+      id: comparisons.id,
+      query: comparisons.query,
+      clerkUserId: comparisons.clerkUserId,
+      clerkOrgId: comparisons.clerkOrgId,
+      retryCount: comparisons.retryCount,
+      updatedAt: comparisons.updatedAt,
+      status: comparisons.status,
+    })
+    .from(comparisons)
+    .where(
+      or(
+        eq(comparisons.status, "queued"),
+        and(
+          eq(comparisons.status, "running"),
+          lte(comparisons.updatedAt, tenMinutesAgo)
+        )
+      )
+    )
+    .orderBy(asc(comparisons.updatedAt))
+    .limit(safeLimit * 4);
+
+  // Handle orphans first: release lock and requeue or fail
+  for (const row of rows) {
+    if (row.status === "running") {
+      await redisReleaseLock(`job-lock:${row.id}`);
+      if (row.retryCount < MAX_RETRIES) {
+        await db
+          .update(comparisons)
+          .set({
+            status: "queued",
+            retryCount: row.retryCount + 1,
+            updatedAt: new Date(),
+          })
+          .where(eq(comparisons.id, row.id));
+        logger.info(`Orphaned job ${row.id} reset to queued (retry ${row.retryCount + 1})`);
+      } else {
+        await db
+          .update(comparisons)
+          .set({
+            status: "failed",
+            errorMessage: "Job timed out and exceeded maximum retries.",
+            updatedAt: new Date(),
+          })
+          .where(eq(comparisons.id, row.id));
+        logger.error(`Orphaned job ${row.id} exceeded max retries. Marked as failed.`);
+      }
+    }
+  }
+
+  const dueRows = rows
+    .filter(
+      (row) =>
+        row.status === "queued" &&
+        row.clerkUserId &&
+        row.retryCount <= MAX_RETRIES &&
+        isQueuedJobDue(row),
+    )
+    .slice(0, safeLimit);
+
+  let started = 0;
+  for (const row of dueRows) {
+    const job = runComparisonJob(
+      row.id,
+      row.clerkUserId!,
+      row.query,
+      row.clerkOrgId || undefined,
+    ).catch((error) => {
+      logger.error("Queued comparison job failed", error instanceof Error ? error : undefined, {
+        comparisonId: row.id,
+      });
+    });
+
+    if (scheduleJob) {
+      scheduleJob(job);
+    } else {
+      await job;
+    }
+    started++;
+  }
+
+  return {
+    scanned: rows.length,
+    due: dueRows.length,
+    started,
+  };
 }
 
 // ─── Individual Steps ───────────────────────────────────────────────────────
@@ -1166,9 +1388,30 @@ async function runFactStep(
       .from(comparisonSources)
       .where(eq(comparisonSources.comparisonId, ctx.comparisonId));
 
-    // Store facts in the production schema. Embeddings remain optional for
-    // follow-ups; the answer engine can fall back to confidence/source ranking.
-    for (const fact of uniqueFacts) {
+    const factEmbeddings: Array<number[] | null> = uniqueFacts.map(() => null);
+    try {
+      const generatedEmbeddings = await embedTexts(
+        uniqueFacts.map((fact) =>
+          [
+            `Entity: ${fact.entity}`,
+            `Dimension: ${fact.dimension || "General"}`,
+            `Fact: ${fact.value}`,
+            fact.citation ? `Source: ${fact.citation}` : "",
+          ].filter(Boolean).join("\n"),
+        ),
+      );
+      for (const [index, embedding] of generatedEmbeddings.entries()) {
+        factEmbeddings[index] = embedding;
+      }
+    } catch (error) {
+      logger.warn("Fact embedding failed; follow-ups will use keyword fallback for these facts", {
+        comparisonId: ctx.comparisonId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Store facts in the production schema with optional pgvector embeddings.
+    for (const [index, fact] of uniqueFacts.entries()) {
       const entityName = fact.entity;
       const dimensionName = fact.dimension || "General";
       const citation = fact.citation || "";
@@ -1195,6 +1438,7 @@ async function runFactStep(
         sourceTitle: sourceRow?.title || "Web source",
         confidence: String(fact.confidence || 0.7),
         freshnessClass: "product",
+        embedding: factEmbeddings[index],
         metadata: { factHash: fact._hash, citation },
       });
     }

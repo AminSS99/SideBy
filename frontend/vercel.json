@@ -2,6 +2,16 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "pnpm run build",
   "outputDirectory": "dist",
+  "crons": [
+    {
+      "path": "/api/jobs/drain",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/watchlists-run",
+      "schedule": "0 * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -38,6 +48,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/seo/sitemap"
+    },
     {
       "source": "/api/workspaces",
       "destination": "/api/workspace?resource=workspaces"

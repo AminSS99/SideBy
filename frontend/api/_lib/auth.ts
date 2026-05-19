@@ -4,6 +4,7 @@
  */
 import { verifyToken } from "@clerk/backend";
 import type { VercelRequest } from "@vercel/node";
+import { assertCsrfForRequest } from "./csrf.js";
 
 const clerkSecretKey = () => process.env.CLERK_SECRET_KEY || "";
 
@@ -44,6 +45,8 @@ export const authenticateRequest = async (
 export const requireAuth = async (
   request: VercelRequest,
 ): Promise<{ userId: string; orgId?: string; orgRole?: string }> => {
+  assertCsrfForRequest(request);
+
   const auth = await authenticateRequest(request);
   if (!auth.userId) {
     const error = new Error("Authentication required.");

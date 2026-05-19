@@ -143,7 +143,9 @@ type ComparisonSource = {
 // ─── Exports ───────────────────────────────────────────────────────────────
 
 export const sendJson = (response: VercelResponse, payload: unknown, status = 200) => {
-  response.setHeader("Cache-Control", "no-store");
+  if (!response.hasHeader("Cache-Control")) {
+    response.setHeader("Cache-Control", "no-store");
+  }
   return response.status(status).json(payload);
 };
 
@@ -158,7 +160,13 @@ const canAccessComparison = (
   clerkUserId: string | null,
 ) => {
   if (visibility === "public") return true;
-  if (!isPrivateOwnershipRequired() && !ownerId) return true;
+  if (
+    !isPrivateOwnershipRequired() &&
+    process.env.DEV_ALLOW_PUBLIC_COMPARISON_ACCESS === "true" &&
+    !ownerId
+  ) {
+    return true;
+  }
   return Boolean(ownerId && clerkUserId && ownerId === clerkUserId);
 };
 

@@ -13,6 +13,8 @@ import {
   queryAnalytics,
   aiRuns,
   feedback as feedbackTable,
+  organizations,
+  subscriptions,
 } from "../src/db/schema.js";
 import { comparisonCache } from "./_lib/cache-layer.js";
 import {
@@ -268,19 +270,46 @@ export default async function handler(
     }
 
     // Standard usage endpoint
+    const db = createDbClient();
+    const [org] = auth.orgId
+      ? await db
+          .select({ plan: organizations.plan })
+          .from(organizations)
+          .where(eq(organizations.id, auth.orgId))
+          .limit(1)
+      : [];
+    const [activeSubscription] = await db
+      .select({ status: subscriptions.status })
+      .from(subscriptions)
+      .where(
+        and(
+          sql`${subscriptions.status} in ('active', 'trialing')`,
+          auth.orgId
+            ? sql`(${subscriptions.organizationId} = ${auth.orgId} OR ${subscriptions.userId} = ${auth.userId})`
+            : eq(subscriptions.userId, auth.userId),
+        ),
+      )
+      .limit(1);
+
+    const plan = org?.plan && org.plan !== "free"
+      ? org.plan
+      : activeSubscription
+        ? "pro"
+        : "free";
     const status = await getUsageStatus("user", auth.userId);
+    const isUnlimited = plan !== "free";
 
     return sendJson(response, {
-      plan: "free",
+      plan,
       limits: {
-        comparisonsPerDay: Number(process.env.FREE_COMPARISONS_PER_DAY || "5"),
-        followUpsPerDay: Number(process.env.FREE_FOLLOWUPS_PER_DAY || "10"),
-        refreshesPerDay: Number(process.env.FREE_REFRESHES_PER_DAY || "3"),
-        exportsPerDay: Number(process.env.FREE_EXPORTS_PER_DAY || "10"),
+        comparisonsPerDay: isUnlimited ? Number.MAX_SAFE_INTEGER : Number(process.env.FREE_COMPARISONS_PER_DAY || "5"),
+        followUpsPerDay: isUnlimited ? Number.MAX_SAFE_INTEGER : Number(process.env.FREE_FOLLOWUPS_PER_DAY || "10"),
+        refreshesPerDay: isUnlimited ? Number.MAX_SAFE_INTEGER : Number(process.env.FREE_REFRESHES_PER_DAY || "3"),
+        exportsPerDay: isUnlimited ? Number.MAX_SAFE_INTEGER : Number(process.env.FREE_EXPORTS_PER_DAY || "10"),
       },
       usage: status,
-      billingConfigured: false,
-      message: "You are on the free plan. Paid plans coming soon.",
+      billingConfigured: Boolean(process.env.PADDLE_API_KEY),
+      message: isUnlimited ? "Your paid plan is active." : "You are on the free plan.",
     });
   } catch (error) {
     const status =

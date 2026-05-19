@@ -1,6 +1,6 @@
 import { sendJson } from "./_lib/sideby.js";
 import { isAuthEnabled, requireAuth } from "./_lib/auth.js";
-import { llmChat, type LLMMessage } from "./_lib/llm.js";
+import { llmChat, llmChatStream, type LLMMessage } from "./_lib/llm.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createDbClient } from "../src/db/index.js";
 import {
@@ -8,11 +8,52 @@ import {
   searchKnowledgeChunks,
 } from "./_lib/knowledge.js";
 import { captureServerEvent } from "./_lib/analytics.js";
+import { sanitizeLlmText } from "./_lib/sanitize.js";
+import { z } from "zod";
 
 export const config = {
   runtime: "nodejs",
   maxDuration: 60,
+  api: {
+    bodyParser: {
+      sizeLimit: "1mb",
+    },
+  },
 };
+
+const ChatBodySchema = z.object({
+  messages: z.array(z.object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string().trim().min(1).max(8000),
+  })).min(1).max(40),
+  workspaceId: z.string().uuid().optional(),
+  projectId: z.string().uuid().nullable().optional(),
+  documentIds: z.array(z.string().uuid()).max(25).optional(),
+  stream: z.boolean().optional(),
+});
+
+function wantsStream(request: VercelRequest, body: z.infer<typeof ChatBodySchema>) {
+  const accept = request.headers.accept;
+  const acceptHeader = Array.isArray(accept) ? accept.join(",") : accept || "";
+  return body.stream === true || acceptHeader.includes("text/event-stream");
+}
+
+function extractAnswerContent(content: string) {
+  try {
+    const parsed = JSON.parse(content) as { answer?: unknown };
+    if (parsed && typeof parsed === "object" && typeof parsed.answer === "string") {
+      return sanitizeLlmText(parsed.answer, 8000);
+    }
+    return sanitizeLlmText(JSON.stringify(parsed, null, 2), 8000);
+  } catch {
+    return sanitizeLlmText(content, 8000);
+  }
+}
+
+function writeSse(response: VercelResponse, event: string, data: unknown) {
+  response.write(`event: ${event}\n`);
+  response.write(`data: ${JSON.stringify(data)}\n\n`);
+}
 
 export default async function handler(
   request: VercelRequest,
@@ -24,16 +65,7 @@ export default async function handler(
 
   try {
     const auth = isAuthEnabled() ? await requireAuth(request) : null;
-    const body = request.body as {
-      messages?: LLMMessage[];
-      workspaceId?: string;
-      projectId?: string | null;
-      documentIds?: string[];
-    };
-
-    if (!body.messages || !Array.isArray(body.messages)) {
-      return sendJson(response, { error: "Messages array is required." }, 400);
-    }
+    const body = ChatBodySchema.parse(request.body || {});
 
     const selectedDocumentIds = Array.isArray(body.documentIds)
       ? body.documentIds.filter((id): id is string => typeof id === "string" && id.length > 0)
@@ -79,7 +111,11 @@ export default async function handler(
 
     const sysMsg: LLMMessage = {
       role: "system",
-      content: buildSystemPrompt(retrievedContext, selectedKnowledgeButNoContext),
+      content: buildSystemPrompt(
+        retrievedContext,
+        selectedKnowledgeButNoContext,
+        wantsStream(request, body) ? "text" : "json",
+      ),
     };
 
     const messagesToRun = [
@@ -87,35 +123,57 @@ export default async function handler(
       ...body.messages.map((m) => ({ role: m.role, content: m.content })),
     ] as LLMMessage[];
 
-    const result = await llmChat(messagesToRun);
-    
-    // Sometimes LLM models return wrapped JSON if format wasn't explicitly enforced
-    let answerContent = result.content;
-    try {
-        const parsed = JSON.parse(result.content);
-        if (parsed && typeof parsed === "object" && parsed.answer) {
-            answerContent = parsed.answer;
-        } else {
-            answerContent = JSON.stringify(parsed, null, 2);
-        }
-    } catch {
-        // Not JSON, just use raw string
+    if (wantsStream(request, body)) {
+      response.writeHead(200, {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      });
+      writeSse(response, "meta", { retrievalCount });
+
+      const result = await llmChatStream(messagesToRun, (token) => {
+        writeSse(response, "token", { token: sanitizeLlmText(token, 1000) });
+      });
+      writeSse(response, "final", {
+        answer: extractAnswerContent(result.content),
+        retrievalCount,
+        model: result.model,
+        provider: result.provider,
+      });
+      response.end();
+      return;
     }
+
+    const result = await llmChat(messagesToRun);
+    const answerContent = extractAnswerContent(result.content);
 
     return sendJson(response, { answer: answerContent, retrievalCount });
   } catch (error) {
     console.error("Chat API error:", error);
+    const status = error instanceof z.ZodError ? 400 : 500;
     return sendJson(
       response,
-      { error: error instanceof Error ? error.message : "Chat request failed." },
-      500,
+      {
+        error: error instanceof z.ZodError
+          ? error.errors[0]?.message || "Invalid request body."
+          : error instanceof Error ? error.message : "Chat request failed.",
+      },
+      status,
     );
   }
 }
 
-function buildSystemPrompt(retrievedContext: string, selectedKnowledgeButNoContext: boolean) {
+function buildSystemPrompt(
+  retrievedContext: string,
+  selectedKnowledgeButNoContext: boolean,
+  responseMode: "json" | "text",
+) {
+  const outputInstruction = responseMode === "json"
+    ? "Return a JSON object with an answer string."
+    : "Stream plain text only. Do not wrap the answer in JSON.";
   const base =
-    "You are the SideBy Research Engine, an expert AI assistant that helps users analyze and compare technology products, tools, services, and their own uploaded workspace documents. Return a JSON object with an answer string.";
+    `You are the SideBy Research Engine, an expert AI assistant that helps users analyze and compare technology products, tools, services, and their own uploaded workspace documents. ${outputInstruction}`;
 
   if (retrievedContext) {
     return `${base}

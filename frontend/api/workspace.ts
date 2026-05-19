@@ -17,8 +17,8 @@ export const config = {
 function setCorsHeaders(res: VercelResponse, req: VercelRequest) {
   const origin = req.headers.origin || "*";
   res.setHeader("Access-Control-Allow-Origin", origin);
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-SideBy-CSRF");
   res.setHeader("Access-Control-Allow-Credentials", "true");
 }
 
@@ -169,6 +169,42 @@ async function handleWorkspaces(
         .returning();
 
       return response.status(201).json({ workspace: inserted[0] });
+    }
+
+    if (request.method === "PATCH") {
+      const body = request.body as {
+        workspaceId?: string;
+        name?: string;
+        slug?: string;
+      };
+
+      if (!body.workspaceId) {
+        return response.status(400).json({ error: "workspaceId is required." });
+      }
+
+      const hasAccess = await canAccessWorkspace(db, auth.userId, body.workspaceId);
+      if (!hasAccess) {
+        return response.status(403).json({ error: "Not authorized to update this workspace." });
+      }
+
+      const name = body.name?.trim();
+      const slug = body.slug
+        ?.toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60);
+
+      const [workspace] = await db
+        .update(workspaces)
+        .set({
+          ...(name ? { name } : {}),
+          ...(slug ? { slug } : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(workspaces.id, body.workspaceId))
+        .returning();
+
+      return response.status(200).json({ workspace });
     }
 
     return response.status(405).json({ error: "Method not allowed" });

@@ -22,6 +22,34 @@
       "when": 1778832194158,
       "tag": "0002_knowledge_base",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779158400000,
+      "tag": "0003_comparison_fact_embeddings",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779158460000,
+      "tag": "0004_saas_backbone",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779158520000,
+      "tag": "0005_intelligence_primitives",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779158580000,
+      "tag": "0006_growth_enterprise_primitives",
+      "breakpoints": true
     }
   ]
 }

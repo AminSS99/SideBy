@@ -5,7 +5,7 @@
 import { sendJson } from "../../_lib/sideby.js";
 import { requireAuth } from "../../_lib/auth.js";
 import { withRateLimit } from "../../_lib/route-guard.js";
-import { refreshComparison } from "../../_lib/refresh-engine.js";
+import { queueComparisonRefresh } from "../../_lib/refresh-engine.js";
 import { createDbClient } from "../../../src/db/index.js";
 import {
   aiRuns,
@@ -21,12 +21,22 @@ import { eq } from "drizzle-orm";
 import { runComparisonJob } from "../../_lib/job-engine.js";
 import { captureServerEvent } from "../../_lib/analytics.js";
 import { waitUntil } from "@vercel/functions";
+import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
   runtime: "nodejs",
   maxDuration: 120,
+  api: {
+    bodyParser: {
+      sizeLimit: "256kb",
+    },
+  },
 };
+
+const ManageBodySchema = z.object({
+  action: z.enum(["refresh", "retry"]).default("refresh"),
+});
 
 export default async function handler(
   request: VercelRequest,
@@ -45,8 +55,8 @@ export default async function handler(
       return sendJson(response, { error: "Comparison id is required." }, 400);
     }
 
-    const body = request.body as { action?: "refresh" | "retry" };
-    const action = body.action || "refresh";
+    const body = ManageBodySchema.parse(request.body || {});
+    const action = body.action;
 
     if (action === "retry") {
       // Retry failed comparison
@@ -98,18 +108,24 @@ export default async function handler(
 
     // Refresh comparison (with rate limit)
     return await withRateLimit(request, response, "refresh", async () => {
-      const result = await refreshComparison(id, auth.userId);
+      const result = await queueComparisonRefresh(id, auth.userId);
       captureServerEvent(auth.userId, "comparison_refreshed", { comparison_id: id });
-      return sendJson(response, result);
+      return sendJson(response, result, 202);
     });
   } catch (error) {
     const status =
-      error instanceof Error && "statusCode" in error
+      error instanceof z.ZodError
+        ? 400
+        : error instanceof Error && "statusCode" in error
         ? (error as Error & { statusCode: number }).statusCode
         : 500;
     return sendJson(
       response,
-      { error: error instanceof Error ? error.message : "Unable to manage comparison." },
+      {
+        error: error instanceof z.ZodError
+          ? error.errors[0]?.message || "Invalid request body."
+          : error instanceof Error ? error.message : "Unable to manage comparison.",
+      },
       status,
     );
   }

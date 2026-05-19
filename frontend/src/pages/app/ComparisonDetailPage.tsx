@@ -11,6 +11,7 @@ import {
   RefreshCw,
   XCircle,
   AlertTriangle,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -34,6 +35,9 @@ import {
   TableOfContents,
   RunTelemetryPanel,
   FeedbackPanel,
+  VersionHistoryUI,
+  DecisionMatrixPanel,
+  WatchlistPanel,
 } from "@/components/Comparison/ComparisonEngine";
 
 type ComparisonJob = {
@@ -55,6 +59,9 @@ const ComparisonDetailPage = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isChangingVisibility, setIsChangingVisibility] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isVersionsOpen, setIsVersionsOpen] = useState(false);
+  const [viewedHistoricalResult, setViewedHistoricalResult] = useState<ComparisonData | null>(null);
+  const [viewedHistoricalVersionNumber, setViewedHistoricalVersionNumber] = useState<number | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const comparisonQuery = useQuery({
@@ -74,7 +81,7 @@ const ComparisonDetailPage = () => {
   });
 
   const job = comparisonQuery.data;
-  const result = job?.result;
+  const result = viewedHistoricalResult || job?.result;
   const latestActivityError = useMemo(() => {
     return job?.activity?.find((step) => step.status === "failed" && step.error)?.error ?? null;
   }, [job?.activity]);
@@ -278,9 +285,39 @@ const ComparisonDetailPage = () => {
             >
               {isRefreshing ? "Refreshing..." : "Refresh facts"}
             </button>
+            <button
+              type="button"
+              onClick={() => setIsVersionsOpen(true)}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#333] bg-[#111] px-5 text-xs font-bold uppercase tracking-[0.25em] text-[#fdfbf7] transition-colors hover:border-orange-500/40 hover:text-orange-400"
+            >
+              <Clock className="h-4 w-4" />
+              History
+            </button>
           </div>
         )}
       </div>
+
+      {viewedHistoricalResult && viewedHistoricalVersionNumber && (
+        <div className="rounded-3xl border border-orange-500/30 bg-orange-500/5 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-orange-400 shrink-0" />
+            <div>
+              <p className="text-sm font-bold text-white">Viewing historical Snapshot V{viewedHistoricalVersionNumber}</p>
+              <p className="text-xs text-white/55">This displays research facts and scores captured during a past execution.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setViewedHistoricalResult(null);
+              setViewedHistoricalVersionNumber(undefined);
+            }}
+            className="rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-orange-400 hover:bg-orange-500/20 transition-colors"
+          >
+            Return to latest
+          </button>
+        </div>
+      )}
 
       {comparisonQuery.isLoading ? (
         <div className="flex items-center justify-center rounded-[28px] border border-white/10 bg-black/30 py-24">
@@ -392,6 +429,7 @@ const ComparisonDetailPage = () => {
                 <RadarChartPanel result={result} />
                 <ConsensusPanel result={result} />
                 <FeatureMatrixPanel result={result} />
+                <DecisionMatrixPanel result={result} comparisonId={job.id} />
                 <div className="space-y-10">
                   {result.categories.map((category, index) => (
                     <CategorySection
@@ -406,6 +444,7 @@ const ComparisonDetailPage = () => {
               <aside className="space-y-6 xl:col-span-4 sticky top-6 self-start pb-8 h-[calc(100vh-2rem)] overflow-y-auto no-scrollbar">
                 <TableOfContents result={result} />
                 <VerdictPanel result={result} />
+                <WatchlistPanel result={result} comparisonId={job.id} />
                 <EntityFactPanel result={result} facts={entityFacts} />
                 <SourcesPanel sources={result.sources} />
                 <RunTelemetryPanel result={result} />
@@ -440,6 +479,7 @@ const ComparisonDetailPage = () => {
             <RadarChartPanel result={result} />
             <ConsensusPanel result={result} />
             <FeatureMatrixPanel result={result} />
+            <DecisionMatrixPanel result={result} comparisonId={job.id} />
 
             <div className="space-y-10">
               {result.categories.map((category, index) => (
@@ -456,6 +496,7 @@ const ComparisonDetailPage = () => {
           <aside className="space-y-6 xl:col-span-4 sticky top-6 self-start pb-8 h-[calc(100vh-2rem)] overflow-y-auto no-scrollbar">
             <TableOfContents result={result} />
             <VerdictPanel result={result} />
+            <WatchlistPanel result={result} comparisonId={job.id} />
             <EntityFactPanel result={result} facts={entityFacts} />
             <SourcesPanel sources={result.sources} />
             <RunTelemetryPanel result={result} />
@@ -463,6 +504,19 @@ const ComparisonDetailPage = () => {
             <FollowUpPanel comparisonId={job.id} />
           </aside>
         </div>
+      )}
+
+      {id && (
+        <VersionHistoryUI
+          comparisonId={id}
+          isOpen={isVersionsOpen}
+          onClose={() => setIsVersionsOpen(false)}
+          onSelectResult={(res, verNum) => {
+            setViewedHistoricalResult(res);
+            setViewedHistoricalVersionNumber(verNum);
+          }}
+          activeVersionNumber={viewedHistoricalVersionNumber}
+        />
       )}
     </div>
   );

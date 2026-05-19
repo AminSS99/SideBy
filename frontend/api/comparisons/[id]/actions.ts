@@ -8,12 +8,24 @@ import { withRateLimit } from "../../_lib/route-guard.js";
 import { exportComparison } from "../../_lib/export-engine.js";
 import { answerFollowUp } from "../../_lib/followup-engine.js";
 import { captureServerEvent } from "../../_lib/analytics.js";
+import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
   runtime: "nodejs",
   maxDuration: 60,
+  api: {
+    bodyParser: {
+      sizeLimit: "512kb",
+    },
+  },
 };
+
+const ActionBodySchema = z.object({
+  action: z.enum(["export", "follow-up"]).default("export"),
+  format: z.enum(["markdown", "json"]).default("markdown"),
+  question: z.string().trim().min(1).max(1200).optional(),
+});
 
 export default async function handler(
   request: VercelRequest,
@@ -32,8 +44,8 @@ export default async function handler(
       return sendJson(response, { error: "Comparison id is required." }, 400);
     }
 
-    const body = request.body as { action?: "export" | "follow-up"; format?: "markdown" | "json"; question?: string };
-    const action = body.action || "export";
+    const body = ActionBodySchema.parse(request.body || {});
+    const action = body.action;
 
     if (action === "follow-up") {
       const question = body.question?.trim();
@@ -73,12 +85,18 @@ export default async function handler(
     });
   } catch (error) {
     const status =
-      error instanceof Error && "statusCode" in error
+      error instanceof z.ZodError
+        ? 400
+        : error instanceof Error && "statusCode" in error
         ? (error as Error & { statusCode: number }).statusCode
         : 500;
     return sendJson(
       response,
-      { error: error instanceof Error ? error.message : "Unable to process action." },
+      {
+        error: error instanceof z.ZodError
+          ? error.errors[0]?.message || "Invalid request body."
+          : error instanceof Error ? error.message : "Unable to process action.",
+      },
       status,
     );
   }
