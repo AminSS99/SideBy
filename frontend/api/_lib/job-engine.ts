@@ -1166,21 +1166,29 @@ async function runFactStep(
       .from(comparisonSources)
       .where(eq(comparisonSources.comparisonId, ctx.comparisonId));
 
+    const entityByName = new Map(entityRows.map((e) => [e.normalizedName, e]));
+    const dimensionByName = new Map(dimensionRows.map((d) => [d.name, d]));
+    const sourceByUrl = new Map(sourceRows.map((s) => [s.url, s]));
+
     // Store facts in the production schema. Embeddings remain optional for
     // follow-ups; the answer engine can fall back to confidence/source ranking.
     for (const fact of uniqueFacts) {
       const entityName = fact.entity;
       const dimensionName = fact.dimension || "General";
       const citation = fact.citation || "";
-      const entityRow =
-        entityRows.find((entity) => entity.normalizedName === entityName) ||
-        entityRows[0];
+
+      const entityRow = entityByName.get(entityName) || entityRows[0];
       if (!entityRow) continue;
-      const dimensionRow = dimensionRows.find((dimension) => dimension.name === dimensionName);
-      const sourceRow =
-        sourceRows.find((source) => source.url === citation) ||
-        sourceRows.find((source) => citation && citation.includes(source.url)) ||
-        sourceRows[0];
+
+      const dimensionRow = dimensionByName.get(dimensionName);
+
+      let sourceRow = citation ? sourceByUrl.get(citation) : undefined;
+      if (!sourceRow && citation) {
+        sourceRow = sourceRows.find((source) => citation.includes(source.url));
+      }
+      if (!sourceRow) {
+        sourceRow = sourceRows[0];
+      }
 
       await ctx.db.insert(comparisonFacts).values({
         comparisonId: ctx.comparisonId,
@@ -1398,14 +1406,13 @@ async function runScoreStep(
       .from(comparisonDimensions)
       .where(eq(comparisonDimensions.comparisonId, ctx.comparisonId));
 
+    const entityByName = new Map(entityRows.map((e) => [e.normalizedName, e]));
+    const dimensionByName = new Map(dimensionRows.map((d) => [d.name, d]));
+
     // Store scores
     for (const score of result.data) {
-      const entityRow =
-        entityRows.find((entity) => entity.normalizedName === score.entity) ||
-        entityRows[0];
-      const dimensionRow =
-        dimensionRows.find((dimension) => dimension.name === score.dimension) ||
-        dimensionRows[0];
+      const entityRow = entityByName.get(score.entity) || entityRows[0];
+      const dimensionRow = dimensionByName.get(score.dimension) || dimensionRows[0];
       if (!entityRow || !dimensionRow) continue;
       await ctx.db.insert(comparisonScores).values({
         comparisonId: ctx.comparisonId,
@@ -1636,6 +1643,11 @@ function buildResultJson(
       sources.find((source) => citation.includes(source.url) || source.url.includes(citation));
   };
 
+  const scoreMap = new Map<string, number>();
+  for (const s of scores) {
+    scoreMap.set(`${s.dimension}|${s.entity}`, s.score);
+  }
+
   return {
     slug: slugOverride || makeResultSlug(nameA, nameB),
     query: parsed.entities.map((e) => e.name).join(" vs "),
@@ -1662,9 +1674,8 @@ function buildResultJson(
       summary: getVerdictText(verdict),
     },
     categories: dimensions.map((dim) => {
-      const dimScores = scores.filter((s) => s.dimension === dim.name);
-      const aScore = dimScores.find((s) => s.entity === entityA?.name)?.score ?? 0;
-      const bScore = dimScores.find((s) => s.entity === entityB?.name)?.score ?? 0;
+      const aScore = scoreMap.get(`${dim.name}|${entityA?.name}`) ?? 0;
+      const bScore = scoreMap.get(`${dim.name}|${entityB?.name}`) ?? 0;
 
       return {
         name: dim.name,
@@ -1689,11 +1700,10 @@ function buildResultJson(
       };
     }),
     dimensions: dimensions.map((dim) => {
-      const dimScores = scores.filter((s) => s.dimension === dim.name);
       return {
         subject: dim.name,
-        a: dimScores.find((s) => s.entity === entityA?.name)?.score ?? 50,
-        b: dimScores.find((s) => s.entity === entityB?.name)?.score ?? 50,
+        a: scoreMap.get(`${dim.name}|${entityA?.name}`) ?? 50,
+        b: scoreMap.get(`${dim.name}|${entityB?.name}`) ?? 50,
         fullMark: 100,
       };
     }),
@@ -1781,13 +1791,18 @@ async function buildPartialResult(
       factsByDim.get(dimName)!.push(f);
     }
 
+    const dimById = new Map(dims.map((d) => [d.id, d.name]));
+    const scoreMap = new Map<string, number>();
+    for (const s of scores) {
+      const dimName = dimById.get(s.dimensionId);
+      if (dimName) {
+        scoreMap.set(`${dimName}|${s.entityId}`, s.score);
+      }
+    }
+
     const categories = Array.from(factsByDim.entries()).map(([name, dimFacts]) => {
-      const dimScores = scores.filter((s) => {
-        const dim = dims.find((d) => d.id === s.dimensionId);
-        return dim?.name === name;
-      });
-      const aScore = dimScores.find((s) => s.entityId === entityA.id)?.score ?? 50;
-      const bScore = dimScores.find((s) => s.entityId === entityB.id)?.score ?? 50;
+      const aScore = scoreMap.get(`${name}|${entityA.id}`) ?? 50;
+      const bScore = scoreMap.get(`${name}|${entityB.id}`) ?? 50;
       return {
         name,
         winner: aScore > bScore ? "a" : bScore > aScore ? "b" : "tie",
