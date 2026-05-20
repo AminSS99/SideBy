@@ -177,8 +177,11 @@ const ComparisonsPage = () => {
     return () => window.clearInterval(interval);
   }, [load]);
 
+  const animatedRef = useRef(false);
+
   useGSAP(() => {
-    if (!isLoading) {
+    if (!isLoading && !animatedRef.current) {
+      animatedRef.current = true;
       gsap.from(".comp-row", {
         y: 20,
         opacity: 0,
@@ -187,7 +190,7 @@ const ComparisonsPage = () => {
         ease: "power2.out"
       });
     }
-  }, [isLoading, items]);
+  }, [isLoading]);
 
   const filteredItems = useMemo(() => {
     const needle = query.trim().toLowerCase();

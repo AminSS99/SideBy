@@ -33,8 +33,8 @@ export const AmbientOrbs = () => {
 
   return (
     <div ref={containerRef} className="pointer-events-none fixed inset-0 overflow-hidden z-0">
-      <div className="ambient-orb-1 absolute -top-[20%] -left-[10%] h-[60vw] w-[60vw] max-h-[800px] max-w-[800px] rounded-full bg-orange-600/[0.04] blur-[120px]" />
-      <div className="ambient-orb-2 absolute top-[40%] -right-[10%] h-[50vw] w-[50vw] max-h-[700px] max-w-[700px] rounded-full bg-cyan-600/[0.03] blur-[120px]" />
+      <div className="ambient-orb-1 absolute -top-[20%] -left-[10%] h-[40vw] w-[40vw] max-h-[500px] max-w-[500px] rounded-full bg-orange-600/[0.03] blur-[40px]" />
+      <div className="ambient-orb-2 absolute top-[40%] -right-[10%] h-[35vw] w-[35vw] max-h-[450px] max-w-[450px] rounded-full bg-cyan-600/[0.02] blur-[40px]" />
     </div>
   );
 };

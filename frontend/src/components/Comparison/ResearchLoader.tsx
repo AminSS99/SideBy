@@ -70,6 +70,8 @@ export const ResearchLoader = ({
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeLogs, liveLogs]);
 
+  const scanLineTweenRef = useRef<gsap.core.Tween | null>(null);
+
   useGSAP(() => {
     // Smooth progress bar update
     if (barRef.current) {
@@ -89,24 +91,27 @@ export const ResearchLoader = ({
         ease: "power2.out",
       });
     }
-    
+
     // Scanning line effect over the entire container
     if (scanLineRef.current) {
-      gsap.fromTo(scanLineRef.current,
+      if (scanLineTweenRef.current) {
+        scanLineTweenRef.current.kill();
+      }
+      scanLineTweenRef.current = gsap.fromTo(scanLineRef.current,
         { top: "0%", opacity: 0 },
-        { 
-          top: "100%", 
-          opacity: 0.5, 
-          duration: 3, 
-          repeat: -1, 
+        {
+          top: "100%",
+          opacity: 0.5,
+          duration: 3,
+          repeat: -1,
           yoyo: true,
-          ease: "linear" 
+          ease: "linear"
         }
       );
     }
-    
+
     // Animate newly active steps
-    gsap.fromTo(`.step-${activeStep}`, 
+    gsap.fromTo(`.step-${activeStep}`,
       { opacity: 0.3, x: -10 },
       { opacity: 1, x: 0, duration: 0.5, ease: "power2.out" }
     );
@@ -118,7 +123,7 @@ export const ResearchLoader = ({
       {/* Ambient moving glow inside the loader */}
       <div 
         ref={glowRef}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] max-w-3xl max-h-3xl bg-orange-600/10 blur-[120px] rounded-full pointer-events-none z-0" 
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] max-w-2xl max-h-2xl bg-orange-600/10 blur-[60px] rounded-full pointer-events-none z-0" 
       />
       
       {/* Cinematic scanning line */}

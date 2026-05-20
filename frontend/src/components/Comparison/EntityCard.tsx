@@ -60,7 +60,7 @@ export const EntityCard = ({ entity, side }: EntityCardProps) => {
   return (
     <div
       ref={cardRef}
-      className={`${panelClass} overflow-hidden border-t-2 p-6 sm:p-8 transition-shadow hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] transform-style-3d will-change-transform`}
+      className={`${panelClass} overflow-hidden border-t-2 p-6 sm:p-8 transition-shadow hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)]`}
       style={{ borderTopColor: accentColor }}
     >
       <div className="mb-6 flex items-center gap-4 sm:gap-5 transform-translate-z-20">

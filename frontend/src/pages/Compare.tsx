@@ -8,7 +8,6 @@ import { brand } from "@/config/brand";
 import { buildApiUrl } from "@/config/env";
 import { apiFetch } from "@/lib/api";
 
-import { AmbientOrbs } from "@/components/AmbientOrbs";
 import {
   type ComparisonData,
   ComparisonHeader,
@@ -142,13 +141,11 @@ const Compare = () => {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
       </div>
       
-      <AmbientOrbs />
-
-      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#030303]/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#030303]/90">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-4 group" aria-label={brand.productName}>
             <div className="flex h-10 w-10 items-center justify-center border border-[#333] bg-[#111] transition-all group-hover:border-orange-500/50">
-              <img src="/sideby.ico" alt="SideBy" className="h-8 w-8 object-contain transition-opacity group-hover:opacity-80" />
+               <img src="/sideby-logo.jpg" alt="SideBy" className="h-8 w-8 object-contain rounded-sm transition-opacity group-hover:opacity-80" />
             </div>
             <div>
               <p className="font-serif text-sm tracking-tight text-[#fdfbf7] group-hover:text-orange-50 transition-colors">{brand.productName}</p>

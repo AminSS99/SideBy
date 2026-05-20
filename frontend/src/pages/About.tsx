@@ -22,15 +22,13 @@ const About = () => {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
       </div>
       <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
-        <div className="absolute top-1/4 left-0 h-[800px] w-[800px] rounded-full bg-orange-600/[0.03] blur-[150px] -translate-x-1/2" />
+        <div className="absolute top-1/4 left-0 h-[500px] w-[500px] rounded-full bg-orange-600/[0.03] blur-[60px] -translate-x-1/2" />
       </div>
 
       <header className="relative z-40 bg-transparent pt-6">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-4 group">
-            <div className="flex h-10 w-10 items-center justify-center border border-[#333] bg-[#111] font-serif text-xl text-[#fdfbf7] transition-all group-hover:border-orange-500/50 group-hover:text-orange-400">
-              S
-            </div>
+            <img src="/sideby-logo.jpg" alt="SideBy" className="h-10 w-10 object-contain rounded-sm transition-all group-hover:opacity-80" />
             <div>
               <p className="font-serif text-lg tracking-tight text-[#fdfbf7] transition-colors group-hover:text-orange-50">{brand.productName}</p>
             </div>

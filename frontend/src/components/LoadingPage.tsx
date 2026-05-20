@@ -35,8 +35,8 @@ const LoadingPage: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0a0a0a] text-white overflow-hidden">
       {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-purple-600/10 rounded-full blur-[80px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-blue-600/15 rounded-full blur-[60px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-[200px] h-[200px] bg-purple-600/10 rounded-full blur-[40px] pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -44,14 +44,10 @@ const LoadingPage: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative z-10 flex flex-col items-center"
       >
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-          className="w-24 h-24 mb-8 relative"
-        >
+        <div className="w-24 h-24 mb-8 relative">
           <div className="absolute inset-0 border-4 border-t-blue-500 border-r-transparent border-b-purple-500 border-l-transparent rounded-full animate-spin" />
           <div className="absolute inset-2 border-4 border-t-transparent border-r-cyan-400 border-b-transparent border-l-pink-500 rounded-full animate-spin-slow" />
-        </motion.div>
+        </div>
 
         <h1 className="text-4xl font-black tracking-tighter mb-2 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent italic uppercase">
           {brand.productName}

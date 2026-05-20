@@ -55,7 +55,7 @@ const AuthPageShell = ({
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
       </div>
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-orange-600/[0.04] blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[400px] w-[400px] rounded-full bg-orange-600/[0.04] blur-[60px]" />
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-16">
@@ -63,7 +63,7 @@ const AuthPageShell = ({
           to="/"
           className="auth-logo mb-16 flex items-center gap-4 self-start group"
         >
-          <img src="/sideby.ico" alt="SideBy" className="h-12 w-12 object-contain group-hover:opacity-80 transition-all" />
+          <img src="/sideby-logo.jpg" alt="SideBy" className="h-12 w-12 object-contain rounded-sm group-hover:opacity-80 transition-all" />
           <div>
             <span className="block font-serif text-xl tracking-tight text-[#fdfbf7] group-hover:text-orange-50 transition-colors">{brand.productName}</span>
             <span className="block text-[9px] uppercase tracking-[0.3em] text-[#fdfbf7]/40">

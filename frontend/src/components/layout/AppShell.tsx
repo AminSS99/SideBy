@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { CommandMenu } from "@/components/CommandMenu";
 import { BrandFooter } from "@/components/brand/BrandFooter";
-import { AmbientOrbs } from "@/components/AmbientOrbs";
+
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 const navItems = [
@@ -92,10 +92,9 @@ const AppShell = () => {
 
   return (
     <div ref={shellRef} className="min-h-screen bg-[#050505] text-white selection:bg-orange-500/30 relative flex flex-col">
-      <AmbientOrbs />
       <CommandMenu open={commandOpen} setOpen={setCommandOpen} />
-      
-      <div className="shell-header border-b border-white/10 bg-black/40 backdrop-blur-xl sticky top-0 z-50">
+
+      <div className="shell-header border-b border-white/10 bg-black/60 sticky top-0 z-50">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-4">
             <button 
@@ -105,7 +104,7 @@ const AppShell = () => {
               <Menu className="h-6 w-6" />
             </button>
             <Link to="/" className="flex items-center gap-4 group">
-              <img src="/sideby.ico" alt="SideBy" className="h-9 w-9 object-contain group-hover:opacity-80 transition-all" />
+              <img src="/sideby-logo.jpg" alt="SideBy" className="h-9 w-9 object-contain rounded-sm group-hover:opacity-80 transition-all" />
               <div className="hidden sm:block">
                 <span className="font-serif text-lg tracking-tight text-white group-hover:text-orange-50 transition-colors">
                   {brand.productName}
@@ -153,7 +152,7 @@ const AppShell = () => {
 
       <div className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 gap-4 px-4 py-5 sm:px-6 sm:py-8 lg:grid-cols-[220px_1fr] lg:gap-8 items-start">
         {/* Desktop Sidebar */}
-        <aside className="shell-sidebar hidden lg:flex flex-col rounded-sm border border-white/10 bg-white/[0.02] backdrop-blur-md p-4 sticky top-28 h-[calc(100vh-8rem)]">
+        <aside className="shell-sidebar hidden lg:flex flex-col rounded-sm border border-white/10 bg-[#0a0a0a] p-4 sticky top-28 h-[calc(100vh-8rem)]">
           <nav className="flex flex-col space-y-1 overflow-y-auto no-scrollbar flex-1">
             {navItems.map((item) => (
               <NavLink
@@ -197,7 +196,7 @@ const AppShell = () => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setMobileMenuOpen(false)}
-                className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm lg:hidden"
+                className="fixed inset-0 z-[60] bg-black/80 lg:hidden"
               />
               <motion.aside 
                 initial={{ x: "-100%" }}
@@ -208,9 +207,7 @@ const AppShell = () => {
               >
                 <div className="p-4 flex items-center justify-between border-b border-[#2a2a2a]">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center border border-[#333] bg-[#111] font-serif text-sm text-[#fdfbf7]">
-                      S
-                    </div>
+                    <img src="/sideby-logo.jpg" alt="SideBy" className="h-8 w-8 object-contain rounded-sm" />
                     <span className="font-serif text-base tracking-tight text-white">{brand.productName}</span>
                   </div>
                   <button 
@@ -266,7 +263,7 @@ const AppShell = () => {
           )}
         </AnimatePresence>
 
-        <main className="shell-main min-w-0 w-full rounded-sm border border-white/10 bg-[#0a0a0a]/90 backdrop-blur-md p-4 sm:p-8 md:p-10 shadow-2xl flex-1 flex flex-col">
+        <main className="shell-main min-w-0 w-full rounded-sm border border-white/10 bg-[#0a0a0a] p-4 sm:p-8 md:p-10 shadow-2xl flex-1 flex flex-col">
           {workspaceError && (
             <div className="mb-6 rounded-sm border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-100">
               {workspaceError}
