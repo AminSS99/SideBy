@@ -5,11 +5,11 @@
   "crons": [
     {
       "path": "/api/jobs/drain",
-      "schedule": "* * * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/watchlists-run",
-      "schedule": "0 * * * *"
+      "schedule": "0 1 * * *"
     }
   ],
   "headers": [
