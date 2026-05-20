@@ -1,0 +1,373 @@
+/**
+ * Consolidated Knowledge Base API for Hobby-plan function limits.
+ * Rewrites preserve:
+ * - GET /api/knowledge/documents
+ * - POST /api/knowledge/upload
+ * - POST /api/knowledge/search
+ * - DELETE /api/knowledge/documents/:id
+ */
+import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { del, put } from "@vercel/blob";
+import { eq } from "drizzle-orm";
+import formidable from "formidable";
+import type { File as FormidableFile } from "formidable";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { createDbClient } from "../../src/db/index.js";
+import { knowledgeDocuments } from "../../src/db/schema.js";
+import { captureServerEvent } from "../_lib/analytics.js";
+import { requireAuth } from "../_lib/auth.js";
+import { serverEnv } from "../_lib/env.js";
+import {
+  KnowledgeApiError,
+  assertKnowledgeScopeAccess,
+  getKnowledgeDocumentForMutation,
+  listKnowledgeDocuments,
+  markKnowledgeDocumentError,
+  persistKnowledgeChunks,
+  searchKnowledgeChunks,
+  toKnowledgeDocumentDto,
+} from "../_lib/knowledge.js";
+import {
+  KnowledgeProcessingError,
+  buildKnowledgeBlobKey,
+  chunkKnowledgeText,
+  extractTextFromKnowledgeFile,
+  getKnowledgeMaxUploadBytes,
+  validateKnowledgeFile,
+} from "../_lib/knowledge-processing.js";
+import { sendJson } from "../_lib/sideby.js";
+
+export const config = {
+  runtime: "nodejs",
+  maxDuration: 300,
+  api: {
+    bodyParser: false,
+  },
+};
+
+type ParsedUpload = {
+  workspaceId: string;
+  projectId: string | null;
+  file: FormidableFile;
+};
+
+type SearchBody = {
+  query?: string;
+  workspaceId?: string;
+  projectId?: string | null;
+  documentIds?: string[];
+  topK?: number;
+};
+
+export default async function handler(
+  request: VercelRequest,
+  response: VercelResponse,
+) {
+  const action = getQueryValue(request.query.action);
+
+  if (action === "documents" && request.method === "GET") {
+    return listDocuments(request, response);
+  }
+
+  if (action === "document" && request.method === "DELETE") {
+    return deleteDocument(request, response);
+  }
+
+  if (action === "search" && request.method === "POST") {
+    return searchDocuments(request, response);
+  }
+
+  if (action === "upload" && request.method === "POST") {
+    return uploadDocument(request, response);
+  }
+
+  return sendJson(response, { error: "Method not allowed" }, 405);
+}
+
+async function listDocuments(
+  request: VercelRequest,
+  response: VercelResponse,
+) {
+  try {
+    const auth = await requireAuth(request);
+    const workspaceId = getQueryValue(request.query.workspaceId);
+    const projectId = getQueryValue(request.query.projectId);
+
+    if (!workspaceId) {
+      return sendJson(response, { error: "workspaceId query parameter is required." }, 400);
+    }
+
+    const db = createDbClient();
+    const documents = await listKnowledgeDocuments(db, {
+      userId: auth.userId,
+      workspaceId,
+      projectId,
+    });
+
+    return sendJson(response, { documents });
+  } catch (error) {
+    return sendJson(
+      response,
+      { error: error instanceof Error ? error.message : "Failed to load documents." },
+      getErrorStatus(error),
+    );
+  }
+}
+
+async function searchDocuments(
+  request: VercelRequest,
+  response: VercelResponse,
+) {
+  try {
+    const auth = await requireAuth(request);
+    const body = request.body as SearchBody;
+
+    if (!body.query?.trim()) {
+      return sendJson(response, { error: "query is required." }, 400);
+    }
+    if (!body.workspaceId) {
+      return sendJson(response, { error: "workspaceId is required." }, 400);
+    }
+
+    const db = createDbClient();
+    const chunks = await searchKnowledgeChunks(db, {
+      userId: auth.userId,
+      workspaceId: body.workspaceId,
+      projectId: body.projectId || null,
+      documentIds: Array.isArray(body.documentIds) ? body.documentIds : undefined,
+      query: body.query,
+      topK: body.topK,
+    });
+
+    return sendJson(response, { chunks });
+  } catch (error) {
+    return sendJson(
+      response,
+      { error: error instanceof Error ? error.message : "Knowledge search failed." },
+      getErrorStatus(error),
+    );
+  }
+}
+
+async function deleteDocument(
+  request: VercelRequest,
+  response: VercelResponse,
+) {
+  try {
+    const auth = await requireAuth(request);
+    const id = getQueryValue(request.query.id);
+
+    if (!id) {
+      return sendJson(response, { error: "Document id is required." }, 400);
+    }
+
+    const db = createDbClient();
+    const document = await getKnowledgeDocumentForMutation(db, {
+      userId: auth.userId,
+      documentId: id,
+    });
+
+    const [deletedDocument] = await db
+      .update(knowledgeDocuments)
+      .set({
+        status: "deleted",
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(knowledgeDocuments.id, id))
+      .returning();
+
+    if (serverEnv.blobReadWriteToken) {
+      await del(document.blobUrl, { token: serverEnv.blobReadWriteToken }).catch((error) => {
+        console.warn("Failed to delete Vercel Blob object", error);
+      });
+    }
+
+    captureServerEvent(auth.userId, "knowledge_document_deleted", {
+      document_id: document.id,
+      workspace_id: document.workspaceId,
+      project_id: document.projectId,
+    });
+
+    return sendJson(response, {
+      document: toKnowledgeDocumentDto(deletedDocument),
+    });
+  } catch (error) {
+    return sendJson(
+      response,
+      { error: error instanceof Error ? error.message : "Document delete failed." },
+      getErrorStatus(error),
+    );
+  }
+}
+
+async function uploadDocument(
+  request: VercelRequest,
+  response: VercelResponse,
+) {
+  let documentId: string | null = null;
+  let authUserId: string | null = null;
+  let eventBase: Record<string, unknown> = {};
+
+  try {
+    const auth = await requireAuth(request);
+    authUserId = auth.userId;
+    const parsed = await parseUploadRequest(request);
+    const db = createDbClient();
+
+    await assertKnowledgeScopeAccess(db, auth.userId, parsed.workspaceId, parsed.projectId);
+
+    const filename = parsed.file.originalFilename || "upload";
+    const mimeType = parsed.file.mimetype || "application/octet-stream";
+    const kind = validateKnowledgeFile({
+      filename,
+      mimeType,
+      sizeBytes: parsed.file.size,
+    });
+
+    if (!serverEnv.blobReadWriteToken) {
+      return sendJson(response, { error: "Blob storage is not configured. Set BLOB_READ_WRITE_TOKEN." }, 500);
+    }
+
+    documentId = randomUUID();
+    eventBase = {
+      workspace_id: parsed.workspaceId,
+      project_id: parsed.projectId,
+      document_id: documentId,
+      filename,
+      mime_type: mimeType,
+      size_bytes: parsed.file.size,
+    };
+    captureServerEvent(auth.userId, "knowledge_upload_started", eventBase);
+
+    const buffer = await readFile(parsed.file.filepath);
+    const blobKey = buildKnowledgeBlobKey({
+      workspaceId: parsed.workspaceId,
+      documentId,
+      filename,
+    });
+    const blob = await put(blobKey, buffer, {
+      access: "private",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      contentType: mimeType,
+      multipart: buffer.length > 4 * 1024 * 1024,
+      token: serverEnv.blobReadWriteToken,
+    });
+
+    const [document] = await db
+      .insert(knowledgeDocuments)
+      .values({
+        id: documentId,
+        workspaceId: parsed.workspaceId,
+        projectId: parsed.projectId,
+        uploadedBy: auth.userId,
+        filename,
+        mimeType,
+        sizeBytes: parsed.file.size,
+        blobUrl: blob.url,
+        blobKey: blob.pathname,
+        status: "indexing",
+        metadata: {
+          blobContentType: blob.contentType,
+          blobEtag: blob.etag,
+        },
+      })
+      .returning();
+
+    try {
+      const text = await extractTextFromKnowledgeFile(buffer, kind);
+      const chunks = chunkKnowledgeText(text);
+
+      if (chunks.length === 0) {
+        throw new KnowledgeProcessingError("No text could be extracted from this document.", 422);
+      }
+
+      const indexedDocument = await persistKnowledgeChunks(db, {
+        documentId,
+        workspaceId: parsed.workspaceId,
+        projectId: parsed.projectId,
+        chunks,
+      });
+
+      captureServerEvent(auth.userId, "knowledge_upload_succeeded", {
+        ...eventBase,
+        chunk_count: chunks.length,
+      });
+
+      return sendJson(response, { document: indexedDocument }, 201);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Document indexing failed.";
+      const failedDocument = await markKnowledgeDocumentError(db, documentId, message);
+      captureServerEvent(auth.userId, "knowledge_upload_failed", {
+        ...eventBase,
+        error: message,
+      });
+
+      const status = error instanceof KnowledgeProcessingError ? 201 : 500;
+      return sendJson(
+        response,
+        {
+          document: failedDocument ?? toKnowledgeDocumentDto(document),
+          error: message,
+        },
+        status,
+      );
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Upload failed.";
+    if (documentId && authUserId) {
+      captureServerEvent(authUserId, "knowledge_upload_failed", {
+        ...eventBase,
+        error: message,
+      });
+    }
+    return sendJson(response, { error: message }, getErrorStatus(error));
+  }
+}
+
+async function parseUploadRequest(request: VercelRequest): Promise<ParsedUpload> {
+  const form = formidable({
+    multiples: false,
+    maxFiles: 1,
+    maxFileSize: getKnowledgeMaxUploadBytes(),
+    allowEmptyFiles: false,
+  });
+
+  const [fields, files] = await form.parse(request);
+  const workspaceId = getFormValue(fields.workspaceId);
+  const projectId = getFormValue(fields.projectId) || null;
+  const file = getFormFile(files.file);
+
+  if (!workspaceId) {
+    throw new KnowledgeProcessingError("workspaceId is required.");
+  }
+  if (!file) {
+    throw new KnowledgeProcessingError("A file upload is required.");
+  }
+
+  return { workspaceId, projectId, file };
+}
+
+function getFormValue(value: string[] | undefined) {
+  return Array.isArray(value) ? value[0] : undefined;
+}
+
+function getFormFile(value: FormidableFile | FormidableFile[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function getQueryValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function getErrorStatus(error: unknown) {
+  if (error instanceof KnowledgeApiError || error instanceof KnowledgeProcessingError) {
+    return error.statusCode;
+  }
+  if (error instanceof Error && "statusCode" in error) {
+    return (error as Error & { statusCode: number }).statusCode;
+  }
+  return 500;
+}
