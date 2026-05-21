@@ -36,8 +36,8 @@ export default defineConfig(() => ({
             if (id.includes("@clerk")) {
               return "vendor-clerk";
             }
-            if (id.includes("recharts") || id.includes("d3")) {
-              return "vendor-charts";
+            if (id.includes("recharts") || id.includes("react-smooth") || id.includes("d3")) {
+              return "vendor-react-core";
             }
             if (id.includes("gsap")) {
               return "vendor-gsap";
