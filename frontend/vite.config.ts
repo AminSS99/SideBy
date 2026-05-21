@@ -34,7 +34,7 @@ export default defineConfig(() => ({
         manualChunks(id) {
           if (id.includes("node_modules")) {
             if (id.includes("@clerk")) {
-              return "vendor-clerk";
+              return "vendor-react-core";
             }
             if (id.includes("recharts") || id.includes("react-smooth") || id.includes("d3")) {
               return "vendor-react-core";
@@ -43,19 +43,19 @@ export default defineConfig(() => ({
               return "vendor-gsap";
             }
             if (id.includes("framer-motion")) {
-              return "vendor-motion";
+              return "vendor-react-core";
             }
             if (id.includes("lucide-react")) {
-              return "vendor-icons";
+              return "vendor-react-core";
             }
-            if (id.includes("@radix-ui")) {
-              return "vendor-radix";
+            if (id.includes("@radix-ui") || id.includes("class-variance-authority")) {
+              return "vendor-react-core";
             }
             if (id.includes("@sentry")) {
-              return "vendor-sentry";
+              return "vendor-react-core";
             }
             if (id.includes("@tanstack")) {
-              return "vendor-tanstack";
+              return "vendor-react-core";
             }
             if (id.includes("react") || id.includes("scheduler")) {
               return "vendor-react-core";
