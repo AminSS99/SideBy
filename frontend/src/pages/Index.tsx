@@ -41,11 +41,11 @@ const Index = () => {
   useEffect(() => {
     if (!heroRef.current) return;
     const hero = heroRef.current;
-    
+
     // QuickTo for smooth performant following
     const xToTitle = gsap.quickTo(".parallax-title", "x", { duration: 0.8, ease: "power3" });
     const yToTitle = gsap.quickTo(".parallax-title", "y", { duration: 0.8, ease: "power3" });
-    
+
     const xToDesc = gsap.quickTo(".parallax-desc", "x", { duration: 1, ease: "power3" });
     const yToDesc = gsap.quickTo(".parallax-desc", "y", { duration: 1, ease: "power3" });
 
@@ -57,7 +57,7 @@ const Index = () => {
       // Move elements on different depth planes
       xToTitle(x * -20);
       yToTitle(y * -20);
-      
+
       xToDesc(x * -10);
       yToDesc(y * -10);
     };
@@ -73,6 +73,11 @@ const Index = () => {
     return () => {
       hero.removeEventListener("mousemove", handleMouseMove);
       hero.removeEventListener("mouseleave", handleMouseLeave);
+      // Kill the internal quickTo tweens to prevent memory leaks
+      xToTitle.kill();
+      yToTitle.kill();
+      xToDesc.kill();
+      yToDesc.kill();
     };
   }, []);
 
@@ -107,7 +112,7 @@ const Index = () => {
       stagger: 0.2,
       ease: "expo.out"
     });
-    
+
     gsap.from(".orch-path", {
       scrollTrigger: {
         trigger: ".orchestration-section",
@@ -120,6 +125,10 @@ const Index = () => {
       ease: "power3.inOut"
     });
 
+    return () => {
+      // Kill all ScrollTriggers scoped to this container to prevent memory leaks
+      ScrollTrigger.getAll().forEach((t) => t.kill());
+    };
   }, { scope: containerRef });
 
   const handleSearch = (e: React.FormEvent) => {

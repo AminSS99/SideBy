@@ -12,26 +12,36 @@ interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  errorCount: number;
 }
+
+const MAX_ERROR_BOUNDARY_RETRIES = 3;
 
 /**
  * GlobalErrorBoundary
  * Catches JavaScript errors anywhere in the child component tree,
  * logs them, and displays a fallback UI instead of crashing the app.
+ * Includes a retry limit to prevent infinite error loops.
  */
 class GlobalErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = { hasError: false, error: null, errorInfo: null, errorCount: 0 };
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error, errorInfo: null };
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("GlobalErrorBoundary caught an error:", error, errorInfo);
-    this.setState({ error, errorInfo });
+    this.setState((prev) => {
+      const nextCount = prev.errorCount + 1;
+      if (nextCount > MAX_ERROR_BOUNDARY_RETRIES) {
+        console.error(`GlobalErrorBoundary: reached max retries (${MAX_ERROR_BOUNDARY_RETRIES}). Stopping error recovery to prevent infinite loops.`);
+      }
+      return { error, errorInfo, errorCount: nextCount };
+    });
 
     // Report to Sentry if available
     if (typeof window !== "undefined" && "__SENTRY__" in window) {
@@ -46,7 +56,7 @@ class GlobalErrorBoundary extends Component<Props, State> {
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null });
+    this.setState({ hasError: false, error: null, errorInfo: null, errorCount: 0 });
     window.location.reload();
   };
 
@@ -55,6 +65,8 @@ class GlobalErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) {
         return this.props.fallback;
       }
+
+      const maxRetriesExceeded = this.state.errorCount > MAX_ERROR_BOUNDARY_RETRIES;
 
       return (
         <div className="min-h-screen flex items-center justify-center bg-[#050505] text-white px-4">
@@ -66,10 +78,12 @@ class GlobalErrorBoundary extends Component<Props, State> {
               Something went wrong
             </h1>
             <p className="text-sm text-[#fdfbf7]/50 mb-8 leading-relaxed">
-              {brand.productName} encountered an unexpected error. We've logged this issue and our team will investigate.
+              {maxRetriesExceeded
+                ? "A critical error is preventing this page from loading. Please reload the application."
+                : `${brand.productName} encountered an unexpected error. We've logged this issue and our team will investigate.`}
             </p>
 
-            {this.state.error && (
+            {this.state.error && !maxRetriesExceeded && (
               <div className="mb-6 rounded-sm border border-red-500/20 bg-red-500/5 p-4 text-left overflow-auto">
                 <p className="text-xs font-mono text-red-400/80">
                   {this.state.error.toString()}

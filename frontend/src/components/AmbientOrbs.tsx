@@ -7,9 +7,9 @@ export const AmbientOrbs = () => {
 
   useGSAP(() => {
     if (!containerRef.current) return;
-    
+
     // Orb 1: Orange/Copper drift
-    gsap.to(".ambient-orb-1", {
+    const tween1 = gsap.to(".ambient-orb-1", {
       x: 150,
       y: 100,
       scale: 1.1,
@@ -20,7 +20,7 @@ export const AmbientOrbs = () => {
     });
 
     // Orb 2: Cyan/Blue drift
-    gsap.to(".ambient-orb-2", {
+    const tween2 = gsap.to(".ambient-orb-2", {
       x: -150,
       y: -100,
       scale: 1.2,
@@ -29,6 +29,11 @@ export const AmbientOrbs = () => {
       yoyo: true,
       ease: "sine.inOut"
     });
+
+    return () => {
+      tween1.kill();
+      tween2.kill();
+    };
   }, { scope: containerRef });
 
   return (

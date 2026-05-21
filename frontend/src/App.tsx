@@ -13,36 +13,39 @@ import GlobalErrorBoundary from "@/components/ErrorBoundary";
 import ScrollToTop from "@/components/ScrollToTop";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import Index from "./pages/Index";
-import Compare from "./pages/Compare";
-import Pricing from "./pages/Pricing";
-import Features from "./pages/Features";
-import Contact from "./pages/Contact";
-import About from "./pages/About";
-import Blog from "./pages/Blog";
-import Docs from "./pages/Docs";
-import NotFound from "./pages/NotFound";
-import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
-import TermsOfService from "./pages/legal/TermsOfService";
-import CookiesPolicy from "./pages/legal/CookiesPolicy";
-import SignIn from "./pages/auth/SignIn";
-import SignUp from "./pages/auth/SignUp";
-import AuthCallback from "./pages/auth/AuthCallback";
-import DashboardHome from "./pages/app/DashboardHome";
-import ComparisonDetailPage from "./pages/app/ComparisonDetailPage";
-import ComparisonsPage from "./pages/app/ComparisonsPage";
-import ChatPage from "./pages/app/ChatPage";
-import ResearchPage from "./pages/app/ResearchPage";
-import UploadsPage from "./pages/app/UploadsPage";
-import PromptsPage from "./pages/app/PromptsPage";
-import AnalyticsPage from "./pages/app/AnalyticsPage";
-import QualityPage from "./pages/app/QualityPage";
-import BillingPage from "./pages/app/BillingPage";
-import ProjectsPage from "./pages/app/ProjectsPage";
-import SettingsPage from "./pages/app/SettingsPage";
-import WorkspacesPage from "./pages/app/WorkspacesPage";
-import TeamPage from "./pages/app/TeamPage";
-import OnboardingPage from "./pages/app/OnboardingPage";
+
+// Lazy-load non-landing pages to reduce initial bundle and memory pressure
+const Compare = lazy(() => import("./pages/Compare"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const Features = lazy(() => import("./pages/Features"));
+const Contact = lazy(() => import("./pages/Contact"));
+const About = lazy(() => import("./pages/About"));
+const Blog = lazy(() => import("./pages/Blog"));
+const Docs = lazy(() => import("./pages/Docs"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/legal/TermsOfService"));
+const CookiesPolicy = lazy(() => import("./pages/legal/CookiesPolicy"));
+const SignIn = lazy(() => import("./pages/auth/SignIn"));
+const SignUp = lazy(() => import("./pages/auth/SignUp"));
+const AuthCallback = lazy(() => import("./pages/auth/AuthCallback"));
+const DashboardHome = lazy(() => import("./pages/app/DashboardHome"));
+const ComparisonDetailPage = lazy(() => import("./pages/app/ComparisonDetailPage"));
+const ComparisonsPage = lazy(() => import("./pages/app/ComparisonsPage"));
+const ChatPage = lazy(() => import("./pages/app/ChatPage"));
+const ResearchPage = lazy(() => import("./pages/app/ResearchPage"));
+const UploadsPage = lazy(() => import("./pages/app/UploadsPage"));
+const PromptsPage = lazy(() => import("./pages/app/PromptsPage"));
+const AnalyticsPage = lazy(() => import("./pages/app/AnalyticsPage"));
+const QualityPage = lazy(() => import("./pages/app/QualityPage"));
+const BillingPage = lazy(() => import("./pages/app/BillingPage"));
+const ProjectsPage = lazy(() => import("./pages/app/ProjectsPage"));
+const SettingsPage = lazy(() => import("./pages/app/SettingsPage"));
+const WorkspacesPage = lazy(() => import("./pages/app/WorkspacesPage"));
+const TeamPage = lazy(() => import("./pages/app/TeamPage"));
+const OnboardingPage = lazy(() => import("./pages/app/OnboardingPage"));
 
 /**
  * Production-grade QueryClient configuration:
@@ -74,6 +77,12 @@ const queryClient = new QueryClient({
   },
 });
 
+const LazyFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-[#030303]">
+    <div className="w-6 h-6 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+  </div>
+);
+
 const App = () => {
   return (
     <GlobalErrorBoundary>
@@ -86,7 +95,8 @@ const App = () => {
                 <Sonner />
                 <BrowserRouter>
                   <ScrollToTop />
-                  <Routes>
+                  <Suspense fallback={<LazyFallback />}>
+                    <Routes>
                     {/* Public marketing pages */}
                     <Route path="/" element={<Index />} />
                     <Route path="/pricing" element={<Pricing />} />
@@ -179,6 +189,7 @@ const App = () => {
                     {/* Catch-all 404 */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
+                  </Suspense>
                 </BrowserRouter>
               </TooltipProvider>
             </ProjectsProvider>
