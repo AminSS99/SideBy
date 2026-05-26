@@ -160,7 +160,7 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
       fullName: clerkUser.fullName,
       imageUrl: clerkUser.imageUrl,
     };
-  }, [clerkUser, isSignedIn, isLoaded, cachedUser]);
+  }, [clerkUser, isSignedIn, isLoaded]);
 
   // Sync user to cache whenever it changes
   useEffect(() => {
@@ -217,7 +217,7 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
         await handleSignOut();
       },
     }),
-    [handleSignOut, isLoaded, user, cachedUser],
+    [handleSignOut, isLoaded, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
