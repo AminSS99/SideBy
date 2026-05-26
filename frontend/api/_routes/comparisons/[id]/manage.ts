@@ -100,7 +100,11 @@ export default async function handler(
         })
         .where(eq(comparisons.id, id));
 
-      waitUntil(runComparisonJob(id, auth.userId, comp.query, auth.orgId).catch(() => {}));
+      if (process.env.DISABLE_IN_PROCESS_JOBS === "true") {
+        console.log(`[DISABLE_IN_PROCESS_JOBS] Comparison retry job ${id} queued for external worker.`);
+      } else {
+        waitUntil(runComparisonJob(id, auth.userId, comp.query, auth.orgId).catch(() => {}));
+      }
 
       captureServerEvent(auth.userId, "comparison_retried", { comparison_id: id });
       return sendJson(response, { success: true, message: "Comparison research restarted." });

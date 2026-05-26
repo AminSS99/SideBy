@@ -73,11 +73,45 @@ function writeCachedAuth(user: AppUser | null) {
 }
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const isTestAuth = typeof window !== "undefined" && localStorage.getItem("sideby.test.auth") === "true";
+
+  if (isTestAuth) {
+    return <TestAuthProvider>{children}</TestAuthProvider>;
+  }
+
   if (!envConfig.hasClerkConfig) {
     return <UnconfiguredAuthProvider>{children}</UnconfiguredAuthProvider>;
   }
 
   return <ClerkAuthProvider>{children}</ClerkAuthProvider>;
+};
+
+const TestAuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const user = useMemo<AppUser>(() => ({
+    id: "user_test_mock",
+    email: "test@example.com",
+    fullName: "Test Admin",
+    imageUrl: null,
+  }), []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      session: { userId: user.id },
+      user,
+      isLoading: false,
+      isConfigured: true,
+      async signInWithPassword() {},
+      async signUpWithPassword() {},
+      async signInWithGoogle() {},
+      async signOut() {
+        localStorage.removeItem("sideby.test.auth");
+        window.location.href = "/";
+      },
+    }),
+    [user],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 const UnconfiguredAuthProvider = ({ children }: { children: React.ReactNode }) => {

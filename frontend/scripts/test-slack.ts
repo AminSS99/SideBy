@@ -76,7 +76,7 @@ async function runTest() {
     });
 
     console.log("Invoking Slack endpoint handler...");
-    const { default: slackHandler } = await import("../api/integrations/slack.js");
+    const { default: slackHandler } = await import("../api/_routes/integrations/slack.js");
     
     try {
       await slackHandler(mockRequest, mockResponse);

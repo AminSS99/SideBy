@@ -97,29 +97,29 @@ async function runTests() {
     }
   });
 
-  await test("GET /api/comparisons/list requires auth", async () => {
-    const res = await get("/api/comparisons/list");
+  await test("GET /api/comparisons requires auth", async () => {
+    const res = await get("/api/comparisons");
     if (res.status !== 401 && res.status !== 403) {
       throw new Error(`Expected 401/403, got ${res.status}`);
     }
   });
 
-  await test("POST /api/comparisons/:id/follow-up requires auth", async () => {
-    const res = await post("/api/comparisons/test-id/follow-up", { question: "Test" });
+  await test("POST /api/comparisons/:id/actions requires auth", async () => {
+    const res = await post("/api/comparisons/test-id/actions", { question: "Test" });
     if (res.status !== 401 && res.status !== 403) {
       throw new Error(`Expected 401/403, got ${res.status}`);
     }
   });
 
-  await test("POST /api/comparisons/:id/export requires auth", async () => {
-    const res = await post("/api/comparisons/test-id/export", { format: "markdown" });
+  await test("GET /api/v1/comparisons/:id/export requires auth", async () => {
+    const res = await get("/api/v1/comparisons/test-id/export?format=markdown");
     if (res.status !== 401 && res.status !== 403) {
       throw new Error(`Expected 401/403, got ${res.status}`);
     }
   });
 
-  await test("POST /api/comparisons/:id/refresh requires auth", async () => {
-    const res = await post("/api/comparisons/test-id/refresh", {});
+  await test("POST /api/comparisons/:id/manage requires auth", async () => {
+    const res = await post("/api/comparisons/test-id/manage", { action: "refresh" });
     if (res.status !== 401 && res.status !== 403) {
       throw new Error(`Expected 401/403, got ${res.status}`);
     }

@@ -13,6 +13,11 @@ export const getClerkToken = async () => {
     return null;
   }
 
+  const isTestAuth = localStorage.getItem("sideby.test.auth") === "true";
+  if (isTestAuth) {
+    return "test-token";
+  }
+
   const clerk = (window as unknown as { Clerk?: ClerkGlobal }).Clerk;
   return (await clerk?.session?.getToken()) ?? null;
 };

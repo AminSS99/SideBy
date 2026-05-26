@@ -44,6 +44,19 @@ import {
   type ComparisonIntent,
 } from "../../src/lib/comparisonTaxonomy.js";
 import { triggerWebhooks } from "./webhook-notifier.js";
+import { waitUntil as vercelWaitUntil } from "@vercel/functions";
+
+const safeWaitUntil = (promise: Promise<unknown>) => {
+  if (process.env.VERCEL === "1") {
+    try {
+      vercelWaitUntil(promise);
+      return;
+    } catch (e) {
+      // Fallback
+    }
+  }
+  promise.catch(() => {});
+};
 
 // ─── Guardrails ─────────────────────────────────────────────────────────────
 
@@ -732,7 +745,7 @@ export async function runComparisonJob(
     });
 
     // Phase 3: Trigger outgoing webhooks on success
-    triggerWebhooks(db, comparisonId, "comparison.completed", { result }, waitUntil).catch((err) => {
+    triggerWebhooks(db, comparisonId, "comparison.completed", { result }, safeWaitUntil).catch((err) => {
       logger.error("Failed to trigger webhook on completion", { comparisonId, error: err });
     });
   } catch (error) {
@@ -784,7 +797,7 @@ export async function runComparisonJob(
         comparisonId,
         "comparison.failed",
         { error: `Failed after ${MAX_RETRIES} retries: ${message}` },
-        waitUntil
+        safeWaitUntil
       ).catch((err) => {
         logger.error("Failed to trigger webhook on failure", { comparisonId, error: err });
       });

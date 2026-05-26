@@ -119,6 +119,7 @@ export default async function handler(
       error: d.errorMessage,
     });
   } catch (error) {
+    console.error("by-slug error:", error);
     return sendJson(
       response,
       { error: error instanceof Error ? error.message : "Unable to load comparison." },

@@ -53,39 +53,11 @@
       "destination": "/api/seo/sitemap"
     },
     {
-      "source": "/api/workspaces",
-      "destination": "/api/workspace?resource=workspaces"
+      "source": "/api/:path*",
+      "destination": "/api/[...path]"
     },
     {
-      "source": "/api/projects",
-      "destination": "/api/workspace?resource=projects"
-    },
-    {
-      "source": "/api/comparisons/create",
-      "destination": "/api/comparisons"
-    },
-    {
-      "source": "/api/comparisons/taxonomy",
-      "destination": "/api/comparisons?action=taxonomy"
-    },
-    {
-      "source": "/api/knowledge/documents/:id",
-      "destination": "/api/knowledge?action=document&id=:id"
-    },
-    {
-      "source": "/api/knowledge/documents",
-      "destination": "/api/knowledge?action=documents"
-    },
-    {
-      "source": "/api/knowledge/upload",
-      "destination": "/api/knowledge?action=upload"
-    },
-    {
-      "source": "/api/knowledge/search",
-      "destination": "/api/knowledge?action=search"
-    },
-    {
-      "source": "/((?!api(?:/|$)|assets(?:/|$)|favicon\\.ico$|sideby\\.ico$|robots\\.txt$|sitemap\\.xml$).*)",
+      "source": "/((?!api(?:/|$)|src(?:/|$)|node_modules(?:/|$)|@vite(?:/|$)|@fs(?:/|$)|@react-refresh|assets(?:/|$)|favicon\\.ico$|sideby\\.ico$|robots\\.txt$|sitemap\\.xml$).*)",
       "destination": "/index.html"
     }
   ]

@@ -70,6 +70,7 @@ export async function searchTavily(params: SearchParams): Promise<SearchResult[]
     return cached;
   }
 
+  console.log(`[Tavily Search] Starting fetch for query: "${params.query}"`);
   const response = await fetch(TAVILY_API_URL, {
     method: "POST",
     headers: {
@@ -138,8 +139,10 @@ export async function searchEntitySources(
   const allResults: SearchResult[] = [];
   const seenUrls = new Set<string>();
 
+  console.log(`[Search Entity Sources] Running ${queries.length} queries for entity "${entityName}":`, queries);
   for (const q of queries) {
     try {
+      console.log(`[Search Entity Sources] Executing sub-query: "${q}"`);
       const batch = await searchTavily({ query: q, maxResults: 3, searchDepth: "basic" });
       for (const r of batch) {
         if (!seenUrls.has(r.url)) {

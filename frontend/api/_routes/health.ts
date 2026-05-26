@@ -29,7 +29,8 @@ export default async function handler(
       const sql = neon(dbUrl);
       await sql`select 1`;
       checks.database = "ok";
-    } catch {
+    } catch (err) {
+      console.error("Health check DB connection failed:", err);
       checks.database = "error";
     }
   } else {

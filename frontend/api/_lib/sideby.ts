@@ -483,11 +483,19 @@ export const createComparisonJob = async (
     trackCacheHit(db, id, "reuse", 0).catch(() => {});
 
     // Serve the stale result immediately while refreshing the source record for future users.
-    const bgRefresh = runComparisonJob(reusedSource.id, input.userId, input.query, input.orgId).catch((e) => {
-      logger.warn(`Background refresh failed for ${reusedSource!.id}`, { error: e instanceof Error ? e.message : String(e) });
-    });
-    if (scheduleResearch) scheduleResearch(bgRefresh);
-    else bgRefresh.catch(() => {});
+    if (process.env.DISABLE_IN_PROCESS_JOBS === "true") {
+      db.update(comparisons)
+        .set({ status: "queued", progress: 0, activeStep: 0, updatedAt: new Date() })
+        .where(eq(comparisons.id, reusedSource.id))
+        .catch(() => {});
+      logger.info(`[DISABLE_IN_PROCESS_JOBS] Background refresh for source ${reusedSource.id} queued for external worker.`);
+    } else {
+      const bgRefresh = runComparisonJob(reusedSource.id, input.userId, input.query, input.orgId).catch((e) => {
+        logger.warn(`Background refresh failed for ${reusedSource!.id}`, { error: e instanceof Error ? e.message : String(e) });
+      });
+      if (scheduleResearch) scheduleResearch(bgRefresh);
+      else bgRefresh.catch(() => {});
+    }
 
     logger.info("Serving stale comparison + enqueued background refresh", {
       comparisonId: id,
@@ -514,14 +522,18 @@ export const createComparisonJob = async (
   }
 
   // Otherwise, run the full research pipeline
-  const research = runComparisonJob(id, input.userId, input.query, input.orgId).catch((e) => {
-    logger.error(`Research job ${id} failed`, e instanceof Error ? e : undefined, { comparisonId: id });
-  });
-
-  if (scheduleResearch) {
-    scheduleResearch(research);
+  if (process.env.DISABLE_IN_PROCESS_JOBS === "true") {
+    logger.info(`[DISABLE_IN_PROCESS_JOBS] Comparison job ${id} queued for external worker.`);
   } else {
-    research.catch(() => {});
+    const research = runComparisonJob(id, input.userId, input.query, input.orgId).catch((e) => {
+      logger.error(`Research job ${id} failed`, e instanceof Error ? e : undefined, { comparisonId: id });
+    });
+
+    if (scheduleResearch) {
+      scheduleResearch(research);
+    } else {
+      research.catch(() => {});
+    }
   }
 
   return {

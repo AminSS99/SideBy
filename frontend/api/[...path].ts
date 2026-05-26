@@ -63,8 +63,14 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ) {
-  const pathParam = request.query.path;
-  const path = Array.isArray(pathParam) ? pathParam : pathParam ? [pathParam] : [];
+  console.log("API ROUTER MATCHED:", { url: request.url, query: request.query, pathParam: request.query.path });
+  const pathParam = request.query.path || request.query['...path'];
+  let path: string[] = [];
+  if (Array.isArray(pathParam)) {
+    path = pathParam;
+  } else if (typeof pathParam === "string") {
+    path = pathParam.split("/").filter(Boolean);
+  }
 
   if (path.length === 0) {
     return response.status(404).json({ error: "Not found" });
@@ -74,6 +80,13 @@ export default async function handler(
 
   // Comparisons
   if (segment0 === "comparisons") {
+    if (segment1 === "create") {
+      return comparisonsIndex(request, response);
+    }
+    if (segment1 === "taxonomy") {
+      request.query.action = "taxonomy";
+      return comparisonsIndex(request, response);
+    }
     if (segment1 === "by-slug" && segment2) {
       request.query.slug = segment2;
       return comparisonsBySlug(request, response);
@@ -88,6 +101,33 @@ export default async function handler(
       return comparisonsId(request, response);
     }
     return comparisonsIndex(request, response);
+  }
+
+  // Workspaces / Projects
+  if (segment0 === "workspaces") {
+    request.query.resource = "workspaces";
+    return workspaceHandler(request, response);
+  }
+  if (segment0 === "projects") {
+    request.query.resource = "projects";
+    return workspaceHandler(request, response);
+  }
+
+  // Knowledge base sub-routes
+  if (segment0 === "knowledge") {
+    if (segment1 === "documents") {
+      if (segment2) {
+        request.query.action = "document";
+        request.query.id = segment2;
+      } else {
+        request.query.action = "documents";
+      }
+    } else if (segment1 === "upload") {
+      request.query.action = "upload";
+    } else if (segment1 === "search") {
+      request.query.action = "search";
+    }
+    return knowledgeHandler(request, response);
   }
 
   // V1 API

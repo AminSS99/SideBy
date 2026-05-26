@@ -12,7 +12,7 @@ import AppShell from "@/components/layout/AppShell";
 import GlobalErrorBoundary from "@/components/ErrorBoundary";
 import ScrollToTop from "@/components/ScrollToTop";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import Index from "./pages/Index";
 
@@ -93,8 +93,7 @@ const App = () => {
               <TooltipProvider>
                 <Toaster />
                 <Sonner />
-                <BrowserRouter>
-                  <ScrollToTop />
+                <ScrollToTop />
                   <Suspense fallback={<LazyFallback />}>
                     <Routes>
                     {/* Public marketing pages */}
@@ -190,7 +189,6 @@ const App = () => {
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                   </Suspense>
-                </BrowserRouter>
               </TooltipProvider>
             </ProjectsProvider>
           </WorkspaceProvider>
