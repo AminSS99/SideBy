@@ -64,9 +64,15 @@ export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
       
       result.categories.forEach(cat => {
         const labels = Array.from(new Set(cat.facts.map(f => f.label)));
+
+        const factsByLabelEntity = new Map<string, string>();
+        for (const f of cat.facts) {
+          factsByLabelEntity.set(`${f.label}:${f.entity}`, f.value);
+        }
+
         labels.forEach(label => {
-          const fa = cat.facts.find(f => f.entity === "a" && f.label === label)?.value || "N/A";
-          const fb = cat.facts.find(f => f.entity === "b" && f.label === label)?.value || "N/A";
+          const fa = factsByLabelEntity.get(`${label}:a`) || "N/A";
+          const fb = factsByLabelEntity.get(`${label}:b`) || "N/A";
           md += `| **${label}** | ${fa.replace(/\n/g, " ")} | ${fb.replace(/\n/g, " ")} |\n`;
         });
       });
