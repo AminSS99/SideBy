@@ -34,13 +34,7 @@ import type { AIProvider } from "./ai-adapter.js";
 import crypto from "crypto";
 import { sanitizeLlmText } from "./sanitize.js";
 import { sendComparisonCompleteEmail } from "./email.js";
-import {
-  buildDimensionPrompt,
-  calibrateConfidence,
-  getFreshnessClass,
-  isReusableFact,
-  normalizeEntityForReuse,
-} from "./reuse-engine.js";
+import { buildDimensionPrompt, calibrateConfidence, getFreshnessClass, isReusableFact, normalizeEntityForReuse } from "./reuse-engine.js";
 import { normalizeQuery } from "./query-normalizer.js";
 import { comparisonCache, hashPrompt } from "./cache-layer.js";
 import {
@@ -122,43 +116,26 @@ function computeSourceReliability(url: string, title: string): number {
 
   // Official domains get highest score
   const officialDomains = [
-    ".gov",
-    ".edu",
-    "github.com",
-    "gitlab.com",
-    "docs.",
-    "documentation.",
-    "developer.",
-    "api.",
+    ".gov", ".edu", "github.com", "gitlab.com",
+    "docs.", "documentation.", "developer.", "api.",
   ];
   for (const domain of officialDomains) {
     if (lowerUrl.includes(domain)) return 1.0;
   }
 
   // Known docs/pricing pages
-  if (/\/(docs?|documentation|pricing|features|api)\b/.test(lowerUrl))
-    return 0.9;
-  if (lowerTitle.includes("documentation") || lowerTitle.includes("official"))
-    return 0.9;
+  if (/\/(docs?|documentation|pricing|features|api)\b/.test(lowerUrl)) return 0.9;
+  if (lowerTitle.includes("documentation") || lowerTitle.includes("official")) return 0.9;
 
   // Statistics/data sources
-  if (
-    lowerUrl.includes("statista") ||
-    lowerUrl.includes("census") ||
-    lowerUrl.includes("bureau")
-  ) {
+  if (lowerUrl.includes("statista") || lowerUrl.includes("census") || lowerUrl.includes("bureau")) {
     return 0.9;
   }
 
   // News sources
   const newsDomains = [
-    "techcrunch.com",
-    "theverge.com",
-    "wired.com",
-    "arstechnica.com",
-    "reuters.com",
-    "bloomberg.com",
-    "forbes.com",
+    "techcrunch.com", "theverge.com", "wired.com", "arstechnica.com",
+    "reuters.com", "bloomberg.com", "forbes.com",
   ];
   for (const domain of newsDomains) {
     if (lowerUrl.includes(domain)) return 0.7;
@@ -166,23 +143,15 @@ function computeSourceReliability(url: string, title: string): number {
 
   // Review/community
   const reviewDomains = [
-    "reddit.com",
-    "stackoverflow.com",
-    "quora.com",
-    "trustpilot.com",
-    "g2.com",
-    "capterra.com",
+    "reddit.com", "stackoverflow.com", "quora.com",
+    "trustpilot.com", "g2.com", "capterra.com",
   ];
   for (const domain of reviewDomains) {
     if (lowerUrl.includes(domain)) return 0.6;
   }
 
   // Blogs/medium
-  if (
-    lowerUrl.includes("medium.com") ||
-    lowerUrl.includes("blog") ||
-    lowerUrl.includes("dev.to")
-  ) {
+  if (lowerUrl.includes("medium.com") || lowerUrl.includes("blog") || lowerUrl.includes("dev.to")) {
     return 0.55;
   }
 
@@ -206,20 +175,14 @@ interface JobContext {
 // ─── Zod Schemas for AI Outputs ─────────────────────────────────────────────
 
 const LlmStringSchema = (maxLength: number) =>
-  z
-    .string()
-    .max(maxLength)
-    .transform((value) => sanitizeLlmText(value, maxLength));
+  z.string().max(maxLength).transform((value) => sanitizeLlmText(value, maxLength));
 
 const EntitySchema = z.object({
   name: LlmStringSchema(160),
   type: LlmStringSchema(80).optional(),
 });
 
-const EntityInputSchema = z.union([
-  EntitySchema,
-  LlmStringSchema(160).pipe(z.string().min(1)),
-]);
+const EntityInputSchema = z.union([EntitySchema, LlmStringSchema(160).pipe(z.string().min(1))]);
 
 interface ParsedEntity {
   name: string;
@@ -355,7 +318,11 @@ async function startStep(
   return step.id;
 }
 
-async function completeStep(ctx: JobContext, stepId: string, output?: unknown) {
+async function completeStep(
+  ctx: JobContext,
+  stepId: string,
+  output?: unknown,
+) {
   await ctx.db
     .update(aiRunSteps)
     .set({
@@ -366,7 +333,11 @@ async function completeStep(ctx: JobContext, stepId: string, output?: unknown) {
     .where(eq(aiRunSteps.id, stepId));
 }
 
-async function failStep(ctx: JobContext, stepId: string, error: string) {
+async function failStep(
+  ctx: JobContext,
+  stepId: string,
+  error: string,
+) {
   await ctx.db
     .update(aiRunSteps)
     .set({
@@ -377,7 +348,10 @@ async function failStep(ctx: JobContext, stepId: string, error: string) {
     .where(eq(aiRunSteps.id, stepId));
 }
 
-async function createAiRun(ctx: JobContext, task: string): Promise<string> {
+async function createAiRun(
+  ctx: JobContext,
+  task: string,
+): Promise<string> {
   const [run] = await ctx.db
     .insert(aiRuns)
     .values({
@@ -409,7 +383,7 @@ async function updateAiRun(
   await ctx.db
     .update(aiRuns)
     .set({
-      ...(updates as Record<string, unknown>),
+      ...updates as Record<string, unknown>,
       updatedAt: new Date(),
     })
     .where(eq(aiRuns.id, runId));
@@ -417,10 +391,7 @@ async function updateAiRun(
   if (updates.estimatedCost) {
     ctx.guardrails.totalCost += updates.estimatedCost;
   }
-  if (
-    isAiCall &&
-    (updates.status === "completed" || updates.status === "failed")
-  ) {
+  if (isAiCall && (updates.status === "completed" || updates.status === "failed")) {
     ctx.guardrails.aiCalls++;
   }
   checkGuardrails(ctx.guardrails);
@@ -457,24 +428,12 @@ async function clearDerivedComparisonData(
   db: ReturnType<typeof createDbClient>,
   comparisonId: string,
 ) {
-  await db
-    .delete(comparisonFacts)
-    .where(eq(comparisonFacts.comparisonId, comparisonId));
-  await db
-    .delete(comparisonScores)
-    .where(eq(comparisonScores.comparisonId, comparisonId));
-  await db
-    .delete(comparisonVerdicts)
-    .where(eq(comparisonVerdicts.comparisonId, comparisonId));
-  await db
-    .delete(comparisonSources)
-    .where(eq(comparisonSources.comparisonId, comparisonId));
-  await db
-    .delete(comparisonDimensions)
-    .where(eq(comparisonDimensions.comparisonId, comparisonId));
-  await db
-    .delete(comparisonEntities)
-    .where(eq(comparisonEntities.comparisonId, comparisonId));
+  await db.delete(comparisonFacts).where(eq(comparisonFacts.comparisonId, comparisonId));
+  await db.delete(comparisonScores).where(eq(comparisonScores.comparisonId, comparisonId));
+  await db.delete(comparisonVerdicts).where(eq(comparisonVerdicts.comparisonId, comparisonId));
+  await db.delete(comparisonSources).where(eq(comparisonSources.comparisonId, comparisonId));
+  await db.delete(comparisonDimensions).where(eq(comparisonDimensions.comparisonId, comparisonId));
+  await db.delete(comparisonEntities).where(eq(comparisonEntities.comparisonId, comparisonId));
   await db.delete(aiRuns).where(eq(aiRuns.comparisonId, comparisonId));
 }
 
@@ -506,10 +465,7 @@ export async function runComparisonJob(
       .limit(1);
 
     if (comp && comp.retryCount > MAX_RETRIES) {
-      logger.warn("Max retries exceeded, marking as failed", {
-        comparisonId,
-        retries: comp.retryCount,
-      });
+      logger.warn("Max retries exceeded, marking as failed", { comparisonId, retries: comp.retryCount });
       await db
         .update(comparisons)
         .set({
@@ -549,11 +505,7 @@ export async function runComparisonJob(
     await updateComparisonProgress(ctx, 15, 1);
 
     // Step 2: Search for sources
-    const sources = await runSearchStep(
-      ctx,
-      parsed.entities,
-      parsed.context || ctx.query,
-    );
+    const sources = await runSearchStep(ctx, parsed.entities, parsed.context || ctx.query);
     await updateComparisonProgress(ctx, 35, 2, { sourceCount: sources.length });
 
     // Step 3: Extract pages
@@ -614,14 +566,12 @@ export async function runComparisonJob(
     });
     let queryEmbedding: number[] | null = null;
     try {
-      queryEmbedding = await embedText(
-        [
-          ctx.query,
-          `Entities: ${parsed.entities.map((entity) => entity.name).join(" vs ")}`,
-          `Dimensions: ${dimensions.map((dimension) => dimension.name).join(", ")}`,
-          `Verdict: ${getVerdictText(verdict)}`,
-        ].join("\n"),
-      );
+      queryEmbedding = await embedText([
+        ctx.query,
+        `Entities: ${parsed.entities.map((entity) => entity.name).join(" vs ")}`,
+        `Dimensions: ${dimensions.map((dimension) => dimension.name).join(", ")}`,
+        `Verdict: ${getVerdictText(verdict)}`,
+      ].join("\n"));
     } catch (error) {
       logger.warn("Comparison query embedding failed", {
         comparisonId,
@@ -655,20 +605,8 @@ export async function runComparisonJob(
 
     // Phase 11: Save reusable facts to entity knowledge base
     for (const rawFact of facts) {
-      const fact = rawFact as {
-        entity?: string;
-        dimension?: string;
-        value?: string;
-        citation?: string;
-        confidence?: number;
-      };
-      if (
-        !isReusableFact({
-          value: fact.value || "",
-          dimension: fact.dimension || "",
-        })
-      )
-        continue;
+      const fact = rawFact as { entity?: string; dimension?: string; value?: string; citation?: string; confidence?: number };
+      if (!isReusableFact({ value: fact.value || "", dimension: fact.dimension || "" })) continue;
       const entityName = (fact.entity || "") as string;
       const entitySlug = normalizeEntityForReuse(entityName);
       if (!entitySlug || entitySlug.length < 2) continue;
@@ -686,11 +624,7 @@ export async function runComparisonJob(
           freshnessClass,
         })
         .onConflictDoUpdate({
-          target: [
-            entityKnowledge.entitySlug,
-            entityKnowledge.dimension,
-            entityKnowledge.value,
-          ],
+          target: [entityKnowledge.entitySlug, entityKnowledge.dimension, entityKnowledge.value],
           set: {
             usageCount: sql`${entityKnowledge.usageCount} + 1`,
             lastVerifiedAt: new Date(),
@@ -706,12 +640,10 @@ export async function runComparisonJob(
         totalCost: String(ctx.guardrails.totalCost),
         searchesUsed: ctx.guardrails.searchCalls,
         sourcesFound: sources.length,
-        detectedEntities: JSON.stringify(
-          parsed.entities?.map((e: { name: string; type?: string }) => ({
-            name: e.name.toLowerCase(),
-            type: e.type || null,
-          })) || [],
-        ),
+        detectedEntities: JSON.stringify(parsed.entities?.map((e: { name: string; type?: string }) => ({
+          name: e.name.toLowerCase(),
+          type: e.type || null,
+        })) || []),
         taxonomyStatus: normalized.taxonomyStatus,
         safetyLevel: normalized.safetyLevel,
         taxonomyConfidence: String(normalized.confidence),
@@ -765,25 +697,17 @@ export async function runComparisonJob(
 
           let alertThreshold = 0.1;
           if (linkedWatchlists.length > 0) {
-            alertThreshold = Math.min(
-              ...linkedWatchlists.map((w) => Number(w.alertThreshold) || 0.1),
-            );
+            alertThreshold = Math.min(...linkedWatchlists.map((w) => Number(w.alertThreshold) || 0.1));
           }
 
-          const diffResult = computeResultDiff(
-            prevVersion.result,
-            result,
-            alertThreshold,
-          );
+          const diffResult = computeResultDiff(prevVersion.result, result, alertThreshold);
           changeSummary = {
             reason: "completed_run",
             diff: diffResult.diff,
-            alert: diffResult.thresholdBreached
-              ? {
-                  threshold: alertThreshold,
-                  message: `Score delta exceeded alert threshold of ${alertThreshold * 100} points.`,
-                }
-              : null,
+            alert: diffResult.thresholdBreached ? {
+              threshold: alertThreshold,
+              message: `Score delta exceeded alert threshold of ${alertThreshold * 100} points.`,
+            } : null,
           };
         }
       }
@@ -803,13 +727,9 @@ export async function runComparisonJob(
         versionNumber: newVersionNum,
       });
     } catch (verr) {
-      logger.error(
-        "Failed to save version snapshot",
-        verr instanceof Error ? verr : undefined,
-        {
-          comparisonId,
-        },
-      );
+      logger.error("Failed to save version snapshot", verr instanceof Error ? verr : undefined, {
+        comparisonId,
+      });
     }
 
     sendComparisonCompleteEmail({
@@ -825,27 +745,14 @@ export async function runComparisonJob(
     });
 
     // Phase 3: Trigger outgoing webhooks on success
-    triggerWebhooks(
-      db,
-      comparisonId,
-      "comparison.completed",
-      { result },
-      safeWaitUntil,
-    ).catch((err) => {
-      logger.error("Failed to trigger webhook on completion", {
-        comparisonId,
-        error: err,
-      });
+    triggerWebhooks(db, comparisonId, "comparison.completed", { result }, safeWaitUntil).catch((err) => {
+      logger.error("Failed to trigger webhook on completion", { comparisonId, error: err });
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Job failed";
-    logger.error(
-      "Comparison job failed",
-      error instanceof Error ? error : undefined,
-      {
-        comparisonId,
-      },
-    );
+    logger.error("Comparison job failed", error instanceof Error ? error : undefined, {
+      comparisonId,
+    });
 
     const db = createDbClient();
     const [comp] = await db
@@ -857,10 +764,7 @@ export async function runComparisonJob(
     const currentRetries = comp?.retryCount || 0;
 
     if (currentRetries < MAX_RETRIES) {
-      logger.info("Queueing retry", {
-        comparisonId,
-        retry: currentRetries + 1,
-      });
+      logger.info("Queueing retry", { comparisonId, retry: currentRetries + 1 });
 
       await clearDerivedComparisonData(db, comparisonId);
 
@@ -893,12 +797,9 @@ export async function runComparisonJob(
         comparisonId,
         "comparison.failed",
         { error: `Failed after ${MAX_RETRIES} retries: ${message}` },
-        safeWaitUntil,
+        safeWaitUntil
       ).catch((err) => {
-        logger.error("Failed to trigger webhook on failure", {
-          comparisonId,
-          error: err,
-        });
+        logger.error("Failed to trigger webhook on failure", { comparisonId, error: err });
       });
 
       // Phase 10: Mark query analytics for failed job
@@ -954,9 +855,9 @@ export async function drainQueuedComparisonJobs(
         eq(comparisons.status, "queued"),
         and(
           eq(comparisons.status, "running"),
-          lte(comparisons.updatedAt, tenMinutesAgo),
-        ),
-      ),
+          lte(comparisons.updatedAt, tenMinutesAgo)
+        )
+      )
     )
     .orderBy(asc(comparisons.updatedAt))
     .limit(safeLimit * 4);
@@ -974,9 +875,7 @@ export async function drainQueuedComparisonJobs(
             updatedAt: new Date(),
           })
           .where(eq(comparisons.id, row.id));
-        logger.info(
-          `Orphaned job ${row.id} reset to queued (retry ${row.retryCount + 1})`,
-        );
+        logger.info(`Orphaned job ${row.id} reset to queued (retry ${row.retryCount + 1})`);
       } else {
         await db
           .update(comparisons)
@@ -986,9 +885,7 @@ export async function drainQueuedComparisonJobs(
             updatedAt: new Date(),
           })
           .where(eq(comparisons.id, row.id));
-        logger.error(
-          `Orphaned job ${row.id} exceeded max retries. Marked as failed.`,
-        );
+        logger.error(`Orphaned job ${row.id} exceeded max retries. Marked as failed.`);
       }
     }
   }
@@ -1011,13 +908,9 @@ export async function drainQueuedComparisonJobs(
       row.query,
       row.clerkOrgId || undefined,
     ).catch((error) => {
-      logger.error(
-        "Queued comparison job failed",
-        error instanceof Error ? error : undefined,
-        {
-          comparisonId: row.id,
-        },
-      );
+      logger.error("Queued comparison job failed", error instanceof Error ? error : undefined, {
+        comparisonId: row.id,
+      });
     });
 
     if (scheduleJob) {
@@ -1045,12 +938,13 @@ async function runParseStep(ctx: JobContext) {
     const messages = [
       {
         role: "system" as const,
-        content: [
-          "You are a query parser for SideBy.",
-          "Extract only the entities being compared, the context, and the comparison type from the user's query.",
-          `The preflight taxonomy category is ${ctx.taxonomy.label}; do not override safety policy or invent extra entities.`,
-          "Return valid JSON only.",
-        ].join(" "),
+        content:
+          [
+            "You are a query parser for SideBy.",
+            "Extract only the entities being compared, the context, and the comparison type from the user's query.",
+            `The preflight taxonomy category is ${ctx.taxonomy.label}; do not override safety policy or invent extra entities.`,
+            "Return valid JSON only.",
+          ].join(" "),
       },
       {
         role: "user" as const,
@@ -1058,13 +952,9 @@ async function runParseStep(ctx: JobContext) {
       },
     ];
 
-    const result = await ctx.provider.generateObject(
-      messages,
-      ParseQuerySchema,
-      {
-        maxTokens: 1000,
-      },
-    );
+    const result = await ctx.provider.generateObject(messages, ParseQuerySchema, {
+      maxTokens: 1000,
+    });
 
     await updateAiRun(ctx, runId, {
       model: result.model,
@@ -1078,10 +968,7 @@ async function runParseStep(ctx: JobContext) {
     const parsed = normalizeParsedQuery(result.data);
 
     await completeStep(ctx, stepId, parsed);
-    await logUsageEvent(ctx, "comparison", 1, {
-      step: "parse",
-      comparisonId: ctx.comparisonId,
-    });
+    await logUsageEvent(ctx, "comparison", 1, { step: "parse", comparisonId: ctx.comparisonId });
 
     // Store entities
     for (const [index, entity] of parsed.entities.entries()) {
@@ -1124,13 +1011,9 @@ async function runParseStep(ctx: JobContext) {
       return parsed;
     }
 
-    const userMessage =
-      "Could not identify two distinct options to compare. Try a query like 'A vs B'.";
+    const userMessage = "Could not identify two distinct options to compare. Try a query like 'A vs B'.";
     await failStep(ctx, stepId, userMessage);
-    await updateAiRun(ctx, runId, {
-      status: "failed",
-      errorMessage: userMessage,
-    });
+    await updateAiRun(ctx, runId, { status: "failed", errorMessage: userMessage });
     throw new Error(userMessage);
   }
 }
@@ -1156,11 +1039,7 @@ async function runSearchStep(
       checkGuardrails(ctx.guardrails);
       ctx.guardrails.searchCalls++;
 
-      const results = await searchEntitySources(
-        entity.name,
-        context,
-        ctx.taxonomy.category,
-      );
+      const results = await searchEntitySources(entity.name, context, ctx.taxonomy.category);
       for (const r of results) {
         allSources.push({
           title: r.title,
@@ -1182,21 +1061,13 @@ async function runSearchStep(
 
     // Store sources with computed reliability
     for (const source of deduped) {
-      const reliabilityScore = computeSourceReliability(
-        source.url,
-        source.title,
-      );
+      const reliabilityScore = computeSourceReliability(source.url, source.title);
       await ctx.db.insert(comparisonSources).values({
         comparisonId: ctx.comparisonId,
         url: source.url,
         title: source.title,
         sourceType: "web",
-        reliability:
-          reliabilityScore >= 0.9
-            ? "official"
-            : reliabilityScore >= 0.7
-              ? "docs"
-              : "review",
+        reliability: reliabilityScore >= 0.9 ? "official" : reliabilityScore >= 0.7 ? "docs" : "review",
         extractionMethod: "tavily",
         fetchedAt: new Date(),
         metadata: {
@@ -1207,18 +1078,13 @@ async function runSearchStep(
       });
     }
 
-    await updateAiRun(
-      ctx,
-      runId,
-      {
-        status: "completed",
-        inputTokens: 0,
-        outputTokens: 0,
-        estimatedCost: 0,
-        latencyMs: Date.now() - ctx.guardrails.startTime,
-      },
-      false,
-    );
+    await updateAiRun(ctx, runId, {
+      status: "completed",
+      inputTokens: 0,
+      outputTokens: 0,
+      estimatedCost: 0,
+      latencyMs: Date.now() - ctx.guardrails.startTime,
+    }, false);
 
     await completeStep(ctx, stepId, { sourceCount: deduped.length });
     await logUsageEvent(ctx, "search", ctx.guardrails.searchCalls, {
@@ -1229,29 +1095,17 @@ async function runSearchStep(
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Search failed";
     await failStep(ctx, stepId, msg);
-    await updateAiRun(
-      ctx,
-      runId,
-      { status: "failed", errorMessage: msg },
-      false,
-    );
+    await updateAiRun(ctx, runId, { status: "failed", errorMessage: msg }, false);
     throw error;
   }
 }
 
 async function runExtractionStep(
   ctx: JobContext,
-  sources: Array<{
-    url: string;
-    title: string;
-    content: string;
-    entityName: string;
-  }>,
+  sources: Array<{ url: string; title: string; content: string; entityName: string }>,
 ) {
   const runId = await createAiRun(ctx, "extract");
-  const stepId = await startStep(ctx, runId, "extract", {
-    sourceCount: sources.length,
-  });
+  const stepId = await startStep(ctx, runId, "extract", { sourceCount: sources.length });
 
   const extracted: Array<{
     url: string;
@@ -1264,21 +1118,14 @@ async function runExtractionStep(
     // Extract top sources with Firecrawl. If Firecrawl is not configured or a
     // scrape fails, keep the job moving with Tavily snippets instead of
     // sending the fact extractor an empty source packet.
-    const selectedSources: Array<(typeof sources)[number]> = [];
+    const selectedSources: Array<typeof sources[number]> = [];
     const selectedUrls = new Set<string>();
-    const entityNames = Array.from(
-      new Set(sources.map((s) => s.entityName).filter(Boolean)),
-    );
+    const entityNames = Array.from(new Set(sources.map((s) => s.entityName).filter(Boolean)));
     const reusableFactCounts = await getReusableFactCounts(ctx, entityNames);
 
     for (const entityName of entityNames) {
-      const sourceLimit =
-        (reusableFactCounts.get(normalizeEntityForReuse(entityName)) || 0) >= 4
-          ? 1
-          : 3;
-      for (const source of sources
-        .filter((s) => s.entityName === entityName)
-        .slice(0, sourceLimit)) {
+      const sourceLimit = (reusableFactCounts.get(normalizeEntityForReuse(entityName)) || 0) >= 4 ? 1 : 3;
+      for (const source of sources.filter((s) => s.entityName === entityName).slice(0, sourceLimit)) {
         if (selectedUrls.has(source.url)) continue;
         selectedUrls.add(source.url);
         selectedSources.push(source);
@@ -1341,23 +1188,16 @@ async function runExtractionStep(
     }
 
     if (extracted.length === 0) {
-      throw new Error(
-        "No source content could be extracted from search results.",
-      );
+      throw new Error("No source content could be extracted from search results.");
     }
 
-    await updateAiRun(
-      ctx,
-      runId,
-      {
-        status: "completed",
-        inputTokens: 0,
-        outputTokens: 0,
-        estimatedCost: 0,
-        latencyMs: Date.now() - ctx.guardrails.startTime,
-      },
-      false,
-    );
+    await updateAiRun(ctx, runId, {
+      status: "completed",
+      inputTokens: 0,
+      outputTokens: 0,
+      estimatedCost: 0,
+      latencyMs: Date.now() - ctx.guardrails.startTime,
+    }, false);
 
     await completeStep(ctx, stepId, { extractedCount: extracted.length });
     await logUsageEvent(ctx, "scrape", extracted.length, {
@@ -1368,21 +1208,17 @@ async function runExtractionStep(
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Extraction failed";
     await failStep(ctx, stepId, msg);
-    await updateAiRun(
-      ctx,
-      runId,
-      { status: "failed", errorMessage: msg },
-      false,
-    );
+    await updateAiRun(ctx, runId, { status: "failed", errorMessage: msg }, false);
     throw error;
   }
 }
 
-async function runDimensionStep(ctx: JobContext, parsed: ParsedQuery) {
+async function runDimensionStep(
+  ctx: JobContext,
+  parsed: ParsedQuery,
+) {
   const runId = await createAiRun(ctx, "dimensions");
-  const stepId = await startStep(ctx, runId, "reason", {
-    entities: parsed.entities,
-  });
+  const stepId = await startStep(ctx, runId, "reason", { entities: parsed.entities });
 
   try {
     // Phase 11: Category-aware dimension generation
@@ -1402,13 +1238,9 @@ async function runDimensionStep(ctx: JobContext, parsed: ParsedQuery) {
     ];
 
     const DimensionArraySchema = z.array(DimensionSchema);
-    const result = await ctx.provider.generateObject(
-      messages,
-      DimensionArraySchema,
-      {
-        maxTokens: 1500,
-      },
-    );
+    const result = await ctx.provider.generateObject(messages, DimensionArraySchema, {
+      maxTokens: 1500,
+    });
 
     await updateAiRun(ctx, runId, {
       model: result.model,
@@ -1422,11 +1254,8 @@ async function runDimensionStep(ctx: JobContext, parsed: ParsedQuery) {
 
     await completeStep(ctx, stepId, result.data);
 
-    const templateDimensions = getComparisonCategoryDefinition(
-      normalized.category,
-    ).defaultDimensions;
-    const dimensionsToStore =
-      result.data.length > 0 ? result.data : templateDimensions;
+    const templateDimensions = getComparisonCategoryDefinition(normalized.category).defaultDimensions;
+    const dimensionsToStore = result.data.length > 0 ? result.data : templateDimensions;
 
     // Store dimensions
     for (const dim of dimensionsToStore) {
@@ -1440,11 +1269,10 @@ async function runDimensionStep(ctx: JobContext, parsed: ParsedQuery) {
 
     return dimensionsToStore;
   } catch (error) {
-    const msg =
-      error instanceof Error ? error.message : "Dimension generation failed";
-    const fallbackDimensions = getComparisonCategoryDefinition(
-      ctx.taxonomy.category,
-    ).defaultDimensions.slice(0, 6);
+    const msg = error instanceof Error ? error.message : "Dimension generation failed";
+    const fallbackDimensions = getComparisonCategoryDefinition(ctx.taxonomy.category)
+      .defaultDimensions
+      .slice(0, 6);
 
     if (fallbackDimensions.length > 0) {
       logger.warn("Dimension generation failed, using taxonomy template", {
@@ -1493,22 +1321,20 @@ async function runFactStep(
   try {
     const definition = getComparisonCategoryDefinition(ctx.taxonomy.category);
     const sourceContent = extracted
-      .map(
-        (e) =>
-          `### Source: ${e.title}\nURL: ${e.url}\nContent:\n${e.markdown.slice(0, 3000)}`,
-      )
+      .map((e) => `### Source: ${e.title}\nURL: ${e.url}\nContent:\n${e.markdown.slice(0, 3000)}`)
       .join("\n\n---\n\n");
 
     const messages = [
       {
         role: "system" as const,
-        content: [
-          `You are a fact extraction engine for SideBy's ${definition.label} category.`,
-          "Extract atomic, source-backed facts from the provided sources for each entity and dimension.",
-          `Preferred source types: ${definition.sourceRequirements.join(", ") || "primary and reputable secondary sources"}.`,
-          "Each fact must have a citation to the source URL.",
-          "Do not invent values, rankings, or unsupported claims. Return valid JSON array only.",
-        ].join(" "),
+        content:
+          [
+            `You are a fact extraction engine for SideBy's ${definition.label} category.`,
+            "Extract atomic, source-backed facts from the provided sources for each entity and dimension.",
+            `Preferred source types: ${definition.sourceRequirements.join(", ") || "primary and reputable secondary sources"}.`,
+            "Each fact must have a citation to the source URL.",
+            "Do not invent values, rankings, or unsupported claims. Return valid JSON array only.",
+          ].join(" "),
       },
       {
         role: "user" as const,
@@ -1517,13 +1343,9 @@ async function runFactStep(
     ];
 
     const FactArraySchema = z.array(FactSchema);
-    const result = await ctx.provider.generateObject(
-      messages,
-      FactArraySchema,
-      {
-        maxTokens: 4000,
-      },
-    );
+    const result = await ctx.provider.generateObject(messages, FactArraySchema, {
+      maxTokens: 4000,
+    });
 
     await updateAiRun(ctx, runId, {
       model: result.model,
@@ -1588,44 +1410,32 @@ async function runFactStep(
             `Dimension: ${fact.dimension || "General"}`,
             `Fact: ${fact.value}`,
             fact.citation ? `Source: ${fact.citation}` : "",
-          ]
-            .filter(Boolean)
-            .join("\n"),
+          ].filter(Boolean).join("\n"),
         ),
       );
       for (const [index, embedding] of generatedEmbeddings.entries()) {
         factEmbeddings[index] = embedding;
       }
     } catch (error) {
-      logger.warn(
-        "Fact embedding failed; follow-ups will use keyword fallback for these facts",
-        {
-          comparisonId: ctx.comparisonId,
-          error: error instanceof Error ? error.message : String(error),
-        },
-      );
+      logger.warn("Fact embedding failed; follow-ups will use keyword fallback for these facts", {
+        comparisonId: ctx.comparisonId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     // Store facts in the production schema with optional pgvector embeddings.
-    const entityByName = new Map(entityRows.map((e) => [e.normalizedName, e]));
-    const dimensionByName = new Map(dimensionRows.map((d) => [d.name, d]));
-    const sourceByUrl = new Map(sourceRows.map((s) => [s.url, s]));
-
     for (const [index, fact] of uniqueFacts.entries()) {
       const entityName = fact.entity;
       const dimensionName = fact.dimension || "General";
       const citation = fact.citation || "";
-      const entityRow = entityByName.get(entityName) || entityRows[0];
+      const entityRow =
+        entityRows.find((entity) => entity.normalizedName === entityName) ||
+        entityRows[0];
       if (!entityRow) continue;
-      const dimensionRow = dimensionByName.get(dimensionName);
+      const dimensionRow = dimensionRows.find((dimension) => dimension.name === dimensionName);
       const sourceRow =
-        sourceByUrl.get(citation) ||
-        (citation
-          ? sourceRows.find(
-              (source) =>
-                source.url.includes(citation) || citation.includes(source.url),
-            )
-          : undefined) ||
+        sourceRows.find((source) => source.url === citation) ||
+        sourceRows.find((source) => citation && citation.includes(source.url)) ||
         sourceRows[0];
 
       await ctx.db.insert(comparisonFacts).values({
@@ -1648,8 +1458,7 @@ async function runFactStep(
 
     return uniqueFacts;
   } catch (error) {
-    const msg =
-      error instanceof Error ? error.message : "Fact extraction failed";
+    const msg = error instanceof Error ? error.message : "Fact extraction failed";
     await failStep(ctx, stepId, msg);
     await updateAiRun(ctx, runId, { status: "failed", errorMessage: msg });
     throw error;
@@ -1674,11 +1483,7 @@ function ensureFactCoverage(
   for (const entity of parsed.entities.slice(0, 2)) {
     for (const dimension of dimensions) {
       if (hasFact(entity.name, dimension.name)) continue;
-      const fallback = buildFallbackFact(
-        entity.name,
-        dimension.name,
-        extracted,
-      );
+      const fallback = buildFallbackFact(entity.name, dimension.name, extracted);
       if (fallback) completeFacts.push(fallback);
     }
   }
@@ -1696,9 +1501,7 @@ function buildFallbackFact(
   const source =
     extracted.find((item) => item.entityName.toLowerCase() === entityNeedle) ||
     extracted.find((item) => item.title.toLowerCase().includes(entityNeedle)) ||
-    extracted.find((item) =>
-      item.markdown.toLowerCase().includes(entityNeedle),
-    );
+    extracted.find((item) => item.markdown.toLowerCase().includes(entityNeedle));
 
   if (!source) return null;
 
@@ -1750,9 +1553,7 @@ async function loadReusableFacts(
   parsed: ParsedQuery,
   dimensions: z.infer<typeof DimensionArraySchema>,
 ): Promise<ExtractedFact[]> {
-  const dimensionNames = new Set(
-    dimensions.map((dimension) => dimension.name.toLowerCase()),
-  );
+  const dimensionNames = new Set(dimensions.map((dimension) => dimension.name.toLowerCase()));
   const cachedFacts: ExtractedFact[] = [];
 
   for (const entity of parsed.entities.slice(0, 2)) {
@@ -1768,19 +1569,12 @@ async function loadReusableFacts(
       })
       .from(entityKnowledge)
       .where(eq(entityKnowledge.entitySlug, entitySlug))
-      .orderBy(
-        sql`${entityKnowledge.usageCount} DESC`,
-        sql`${entityKnowledge.lastVerifiedAt} DESC NULLS LAST`,
-      )
+      .orderBy(sql`${entityKnowledge.usageCount} DESC`, sql`${entityKnowledge.lastVerifiedAt} DESC NULLS LAST`)
       .limit(12);
 
     for (const row of rows) {
       const dimension = row.dimension || "General";
-      if (
-        dimensionNames.size > 0 &&
-        !dimensionNames.has(dimension.toLowerCase())
-      )
-        continue;
+      if (dimensionNames.size > 0 && !dimensionNames.has(dimension.toLowerCase())) continue;
       cachedFacts.push({
         entity: entity.name,
         dimension,
@@ -1801,9 +1595,7 @@ async function runScoreStep(
   dimensions: z.infer<typeof DimensionArraySchema>,
 ) {
   const runId = await createAiRun(ctx, "score");
-  const stepId = await startStep(ctx, runId, "score", {
-    factCount: facts.length,
-  });
+  const stepId = await startStep(ctx, runId, "score", { factCount: facts.length });
 
   try {
     // Fetch source reliability for weighting
@@ -1839,13 +1631,9 @@ async function runScoreStep(
     ];
 
     const ScoreArraySchema = z.array(ScoreSchema);
-    const result = await ctx.provider.generateObject(
-      messages,
-      ScoreArraySchema,
-      {
-        maxTokens: 3000,
-      },
-    );
+    const result = await ctx.provider.generateObject(messages, ScoreArraySchema, {
+      maxTokens: 3000,
+    });
 
     await updateAiRun(ctx, runId, {
       model: result.model,
@@ -1868,12 +1656,13 @@ async function runScoreStep(
       .where(eq(comparisonDimensions.comparisonId, ctx.comparisonId));
 
     // Store scores
-    const entityByName = new Map(entityRows.map((e) => [e.normalizedName, e]));
-    const dimensionByName = new Map(dimensionRows.map((d) => [d.name, d]));
     for (const score of result.data) {
-      const entityRow = entityByName.get(score.entity) || entityRows[0];
+      const entityRow =
+        entityRows.find((entity) => entity.normalizedName === score.entity) ||
+        entityRows[0];
       const dimensionRow =
-        dimensionByName.get(score.dimension) || dimensionRows[0];
+        dimensionRows.find((dimension) => dimension.name === score.dimension) ||
+        dimensionRows[0];
       if (!entityRow || !dimensionRow) continue;
       await ctx.db.insert(comparisonScores).values({
         comparisonId: ctx.comparisonId,
@@ -1900,9 +1689,7 @@ async function runVerdictStep(
   facts: z.infer<typeof FactArraySchema>,
 ) {
   const runId = await createAiRun(ctx, "verdict");
-  const stepId = await startStep(ctx, runId, "reason", {
-    scoreCount: scores.length,
-  });
+  const stepId = await startStep(ctx, runId, "reason", { scoreCount: scores.length });
 
   try {
     const definition = getComparisonCategoryDefinition(ctx.taxonomy.category);
@@ -1913,25 +1700,19 @@ async function runVerdictStep(
     const messages = [
       {
         role: "system" as const,
-        content: [
-          `You are a comparison verdict engine for SideBy's ${definition.label} category.`,
-          `Tone: ${definition.resultTone}`,
-          definition.disclaimer
-            ? `Include this caveat in the caveats field: ${definition.disclaimer}`
-            : "",
-          "Based on the scores and facts, produce a final verdict with overall winner, tradeoffs, confidence, and caveats.",
-          "Do not make personalized medical, legal, financial, identity, religion, or people-ranking claims.",
-          "Return valid JSON only.",
-        ]
-          .filter(Boolean)
-          .join(" "),
+        content:
+          [
+            `You are a comparison verdict engine for SideBy's ${definition.label} category.`,
+            `Tone: ${definition.resultTone}`,
+            definition.disclaimer ? `Include this caveat in the caveats field: ${definition.disclaimer}` : "",
+            "Based on the scores and facts, produce a final verdict with overall winner, tradeoffs, confidence, and caveats.",
+            "Do not make personalized medical, legal, financial, identity, religion, or people-ranking claims.",
+            "Return valid JSON only.",
+          ].filter(Boolean).join(" "),
       },
       {
         role: "user" as const,
-        content: `Entities: ${parsed.entities.map((e) => e.name).join(", ")}\n\nScores:\n${scoreSummary}\n\nKey Facts:\n${facts
-          .slice(0, 10)
-          .map((f) => `- ${f.entity}: ${f.value}`)
-          .join("\n")}`,
+        content: `Entities: ${parsed.entities.map((e) => e.name).join(", ")}\n\nScores:\n${scoreSummary}\n\nKey Facts:\n${facts.slice(0, 10).map((f) => `- ${f.entity}: ${f.value}`).join("\n")}`,
       },
     ];
 
@@ -1954,9 +1735,7 @@ async function runVerdictStep(
       .select()
       .from(comparisonEntities)
       .where(eq(comparisonEntities.comparisonId, ctx.comparisonId));
-    const winnerEntity = entityRows.find(
-      (entity) => entity.normalizedName === result.data.winner,
-    );
+    const winnerEntity = entityRows.find((entity) => entity.normalizedName === result.data.winner);
     const verdictText = getVerdictText(result.data);
 
     // Store verdict
@@ -1964,16 +1743,12 @@ async function runVerdictStep(
       comparisonId: ctx.comparisonId,
       verdictType: "overall",
       winnerEntityId: winnerEntity?.id || null,
-      title: result.data.winner
-        ? `${result.data.winner} leads overall`
-        : "Comparison verdict",
+      title: result.data.winner ? `${result.data.winner} leads overall` : "Comparison verdict",
       body: [
         verdictText,
         result.data.tradeoffs ? `Tradeoffs: ${result.data.tradeoffs}` : "",
         result.data.caveats ? `Caveats: ${result.data.caveats}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
+      ].filter(Boolean).join("\n\n"),
       confidence: String(result.data.confidence ?? 0.6),
     });
 
@@ -2000,14 +1775,7 @@ function getVerdictText(verdict: z.infer<typeof VerdictSchema>): string {
 
 // ─── Result Builder ─────────────────────────────────────────────────────────
 
-const ENTITY_COLORS = [
-  "#8b5cf6",
-  "#0ea5e9",
-  "#f59e0b",
-  "#10b981",
-  "#ef4444",
-  "#ec4899",
-];
+const ENTITY_COLORS = ["#8b5cf6", "#0ea5e9", "#f59e0b", "#10b981", "#ef4444", "#ec4899"];
 
 function entityHex(name: string): string {
   let hash = 0;
@@ -2019,15 +1787,16 @@ function entityHex(name: string): string {
 }
 
 function makeResultSlug(a: string, b: string): string {
-  return (
-    `${a}-vs-${b}`
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "") || "comparison"
-  );
+  return `${a}-vs-${b}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "") || "comparison";
 }
 
-function buildVerdictSlots(category: string, winner: string | undefined) {
+function buildVerdictSlots(
+  category: string,
+  winner: string | undefined,
+) {
   const lead = winner || "Depends on priorities";
   const slots = {
     bestOverall: lead,
@@ -2109,29 +1878,19 @@ function buildResultJson(
   verdict: z.infer<typeof VerdictSchema>,
   dimensions: z.infer<typeof DimensionArraySchema>,
   slugOverride?: string,
-  taxonomy: ComparisonIntent = analyzeComparisonQuery(
-    parsed.entities.map((e) => e.name).join(" vs "),
-  ),
+  taxonomy: ComparisonIntent = analyzeComparisonQuery(parsed.entities.map((e) => e.name).join(" vs ")),
 ) {
   const entityA = parsed.entities[0];
   const entityB = parsed.entities[1];
   const nameA = entityA?.name || "A";
   const nameB = entityB?.name || "B";
   const taxonomySummary = summarizeComparisonTaxonomy(taxonomy);
-  const verdictSlots = buildVerdictSlots(
-    taxonomySummary.category,
-    verdict.winner,
-  );
+  const verdictSlots = buildVerdictSlots(taxonomySummary.category, verdict.winner);
   const sourceByUrl = new Map(sources.map((source) => [source.url, source]));
   const findSource = (citation?: string) => {
     if (!citation) return undefined;
-    return (
-      sourceByUrl.get(citation) ||
-      sources.find(
-        (source) =>
-          citation.includes(source.url) || source.url.includes(citation),
-      )
-    );
+    return sourceByUrl.get(citation) ||
+      sources.find((source) => citation.includes(source.url) || source.url.includes(citation));
   };
 
   return {
@@ -2159,70 +1918,52 @@ function buildResultJson(
       ...verdictSlots,
       summary: getVerdictText(verdict),
     },
-    categories: (() => {
-      const scoreByDimAndEntity = new Map(
-        scores.map((s) => [`${s.dimension}|${s.entity}`, s.score]),
-      );
+    categories: dimensions.map((dim) => {
+      const dimScores = scores.filter((s) => s.dimension === dim.name);
+      const aScore = dimScores.find((s) => s.entity === entityA?.name)?.score ?? 0;
+      const bScore = dimScores.find((s) => s.entity === entityB?.name)?.score ?? 0;
 
-      return dimensions.map((dim) => {
-        const aScore =
-          scoreByDimAndEntity.get(`${dim.name}|${entityA?.name}`) ?? 0;
-        const bScore =
-          scoreByDimAndEntity.get(`${dim.name}|${entityB?.name}`) ?? 0;
-
-        return {
-          name: dim.name,
-          winner: aScore > bScore ? "a" : bScore > aScore ? "b" : "tie",
-          verdict: `${dim.name} comparison based on source-backed facts.`,
-          facts: facts
-            .filter((f) => f.dimension === dim.name)
-            .map((f) => {
-              const matchedSource = findSource(f.citation);
-              return {
-                entity: f.entity === entityA?.name ? "a" : "b",
-                label: f.dimension,
-                value: f.value,
-                source: matchedSource?.title || f.citation || "Web sources",
-                sourceUrl: f.citation || matchedSource?.url || "#",
-                sourceTitle:
-                  matchedSource?.title ||
-                  (f.citation ? "Cited source" : "Source"),
-                confidence: f.confidence,
-                freshness:
-                  taxonomySummary.safetyLevel === "informational"
-                    ? ("Monitor" as const)
-                    : ("Fresh" as const),
-                changed: false,
-              };
-            }),
-        };
-      });
-    })(),
-    dimensions: (() => {
-      const scoreByDimAndEntity = new Map(
-        scores.map((s) => [`${s.dimension}|${s.entity}`, s.score]),
-      );
-
-      return dimensions.map((dim) => {
-        return {
-          subject: dim.name,
-          a: scoreByDimAndEntity.get(`${dim.name}|${entityA?.name}`) ?? 50,
-          b: scoreByDimAndEntity.get(`${dim.name}|${entityB?.name}`) ?? 50,
-          fullMark: 100,
-        };
-      });
-    })(),
+      return {
+        name: dim.name,
+        winner: aScore > bScore ? "a" : bScore > aScore ? "b" : "tie",
+        verdict: `${dim.name} comparison based on source-backed facts.`,
+        facts: facts
+          .filter((f) => f.dimension === dim.name)
+          .map((f) => {
+            const matchedSource = findSource(f.citation);
+            return {
+              entity: f.entity === entityA?.name ? "a" : "b",
+              label: f.dimension,
+              value: f.value,
+              source: matchedSource?.title || f.citation || "Web sources",
+              sourceUrl: f.citation || matchedSource?.url || "#",
+              sourceTitle: matchedSource?.title || (f.citation ? "Cited source" : "Source"),
+              confidence: f.confidence,
+              freshness: taxonomySummary.safetyLevel === "informational" ? "Monitor" as const : "Fresh" as const,
+              changed: false,
+            };
+          }),
+      };
+    }),
+    dimensions: dimensions.map((dim) => {
+      const dimScores = scores.filter((s) => s.dimension === dim.name);
+      return {
+        subject: dim.name,
+        a: dimScores.find((s) => s.entity === entityA?.name)?.score ?? 50,
+        b: dimScores.find((s) => s.entity === entityB?.name)?.score ?? 50,
+        fullMark: 100,
+      };
+    }),
     consensus: taxonomySummary.disclaimer ? [taxonomySummary.disclaimer] : [],
     contradictions: [],
     sources: sources.map((s) => ({
       title: s.title,
       url: s.url,
-      reliability:
-        computeSourceReliability(s.url, s.title) >= 0.9
-          ? ("Official" as const)
-          : computeSourceReliability(s.url, s.title) >= 0.7
-            ? ("Docs" as const)
-            : ("Community" as const),
+      reliability: computeSourceReliability(s.url, s.title) >= 0.9
+        ? "Official" as const
+        : computeSourceReliability(s.url, s.title) >= 0.7
+          ? "Docs" as const
+          : "Community" as const,
       sourceType: "web",
       extractionMethod: "tavily",
       fetchedAt: new Date().toISOString(),
@@ -2297,41 +2038,32 @@ async function buildPartialResult(
       factsByDim.get(dimName)!.push(f);
     }
 
-    const dimById = new Map(dims.map((d) => [d.id, d]));
-    const scoreByDimNameAndEntityId = new Map(
-      scores.map((s) => {
-        const dim = dimById.get(s.dimensionId);
-        return [`${dim?.name}|${s.entityId}`, s.score];
-      }),
-    );
+    const categories = Array.from(factsByDim.entries()).map(([name, dimFacts]) => {
+      const dimScores = scores.filter((s) => {
+        const dim = dims.find((d) => d.id === s.dimensionId);
+        return dim?.name === name;
+      });
+      const aScore = dimScores.find((s) => s.entityId === entityA.id)?.score ?? 50;
+      const bScore = dimScores.find((s) => s.entityId === entityB.id)?.score ?? 50;
+      return {
+        name,
+        winner: aScore > bScore ? "a" : bScore > aScore ? "b" : "tie",
+        verdict: `Partial data available (${dimFacts.length} facts)`,
+        facts: dimFacts.map((f) => ({
+          entity: f.entityId === entityA.id ? "a" : "b",
+          label: f.label || "Fact",
+          value: f.value || "No value extracted",
+          source: f.sourceTitle || "Web sources",
+          sourceUrl: f.sourceUrl || "#",
+          sourceTitle: f.sourceTitle || "Source",
+          confidence: Number(f.confidence ?? 0.5),
+          freshness: "Fresh" as const,
+          changed: false,
+        })),
+      };
+    });
 
-    const categories = Array.from(factsByDim.entries()).map(
-      ([name, dimFacts]) => {
-        const aScore =
-          scoreByDimNameAndEntityId.get(`${name}|${entityA.id}`) ?? 50;
-        const bScore =
-          scoreByDimNameAndEntityId.get(`${name}|${entityB.id}`) ?? 50;
-        return {
-          name,
-          winner: aScore > bScore ? "a" : bScore > aScore ? "b" : "tie",
-          verdict: `Partial data available (${dimFacts.length} facts)`,
-          facts: dimFacts.map((f) => ({
-            entity: f.entityId === entityA.id ? "a" : "b",
-            label: f.label || "Fact",
-            value: f.value || "No value extracted",
-            source: f.sourceTitle || "Web sources",
-            sourceUrl: f.sourceUrl || "#",
-            sourceTitle: f.sourceTitle || "Source",
-            confidence: Number(f.confidence ?? 0.5),
-            freshness: "Fresh" as const,
-            changed: false,
-          })),
-        };
-      },
-    );
-
-    const overallVerdict =
-      verdicts.find((v) => v.body)?.body ||
+    const overallVerdict = verdicts.find((v) => v.body)?.body ||
       `Partial comparison: ${entityA.normalizedName} vs ${entityB.normalizedName}`;
 
     return {
@@ -2365,17 +2097,12 @@ async function buildPartialResult(
         ecosystem: "Unknown",
         summary: `${overallVerdict} (Partial result — research did not complete. Some data may be missing or incomplete.)`,
       },
-      categories:
-        categories.length > 0
-          ? categories
-          : [
-              {
-                name: "General",
-                winner: "tie" as const,
-                verdict: "No structured facts extracted yet",
-                facts: [],
-              },
-            ],
+      categories: categories.length > 0 ? categories : [{
+        name: "General",
+        winner: "tie" as const,
+        verdict: "No structured facts extracted yet",
+        facts: [],
+      }],
       dimensions: dims.map((dim) => ({
         subject: dim.name,
         a: 50,
@@ -2387,31 +2114,19 @@ async function buildPartialResult(
       sources: sources.map((s) => ({
         title: s.title || s.url,
         url: s.url,
-        reliability: (s.reliability === "official"
-          ? "Official"
-          : s.reliability === "docs"
-            ? "Docs"
-            : "Community") as "Official" | "Docs" | "Community",
+        reliability: (s.reliability === "official" ? "Official" : s.reliability === "docs" ? "Docs" : "Community") as "Official" | "Docs" | "Community",
         sourceType: s.sourceType || "web",
         extractionMethod: s.extractionMethod || "tavily",
         fetchedAt: s.fetchedAt?.toISOString() || new Date().toISOString(),
-        confidence: Number(
-          ((s.metadata || {}) as { reliabilityScore?: number })
-            .reliabilityScore || 0.7,
-        ),
+        confidence: Number(((s.metadata || {}) as { reliabilityScore?: number }).reliabilityScore || 0.7),
         contentHash: s.contentHash || "",
-        summary: String(
-          ((s.metadata || {}) as { summary?: string }).summary || "",
-        ),
+        summary: String(((s.metadata || {}) as { summary?: string }).summary || ""),
       })),
       completeness: "partial",
       confidence: 0.3,
     };
   } catch (e) {
-    logger.warn("Failed to build partial result", {
-      comparisonId,
-      error: e instanceof Error ? e.message : "unknown",
-    });
+    logger.warn("Failed to build partial result", { comparisonId, error: e instanceof Error ? e.message : "unknown" });
     return null;
   }
 }
