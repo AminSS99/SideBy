@@ -641,10 +641,15 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[]) => {
     edges.push({ from: "verdict", to: id, color: "#f97316" });
   });
 
+  const categoryIndexMap = new Map<string, number>();
+  result.categories.forEach((category, index) => {
+    categoryIndexMap.set(category.name, index);
+  });
+
   facts.forEach((fact, index) => {
     const id = `fact-${index}`;
     const entityId = fact.entity === "a" ? "entity-a" : "entity-b";
-    const dimIndex = result.categories.findIndex((category) => category.name === fact.category);
+    const dimIndex = categoryIndexMap.get(fact.category) ?? -1;
     nodes.push({
       id,
       type: "fact",
@@ -660,7 +665,14 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[]) => {
     }
   });
 
-  Array.from(sourceMap.values()).slice(0, 5).forEach((source, index) => {
+  const sourceList = Array.from(sourceMap.values()).slice(0, 5);
+
+  const sourceIndexMap = new Map<string, number>();
+  sourceList.forEach((source, index) => {
+    sourceIndexMap.set(source.url, index);
+    if (source.title) sourceIndexMap.set(source.title, index);
+    sourceIndexMap.set(safeHostname(source.url), index);
+
     const id = `source-${index}`;
     nodes.push({
       id,
@@ -674,12 +686,15 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[]) => {
   });
 
   facts.forEach((fact, factIndex) => {
-    const sourceIndex = Array.from(sourceMap.values()).findIndex((source) => (
-      source.url === fact.sourceUrl ||
-      source.title === fact.sourceTitle ||
-      safeHostname(source.url) === safeHostname(fact.sourceUrl)
-    ));
-    if (sourceIndex >= 0) {
+    let sourceIndex = sourceIndexMap.get(fact.sourceUrl);
+    if (sourceIndex === undefined && fact.sourceTitle) {
+      sourceIndex = sourceIndexMap.get(fact.sourceTitle);
+    }
+    if (sourceIndex === undefined) {
+      sourceIndex = sourceIndexMap.get(safeHostname(fact.sourceUrl));
+    }
+
+    if (sourceIndex !== undefined) {
       edges.push({ from: `fact-${factIndex}`, to: `source-${sourceIndex}`, color: "#525252" });
     }
   });

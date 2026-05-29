@@ -19,12 +19,20 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
     return result.categories.map(cat => {
       const labels = Array.from(new Set(cat.facts.map(f => f.label)));
       
+      // O(N) pre-computation of facts to avoid O(N*M) lookups
+      const factsByLabel = new Map<string, { a?: typeof cat.facts[0], b?: typeof cat.facts[0] }>();
+      for (const fact of cat.facts) {
+        if (!factsByLabel.has(fact.label)) factsByLabel.set(fact.label, {});
+        const entry = factsByLabel.get(fact.label)!;
+        if (fact.entity === 'a') entry.a = fact;
+        if (fact.entity === 'b') entry.b = fact;
+      }
+
       const rows = labels
         .filter(label => label.toLowerCase().includes(term) || cat.name.toLowerCase().includes(term))
         .map(label => {
-          const factA = cat.facts.find(f => f.entity === 'a' && f.label === label);
-          const factB = cat.facts.find(f => f.entity === 'b' && f.label === label);
-          return { label, factA, factB };
+          const entry = factsByLabel.get(label) || {};
+          return { label, factA: entry.a, factB: entry.b };
         });
 
       return {
