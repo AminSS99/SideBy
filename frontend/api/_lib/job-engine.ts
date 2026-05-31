@@ -1140,11 +1140,12 @@ async function runExtractionStep(
     }
 
     const topUrls = selectedSources.map((s) => s.url);
+    const sourceByUrl = new Map(sources.map((s) => [s.url, s]));
 
     for (const url of topUrls) {
       checkGuardrails(ctx.guardrails);
       const page = await extractPage(url);
-      const source = sources.find((s) => s.url === url);
+      const source = sourceByUrl.get(url);
       if (page) {
         extracted.push({
           url: page.url,
@@ -1423,20 +1424,30 @@ async function runFactStep(
       });
     }
 
+    const entityRowsByName = new Map(entityRows.map(e => [e.normalizedName, e]));
+    const dimensionRowsByName = new Map(dimensionRows.map(d => [d.name, d]));
+    const sourceRowsByUrl = new Map(sourceRows.map(s => [s.url, s]));
+
+    // Fallback search map for partial matching of citations
+    const sourceRowsSearchable = sourceRows.map(s => ({ url: s.url, row: s }));
+
     // Store facts in the production schema with optional pgvector embeddings.
     for (const [index, fact] of uniqueFacts.entries()) {
       const entityName = fact.entity;
       const dimensionName = fact.dimension || "General";
       const citation = fact.citation || "";
       const entityRow =
-        entityRows.find((entity) => entity.normalizedName === entityName) ||
+        entityRowsByName.get(entityName) ||
         entityRows[0];
       if (!entityRow) continue;
-      const dimensionRow = dimensionRows.find((dimension) => dimension.name === dimensionName);
-      const sourceRow =
-        sourceRows.find((source) => source.url === citation) ||
-        sourceRows.find((source) => citation && citation.includes(source.url)) ||
-        sourceRows[0];
+      const dimensionRow = dimensionRowsByName.get(dimensionName);
+
+      let sourceRow = sourceRowsByUrl.get(citation);
+      if (!sourceRow && citation) {
+         const match = sourceRowsSearchable.find((s) => citation.includes(s.url));
+         if (match) sourceRow = match.row;
+      }
+      if (!sourceRow) sourceRow = sourceRows[0];
 
       await ctx.db.insert(comparisonFacts).values({
         comparisonId: ctx.comparisonId,
@@ -1655,13 +1666,16 @@ async function runScoreStep(
       .from(comparisonDimensions)
       .where(eq(comparisonDimensions.comparisonId, ctx.comparisonId));
 
+    const entityRowsByName = new Map(entityRows.map(e => [e.normalizedName, e]));
+    const dimensionRowsByName = new Map(dimensionRows.map(d => [d.name, d]));
+
     // Store scores
     for (const score of result.data) {
       const entityRow =
-        entityRows.find((entity) => entity.normalizedName === score.entity) ||
+        entityRowsByName.get(score.entity) ||
         entityRows[0];
       const dimensionRow =
-        dimensionRows.find((dimension) => dimension.name === score.dimension) ||
+        dimensionRowsByName.get(score.dimension) ||
         dimensionRows[0];
       if (!entityRow || !dimensionRow) continue;
       await ctx.db.insert(comparisonScores).values({
@@ -1893,6 +1907,17 @@ function buildResultJson(
       sources.find((source) => citation.includes(source.url) || source.url.includes(citation));
   };
 
+  const factsByDimension = new Map<string, typeof facts>();
+  for (const fact of facts) {
+    if (!factsByDimension.has(fact.dimension)) factsByDimension.set(fact.dimension, []);
+    factsByDimension.get(fact.dimension)!.push(fact);
+  }
+
+  const scoreMap = new Map<string, number>();
+  for (const score of scores) {
+    scoreMap.set(`${score.dimension}|${score.entity}`, score.score);
+  }
+
   return {
     slug: slugOverride || makeResultSlug(nameA, nameB),
     query: parsed.entities.map((e) => e.name).join(" vs "),
@@ -1919,17 +1944,15 @@ function buildResultJson(
       summary: getVerdictText(verdict),
     },
     categories: dimensions.map((dim) => {
-      const dimScores = scores.filter((s) => s.dimension === dim.name);
-      const aScore = dimScores.find((s) => s.entity === entityA?.name)?.score ?? 0;
-      const bScore = dimScores.find((s) => s.entity === entityB?.name)?.score ?? 0;
+      const aScore = scoreMap.get(`${dim.name}|${nameA}`) ?? 0;
+      const bScore = scoreMap.get(`${dim.name}|${nameB}`) ?? 0;
+      const dimFacts = factsByDimension.get(dim.name) || [];
 
       return {
         name: dim.name,
         winner: aScore > bScore ? "a" : bScore > aScore ? "b" : "tie",
         verdict: `${dim.name} comparison based on source-backed facts.`,
-        facts: facts
-          .filter((f) => f.dimension === dim.name)
-          .map((f) => {
+        facts: dimFacts.map((f) => {
             const matchedSource = findSource(f.citation);
             return {
               entity: f.entity === entityA?.name ? "a" : "b",
@@ -1946,11 +1969,10 @@ function buildResultJson(
       };
     }),
     dimensions: dimensions.map((dim) => {
-      const dimScores = scores.filter((s) => s.dimension === dim.name);
       return {
         subject: dim.name,
-        a: dimScores.find((s) => s.entity === entityA?.name)?.score ?? 50,
-        b: dimScores.find((s) => s.entity === entityB?.name)?.score ?? 50,
+        a: scoreMap.get(`${dim.name}|${nameA}`) ?? 50,
+        b: scoreMap.get(`${dim.name}|${nameB}`) ?? 50,
         fullMark: 100,
       };
     }),
@@ -2030,6 +2052,15 @@ async function buildPartialResult(
 
     if (!entityA || !entityB) return null;
 
+    const dimsById = new Map(dims.map(d => [d.id, d]));
+    const scoreMap = new Map<string, number>();
+    for (const score of scores) {
+      const dim = dimsById.get(score.dimensionId);
+      if (dim) {
+        scoreMap.set(`${dim.name}|${score.entityId}`, Number(score.score));
+      }
+    }
+
     // Group facts by dimension for categories
     const factsByDim = new Map<string, typeof facts>();
     for (const f of facts) {
@@ -2039,12 +2070,8 @@ async function buildPartialResult(
     }
 
     const categories = Array.from(factsByDim.entries()).map(([name, dimFacts]) => {
-      const dimScores = scores.filter((s) => {
-        const dim = dims.find((d) => d.id === s.dimensionId);
-        return dim?.name === name;
-      });
-      const aScore = dimScores.find((s) => s.entityId === entityA.id)?.score ?? 50;
-      const bScore = dimScores.find((s) => s.entityId === entityB.id)?.score ?? 50;
+      const aScore = scoreMap.get(`${name}|${entityA.id}`) ?? 50;
+      const bScore = scoreMap.get(`${name}|${entityB.id}`) ?? 50;
       return {
         name,
         winner: aScore > bScore ? "a" : bScore > aScore ? "b" : "tie",
