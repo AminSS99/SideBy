@@ -1424,19 +1424,26 @@ async function runFactStep(
     }
 
     // Store facts in the production schema with optional pgvector embeddings.
+    const entityByName = new Map(entityRows.map((e) => [e.normalizedName, e]));
+    const dimensionByName = new Map(dimensionRows.map((d) => [d.name, d]));
+    const sourceByUrl = new Map(sourceRows.map((s) => [s.url, s]));
+
     for (const [index, fact] of uniqueFacts.entries()) {
       const entityName = fact.entity;
       const dimensionName = fact.dimension || "General";
       const citation = fact.citation || "";
-      const entityRow =
-        entityRows.find((entity) => entity.normalizedName === entityName) ||
-        entityRows[0];
+
+      const entityRow = entityByName.get(entityName) || entityRows[0];
       if (!entityRow) continue;
-      const dimensionRow = dimensionRows.find((dimension) => dimension.name === dimensionName);
-      const sourceRow =
-        sourceRows.find((source) => source.url === citation) ||
-        sourceRows.find((source) => citation && citation.includes(source.url)) ||
-        sourceRows[0];
+
+      const dimensionRow = dimensionByName.get(dimensionName);
+
+      // For source matching, exact match first, then fallback to partial match on array
+      let sourceRow = sourceByUrl.get(citation);
+      if (!sourceRow && citation) {
+         sourceRow = sourceRows.find((source) => citation.includes(source.url));
+      }
+      sourceRow = sourceRow || sourceRows[0];
 
       await ctx.db.insert(comparisonFacts).values({
         comparisonId: ctx.comparisonId,
@@ -1472,19 +1479,21 @@ function ensureFactCoverage(
   extracted: ExtractedSource[],
 ): ExtractedFact[] {
   const completeFacts = [...facts];
-  const hasFact = (entity: string, dimension: string) =>
-    completeFacts.some(
-      (fact) =>
-        fact.entity.toLowerCase() === entity.toLowerCase() &&
-        fact.dimension.toLowerCase() === dimension.toLowerCase() &&
-        fact.value.trim().length > 0,
-    );
+  const existingFacts = new Set(
+    facts
+      .filter((f) => f.value.trim().length > 0)
+      .map((f) => `${f.entity.toLowerCase()}|${f.dimension.toLowerCase()}`)
+  );
 
   for (const entity of parsed.entities.slice(0, 2)) {
     for (const dimension of dimensions) {
-      if (hasFact(entity.name, dimension.name)) continue;
+      const key = `${entity.name.toLowerCase()}|${dimension.name.toLowerCase()}`;
+      if (existingFacts.has(key)) continue;
       const fallback = buildFallbackFact(entity.name, dimension.name, extracted);
-      if (fallback) completeFacts.push(fallback);
+      if (fallback) {
+        completeFacts.push(fallback);
+        existingFacts.add(key);
+      }
     }
   }
 
@@ -1656,13 +1665,12 @@ async function runScoreStep(
       .where(eq(comparisonDimensions.comparisonId, ctx.comparisonId));
 
     // Store scores
+    const scoreEntityByName = new Map(entityRows.map((e) => [e.normalizedName, e]));
+    const scoreDimensionByName = new Map(dimensionRows.map((d) => [d.name, d]));
+
     for (const score of result.data) {
-      const entityRow =
-        entityRows.find((entity) => entity.normalizedName === score.entity) ||
-        entityRows[0];
-      const dimensionRow =
-        dimensionRows.find((dimension) => dimension.name === score.dimension) ||
-        dimensionRows[0];
+      const entityRow = scoreEntityByName.get(score.entity) || entityRows[0];
+      const dimensionRow = scoreDimensionByName.get(score.dimension) || dimensionRows[0];
       if (!entityRow || !dimensionRow) continue;
       await ctx.db.insert(comparisonScores).values({
         comparisonId: ctx.comparisonId,
