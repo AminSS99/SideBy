@@ -17,13 +17,22 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
     const term = filter.toLowerCase();
     
     return result.categories.map(cat => {
-      const labels = Array.from(new Set(cat.facts.map(f => f.label)));
+      const factsByLabelAndEntity = new Map<string, Map<string, typeof cat.facts[0]>>();
+      for (const fact of cat.facts) {
+        if (!factsByLabelAndEntity.has(fact.label)) {
+          factsByLabelAndEntity.set(fact.label, new Map());
+        }
+        factsByLabelAndEntity.get(fact.label)!.set(fact.entity, fact);
+      }
+
+      const labels = Array.from(factsByLabelAndEntity.keys());
       
       const rows = labels
         .filter(label => label.toLowerCase().includes(term) || cat.name.toLowerCase().includes(term))
         .map(label => {
-          const factA = cat.facts.find(f => f.entity === 'a' && f.label === label);
-          const factB = cat.facts.find(f => f.entity === 'b' && f.label === label);
+          const entityFacts = factsByLabelAndEntity.get(label)!;
+          const factA = entityFacts.get('a');
+          const factB = entityFacts.get('b');
           return { label, factA, factB };
         });
 

@@ -63,10 +63,19 @@ export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
       md += `|---|---|---|\n`;
       
       result.categories.forEach(cat => {
-        const labels = Array.from(new Set(cat.facts.map(f => f.label)));
+        const factsByLabelAndEntity = new Map<string, Map<string, string>>();
+        for (const fact of cat.facts) {
+          if (!factsByLabelAndEntity.has(fact.label)) {
+            factsByLabelAndEntity.set(fact.label, new Map());
+          }
+          factsByLabelAndEntity.get(fact.label)!.set(fact.entity, fact.value);
+        }
+
+        const labels = Array.from(factsByLabelAndEntity.keys());
         labels.forEach(label => {
-          const fa = cat.facts.find(f => f.entity === "a" && f.label === label)?.value || "N/A";
-          const fb = cat.facts.find(f => f.entity === "b" && f.label === label)?.value || "N/A";
+          const entityFacts = factsByLabelAndEntity.get(label)!;
+          const fa = entityFacts.get("a") || "N/A";
+          const fb = entityFacts.get("b") || "N/A";
           md += `| **${label}** | ${fa.replace(/\n/g, " ")} | ${fb.replace(/\n/g, " ")} |\n`;
         });
       });
