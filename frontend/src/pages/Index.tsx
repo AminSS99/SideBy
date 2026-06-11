@@ -78,10 +78,8 @@ const Index = () => {
     return () => {
       hero.removeEventListener("mousemove", handleMouseMove);
       hero.removeEventListener("mouseleave", handleMouseLeave);
-      xToTitle.kill();
-      yToTitle.kill();
-      xToDesc.kill();
-      yToDesc.kill();
+      gsap.killTweensOf(title);
+      gsap.killTweensOf(desc);
     };
   }, []);
 
@@ -216,9 +214,7 @@ const Index = () => {
         return () => {
           card.removeEventListener("mousemove", move);
           card.removeEventListener("mouseleave", leave);
-          rotateX.kill();
-          rotateY.kill();
-          y.kill();
+          gsap.killTweensOf(card);
         };
       });
 
