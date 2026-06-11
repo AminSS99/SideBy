@@ -1,3 +1,5 @@
+import { envConfig } from "@/config/env";
+
 type ClerkSession = {
   getToken: () => Promise<string | null>;
 };
@@ -13,7 +15,8 @@ export const getClerkToken = async () => {
     return null;
   }
 
-  const isTestAuth = localStorage.getItem("sideby.test.auth") === "true";
+  const isTestAuth =
+    envConfig.canUseTestAuth && localStorage.getItem("sideby.test.auth") === "true";
   if (isTestAuth) {
     return "test-token";
   }

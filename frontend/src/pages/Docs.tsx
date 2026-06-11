@@ -66,7 +66,7 @@ const Docs = () => {
       <header className="relative z-40 border-b border-[#2a2a2a] bg-[#030303] pt-4 pb-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-4 group">
-            <img src="/sideby-logo.jpg" alt="SideBy" className="h-8 w-8 object-contain rounded-sm transition-all group-hover:opacity-80" />
+            <img src="/sideby.ico" alt="SideBy" className="h-8 w-8 object-contain rounded-sm transition-all group-hover:opacity-80" />
             <div className="flex items-center gap-2">
               <span className="font-serif tracking-tight text-[#fdfbf7] group-hover:text-orange-50 transition-colors">{brand.productName}</span>
               <span className="text-[10px] font-bold uppercase tracking-widest text-white/30 border-l border-[#333] pl-2">Documentation</span>

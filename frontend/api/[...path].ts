@@ -63,7 +63,6 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ) {
-  console.log("API ROUTER MATCHED:", { url: request.url, query: request.query, pathParam: request.query.path });
   const pathParam = request.query.path || request.query['...path'];
   let path: string[] = [];
   if (Array.isArray(pathParam)) {

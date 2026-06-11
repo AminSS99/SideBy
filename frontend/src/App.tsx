@@ -28,6 +28,8 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/legal/TermsOfService"));
 const CookiesPolicy = lazy(() => import("./pages/legal/CookiesPolicy"));
+const RefundPolicy = lazy(() => import("./pages/legal/RefundPolicy"));
+const SecurityOverview = lazy(() => import("./pages/legal/SecurityOverview"));
 const SignIn = lazy(() => import("./pages/auth/SignIn"));
 const SignUp = lazy(() => import("./pages/auth/SignUp"));
 const AuthCallback = lazy(() => import("./pages/auth/AuthCallback"));
@@ -107,6 +109,8 @@ const App = () => {
                     <Route path="/legal/privacy" element={<PrivacyPolicy />} />
                     <Route path="/legal/terms" element={<TermsOfService />} />
                     <Route path="/legal/cookies" element={<CookiesPolicy />} />
+                    <Route path="/legal/refund" element={<RefundPolicy />} />
+                    <Route path="/legal/security" element={<SecurityOverview />} />
                     <Route path="/compare/:slug" element={<Compare />} />
 
                     {/* Auth pages — reverse protected so signed-in users get redirected */}

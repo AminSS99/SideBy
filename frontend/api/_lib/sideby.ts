@@ -1,8 +1,10 @@
 import type { VercelResponse } from "@vercel/node";
+import { z } from "zod";
 import { eq, desc, and, asc, or, sql } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import { comparisons, aiRuns, aiRunSteps, queryAnalytics } from "../../src/db/schema.js";
 import { runComparisonJob } from "./job-engine.js";
+import { getPrimaryProvider } from "./providers/index.js";
 import { logger } from "./log.js";
 import { normalizeQuery } from "./query-normalizer.js";
 import { isFreshEnough, isStaleButUsable, getFreshnessClass, freshnessLabel } from "./reuse-engine.js";
@@ -333,8 +335,8 @@ export const createComparisonJob = async (
     });
   }
 
-  const parsed = parseQuery(input.query);
-  const normalized = normalizeQuery(input.query);
+  const parsed = await parseQueryWithLlm(input.query);
+  const normalized = normalizeQuery(input.query, { entityA: parsed.entityA, entityB: parsed.entityB });
   const id = crypto.randomUUID();
   const comparisonSlug = uniqueSlug(slug(parsed.entityA, parsed.entityB));
 
@@ -826,14 +828,59 @@ type ParsedComparison = {
   normalizedQuery: string;
 };
 
-const parseQuery = (raw: string): ParsedComparison => {
+const ParseQuerySchema = z.object({
+  entities: z.array(z.string()).min(2).max(5),
+  context: z.string().optional(),
+});
+
+export const parseQueryWithLlm = async (raw: string): Promise<ParsedComparison> => {
   const q = raw?.trim() || "Supabase vs Firebase for a SaaS";
-  const [left, rest = "Firebase"] = q.split(/\s+vs\.?\s+/i);
-  const [right, ctx] = rest.split(/\s+for\s+/i);
-  const ea = normalizeEntity(left) || "Supabase";
-  const eb = normalizeEntity(right) || "Firebase";
-  const context = ctx?.trim() ? `for ${ctx.trim()}` : q.toLowerCase().includes("saas") ? "for a SaaS product" : "for the decision you described";
-  return { entityA: ea, entityB: eb, context, normalizedQuery: `${ea} vs ${eb} ${context}` };
+  
+  // Try heuristic first (very fast, zero cost)
+  const parts = q.split(/\s+vs\.?\s+/i);
+  if (parts.length >= 2) {
+    const left = parts[0] || "";
+    const [right, ctx] = parts.slice(1).join(" vs ").split(/\s+for\s+/i);
+    const ea = normalizeEntity(left);
+    const eb = normalizeEntity(right);
+    if (ea && eb) {
+      const context = ctx?.trim() ? `for ${ctx.trim()}` : q.toLowerCase().includes("saas") ? "for a SaaS product" : "for the decision you described";
+      return { entityA: ea, entityB: eb, context, normalizedQuery: `${ea} vs ${eb} ${context}` };
+    }
+  }
+
+  // LLM fallback for natural queries (e.g. "React or Vue for SaaS?")
+  try {
+    const provider = getPrimaryProvider();
+    const prompt = [
+      {
+        role: "system" as const,
+        content: "You are a query parser for SideBy. Extract the two primary entities being compared and the context of the comparison. Return ONLY valid JSON with 'entities' (array of strings, exactly 2 entities) and 'context' (string, e.g. 'for SaaS development').",
+      },
+      {
+        role: "user" as const,
+        content: `Extract entities from this comparison query: "${q}"`,
+      },
+    ];
+    const result = await provider.generateObject(prompt, ParseQuerySchema);
+    const entities = result.data.entities;
+    const ea = normalizeEntity(entities[0] || "Supabase");
+    const eb = normalizeEntity(entities[1] || "Firebase");
+    const context = result.data.context ? `for ${result.data.context.trim()}` : "for your use case";
+    return {
+      entityA: ea,
+      entityB: eb,
+      context,
+      normalizedQuery: `${ea} vs ${eb} ${context}`
+    };
+  } catch (error) {
+    logger.warn("LLM query parse fallback failed, using fallback default", { error });
+    // Default fallback
+    const ea = "Option A";
+    const eb = "Option B";
+    const context = "for the decision you described";
+    return { entityA: ea, entityB: eb, context, normalizedQuery: `${ea} vs ${eb} ${context}` };
+  }
 };
 
 const normalizeEntity = (v: string) => v.replace(/\b(for|with|inside|on)\b.*$/i, "").replace(/[^a-z0-9\s+.-]/gi, "").trim();

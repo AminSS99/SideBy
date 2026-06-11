@@ -73,7 +73,10 @@ function writeCachedAuth(user: AppUser | null) {
 }
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const isTestAuth = typeof window !== "undefined" && localStorage.getItem("sideby.test.auth") === "true";
+  const isTestAuth =
+    envConfig.canUseTestAuth &&
+    typeof window !== "undefined" &&
+    localStorage.getItem("sideby.test.auth") === "true";
 
   if (isTestAuth) {
     return <TestAuthProvider>{children}</TestAuthProvider>;

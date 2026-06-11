@@ -546,7 +546,10 @@ export async function runComparisonJob(
     );
 
     // Phase 11: Calibrate overall confidence
-    const normalized = normalizeQuery(ctx.query);
+    const normalized = normalizeQuery(ctx.query, {
+      entityA: parsed.entities[0]?.name || "Option A",
+      entityB: parsed.entities[1]?.name || "Option B",
+    });
     const freshnessClass = getFreshnessClass(normalized.category);
     const reliabilityScores = sources.map((s) => {
       // Compute reliability score from content
@@ -1222,7 +1225,10 @@ async function runDimensionStep(
 
   try {
     // Phase 11: Category-aware dimension generation
-    const normalized = normalizeQuery(ctx.query);
+    const normalized = normalizeQuery(ctx.query, {
+      entityA: parsed.entities[0]?.name || "Option A",
+      entityB: parsed.entities[1]?.name || "Option B",
+    });
     const categoryPrompt = buildDimensionPrompt(
       parsed.entities.map((e) => e.name),
       parsed.context || "",

@@ -104,7 +104,7 @@ const AppShell = () => {
               <Menu className="h-6 w-6" />
             </button>
             <Link to="/" className="flex items-center gap-4 group">
-              <img src="/sideby-logo.jpg" alt="SideBy" className="h-9 w-9 object-contain rounded-sm group-hover:opacity-80 transition-all" />
+              <img src="/sideby.ico" alt="SideBy" className="h-9 w-9 object-contain rounded-sm group-hover:opacity-80 transition-all" />
               <div className="hidden sm:block">
                 <span className="font-serif text-lg tracking-tight text-white group-hover:text-orange-50 transition-colors">
                   {brand.productName}
@@ -207,7 +207,7 @@ const AppShell = () => {
               >
                 <div className="p-4 flex items-center justify-between border-b border-[#2a2a2a]">
                   <div className="flex items-center gap-3">
-                    <img src="/sideby-logo.jpg" alt="SideBy" className="h-8 w-8 object-contain rounded-sm" />
+                    <img src="/sideby.ico" alt="SideBy" className="h-8 w-8 object-contain rounded-sm" />
                     <span className="font-serif text-base tracking-tight text-white">{brand.productName}</span>
                   </div>
                   <button 

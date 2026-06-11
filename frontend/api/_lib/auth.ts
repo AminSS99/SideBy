@@ -11,6 +11,8 @@ const clerkSecretKey = () => process.env.CLERK_SECRET_KEY || "";
 const isProductionRuntime = () =>
   process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
 
+const isTestAuthEnabled = () => !isProductionRuntime();
+
 export interface AuthContext {
   userId: string | null;
   orgId: string | null;
@@ -30,7 +32,7 @@ export const authenticateRequest = async (
 
   if (!sessionToken) return { userId: null, orgId: null, orgRole: null };
 
-  if (sessionToken === "test-token") {
+  if (sessionToken === "test-token" && isTestAuthEnabled()) {
     return { userId: "user_test_mock", orgId: null, orgRole: null };
   }
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.jpg" alt="SideBy Logo" width="160"/>
+  <img src="assets/sideby.ico" alt="SideBy Logo" width="160"/>
 </p>
 
 <h1 align="center">SideBy</h1>
@@ -42,7 +42,7 @@ Unlike generic chatbots, SideBy doesn't hallucinate rankings. It researches, cit
 ### Demo
 
 <a href="https://sideby-kappa.vercel.app" target="_blank">
-  <img src="assets/logo.jpg" alt="SideBy Screenshot" width="100%"/>
+  <img src="assets/sideby.ico" alt="SideBy Screenshot" width="100%"/>
 </a>
 
 ---

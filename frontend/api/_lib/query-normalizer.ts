@@ -54,9 +54,12 @@ function canonicalEntityOrder(a: string, b: string): [string, string] {
   return an <= bn ? [a, b] : [b, a];
 }
 
-export function normalizeQuery(rawQuery: string): NormalizedQuery {
+export function normalizeQuery(
+  rawQuery: string,
+  preExtracted?: { entityA: string; entityB: string },
+): NormalizedQuery {
   const intent = analyzeComparisonQuery(rawQuery);
-  const extracted = extractComparisonEntities(rawQuery);
+  const extracted = preExtracted || extractComparisonEntities(rawQuery);
   const entityA = normalize(intent.entityA || extracted.entityA || "unknown");
   const entityB = normalize(intent.entityB || extracted.entityB || "unknown");
   const [canonA, canonB] = canonicalEntityOrder(entityA, entityB);

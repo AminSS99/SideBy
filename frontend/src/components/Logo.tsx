@@ -8,7 +8,7 @@ interface LogoProps {
 
 export const Logo = ({ className, alt = "SideBy" }: LogoProps) => (
   <img
-    src="/sideby-logo.jpg"
+    src="/sideby.ico"
     alt={alt}
     className={cn("object-contain", className)}
     loading="eager"

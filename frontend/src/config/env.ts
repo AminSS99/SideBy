@@ -10,21 +10,22 @@ const rawClerkPublishableKey = normalizeEnv(
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
     import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
 );
-const allowClerkTestKeyInProduction =
-  normalizeEnv(import.meta.env.VITE_ALLOW_CLERK_TEST_KEY_IN_PRODUCTION) === "true";
 const isClerkTestKey = rawClerkPublishableKey.startsWith("pk_test_");
-const shouldBlockClerkTestKey =
-  import.meta.env.PROD && isClerkTestKey && !allowClerkTestKeyInProduction;
+const isProductionBuild = import.meta.env.PROD;
+const shouldBlockClerkTestKey = isProductionBuild && isClerkTestKey;
 const clerkPublishableKey = shouldBlockClerkTestKey ? "" : rawClerkPublishableKey;
 const hasClerkConfig = clerkPublishableKey.length > 0;
+const canUseTestAuth = !isProductionBuild;
 
 export const envConfig = {
   apiBaseUrl,
   pexelsApiKey,
   clerkPublishableKey,
+  isProductionBuild,
   hasApiBaseUrl: apiBaseUrl.length > 0,
   hasPexelsApiKey: pexelsApiKey.length > 0,
   hasClerkConfig,
+  canUseTestAuth,
   isClerkTestKeyBlocked: shouldBlockClerkTestKey,
 } as const;
 

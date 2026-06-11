@@ -9,9 +9,13 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const EMBEDDING_MODEL = "text-embedding-3-small";
 const EMBEDDING_URL = "https://api.openai.com/v1/embeddings";
 
+const isKeyConfigured = (key?: string) => {
+  return Boolean(key && key.trim() !== "" && key !== "sk-placeholder");
+};
+
 export async function embedText(text: string): Promise<number[]> {
-  if (!OPENAI_API_KEY) {
-    throw new Error("OpenAI API key required for embeddings. Set OPENAI_API_KEY.");
+  if (!isKeyConfigured(OPENAI_API_KEY)) {
+    throw new Error("OpenAI API key is missing or not configured (placeholder detected). Set a valid OPENAI_API_KEY for fact embeddings.");
   }
 
   const response = await fetch(EMBEDDING_URL, {
@@ -39,8 +43,8 @@ export async function embedText(text: string): Promise<number[]> {
 }
 
 export async function embedTexts(texts: string[]): Promise<number[][]> {
-  if (!OPENAI_API_KEY) {
-    throw new Error("OpenAI API key required for embeddings. Set OPENAI_API_KEY.");
+  if (!isKeyConfigured(OPENAI_API_KEY)) {
+    throw new Error("OpenAI API key is missing or not configured (placeholder detected). Set a valid OPENAI_API_KEY for fact embeddings.");
   }
 
   // Batch embeddings - process in chunks of 100

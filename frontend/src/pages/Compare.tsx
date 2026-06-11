@@ -145,7 +145,7 @@ const Compare = () => {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-4 group" aria-label={brand.productName}>
             <div className="flex h-10 w-10 items-center justify-center border border-[#333] bg-[#111] transition-all group-hover:border-orange-500/50">
-               <img src="/sideby-logo.jpg" alt="SideBy" className="h-8 w-8 object-contain rounded-sm transition-opacity group-hover:opacity-80" />
+               <img src="/sideby.ico" alt="SideBy" className="h-8 w-8 object-contain rounded-sm transition-opacity group-hover:opacity-80" />
             </div>
             <div>
               <p className="font-serif text-sm tracking-tight text-[#fdfbf7] group-hover:text-orange-50 transition-colors">{brand.productName}</p>

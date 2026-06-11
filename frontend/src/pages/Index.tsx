@@ -42,19 +42,24 @@ const Index = () => {
     if (!heroRef.current) return;
     const hero = heroRef.current;
 
-    // QuickTo for smooth performant following
-    const xToTitle = gsap.quickTo(".parallax-title", "x", { duration: 0.8, ease: "power3" });
-    const yToTitle = gsap.quickTo(".parallax-title", "y", { duration: 0.8, ease: "power3" });
+    const title = hero.querySelector(".parallax-title");
+    const desc = hero.querySelector(".parallax-desc");
+    if (!title || !desc) return;
 
-    const xToDesc = gsap.quickTo(".parallax-desc", "x", { duration: 1, ease: "power3" });
-    const yToDesc = gsap.quickTo(".parallax-desc", "y", { duration: 1, ease: "power3" });
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) return;
+
+    const xToTitle = gsap.quickTo(title, "x", { duration: 0.8, ease: "power3" });
+    const yToTitle = gsap.quickTo(title, "y", { duration: 0.8, ease: "power3" });
+
+    const xToDesc = gsap.quickTo(desc, "x", { duration: 1, ease: "power3" });
+    const yToDesc = gsap.quickTo(desc, "y", { duration: 1, ease: "power3" });
 
     const handleMouseMove = (e: MouseEvent) => {
       const rect = hero.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width - 0.5;
       const y = (e.clientY - rect.top) / rect.height - 0.5;
 
-      // Move elements on different depth planes
       xToTitle(x * -20);
       yToTitle(y * -20);
 
@@ -73,7 +78,6 @@ const Index = () => {
     return () => {
       hero.removeEventListener("mousemove", handleMouseMove);
       hero.removeEventListener("mouseleave", handleMouseLeave);
-      // Kill the internal quickTo tweens to prevent memory leaks
       xToTitle.kill();
       yToTitle.kill();
       xToDesc.kill();
@@ -82,53 +86,148 @@ const Index = () => {
   }, []);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
-    tl.from(".hero-badge", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" })
-      .from(".parallax-title", { y: 30, opacity: 0, duration: 1, ease: "expo.out" }, "-=0.6")
-      .from(".parallax-desc", { y: 20, opacity: 0, duration: 0.8 }, "-=0.6")
-      .from(".hero-search", { y: 20, opacity: 0, duration: 0.8, ease: "back.out(1.2)" }, "-=0.4")
-      .from(".hero-featured", { opacity: 0, duration: 1 }, "-=0.4");
+    const mm = gsap.matchMedia();
 
-    gsap.from(".feature-card", {
-      scrollTrigger: {
-        trigger: ".features-grid",
-        start: "top 80%",
-      },
-      y: 40,
-      opacity: 0,
-      duration: 0.8,
-      stagger: 0.15,
-      ease: "power2.out"
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      gsap.set(".hero-badge, .parallax-title, .parallax-desc, .hero-search, .hero-featured, .starter-card, .feature-card, .orch-card", {
+        clearProps: "all",
+        opacity: 1,
+      });
     });
 
-    gsap.from(".orch-card", {
-      scrollTrigger: {
-        trigger: ".orchestration-section",
-        start: "top 75%",
-      },
-      y: 50,
-      opacity: 0,
-      duration: 1,
-      stagger: 0.2,
-      ease: "expo.out"
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.set(".hero-badge, .parallax-title, .parallax-desc, .hero-search, .hero-featured", {
+        willChange: "transform, opacity, filter",
+      });
+      gsap.set(".starter-card, .feature-card, .orch-card", {
+        transformPerspective: 900,
+        transformOrigin: "center",
+        willChange: "transform, opacity, border-color",
+      });
+
+      const tl = gsap.timeline({ defaults: { ease: "expo.out" } });
+      tl.from(".hero-badge", { y: 24, opacity: 0, filter: "blur(10px)", duration: 0.8 })
+        .from(".parallax-title", { y: 44, opacity: 0, filter: "blur(14px)", duration: 1.15 }, "-=0.48")
+        .from(".parallax-desc", { y: 24, opacity: 0, filter: "blur(8px)", duration: 0.82 }, "-=0.72")
+        .from(".hero-search", { y: 28, opacity: 0, scale: 0.97, filter: "blur(10px)", duration: 0.9, ease: "back.out(1.25)" }, "-=0.5")
+        .from(".hero-featured", { y: 16, opacity: 0, duration: 0.72 }, "-=0.5")
+        .from(".quick-start-chip", { y: 16, opacity: 0, stagger: 0.045, duration: 0.48, ease: "power3.out" }, "-=0.5")
+        .from(".starter-card", { y: 34, opacity: 0, rotateX: -8, stagger: 0.055, duration: 0.72, ease: "power3.out" }, "-=0.35");
+
+      gsap.to(".hero-search-shell", {
+        boxShadow: "0 28px 80px rgba(234,88,12,0.18)",
+        borderColor: "rgba(234,88,12,0.45)",
+        duration: 1.8,
+        yoyo: true,
+        repeat: -1,
+        ease: "sine.inOut",
+      });
+
+      gsap.from(".feature-card", {
+        scrollTrigger: {
+          trigger: ".features-grid",
+          start: "top 82%",
+          end: "bottom 55%",
+          scrub: 0.6,
+        },
+        y: 58,
+        opacity: 0,
+        rotateX: -10,
+        stagger: 0.14,
+        ease: "none",
+      });
+
+      gsap.from(".feature-icon", {
+        scrollTrigger: {
+          trigger: ".features-grid",
+          start: "top 72%",
+          toggleActions: "play none none reverse",
+        },
+        scale: 0.72,
+        rotate: -8,
+        opacity: 0,
+        stagger: 0.1,
+        duration: 0.7,
+        ease: "back.out(1.7)",
+      });
+
+      gsap.from(".orchestration-heading > *", {
+        scrollTrigger: {
+          trigger: ".orchestration-section",
+          start: "top 72%",
+          toggleActions: "play none none reverse",
+        },
+        y: 28,
+        opacity: 0,
+        stagger: 0.1,
+        duration: 0.9,
+        ease: "power3.out",
+      });
+
+      gsap.from(".orch-card", {
+        scrollTrigger: {
+          trigger: ".orchestration-section",
+          start: "top 66%",
+          toggleActions: "play none none reverse",
+        },
+        y: 70,
+        opacity: 0,
+        rotateY: 10,
+        stagger: 0.16,
+        duration: 1,
+        ease: "expo.out",
+      });
+
+      gsap.from(".orch-path", {
+        scrollTrigger: {
+          trigger: ".orchestration-section",
+          start: "top 58%",
+          end: "top 30%",
+          scrub: 0.8,
+        },
+        scaleX: 0,
+        opacity: 0,
+        transformOrigin: "left",
+        ease: "none",
+      });
+
+      const tiltCards = gsap.utils.toArray<HTMLElement>(".starter-card, .feature-card, .orch-card");
+      const listeners = tiltCards.map((card) => {
+        const rotateX = gsap.quickTo(card, "rotationX", { duration: 0.45, ease: "power3.out" });
+        const rotateY = gsap.quickTo(card, "rotationY", { duration: 0.45, ease: "power3.out" });
+        const y = gsap.quickTo(card, "y", { duration: 0.45, ease: "power3.out" });
+
+        const move = (event: MouseEvent) => {
+          const rect = card.getBoundingClientRect();
+          const relX = (event.clientX - rect.left) / rect.width - 0.5;
+          const relY = (event.clientY - rect.top) / rect.height - 0.5;
+          rotateX(relY * -5);
+          rotateY(relX * 7);
+          y(-4);
+        };
+        const leave = () => {
+          rotateX(0);
+          rotateY(0);
+          y(0);
+        };
+
+        card.addEventListener("mousemove", move);
+        card.addEventListener("mouseleave", leave);
+        return () => {
+          card.removeEventListener("mousemove", move);
+          card.removeEventListener("mouseleave", leave);
+          rotateX.kill();
+          rotateY.kill();
+          y.kill();
+        };
+      });
+
+      return () => {
+        listeners.forEach((cleanup) => cleanup());
+      };
     });
 
-    gsap.from(".orch-path", {
-      scrollTrigger: {
-        trigger: ".orchestration-section",
-        start: "top 60%",
-      },
-      scaleX: 0,
-      opacity: 0,
-      transformOrigin: "left",
-      duration: 1.5,
-      ease: "power3.inOut"
-    });
-
-    return () => {
-      // Kill all ScrollTriggers scoped to this container to prevent memory leaks
-      ScrollTrigger.getAll().forEach((t) => t.kill());
-    };
+    return () => mm.revert();
   }, { scope: containerRef });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -152,7 +251,7 @@ const Index = () => {
       <header className="relative z-40 border-b border-white/[0.06] bg-[#030303]/90 sticky top-0">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
             <div className="flex items-center gap-4 group cursor-default">
-              <img src="/sideby-logo.jpg" alt="SideBy" className="h-9 w-9 object-contain rounded-sm transition-all group-hover:opacity-80" />
+              <img src="/sideby.ico" alt="SideBy" className="h-9 w-9 object-contain rounded-sm transition-all group-hover:opacity-80" />
               <div>
               <p className="font-serif text-sm tracking-tight text-[#fdfbf7]">SideBy</p>
               <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#fdfbf7]/40">Research Engine</p>
@@ -195,8 +294,8 @@ const Index = () => {
           </p>
 
           <form onSubmit={handleSearch} className="hero-search mt-10 w-full max-w-2xl group transform-translate-z-10">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none">
+            <div className="hero-search-shell relative rounded-sm border border-transparent">
+              <div className="pointer-events-none absolute left-0 top-0 flex h-[66px] items-center pl-5">
                 <Search className="h-5 w-5 text-white/30 group-focus-within:text-orange-500 transition-colors" />
               </div>
               <input
@@ -204,12 +303,12 @@ const Index = () => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="e.g., Supabase vs Firebase..."
-                className="w-full rounded-sm border border-[#333] bg-[#0c0b0a] py-5 pl-14 pr-36 text-lg text-white placeholder:text-white/20 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all shadow-[0_20px_40px_rgba(0,0,0,0.4)]"
+                className="w-full rounded-sm border border-[#333] bg-[#0c0b0a] py-5 pl-14 pr-5 text-base text-white placeholder:text-white/20 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all shadow-[0_20px_40px_rgba(0,0,0,0.4)] sm:pr-36 sm:text-lg"
               />
               <button
                 type="submit"
                 disabled={Boolean(query.trim()) && !queryIntent.canStart}
-                className="absolute inset-y-2 right-2 flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-6 font-bold uppercase tracking-widest text-xs text-black hover:bg-[#e0e0e0] transition-colors active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-sm bg-[#fdfbf7] px-6 py-4 font-bold uppercase tracking-widest text-xs text-black hover:bg-[#e0e0e0] transition-colors active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:absolute sm:inset-y-2 sm:right-2 sm:mt-0 sm:w-auto sm:py-0"
               >
                 Compare <ArrowRight className="h-3.5 w-3.5" />
               </button>
@@ -254,7 +353,7 @@ const Index = () => {
                   key={comp}
                   type="button"
                   onClick={() => handleQuickStart(comp)}
-                  className="rounded-full border border-white/[0.06] bg-[#111] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/40 transition-all hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-400"
+                  className="quick-start-chip rounded-full border border-white/[0.06] bg-[#111] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/40 transition-all hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-400"
                 >
                   {comp}
                 </button>
@@ -272,7 +371,7 @@ const Index = () => {
                     key={comp.label}
                     type="button"
                     onClick={() => handleQuickStart(comp.label)}
-                    className="group relative overflow-hidden rounded-sm border border-white/[0.06] bg-[#0c0b0a] p-5 transition-all hover:border-orange-500/30 hover:bg-[#1a110a] hover:shadow-[0_0_30px_rgba(234,88,12,0.08)]"
+                    className="starter-card group relative overflow-hidden rounded-sm border border-white/[0.06] bg-[#0c0b0a] p-5 transition-all hover:border-orange-500/30 hover:bg-[#1a110a] hover:shadow-[0_0_30px_rgba(234,88,12,0.08)]"
                   >
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-[9px] font-bold uppercase tracking-widest text-orange-500/70">{comp.category}</span>
@@ -295,7 +394,7 @@ const Index = () => {
         {/* Features Grid */}
         <div className="features-grid grid gap-6 md:grid-cols-3 pt-12 border-t border-[#2a2a2a]">
           <div className="feature-card border border-[#2a2a2a] bg-[#0c0b0a] p-8 rounded-sm hover:border-[#444] transition-colors">
-            <div className="mb-6 inline-flex rounded-sm bg-[#111] border border-[#333] p-3 text-white">
+            <div className="feature-icon mb-6 inline-flex rounded-sm bg-[#111] border border-[#333] p-3 text-white">
               <Scale className="h-6 w-6" />
             </div>
             <h3 className="font-serif text-2xl text-[#fdfbf7] mb-3">Unbiased Verdicts</h3>
@@ -304,7 +403,7 @@ const Index = () => {
             </p>
           </div>
           <div className="feature-card border border-orange-500/30 bg-[#1a110a] shadow-[0_0_30px_rgba(234,88,12,0.05)] p-8 rounded-sm">
-            <div className="mb-6 inline-flex rounded-sm bg-orange-500/10 border border-orange-500/20 p-3 text-orange-400">
+            <div className="feature-icon mb-6 inline-flex rounded-sm bg-orange-500/10 border border-orange-500/20 p-3 text-orange-400">
               <Zap className="h-6 w-6" />
             </div>
             <h3 className="font-serif text-2xl text-[#fdfbf7] mb-3">Instant Generation</h3>
@@ -313,7 +412,7 @@ const Index = () => {
             </p>
           </div>
           <div className="feature-card border border-[#2a2a2a] bg-[#0c0b0a] p-8 rounded-sm hover:border-[#444] transition-colors">
-            <div className="mb-6 inline-flex rounded-sm bg-[#111] border border-[#333] p-3 text-cyan-400">
+            <div className="feature-icon mb-6 inline-flex rounded-sm bg-[#111] border border-[#333] p-3 text-cyan-400">
               <ShieldCheck className="h-6 w-6" />
             </div>
             <h3 className="font-serif text-2xl text-[#fdfbf7] mb-3">Source Backed</h3>
@@ -325,7 +424,7 @@ const Index = () => {
 
         {/* Orchestration Section */}
         <section className="orchestration-section mt-32 border-t border-[#2a2a2a] pt-24 pb-12">
-          <div className="text-center mb-16">
+          <div className="orchestration-heading text-center mb-16">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-500 mb-4 flex justify-center items-center gap-2">
               <Network className="h-3.5 w-3.5" /> Multi-Model Orchestration
             </p>
@@ -349,7 +448,7 @@ const Index = () => {
               
               <div className="orch-card border border-orange-500/30 bg-[#1a110a] shadow-2xl p-8 rounded-sm text-center transform md:scale-110 z-20">
                 <div className="absolute top-0 inset-x-0 h-1 bg-orange-500" />
-                <img src="/sideby-logo.jpg" alt="SideBy Router" className="h-12 w-12 object-contain rounded-sm mx-auto mb-4" />
+                <img src="/sideby.ico" alt="SideBy Router" className="h-12 w-12 object-contain rounded-sm mx-auto mb-4" />
                 <h3 className="font-serif text-xl text-white mb-2">SideBy Router</h3>
                 <p className="text-xs text-orange-400 uppercase tracking-widest font-bold mb-3">Orchestration</p>
                 <p className="text-sm text-white/60">Evaluates the query and intelligently splits tasks across providers.</p>
@@ -373,7 +472,7 @@ const Index = () => {
           <div className="grid gap-12 md:grid-cols-4 mb-16">
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-6">
-                <img src="/sideby-logo.jpg" alt="SideBy" className="h-7 w-7 object-contain rounded-sm" />
+                <img src="/sideby.ico" alt="SideBy" className="h-7 w-7 object-contain rounded-sm" />
                 <span className="font-serif text-lg tracking-tight text-[#fdfbf7]">SideBy</span>
               </div>
               <p className="text-sm text-white/40 max-w-sm leading-relaxed mb-6">
@@ -401,6 +500,8 @@ const Index = () => {
                 <li><Link to="/legal/privacy" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Privacy Policy</Link></li>
                 <li><Link to="/legal/terms" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Terms of Service</Link></li>
                 <li><Link to="/legal/cookies" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Cookies Policy</Link></li>
+                <li><Link to="/legal/refund" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Refund Policy</Link></li>
+                <li><Link to="/legal/security" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Security Overview</Link></li>
               </ul>
             </div>
           </div>

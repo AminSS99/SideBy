@@ -25,7 +25,7 @@ export const LegalPageShell = ({ title, lastUpdated, children }: LegalPageShellP
       <header className="border-b border-[#2a2a2a] bg-[#030303] sticky top-0 z-40">
         <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-6">
           <Link to="/" className="flex items-center gap-4 group">
-            <img src="/sideby-logo.jpg" alt="SideBy" className="h-7 w-7 object-contain rounded-sm group-hover:opacity-80 transition-all" />
+            <img src="/sideby.ico" alt="SideBy" className="h-7 w-7 object-contain rounded-sm group-hover:opacity-80 transition-all" />
             <span className="font-serif tracking-tight text-[#fdfbf7] group-hover:text-orange-50 transition-colors">SideBy</span>
           </Link>
           <Link to="/contact" className="text-[10px] font-bold uppercase tracking-widest text-white/50 hover:text-white transition-colors">

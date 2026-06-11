@@ -63,7 +63,7 @@ const AuthPageShell = ({
           to="/"
           className="auth-logo mb-16 flex items-center gap-4 self-start group"
         >
-          <img src="/sideby-logo.jpg" alt="SideBy" className="h-12 w-12 object-contain rounded-sm group-hover:opacity-80 transition-all" />
+          <img src="/sideby.ico" alt="SideBy" className="h-12 w-12 object-contain rounded-sm group-hover:opacity-80 transition-all" />
           <div>
             <span className="block font-serif text-xl tracking-tight text-[#fdfbf7] group-hover:text-orange-50 transition-colors">{brand.productName}</span>
             <span className="block text-[9px] uppercase tracking-[0.3em] text-[#fdfbf7]/40">

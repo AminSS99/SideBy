@@ -1,5 +1,4 @@
 import { issueCsrfToken } from "../_lib/csrf.js";
-import { sendJson } from "../_lib/sideby.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
@@ -12,8 +11,8 @@ export default function handler(
   response: VercelResponse,
 ) {
   if (request.method !== "GET") {
-    return sendJson(response, { error: "Method not allowed" }, 405);
+    return response.status(405).json({ error: "Method not allowed" });
   }
 
-  return sendJson(response, { csrfToken: issueCsrfToken(response) });
+  return response.status(200).json({ csrfToken: issueCsrfToken(response) });
 }
