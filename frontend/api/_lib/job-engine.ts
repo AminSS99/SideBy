@@ -1140,11 +1140,12 @@ async function runExtractionStep(
     }
 
     const topUrls = selectedSources.map((s) => s.url);
+    const sourceByUrl = new Map(sources.map(s => [s.url, s]));
 
     for (const url of topUrls) {
       checkGuardrails(ctx.guardrails);
       const page = await extractPage(url);
-      const source = sources.find((s) => s.url === url);
+      const source = sourceByUrl.get(url);
       if (page) {
         extracted.push({
           url: page.url,
@@ -1437,10 +1438,11 @@ async function runFactStep(
         entityRows[0];
       if (!entityRow) continue;
       const dimensionRow = dimensionByName.get(dimensionName);
-      const sourceRow =
-        sourceByUrl.get(citation) ||
-        sourceRows.find((source) => citation && citation.includes(source.url)) ||
-        sourceRows[0];
+      let sourceRow = sourceByUrl.get(citation);
+      if (!sourceRow && citation) {
+         sourceRow = sourceRows.find((source) => citation.includes(source.url));
+      }
+      if (!sourceRow) sourceRow = sourceRows[0];
 
       await ctx.db.insert(comparisonFacts).values({
         comparisonId: ctx.comparisonId,
@@ -1502,6 +1504,7 @@ function buildFallbackFact(
 ): ExtractedFact | null {
   const entityNeedle = entityName.toLowerCase();
   const dimensionNeedle = dimensionName.toLowerCase().split(/\s+/)[0] || "";
+
   const source =
     extracted.find((item) => item.entityName.toLowerCase() === entityNeedle) ||
     extracted.find((item) => item.title.toLowerCase().includes(entityNeedle)) ||
@@ -1514,6 +1517,7 @@ function buildFallbackFact(
     .split(/(?<=[.!?])\s+/)
     .map((sentence) => sentence.trim())
     .filter((sentence) => sentence.length > 40);
+
   const sentence =
     sentences.find((item) => item.toLowerCase().includes(dimensionNeedle)) ||
     sentences.find((item) => item.toLowerCase().includes(entityNeedle)) ||
@@ -1742,7 +1746,9 @@ async function runVerdictStep(
       .select()
       .from(comparisonEntities)
       .where(eq(comparisonEntities.comparisonId, ctx.comparisonId));
+
     const winnerEntity = entityRows.find((entity) => entity.normalizedName === result.data.winner);
+
     const verdictText = getVerdictText(result.data);
 
     // Store verdict
@@ -1896,8 +1902,9 @@ function buildResultJson(
   const sourceByUrl = new Map(sources.map((source) => [source.url, source]));
   const findSource = (citation?: string) => {
     if (!citation) return undefined;
-    return sourceByUrl.get(citation) ||
-      sources.find((source) => citation.includes(source.url) || source.url.includes(citation));
+    const match = sourceByUrl.get(citation);
+    if (match) return match;
+    return sources.find((source) => citation.includes(source.url) || source.url.includes(citation));
   };
 
   return {
