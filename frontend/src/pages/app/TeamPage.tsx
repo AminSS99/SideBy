@@ -108,8 +108,16 @@ const TeamPage = () => {
       joinedAt: activeWorkspace?.createdAt || new Date().toISOString(),
     };
 
-    return [...members, owner, ...invitations]
-      .filter((member, index, all) => all.findIndex((item) => item.email === member.email) === index);
+    const allMembers = [...members, owner, ...invitations];
+    const uniqueMembers = [];
+    const seenEmails = new Set();
+    for (const member of allMembers) {
+      if (!seenEmails.has(member.email)) {
+        seenEmails.add(member.email);
+        uniqueMembers.push(member);
+      }
+    }
+    return uniqueMembers;
   }, [activeWorkspace?.createdAt, invitations, members, user?.email, user?.fullName, user?.id]);
 
   const handleInvite = async (e: React.FormEvent) => {

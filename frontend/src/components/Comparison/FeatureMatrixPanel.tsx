@@ -17,13 +17,22 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
     const term = filter.toLowerCase();
     
     return result.categories.map(cat => {
+      // Pre-compute maps for O(1) lookups instead of O(N) array finds
+      const factsA = new Map();
+      const factsB = new Map();
+
+      cat.facts.forEach(f => {
+        if (f.entity === 'a' && !factsA.has(f.label)) factsA.set(f.label, f);
+        if (f.entity === 'b' && !factsB.has(f.label)) factsB.set(f.label, f);
+      });
+
       const labels = Array.from(new Set(cat.facts.map(f => f.label)));
       
       const rows = labels
         .filter(label => label.toLowerCase().includes(term) || cat.name.toLowerCase().includes(term))
         .map(label => {
-          const factA = cat.facts.find(f => f.entity === 'a' && f.label === label);
-          const factB = cat.facts.find(f => f.entity === 'b' && f.label === label);
+          const factA = factsA.get(label);
+          const factB = factsB.get(label);
           return { label, factA, factB };
         });
 
