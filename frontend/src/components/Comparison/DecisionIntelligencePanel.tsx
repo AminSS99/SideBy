@@ -598,6 +598,21 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[]) => {
     sourceMap.set(sourceKey(source), source);
   });
 
+  // Pre-compute maps to replace O(N^2) lookups with O(N) hash map lookups
+  const categoryIndexMap = new Map<string, number>();
+  result.categories.slice(0, 5).forEach((cat, index) => categoryIndexMap.set(cat.name, index));
+
+  const sourceIndexByUrl = new Map<string, number>();
+  const sourceIndexByTitle = new Map<string, number>();
+  const sourceIndexByHostname = new Map<string, number>();
+
+  Array.from(sourceMap.values()).slice(0, 5).forEach((source, index) => {
+    sourceIndexByUrl.set(source.url, index);
+    if (source.title) sourceIndexByTitle.set(source.title, index);
+    const host = safeHostname(source.url);
+    if (host) sourceIndexByHostname.set(host, index);
+  });
+
   nodes.push({
     id: "verdict",
     type: "verdict",
@@ -644,7 +659,7 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[]) => {
   facts.forEach((fact, index) => {
     const id = `fact-${index}`;
     const entityId = fact.entity === "a" ? "entity-a" : "entity-b";
-    const dimIndex = result.categories.findIndex((category) => category.name === fact.category);
+    const dimIndex = categoryIndexMap.get(fact.category) ?? -1;
     nodes.push({
       id,
       type: "fact",
@@ -674,11 +689,17 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[]) => {
   });
 
   facts.forEach((fact, factIndex) => {
-    const sourceIndex = Array.from(sourceMap.values()).findIndex((source) => (
-      source.url === fact.sourceUrl ||
-      source.title === fact.sourceTitle ||
-      safeHostname(source.url) === safeHostname(fact.sourceUrl)
-    ));
+    let sourceIndex = -1;
+    if (fact.sourceUrl && sourceIndexByUrl.has(fact.sourceUrl)) {
+      sourceIndex = sourceIndexByUrl.get(fact.sourceUrl)!;
+    } else if (fact.sourceTitle && sourceIndexByTitle.has(fact.sourceTitle)) {
+      sourceIndex = sourceIndexByTitle.get(fact.sourceTitle)!;
+    } else if (fact.sourceUrl) {
+      const factHost = safeHostname(fact.sourceUrl);
+      if (factHost && sourceIndexByHostname.has(factHost)) {
+        sourceIndex = sourceIndexByHostname.get(factHost)!;
+      }
+    }
     if (sourceIndex >= 0) {
       edges.push({ from: `fact-${factIndex}`, to: `source-${sourceIndex}`, color: "#525252" });
     }
