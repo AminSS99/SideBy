@@ -1144,10 +1144,12 @@ async function runExtractionStep(
 
     const topUrls = selectedSources.map((s) => s.url);
 
+    const sourcesByUrl = new Map(sources.map((s) => [s.url, s]));
+
     for (const url of topUrls) {
       checkGuardrails(ctx.guardrails);
       const page = await extractPage(url);
-      const source = sources.find((s) => s.url === url);
+      const source = sourcesByUrl.get(url);
       if (page) {
         extracted.push({
           url: page.url,
