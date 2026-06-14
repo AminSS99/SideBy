@@ -78,17 +78,18 @@ const ChatPage = () => {
       const data = (await res.json()) as { documents: KnowledgeDocument[] };
       const indexedDocuments = data.documents.filter((document) => document.status === "indexed");
 
-      setActiveFiles((current) =>
-        indexedDocuments.map((document) => {
-          const existing = current.find((file) => file.id === document.id);
+      setActiveFiles((current) => {
+        const currentMap = new Map(current.map(f => [f.id, f]));
+        return indexedDocuments.map((document) => {
+          const existing = currentMap.get(document.id);
           return {
             id: document.id,
             filename: document.filename,
             chunkCount: document.chunkCount,
             active: existing?.active ?? true,
           };
-        }),
-      );
+        });
+      });
     } catch (error) {
       setFilesError(error instanceof Error ? error.message : "Unable to load knowledge files.");
       setActiveFiles([]);
