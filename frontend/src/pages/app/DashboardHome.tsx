@@ -73,7 +73,7 @@ const DashboardHome = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    if (!comparisonsLoading) {
+    if (!comparisonsLoading && !isLoading && !projectsLoading) {
       const tl = gsap.timeline();
       const listItems = gsap.utils.toArray(".dash-list-item");
       tl.from(".dash-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
@@ -82,8 +82,24 @@ const DashboardHome = () => {
       if (listItems.length) {
         tl.from(listItems, { x: -20, opacity: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }, "-=0.4");
       }
+
+      // Staggered number counters
+      gsap.utils.toArray<HTMLElement>(".stat-number").forEach((el) => {
+        const val = parseFloat(el.getAttribute("data-value") || "0");
+        if (!isNaN(val) && isFinite(val) && val > 0) {
+          gsap.fromTo(el,
+            { innerHTML: "0" },
+            {
+              innerHTML: val.toString(),
+              duration: 1.2,
+              ease: "power2.out",
+              snap: { innerHTML: 1 },
+            }
+          );
+        }
+      });
     }
-  }, [comparisonsLoading]);
+  }, [comparisonsLoading, isLoading, projectsLoading]);
 
   useEffect(() => {
     if (!activeWorkspaceId || !isConfigured) {
@@ -217,7 +233,15 @@ const DashboardHome = () => {
             <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
               {stat.title}
             </p>
-            <h2 className="mt-2 font-serif text-3xl text-[#fdfbf7]">{stat.value}</h2>
+            <h2 className="mt-2 font-serif text-3xl text-[#fdfbf7]">
+              {typeof stat.value === "number" ? (
+                <span className="stat-number inline-block" data-value={stat.value}>
+                  {stat.value}
+                </span>
+              ) : (
+                stat.value
+              )}
+            </h2>
             <p className="mt-2 text-[10px] uppercase tracking-widest font-bold text-[#fdfbf7]/30 truncate">
               {stat.desc}
             </p>

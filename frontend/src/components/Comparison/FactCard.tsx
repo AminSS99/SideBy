@@ -40,7 +40,7 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
       delay: index * 0.1, // Stagger facts if multiple exist
     });
 
-    // Animate the confidence gauge filling up
+    // Animate the confidence gauge filling up with a premium springy overshoot
     if (gaugeRef.current) {
       gsap.from(gaugeRef.current, {
         scrollTrigger: {
@@ -48,8 +48,8 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
           start: "top 85%",
         },
         width: "0%",
-        duration: 1.5,
-        ease: "power4.out",
+        duration: 1.6,
+        ease: "back.out(1.5)",
         delay: (index * 0.1) + 0.3,
       });
     }
