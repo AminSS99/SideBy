@@ -521,8 +521,8 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
     setSelectedId(graph.nodes[0]?.id || "");
   }, [graph.nodes]);
 
-  const selected = graph.nodes.find((node) => node.id === selectedId) || graph.nodes[0];
   const nodeMap = new Map(graph.nodes.map((node) => [node.id, node]));
+  const selected = nodeMap.get(selectedId) || graph.nodes[0];
 
   return (
     <section id="evidence-graph" className={cn(panelClass, "overflow-hidden scroll-mt-28")}>

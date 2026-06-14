@@ -69,6 +69,9 @@ export function computeResultDiff(
   const oldDimensions = oldResult?.dimensions || [];
   const newDimensions = newResult?.dimensions || [];
 
+  const oldDimMap = new Map(oldDimensions.map((d) => [d.subject, d]));
+  const newDimMap = new Map(newDimensions.map((d) => [d.subject, d]));
+
   const allSubjects = Array.from(
     new Set([
       ...oldDimensions.map((d) => d.subject),
@@ -77,8 +80,8 @@ export function computeResultDiff(
   );
 
   for (const subject of allSubjects) {
-    const oldDim = oldDimensions.find((d) => d.subject === subject);
-    const newDim = newDimensions.find((d) => d.subject === subject);
+    const oldDim = oldDimMap.get(subject);
+    const newDim = newDimMap.get(subject);
 
     const oldA = oldDim ? oldDim.a : 50;
     const oldB = oldDim ? oldDim.b : 50;
