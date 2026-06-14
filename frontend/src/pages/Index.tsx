@@ -29,6 +29,12 @@ const quickStartComparisons = [
   "ETFs vs mutual funds",
 ];
 
+const landingNavItems = [
+  { label: "Features", to: "/features" },
+  { label: "Docs", to: "/docs" },
+  { label: "Workbench", to: "/app" },
+];
+
 const Index = () => {
   usePageTitle("AI-Powered Comparisons");
   const [query, setQuery] = useState("");
@@ -110,7 +116,7 @@ const Index = () => {
         .from(".hero-search", { y: 28, opacity: 0, scale: 0.97, filter: "blur(10px)", duration: 0.9, ease: "back.out(1.25)" }, "-=0.5")
         .from(".hero-featured", { y: 16, opacity: 0, duration: 0.72 }, "-=0.5")
         .from(".quick-start-chip", { y: 16, opacity: 0, stagger: 0.045, duration: 0.48, ease: "power3.out" }, "-=0.5")
-        .from(".starter-card", { y: 34, opacity: 0, rotateX: -8, stagger: 0.055, duration: 0.72, ease: "power3.out" }, "-=0.35");
+        .from(".starter-card", { y: 18, rotateX: -4, stagger: 0.045, duration: 0.55, ease: "power3.out" }, "-=0.25");
 
       gsap.to(".hero-search-shell", {
         boxShadow: "0 28px 80px rgba(234,88,12,0.18)",
@@ -244,49 +250,56 @@ const Index = () => {
       
       <AmbientOrbs />
 
-      <header className="relative z-40 border-b border-white/[0.06] bg-[#030303]/90 sticky top-0">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-            <div className="flex items-center gap-4 group cursor-default">
-              <img src="/sideby.ico" alt="SideBy" className="h-9 w-9 object-contain rounded-sm transition-all group-hover:opacity-80" />
-              <div>
+      <header className="sticky top-0 z-40 h-20 pointer-events-none">
+        <div className="relative mx-auto h-full max-w-7xl px-4 sm:px-6">
+          <Link
+            to="/"
+            className="pointer-events-auto absolute left-4 top-3 flex items-center gap-3 rounded-full border border-white/[0.08] bg-black/70 px-3 py-2 shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-colors hover:border-white/15 sm:left-6"
+          >
+            <img src="/sideby.ico" alt="SideBy" className="h-8 w-8 object-contain rounded-sm transition-opacity group-hover:opacity-80" />
+            <div className="hidden sm:block">
               <p className="font-serif text-sm tracking-tight text-[#fdfbf7]">SideBy</p>
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#fdfbf7]/40">Research Engine</p>
+              <p className="text-[8px] font-bold uppercase tracking-[0.22em] text-[#fdfbf7]/40">Research Engine</p>
             </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link to="/features" className="hidden sm:block text-xs font-bold uppercase tracking-widest text-white/50 hover:text-white transition-colors">
-              Features
-            </Link>
-            <Link to="/docs" className="hidden sm:block text-xs font-bold uppercase tracking-widest text-white/50 hover:text-white transition-colors">
-              Docs
-            </Link>
-            <Link to="/app" className="hidden sm:block text-xs font-bold uppercase tracking-widest text-white/50 hover:text-white transition-colors">
-              Workbench
-            </Link>
-            <Link
-              to="/app"
-              className="rounded-sm border border-[#333] bg-[#0c0b0a] hover:bg-[#1a1a1a] hover:border-white/20 px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition-all active:scale-[0.98]"
-            >
-              Sign In
-            </Link>
-          </div>
+          </Link>
+
+          <nav className="pointer-events-auto absolute left-1/2 top-0 hidden -translate-x-1/2 md:block">
+            <div className="flex items-center gap-8 rounded-b-[1.75rem] border-x border-b border-white/[0.08] bg-black/85 px-8 py-3 shadow-[0_22px_55px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:gap-12 lg:px-10">
+              {landingNavItems.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#fdfbf7]/55 transition-colors hover:text-[#fdfbf7]"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+
+          <Link
+            to="/app"
+            className="pointer-events-auto absolute right-4 top-3 rounded-full border border-white/[0.1] bg-[#fdfbf7] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-black shadow-[0_18px_40px_rgba(0,0,0,0.35)] transition-all hover:bg-white active:scale-[0.98] sm:right-6"
+          >
+            Sign In
+          </Link>
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-7xl px-4 pt-24 sm:px-6 pb-24">
+      <main className="relative z-10 mx-auto -mt-8 max-w-7xl px-4 pt-24 sm:px-6 pb-24">
         {/* Hero Section */}
         <div ref={heroRef} className="flex flex-col items-center text-center pb-24 relative perspective-1000">
-          <div className="hero-badge mb-6 flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-400 transform-style-3d">
+          <div className="hero-badge mb-6 flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-300 transform-style-3d shadow-[0_0_38px_rgba(234,88,12,0.12)]">
             <Sparkles className="h-3 w-3" />
-            Source-Backed AI Comparisons
+            Sources checked before verdicts
           </div>
           
           <h1 className="parallax-title max-w-4xl font-serif text-5xl tracking-tight text-white md:text-7xl leading-[1.1] transform-style-3d">
-            Every claim cited. <span className="bg-gradient-to-br from-orange-400 to-orange-600 bg-clip-text text-transparent italic font-light pr-2">Every source verified.</span>
+            Compare with receipts. <span className="bg-gradient-to-br from-orange-400 to-orange-600 bg-clip-text text-transparent italic font-light pr-2">Decide with confidence.</span>
           </h1>
           
           <p className="parallax-desc mt-6 max-w-2xl text-lg text-white/50 font-light leading-relaxed transform-style-3d">
-            Compare supported decisions with cited sources. SideBy classifies the category, applies the right evidence rules, extracts facts, and scores dimensions with links to every claim.
+            SideBy turns messy research into an evidence map: sources, facts, scoring dimensions, and a verdict you can audit before you act.
           </p>
 
           <form onSubmit={handleSearch} className="hero-search mt-10 w-full max-w-2xl group transform-translate-z-10">
@@ -358,26 +371,29 @@ const Index = () => {
           </div>
 
           {/* Starter comparisons */}
-          <div className="mt-16 flex flex-col items-center w-full max-w-4xl">
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30 mb-6">Starter comparisons - click to research</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+          <div className="mt-12 flex w-full max-w-5xl flex-col items-center rounded-sm border border-white/[0.08] bg-white/[0.025] px-4 py-7 shadow-[0_28px_80px_rgba(0,0,0,0.35)] sm:px-6 sm:py-8">
+            <div className="mb-6 flex w-full flex-col items-start justify-between gap-2 sm:flex-row sm:items-end">
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/55">Starter comparisons</p>
+              <p className="text-xs text-white/35">Pick one and SideBy starts the research map.</p>
+            </div>
+            <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {featuredComparisons.map((comp) => {
                 return (
                   <button
                     key={comp.label}
                     type="button"
                     onClick={() => handleQuickStart(comp.label)}
-                    className="starter-card group relative overflow-hidden rounded-sm border border-white/[0.06] bg-[#0c0b0a] p-5 transition-all hover:border-orange-500/30 hover:bg-[#1a110a] hover:shadow-[0_0_30px_rgba(234,88,12,0.08)]"
+                    className="starter-card group relative min-h-[150px] overflow-hidden rounded-sm border border-white/[0.1] bg-[#11100e] p-5 text-left shadow-[0_14px_36px_rgba(0,0,0,0.28)] transition-all hover:-translate-y-1 hover:border-orange-500/35 hover:bg-[#1a110a] hover:shadow-[0_0_34px_rgba(234,88,12,0.1)]"
                   >
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="mb-3 flex items-center justify-between">
                       <span className="text-[9px] font-bold uppercase tracking-widest text-orange-500/70">{comp.category}</span>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-white/20">Policy mapped</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-white/35">Policy mapped</span>
                     </div>
                     <p className="font-serif text-lg text-[#fdfbf7] mb-2 group-hover:text-orange-400 transition-colors">
                       {comp.label}
                     </p>
-                    <p className="text-xs leading-relaxed text-white/35">{comp.sourceRequirement}</p>
-                    <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <p className="text-xs leading-relaxed text-white/50">{comp.sourceRequirement}</p>
+                    <div className="absolute bottom-4 right-4 opacity-35 transition-opacity group-hover:opacity-100">
                       <ArrowRight className="h-4 w-4 text-orange-400" />
                     </div>
                   </button>

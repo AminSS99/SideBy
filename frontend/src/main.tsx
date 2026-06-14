@@ -17,7 +17,12 @@ const clerkOptions = {
 };
 
 createRoot(document.getElementById("root")!).render(
-  <BrowserRouter>
+  <BrowserRouter
+    future={{
+      v7_relativeSplatPath: true,
+      v7_startTransition: true,
+    }}
+  >
     {envConfig.hasClerkConfig ? (
       <ClerkProvider
         publishableKey={envConfig.clerkPublishableKey}
