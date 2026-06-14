@@ -10,10 +10,41 @@ const rawClerkPublishableKey = normalizeEnv(
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
     import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
 );
+
+const decodeClerkPublishableKeyHost = (publishableKey: string) => {
+  const keyPrefix = publishableKey.startsWith("pk_live_")
+    ? "pk_live_"
+    : publishableKey.startsWith("pk_test_")
+      ? "pk_test_"
+      : "";
+
+  if (!keyPrefix) {
+    return "";
+  }
+
+  try {
+    const encodedHost = publishableKey.slice(keyPrefix.length);
+    const decodedHost = globalThis
+      .atob(encodedHost.replace(/-/g, "+").replace(/_/g, "/"))
+      .replace(/\$$/, "");
+
+    return decodedHost.trim();
+  } catch {
+    return "";
+  }
+};
+
+const clerkPublishableKeyHost = decodeClerkPublishableKeyHost(rawClerkPublishableKey);
+const isMalformedClerkKey =
+  rawClerkPublishableKey.length > 0 &&
+  (clerkPublishableKeyHost.length === 0 ||
+    clerkPublishableKeyHost.startsWith(".") ||
+    !clerkPublishableKeyHost.includes("."));
 const isClerkTestKey = rawClerkPublishableKey.startsWith("pk_test_");
 const isProductionBuild = import.meta.env.PROD;
 const shouldBlockClerkTestKey = isProductionBuild && isClerkTestKey;
-const clerkPublishableKey = shouldBlockClerkTestKey ? "" : rawClerkPublishableKey;
+const clerkPublishableKey =
+  shouldBlockClerkTestKey || isMalformedClerkKey ? "" : rawClerkPublishableKey;
 const hasClerkConfig = clerkPublishableKey.length > 0;
 const canUseTestAuth = !isProductionBuild;
 
@@ -27,6 +58,7 @@ export const envConfig = {
   hasClerkConfig,
   canUseTestAuth,
   isClerkTestKeyBlocked: shouldBlockClerkTestKey,
+  isClerkPublishableKeyMalformed: isMalformedClerkKey,
 } as const;
 
 export const buildApiUrl = (path: string) => {

@@ -24,9 +24,11 @@ const SignIn = () => {
             <div className="flex items-start gap-3">
               <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
               <p className="leading-relaxed">
-                {envConfig.isClerkTestKeyBlocked
-                  ? "Production sign-in is paused because Clerk is configured with development keys. Add live Clerk keys in Vercel to enable sign-in."
-                  : (
+                {envConfig.isClerkPublishableKeyMalformed ? (
+                  "Sign-in is paused because the Clerk publishable key is malformed. Add the full live publishable key from Clerk's API Keys page in Vercel."
+                ) : envConfig.isClerkTestKeyBlocked ? (
+                  "Sign-in is paused because this production build still has Clerk development keys. Add live Clerk keys in Vercel to enable sign-in."
+                ) : (
                     <>
                       Configure <code className="bg-amber-500/20 px-1 py-0.5 rounded text-amber-300">VITE_CLERK_PUBLISHABLE_KEY</code> to enable beta sign-in.
                     </>

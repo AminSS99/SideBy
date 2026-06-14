@@ -22,7 +22,7 @@ export const serverEnv = {
 
   // Clerk
   clerkSecretKey: optional("CLERK_SECRET_KEY"),
-  clerkPublishableKey: optional("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY") || optional("VITE_CLERK_PUBLISHABLE_KEY"),
+  clerkPublishableKey: optional("VITE_CLERK_PUBLISHABLE_KEY") || optional("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"),
 
   // AI Providers
   deepseekApiKey: optional("DEEPSEEK_API_KEY"),
