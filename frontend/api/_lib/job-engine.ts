@@ -44,6 +44,7 @@ import {
   type ComparisonIntent,
 } from "../../src/lib/comparisonTaxonomy.js";
 import { triggerWebhooks } from "./webhook-notifier.js";
+import { queueSnapSolveEvent } from "./snapsolve-core.js";
 import { waitUntil as vercelWaitUntil } from "@vercel/functions";
 
 const safeWaitUntil = (promise: Promise<unknown>) => {
@@ -530,7 +531,11 @@ export async function runComparisonJob(
 
     // Step 8: Build result JSON and finalize
     const [comparisonRow] = await db
-      .select({ slug: comparisons.slug })
+      .select({
+        projectId: comparisons.projectId,
+        slug: comparisons.slug,
+        workspaceId: comparisons.workspaceId,
+      })
       .from(comparisons)
       .where(eq(comparisons.id, comparisonId))
       .limit(1);
@@ -751,6 +756,25 @@ export async function runComparisonJob(
     triggerWebhooks(db, comparisonId, "comparison.completed", { result }, safeWaitUntil).catch((err) => {
       logger.error("Failed to trigger webhook on completion", { comparisonId, error: err });
     });
+
+    safeWaitUntil(queueSnapSolveEvent({
+      clerkUserId: userId,
+      eventType: "sideby.comparison.completed",
+      idempotencyKey: comparisonId,
+      metadata: {
+        category: normalized.category,
+        comparison_id: comparisonId,
+        project_id: comparisonRow?.projectId ?? null,
+        status: "completed",
+        workspace_id: comparisonRow?.workspaceId ?? null,
+      },
+      workspaceId: comparisonRow?.workspaceId ?? null,
+    }).catch((error) => {
+      logger.warn("Failed to enqueue SnapSolve comparison event", {
+        comparisonId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Job failed";
     logger.error("Comparison job failed", error instanceof Error ? error : undefined, {

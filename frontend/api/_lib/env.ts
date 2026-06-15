@@ -59,6 +59,10 @@ export const serverEnv = {
   posthogKey: optional("NEXT_PUBLIC_POSTHOG_KEY") || optional("VITE_POSTHOG_KEY"),
   posthogHost: optional("NEXT_PUBLIC_POSTHOG_HOST") || optional("VITE_POSTHOG_HOST"),
 
+  // SnapSolve ecosystem bridge
+  snapsolveCoreUrl: optional("SNAPSOLVE_CORE_URL"),
+  snapsolveSidebySecret: optional("SNAPSOLVE_SIDEBY_SECRET"),
+
   // App
   nodeEnv: optional("NODE_ENV") || "development",
   isVercel: optional("VERCEL") === "1",

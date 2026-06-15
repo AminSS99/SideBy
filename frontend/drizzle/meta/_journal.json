@@ -50,6 +50,20 @@
       "when": 1779158580000,
       "tag": "0006_growth_enterprise_primitives",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779158640000,
+      "tag": "0007_watchlist_comparison_link",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781417600000,
+      "tag": "0008_snapsolve_outbox",
+      "breakpoints": true
     }
   ]
 }
