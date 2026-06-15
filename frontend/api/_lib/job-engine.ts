@@ -5,7 +5,7 @@
  * Enforces cost/time guardrails per job.
  */
 import { z } from "zod";
-import { asc, eq, and, sql, or, lte } from "drizzle-orm";
+import { asc, eq, and, sql, or, lte, inArray } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
@@ -1434,6 +1434,9 @@ async function runFactStep(
     const dimensionByName = new Map(dimensionRows.map(d => [d.name, d]));
     const sourceByUrl = new Map(sourceRows.map(s => [s.url, s]));
 
+    // Memoize slow partial string matching for source urls
+    const matchedSourceCache = new Map<string, typeof sourceRows[number] | undefined>();
+
     // Store facts in the production schema with optional pgvector embeddings.
     for (const [index, fact] of uniqueFacts.entries()) {
       const entityName = fact.entity;
@@ -1444,10 +1447,18 @@ async function runFactStep(
         entityRows[0];
       if (!entityRow) continue;
       const dimensionRow = dimensionByName.get(dimensionName);
-      const sourceRow =
-        sourceByUrl.get(citation) ||
-        sourceRows.find((source) => citation && citation.includes(source.url)) ||
-        sourceRows[0];
+
+      let matchedSourceRow = sourceByUrl.get(citation);
+      if (!matchedSourceRow && citation) {
+        if (matchedSourceCache.has(citation)) {
+          matchedSourceRow = matchedSourceCache.get(citation);
+        } else {
+          matchedSourceRow = sourceRows.find((source) => citation.includes(source.url));
+          matchedSourceCache.set(citation, matchedSourceRow);
+        }
+      }
+
+      const sourceRow = matchedSourceRow || sourceRows[0];
 
       await ctx.db.insert(comparisonFacts).values({
         comparisonId: ctx.comparisonId,
@@ -1483,19 +1494,23 @@ function ensureFactCoverage(
   extracted: ExtractedSource[],
 ): ExtractedFact[] {
   const completeFacts = [...facts];
-  const hasFact = (entity: string, dimension: string) =>
-    completeFacts.some(
-      (fact) =>
-        fact.entity.toLowerCase() === entity.toLowerCase() &&
-        fact.dimension.toLowerCase() === dimension.toLowerCase() &&
-        fact.value.trim().length > 0,
-    );
+
+  const existingFactsSet = new Set(
+    completeFacts
+      .filter((fact) => fact.value.trim().length > 0)
+      .map((fact) => `${fact.entity.toLowerCase()}:${fact.dimension.toLowerCase()}`)
+  );
 
   for (const entity of parsed.entities.slice(0, 2)) {
     for (const dimension of dimensions) {
-      if (hasFact(entity.name, dimension.name)) continue;
+      const key = `${entity.name.toLowerCase()}:${dimension.name.toLowerCase()}`;
+      if (existingFactsSet.has(key)) continue;
+
       const fallback = buildFallbackFact(entity.name, dimension.name, extracted);
-      if (fallback) completeFacts.push(fallback);
+      if (fallback) {
+        completeFacts.push(fallback);
+        existingFactsSet.add(key); // keep set updated just in case
+      }
     }
   }
 
@@ -1543,17 +1558,23 @@ async function getReusableFactCounts(
   entityNames: string[],
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
+  const entitySlugs = entityNames
+    .map((name) => normalizeEntityForReuse(name))
+    .filter((slug): slug is string => !!slug);
 
-  for (const entityName of entityNames) {
-    const entitySlug = normalizeEntityForReuse(entityName);
-    if (!entitySlug) continue;
+  if (entitySlugs.length === 0) return counts;
 
-    const [row] = await ctx.db
-      .select({ count: sql<number>`count(*)::integer` })
-      .from(entityKnowledge)
-      .where(eq(entityKnowledge.entitySlug, entitySlug));
+  const rows = await ctx.db
+    .select({
+      entitySlug: entityKnowledge.entitySlug,
+      count: sql<number>`count(*)::integer`,
+    })
+    .from(entityKnowledge)
+    .where(inArray(entityKnowledge.entitySlug, entitySlugs))
+    .groupBy(entityKnowledge.entitySlug);
 
-    counts.set(entitySlug, row?.count || 0);
+  for (const row of rows) {
+    counts.set(row.entitySlug, row.count);
   }
 
   return counts;
@@ -1907,6 +1928,22 @@ function buildResultJson(
       sources.find((source) => citation.includes(source.url) || source.url.includes(citation));
   };
 
+  const scoresByDimension = new Map<string, Map<string, number>>();
+  for (const score of scores) {
+    if (!scoresByDimension.has(score.dimension)) {
+      scoresByDimension.set(score.dimension, new Map());
+    }
+    scoresByDimension.get(score.dimension)!.set(score.entity, score.score);
+  }
+
+  const factsByDimension = new Map<string, typeof facts>();
+  for (const fact of facts) {
+    if (!factsByDimension.has(fact.dimension)) {
+      factsByDimension.set(fact.dimension, []);
+    }
+    factsByDimension.get(fact.dimension)!.push(fact);
+  }
+
   return {
     slug: slugOverride || makeResultSlug(nameA, nameB),
     query: parsed.entities.map((e) => e.name).join(" vs "),
@@ -1933,19 +1970,17 @@ function buildResultJson(
       summary: getVerdictText(verdict),
     },
     categories: dimensions.map((dim) => {
-      const dimScoresMap = new Map(
-        scores.filter((s) => s.dimension === dim.name).map((s) => [s.entity, s.score])
-      );
+      const dimScoresMap = scoresByDimension.get(dim.name) || new Map<string, number>();
       const aScore = dimScoresMap.get(entityA?.name) ?? 0;
       const bScore = dimScoresMap.get(entityB?.name) ?? 0;
+
+      const dimFacts = factsByDimension.get(dim.name) || [];
 
       return {
         name: dim.name,
         winner: aScore > bScore ? "a" : bScore > aScore ? "b" : "tie",
         verdict: `${dim.name} comparison based on source-backed facts.`,
-        facts: facts
-          .filter((f) => f.dimension === dim.name)
-          .map((f) => {
+        facts: dimFacts.map((f) => {
             const matchedSource = findSource(f.citation);
             return {
               entity: f.entity === entityA?.name ? "a" : "b",
@@ -1962,9 +1997,7 @@ function buildResultJson(
       };
     }),
     dimensions: dimensions.map((dim) => {
-      const dimScoresMap = new Map(
-        scores.filter((s) => s.dimension === dim.name).map((s) => [s.entity, s.score])
-      );
+      const dimScoresMap = scoresByDimension.get(dim.name) || new Map<string, number>();
       return {
         subject: dim.name,
         a: dimScoresMap.get(entityA?.name) ?? 50,
@@ -2058,15 +2091,21 @@ async function buildPartialResult(
 
     const dimById = new Map(dims.map(d => [d.id, d]));
 
+    const scoresByDimension = new Map<string, Map<string, string>>();
+    for (const score of scores) {
+      const dim = dimById.get(score.dimensionId);
+      if (dim) {
+        if (!scoresByDimension.has(dim.name)) {
+          scoresByDimension.set(dim.name, new Map());
+        }
+        scoresByDimension.get(dim.name)!.set(score.entityId, score.score);
+      }
+    }
+
     const categories = Array.from(factsByDim.entries()).map(([name, dimFacts]) => {
-      const dimScoresMap = new Map(
-        scores.filter((s) => {
-          const dim = dimById.get(s.dimensionId);
-          return dim?.name === name;
-        }).map((s) => [s.entityId, s.score])
-      );
-      const aScore = dimScoresMap.get(entityA.id) ?? 50;
-      const bScore = dimScoresMap.get(entityB.id) ?? 50;
+      const dimScoresMap = scoresByDimension.get(name) || new Map<string, string>();
+      const aScore = dimScoresMap.get(entityA.id) ? Number(dimScoresMap.get(entityA.id)) : 50;
+      const bScore = dimScoresMap.get(entityB.id) ? Number(dimScoresMap.get(entityB.id)) : 50;
       return {
         name,
         winner: aScore > bScore ? "a" : bScore > aScore ? "b" : "tie",
