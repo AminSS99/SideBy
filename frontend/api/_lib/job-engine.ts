@@ -974,14 +974,16 @@ async function runParseStep(ctx: JobContext) {
     await logUsageEvent(ctx, "comparison", 1, { step: "parse", comparisonId: ctx.comparisonId });
 
     // Store entities
-    for (const [index, entity] of parsed.entities.entries()) {
-      await ctx.db.insert(comparisonEntities).values({
-        comparisonId: ctx.comparisonId,
-        position: index + 1,
-        name: entity.name,
-        normalizedName: entity.name,
-        metadata: entity.type ? { detectedType: entity.type } : {},
-      });
+    const entitiesToInsert = parsed.entities.map((entity, index) => ({
+      comparisonId: ctx.comparisonId,
+      position: index + 1,
+      name: entity.name,
+      normalizedName: entity.name,
+      metadata: entity.type ? { detectedType: entity.type } : {},
+    }));
+
+    if (entitiesToInsert.length > 0) {
+      await ctx.db.insert(comparisonEntities).values(entitiesToInsert);
     }
 
     return parsed;
@@ -1001,14 +1003,16 @@ async function runParseStep(ctx: JobContext) {
         comparisonId: ctx.comparisonId,
       });
 
-      for (const [index, entity] of parsed.entities.entries()) {
-        await ctx.db.insert(comparisonEntities).values({
-          comparisonId: ctx.comparisonId,
-          position: index + 1,
-          name: entity.name,
-          normalizedName: entity.name,
-          metadata: entity.type ? { detectedType: entity.type } : {},
-        });
+      const fallbackEntitiesToInsert = parsed.entities.map((entity, index) => ({
+        comparisonId: ctx.comparisonId,
+        position: index + 1,
+        name: entity.name,
+        normalizedName: entity.name,
+        metadata: entity.type ? { detectedType: entity.type } : {},
+      }));
+
+      if (fallbackEntitiesToInsert.length > 0) {
+        await ctx.db.insert(comparisonEntities).values(fallbackEntitiesToInsert);
       }
 
       return parsed;
@@ -1063,22 +1067,26 @@ async function runSearchStep(
     });
 
     // Store sources with computed reliability
-    for (const source of deduped) {
+    const sourcesToInsert = deduped.map((source) => {
       const reliabilityScore = computeSourceReliability(source.url, source.title);
-      await ctx.db.insert(comparisonSources).values({
+      return {
         comparisonId: ctx.comparisonId,
         url: source.url,
         title: source.title,
-        sourceType: "web",
-        reliability: reliabilityScore >= 0.9 ? "official" : reliabilityScore >= 0.7 ? "docs" : "review",
-        extractionMethod: "tavily",
+        sourceType: "web" as const,
+        reliability: (reliabilityScore >= 0.9 ? "official" : reliabilityScore >= 0.7 ? "docs" : "review") as "official" | "docs" | "review",
+        extractionMethod: "tavily" as const,
         fetchedAt: new Date(),
         metadata: {
           reliabilityScore,
           summary: source.content.slice(0, 500),
           entityName: source.entityName,
         },
-      });
+      };
+    });
+
+    if (sourcesToInsert.length > 0) {
+      await ctx.db.insert(comparisonSources).values(sourcesToInsert);
     }
 
     await updateAiRun(ctx, runId, {
@@ -1265,13 +1273,15 @@ async function runDimensionStep(
     const dimensionsToStore = result.data.length > 0 ? result.data : templateDimensions;
 
     // Store dimensions
-    for (const dim of dimensionsToStore) {
-      await ctx.db.insert(comparisonDimensions).values({
-        comparisonId: ctx.comparisonId,
-        name: dim.name,
-        description: dim.description || null,
-        weight: normalizeDimensionWeight(dim.weight),
-      });
+    const dimsToInsert = dimensionsToStore.map((dim) => ({
+      comparisonId: ctx.comparisonId,
+      name: dim.name,
+      description: dim.description || null,
+      weight: normalizeDimensionWeight(dim.weight),
+    }));
+
+    if (dimsToInsert.length > 0) {
+      await ctx.db.insert(comparisonDimensions).values(dimsToInsert);
     }
 
     return dimensionsToStore;
@@ -1295,13 +1305,15 @@ async function runDimensionStep(
       });
       await updateAiRun(ctx, runId, { status: "completed", errorMessage: msg });
 
-      for (const dim of fallbackDimensions) {
-        await ctx.db.insert(comparisonDimensions).values({
-          comparisonId: ctx.comparisonId,
-          name: dim.name,
-          description: dim.description || null,
-          weight: normalizeDimensionWeight(dim.weight),
-        });
+      const fallbackDimsToInsert = fallbackDimensions.map((dim) => ({
+        comparisonId: ctx.comparisonId,
+        name: dim.name,
+        description: dim.description || null,
+        weight: normalizeDimensionWeight(dim.weight),
+      }));
+
+      if (fallbackDimsToInsert.length > 0) {
+        await ctx.db.insert(comparisonDimensions).values(fallbackDimsToInsert);
       }
 
       return fallbackDimensions;
@@ -1433,8 +1445,10 @@ async function runFactStep(
     const entityByNormalizedName = new Map(entityRows.map(e => [e.normalizedName, e]));
     const dimensionByName = new Map(dimensionRows.map(d => [d.name, d]));
     const sourceByUrl = new Map(sourceRows.map(s => [s.url, s]));
+    const sourceCache = new Map<string, typeof sourceRows[0] | undefined>();
 
     // Store facts in the production schema with optional pgvector embeddings.
+    const factsToInsert = [];
     for (const [index, fact] of uniqueFacts.entries()) {
       const entityName = fact.entity;
       const dimensionName = fact.dimension || "General";
@@ -1444,12 +1458,20 @@ async function runFactStep(
         entityRows[0];
       if (!entityRow) continue;
       const dimensionRow = dimensionByName.get(dimensionName);
-      const sourceRow =
-        sourceByUrl.get(citation) ||
-        sourceRows.find((source) => citation && citation.includes(source.url)) ||
-        sourceRows[0];
 
-      await ctx.db.insert(comparisonFacts).values({
+      let sourceRow;
+      if (sourceCache.has(citation)) {
+        sourceRow = sourceCache.get(citation);
+      } else {
+        sourceRow = sourceByUrl.get(citation);
+        if (!sourceRow && citation) {
+          sourceRow = sourceRows.find((source) => citation.includes(source.url));
+        }
+        sourceCache.set(citation, sourceRow);
+      }
+      sourceRow = sourceRow || sourceRows[0];
+
+      factsToInsert.push({
         comparisonId: ctx.comparisonId,
         entityId: entityRow.id,
         categoryId: dimensionRow?.id || null,
@@ -1465,6 +1487,10 @@ async function runFactStep(
         embedding: factEmbeddings[index],
         metadata: { factHash: fact._hash, citation },
       });
+    }
+
+    if (factsToInsert.length > 0) {
+      await ctx.db.insert(comparisonFacts).values(factsToInsert);
     }
 
     return uniqueFacts;
@@ -1670,6 +1696,7 @@ async function runScoreStep(
     const dimensionByName = new Map(dimensionRows.map(d => [d.name, d]));
 
     // Store scores
+    const scoresToInsert = [];
     for (const score of result.data) {
       const entityRow =
         entityByNormalizedName.get(score.entity) ||
@@ -1678,13 +1705,18 @@ async function runScoreStep(
         dimensionByName.get(score.dimension) ||
         dimensionRows[0];
       if (!entityRow || !dimensionRow) continue;
-      await ctx.db.insert(comparisonScores).values({
+
+      scoresToInsert.push({
         comparisonId: ctx.comparisonId,
         entityId: entityRow.id,
         dimensionId: dimensionRow.id,
         score: String(score.score),
         rationale: score.rationale,
       });
+    }
+
+    if (scoresToInsert.length > 0) {
+      await ctx.db.insert(comparisonScores).values(scoresToInsert);
     }
 
     return result.data;
@@ -1901,10 +1933,19 @@ function buildResultJson(
   const taxonomySummary = summarizeComparisonTaxonomy(taxonomy);
   const verdictSlots = buildVerdictSlots(taxonomySummary.category, verdict.winner);
   const sourceByUrl = new Map(sources.map((source) => [source.url, source]));
+  const sourceCache = new Map<string, typeof sources[0] | undefined>();
+
   const findSource = (citation?: string) => {
     if (!citation) return undefined;
-    return sourceByUrl.get(citation) ||
-      sources.find((source) => citation.includes(source.url) || source.url.includes(citation));
+    if (sourceCache.has(citation)) return sourceCache.get(citation);
+
+    let match = sourceByUrl.get(citation);
+    if (!match) {
+      match = sources.find((source) => citation.includes(source.url) || source.url.includes(citation));
+    }
+
+    sourceCache.set(citation, match);
+    return match;
   };
 
   return {
