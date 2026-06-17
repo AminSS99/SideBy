@@ -5,7 +5,7 @@
  * Enforces cost/time guardrails per job.
  */
 import { z } from "zod";
-import { asc, eq, and, sql, or, lte } from "drizzle-orm";
+import { asc, eq, and, sql, or, lte, inArray } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
@@ -607,6 +607,7 @@ export async function runComparisonJob(
     comparisonCache.set(normalized.canonicalSlug, result, 10 * 60 * 1000);
 
     // Phase 11: Save reusable facts to entity knowledge base
+    const knowledgeToInsert = [];
     for (const rawFact of facts) {
       const fact = rawFact as { entity?: string; dimension?: string; value?: string; citation?: string; confidence?: number };
       if (!isReusableFact({ value: fact.value || "", dimension: fact.dimension || "" })) continue;
@@ -614,24 +615,28 @@ export async function runComparisonJob(
       const entitySlug = normalizeEntityForReuse(entityName);
       if (!entitySlug || entitySlug.length < 2) continue;
 
+      knowledgeToInsert.push({
+        entitySlug,
+        entityDisplayName: entityName,
+        dimension: (fact.dimension || "general") as string,
+        value: (fact.value || "") as string,
+        sourceUrl: (fact.citation || null) as string | null,
+        sourceTitle: null,
+        confidence: String(fact.confidence || 0.5),
+        freshnessClass,
+      });
+    }
+
+    if (knowledgeToInsert.length > 0) {
       await db
         .insert(entityKnowledge)
-        .values({
-          entitySlug,
-          entityDisplayName: entityName,
-          dimension: (fact.dimension || "general") as string,
-          value: (fact.value || "") as string,
-          sourceUrl: (fact.citation || null) as string | null,
-          sourceTitle: null,
-          confidence: String(fact.confidence || 0.5),
-          freshnessClass,
-        })
+        .values(knowledgeToInsert)
         .onConflictDoUpdate({
           target: [entityKnowledge.entitySlug, entityKnowledge.dimension, entityKnowledge.value],
           set: {
             usageCount: sql`${entityKnowledge.usageCount} + 1`,
             lastVerifiedAt: new Date(),
-            freshnessClass,
+            freshnessClass: sql`EXCLUDED.freshness_class`,
           },
         });
     }
@@ -1569,17 +1574,29 @@ async function getReusableFactCounts(
   entityNames: string[],
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
+  const entitySlugs = entityNames
+    .map(normalizeEntityForReuse)
+    .filter((slug): slug is string => !!slug);
 
-  for (const entityName of entityNames) {
-    const entitySlug = normalizeEntityForReuse(entityName);
-    if (!entitySlug) continue;
+  for (const slug of entitySlugs) {
+    counts.set(slug, 0);
+  }
 
-    const [row] = await ctx.db
-      .select({ count: sql<number>`count(*)::integer` })
-      .from(entityKnowledge)
-      .where(eq(entityKnowledge.entitySlug, entitySlug));
+  if (entitySlugs.length === 0) return counts;
 
-    counts.set(entitySlug, row?.count || 0);
+  const rows = await ctx.db
+    .select({
+      entitySlug: entityKnowledge.entitySlug,
+      count: sql<number>`count(*)::integer`
+    })
+    .from(entityKnowledge)
+    .where(inArray(entityKnowledge.entitySlug, entitySlugs))
+    .groupBy(entityKnowledge.entitySlug);
+
+  for (const row of rows) {
+    if (row.entitySlug) {
+      counts.set(row.entitySlug, row.count);
+    }
   }
 
   return counts;
@@ -1948,6 +1965,23 @@ function buildResultJson(
     return match;
   };
 
+  const scoresByDimension = new Map<string, Map<string, number>>();
+  for (const s of scores) {
+    if (!scoresByDimension.has(s.dimension)) {
+      scoresByDimension.set(s.dimension, new Map<string, number>());
+    }
+    scoresByDimension.get(s.dimension)!.set(s.entity, s.score);
+  }
+
+  const factsByDimension = new Map<string, typeof facts>();
+  for (const f of facts) {
+    const dimName = f.dimension || "General";
+    if (!factsByDimension.has(dimName)) {
+      factsByDimension.set(dimName, []);
+    }
+    factsByDimension.get(dimName)!.push(f);
+  }
+
   return {
     slug: slugOverride || makeResultSlug(nameA, nameB),
     query: parsed.entities.map((e) => e.name).join(" vs "),
@@ -1974,38 +2008,33 @@ function buildResultJson(
       summary: getVerdictText(verdict),
     },
     categories: dimensions.map((dim) => {
-      const dimScoresMap = new Map(
-        scores.filter((s) => s.dimension === dim.name).map((s) => [s.entity, s.score])
-      );
+      const dimScoresMap = scoresByDimension.get(dim.name) || new Map<string, number>();
       const aScore = dimScoresMap.get(entityA?.name) ?? 0;
       const bScore = dimScoresMap.get(entityB?.name) ?? 0;
+      const dimFacts = factsByDimension.get(dim.name) || [];
 
       return {
         name: dim.name,
         winner: aScore > bScore ? "a" : bScore > aScore ? "b" : "tie",
         verdict: `${dim.name} comparison based on source-backed facts.`,
-        facts: facts
-          .filter((f) => f.dimension === dim.name)
-          .map((f) => {
-            const matchedSource = findSource(f.citation);
-            return {
-              entity: f.entity === entityA?.name ? "a" : "b",
-              label: f.dimension,
-              value: f.value,
-              source: matchedSource?.title || f.citation || "Web sources",
-              sourceUrl: f.citation || matchedSource?.url || "#",
-              sourceTitle: matchedSource?.title || (f.citation ? "Cited source" : "Source"),
-              confidence: f.confidence,
-              freshness: taxonomySummary.safetyLevel === "informational" ? "Monitor" as const : "Fresh" as const,
-              changed: false,
-            };
-          }),
+        facts: dimFacts.map((f) => {
+          const matchedSource = findSource(f.citation);
+          return {
+            entity: f.entity === entityA?.name ? "a" : "b",
+            label: f.dimension,
+            value: f.value,
+            source: matchedSource?.title || f.citation || "Web sources",
+            sourceUrl: f.citation || matchedSource?.url || "#",
+            sourceTitle: matchedSource?.title || (f.citation ? "Cited source" : "Source"),
+            confidence: f.confidence,
+            freshness: taxonomySummary.safetyLevel === "informational" ? "Monitor" as const : "Fresh" as const,
+            changed: false,
+          };
+        }),
       };
     }),
     dimensions: dimensions.map((dim) => {
-      const dimScoresMap = new Map(
-        scores.filter((s) => s.dimension === dim.name).map((s) => [s.entity, s.score])
-      );
+      const dimScoresMap = scoresByDimension.get(dim.name) || new Map<string, number>();
       return {
         subject: dim.name,
         a: dimScoresMap.get(entityA?.name) ?? 50,
@@ -2099,13 +2128,18 @@ async function buildPartialResult(
 
     const dimById = new Map(dims.map(d => [d.id, d]));
 
+    const scoresByDimension = new Map<string, Map<string, number>>();
+    for (const s of scores) {
+      const dim = dimById.get(s.dimensionId);
+      const dimName = dim?.name || "General";
+      if (!scoresByDimension.has(dimName)) {
+        scoresByDimension.set(dimName, new Map<string, number>());
+      }
+      scoresByDimension.get(dimName)!.set(s.entityId, s.score);
+    }
+
     const categories = Array.from(factsByDim.entries()).map(([name, dimFacts]) => {
-      const dimScoresMap = new Map(
-        scores.filter((s) => {
-          const dim = dimById.get(s.dimensionId);
-          return dim?.name === name;
-        }).map((s) => [s.entityId, s.score])
-      );
+      const dimScoresMap = scoresByDimension.get(name) || new Map<string, number>();
       const aScore = dimScoresMap.get(entityA.id) ?? 50;
       const bScore = dimScoresMap.get(entityB.id) ?? 50;
       return {
