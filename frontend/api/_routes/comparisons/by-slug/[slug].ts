@@ -8,6 +8,7 @@ import { comparisons } from "../../../../src/db/schema.js";
 import { sendJson } from "../../../_lib/sideby.js";
 import { authenticateRequest } from "../../../_lib/auth.js";
 import { analyzeComparisonQuery, summarizeComparisonTaxonomy } from "../../../../src/lib/comparisonTaxonomy.js";
+import { setCorsHeaders } from "../../../_lib/cors.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
@@ -20,9 +21,7 @@ export default async function handler(
   response: VercelResponse,
 ) {
   // CORS Headers for public embeddable widget
-  response.setHeader("Access-Control-Allow-Origin", "*");
-  response.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-  response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  setCorsHeaders(response, request);
 
   if (request.method === "OPTIONS") {
     response.status(200).end();
