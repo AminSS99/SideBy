@@ -1153,39 +1153,48 @@ async function runExtractionStep(
     const topUrls = selectedSources.map((s) => s.url);
     const sourcesByUrl = new Map(sources.map((s) => [s.url, s]));
 
-    for (const url of topUrls) {
-      checkGuardrails(ctx.guardrails);
-      const page = await extractPage(url);
-      const source = sourcesByUrl.get(url);
-      if (page) {
-        extracted.push({
-          url: page.url,
-          title: page.title || source?.title || "",
-          markdown: page.markdown,
-          entityName: source?.entityName || "",
-        });
+    let urlIndex = 0;
+    const extractWorker = async () => {
+      while (urlIndex < topUrls.length) {
+        const url = topUrls[urlIndex++];
+        checkGuardrails(ctx.guardrails);
+        const page = await extractPage(url);
+        const source = sourcesByUrl.get(url);
+        if (page) {
+          extracted.push({
+            url: page.url,
+            title: page.title || source?.title || "",
+            markdown: page.markdown,
+            entityName: source?.entityName || "",
+          });
 
-        // Update source with extraction status
-        await ctx.db
-          .update(comparisonSources)
-          .set({
-            contentHash: page.contentHash,
-          })
-          .where(
-            and(
-              eq(comparisonSources.comparisonId, ctx.comparisonId),
-              eq(comparisonSources.url, url),
-            ),
-          );
-      } else if (source?.content) {
-        extracted.push({
-          url: source.url,
-          title: source.title || source.url,
-          markdown: source.content,
-          entityName: source.entityName || "",
-        });
+          // Update source with extraction status
+          await ctx.db
+            .update(comparisonSources)
+            .set({
+              contentHash: page.contentHash,
+            })
+            .where(
+              and(
+                eq(comparisonSources.comparisonId, ctx.comparisonId),
+                eq(comparisonSources.url, url),
+              ),
+            );
+        } else if (source?.content) {
+          extracted.push({
+            url: source.url,
+            title: source.title || source.url,
+            markdown: source.content,
+            entityName: source.entityName || "",
+          });
+        }
       }
-    }
+    };
+
+    const CONCURRENCY_LIMIT = 4;
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY_LIMIT, topUrls.length) }, extractWorker)
+    );
 
     if (extracted.length === 0 && sources.length > 0) {
       for (const source of sources.slice(0, 6)) {
