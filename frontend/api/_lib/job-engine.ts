@@ -441,6 +441,244 @@ async function clearDerivedComparisonData(
 
 const MAX_RETRIES = 2;
 
+
+
+// ─── Refactored Phases for runComparisonJob ───────────────────────────────
+
+function calculateOverallConfidence(parsed: { entities: Array<{ name: string; type?: string }> }, sources: Array<{ url?: string }>, facts: Array<{ entity?: string; dimension?: string; value?: string; citation?: string; confidence?: number }>, dimensions: Array<{ name: string }>, freshnessClass: string) {
+  const reliabilityScores = sources.map((s) => {
+    // Compute reliability score from content
+    const url = s.url || "";
+    if (/\.gov|\.edu|github\.com/i.test(url)) return 1.0;
+    if (/docs|documentation|api/i.test(url)) return 0.9;
+    if (/reddit|stackoverflow|quora/i.test(url)) return 0.6;
+    return 0.7;
+  });
+  return calibrateConfidence({
+    sourceCount: sources.length,
+    sourceReliabilityScores: reliabilityScores,
+    factsCount: facts.length,
+    dimensionsCovered: dimensions.length,
+    totalDimensions: dimensions.length,
+    freshnessClass,
+  });
+}
+
+async function getQueryEmbedding(query: string, parsed: { entities: Array<{ name: string; type?: string }> }, dimensions: Array<{ name: string }>, verdict: unknown, comparisonId: string) {
+  let queryEmbedding: number[] | null = null;
+  try {
+    queryEmbedding = await embedText([
+      query,
+      `Entities: ${parsed.entities.map((entity) => entity.name).join(" vs ")}`,
+      `Dimensions: ${dimensions.map((dimension) => dimension.name).join(", ")}`,
+      `Verdict: ${getVerdictText(verdict)}`,
+    ].join("\n"));
+  } catch (error) {
+    logger.warn("Comparison query embedding failed", {
+      comparisonId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+  return queryEmbedding;
+}
+
+async function saveReusableFacts(db: ReturnType<typeof createDbClient>, facts: Array<{ entity?: string; dimension?: string; value?: string; citation?: string; confidence?: number }>, freshnessClass: string) {
+  for (const rawFact of facts) {
+    const fact = rawFact as { entity?: string; dimension?: string; value?: string; citation?: string; confidence?: number };
+    if (!isReusableFact({ value: fact.value || "", dimension: fact.dimension || "" })) continue;
+    const entityName = (fact.entity || "") as string;
+    const entitySlug = normalizeEntityForReuse(entityName);
+    if (!entitySlug || entitySlug.length < 2) continue;
+
+    await db
+      .insert(entityKnowledge)
+      .values({
+        entitySlug,
+        entityDisplayName: entityName,
+        dimension: (fact.dimension || "general") as string,
+        value: (fact.value || "") as string,
+        sourceUrl: (fact.citation || null) as string | null,
+        sourceTitle: null,
+        confidence: String(fact.confidence || 0.5),
+        freshnessClass,
+      })
+      .onConflictDoUpdate({
+        target: [entityKnowledge.entitySlug, entityKnowledge.dimension, entityKnowledge.value],
+        set: {
+          usageCount: sql`${entityKnowledge.usageCount} + 1`,
+          lastVerifiedAt: new Date(),
+          freshnessClass,
+        },
+      });
+  }
+}
+
+async function updateQueryAnalyticsFinalData(db: ReturnType<typeof createDbClient>, comparisonId: string, ctx: JobContext, sources: Array<{ url?: string }>, parsed: { entities: Array<{ name: string; type?: string }> }, normalized: ReturnType<typeof normalizeQuery>) {
+  await db
+    .update(queryAnalytics)
+    .set({
+      totalCost: String(ctx.guardrails.totalCost),
+      searchesUsed: ctx.guardrails.searchCalls,
+      sourcesFound: sources.length,
+      detectedEntities: JSON.stringify(parsed.entities?.map((e: { name: string; type?: string }) => ({
+        name: e.name.toLowerCase(),
+        type: e.type || null,
+      })) || []),
+      taxonomyStatus: normalized.taxonomyStatus,
+      safetyLevel: normalized.safetyLevel,
+      taxonomyConfidence: String(normalized.confidence),
+      policyNote: normalized.policyNote || null,
+      sourceStrategy: {
+        requirements: normalized.sourceRequirements,
+        disclaimer: normalized.disclaimer,
+      },
+    })
+    .where(eq(queryAnalytics.comparisonId, comparisonId));
+}
+
+async function saveComparisonVersion(db: ReturnType<typeof createDbClient>, comparisonId: string, userId: string, result: unknown, sourcesCount: number, overallConfidence: string | number) {
+  try {
+    const [versionCounter] = await db
+      .select({ count: sql<number>`count(*)::integer` })
+      .from(comparisonVersions)
+      .where(eq(comparisonVersions.comparisonId, comparisonId));
+
+    const newVersionNum = (versionCounter?.count || 0) + 1;
+
+    let changeSummary: Record<string, unknown> = { reason: "completed_run" };
+    if (newVersionNum > 1) {
+      const [prevVersion] = await db
+        .select({ result: comparisonVersions.result })
+        .from(comparisonVersions)
+        .where(
+          and(
+            eq(comparisonVersions.comparisonId, comparisonId),
+            eq(comparisonVersions.versionNumber, newVersionNum - 1),
+          ),
+        )
+        .limit(1);
+
+      if (prevVersion?.result) {
+        // Find any active watchlists linked to this comparison
+        const linkedWatchlists = await db
+          .select({ alertThreshold: watchlists.alertThreshold })
+          .from(watchlists)
+          .where(
+            and(
+              eq(watchlists.comparisonId, comparisonId),
+              eq(watchlists.status, "active"),
+            ),
+          );
+
+        let alertThreshold = 0.1;
+        if (linkedWatchlists.length > 0) {
+          alertThreshold = Math.min(...linkedWatchlists.map((w) => Number(w.alertThreshold) || 0.1));
+        }
+
+        const diffResult = computeResultDiff(prevVersion.result, result, alertThreshold);
+        changeSummary = {
+          reason: "completed_run",
+          diff: diffResult.diff,
+          alert: diffResult.thresholdBreached ? {
+            threshold: alertThreshold,
+            message: `Score delta exceeded alert threshold of ${alertThreshold * 100} points.`,
+          } : null,
+        };
+      }
+    }
+
+    await db.insert(comparisonVersions).values({
+      comparisonId,
+      versionNumber: newVersionNum,
+      result: result,
+      sourceCount: sourcesCount,
+      overallConfidence: String(overallConfidence),
+      changeSummary: changeSummary,
+      createdBy: userId,
+    });
+
+    logger.info("Saved historical snapshot to comparisonVersions", {
+      comparisonId,
+      versionNumber: newVersionNum,
+    });
+  } catch (verr) {
+    logger.error("Failed to save version snapshot", verr instanceof Error ? verr : undefined, {
+      comparisonId,
+    });
+  }
+}
+
+async function handleJobFailure(error: unknown, comparisonId: string) {
+  const message = error instanceof Error ? error.message : "Job failed";
+  logger.error("Comparison job failed", error instanceof Error ? error : undefined, {
+    comparisonId,
+  });
+
+  const db = createDbClient();
+  const [comp] = await db
+    .select({ retryCount: comparisons.retryCount })
+    .from(comparisons)
+    .where(eq(comparisons.id, comparisonId))
+    .limit(1);
+
+  const currentRetries = comp?.retryCount || 0;
+
+  if (currentRetries < MAX_RETRIES) {
+    logger.info("Queueing retry", { comparisonId, retry: currentRetries + 1 });
+
+    await clearDerivedComparisonData(db, comparisonId);
+
+    await db
+      .update(comparisons)
+      .set({
+        status: "queued",
+        errorMessage: `Retry ${currentRetries + 1}/${MAX_RETRIES}: ${message}`,
+        retryCount: currentRetries + 1,
+        updatedAt: new Date(),
+      })
+      .where(eq(comparisons.id, comparisonId));
+  } else {
+    // Build partial result from whatever data exists
+    const partialResult = await buildPartialResult(db, comparisonId);
+
+    await db
+      .update(comparisons)
+      .set({
+        status: "failed",
+        errorMessage: `Failed after ${MAX_RETRIES} retries: ${message}`,
+        result: partialResult,
+        updatedAt: new Date(),
+      })
+      .where(eq(comparisons.id, comparisonId));
+
+    // Phase 3: Trigger outgoing webhooks on failure
+    triggerWebhooks(
+      db,
+      comparisonId,
+      "comparison.failed",
+      { error: `Failed after ${MAX_RETRIES} retries: ${message}` },
+      safeWaitUntil
+    ).catch((err) => {
+      logger.error("Failed to trigger webhook on failure", { comparisonId, error: err });
+    });
+
+    // Phase 10: Mark query analytics for failed job
+    await db
+      .update(queryAnalytics)
+      .set({
+        totalCost: "0",
+        searchesUsed: 0,
+      })
+      .where(eq(queryAnalytics.comparisonId, comparisonId));
+
+    logger.info("Saved partial result for failed comparison", {
+      comparisonId,
+      hasPartialResult: !!partialResult,
+    });
+  }
+}
+
+
 export async function runComparisonJob(
   comparisonId: string,
   userId: string,
@@ -551,36 +789,9 @@ export async function runComparisonJob(
       entityB: parsed.entities[1]?.name || "Option B",
     });
     const freshnessClass = getFreshnessClass(normalized.category);
-    const reliabilityScores = sources.map((s) => {
-      // Compute reliability score from content
-      const url = s.url || "";
-      if (/\.gov|\.edu|github\.com/i.test(url)) return 1.0;
-      if (/docs|documentation|api/i.test(url)) return 0.9;
-      if (/reddit|stackoverflow|quora/i.test(url)) return 0.6;
-      return 0.7;
-    });
-    const overallConfidence = calibrateConfidence({
-      sourceCount: sources.length,
-      sourceReliabilityScores: reliabilityScores,
-      factsCount: facts.length,
-      dimensionsCovered: dimensions.length,
-      totalDimensions: dimensions.length,
-      freshnessClass,
-    });
-    let queryEmbedding: number[] | null = null;
-    try {
-      queryEmbedding = await embedText([
-        ctx.query,
-        `Entities: ${parsed.entities.map((entity) => entity.name).join(" vs ")}`,
-        `Dimensions: ${dimensions.map((dimension) => dimension.name).join(", ")}`,
-        `Verdict: ${getVerdictText(verdict)}`,
-      ].join("\n"));
-    } catch (error) {
-      logger.warn("Comparison query embedding failed", {
-        comparisonId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+
+    const overallConfidence = calculateOverallConfidence(parsed, sources, facts, dimensions, freshnessClass);
+    const queryEmbedding = await getQueryEmbedding(ctx.query, parsed, dimensions, verdict, comparisonId);
 
     await db
       .update(comparisons)
@@ -607,56 +818,10 @@ export async function runComparisonJob(
     comparisonCache.set(normalized.canonicalSlug, result, 10 * 60 * 1000);
 
     // Phase 11: Save reusable facts to entity knowledge base
-    for (const rawFact of facts) {
-      const fact = rawFact as { entity?: string; dimension?: string; value?: string; citation?: string; confidence?: number };
-      if (!isReusableFact({ value: fact.value || "", dimension: fact.dimension || "" })) continue;
-      const entityName = (fact.entity || "") as string;
-      const entitySlug = normalizeEntityForReuse(entityName);
-      if (!entitySlug || entitySlug.length < 2) continue;
-
-      await db
-        .insert(entityKnowledge)
-        .values({
-          entitySlug,
-          entityDisplayName: entityName,
-          dimension: (fact.dimension || "general") as string,
-          value: (fact.value || "") as string,
-          sourceUrl: (fact.citation || null) as string | null,
-          sourceTitle: null,
-          confidence: String(fact.confidence || 0.5),
-          freshnessClass,
-        })
-        .onConflictDoUpdate({
-          target: [entityKnowledge.entitySlug, entityKnowledge.dimension, entityKnowledge.value],
-          set: {
-            usageCount: sql`${entityKnowledge.usageCount} + 1`,
-            lastVerifiedAt: new Date(),
-            freshnessClass,
-          },
-        });
-    }
+    await saveReusableFacts(db, facts, freshnessClass);
 
     // Phase 10: Update query analytics with final data
-    await db
-      .update(queryAnalytics)
-      .set({
-        totalCost: String(ctx.guardrails.totalCost),
-        searchesUsed: ctx.guardrails.searchCalls,
-        sourcesFound: sources.length,
-        detectedEntities: JSON.stringify(parsed.entities?.map((e: { name: string; type?: string }) => ({
-          name: e.name.toLowerCase(),
-          type: e.type || null,
-        })) || []),
-        taxonomyStatus: normalized.taxonomyStatus,
-        safetyLevel: normalized.safetyLevel,
-        taxonomyConfidence: String(normalized.confidence),
-        policyNote: normalized.policyNote || null,
-        sourceStrategy: {
-          requirements: normalized.sourceRequirements,
-          disclaimer: normalized.disclaimer,
-        },
-      })
-      .where(eq(queryAnalytics.comparisonId, comparisonId));
+    await updateQueryAnalyticsFinalData(db, comparisonId, ctx, sources, parsed, normalized);
 
     logger.info("Comparison job completed", {
       comparisonId,
@@ -665,75 +830,7 @@ export async function runComparisonJob(
     });
 
     // Phase 12: Insert into comparison_versions for Time Travel history
-    try {
-      const [versionCounter] = await db
-        .select({ count: sql<number>`count(*)::integer` })
-        .from(comparisonVersions)
-        .where(eq(comparisonVersions.comparisonId, comparisonId));
-
-      const newVersionNum = (versionCounter?.count || 0) + 1;
-
-      let changeSummary: Record<string, unknown> = { reason: "completed_run" };
-      if (newVersionNum > 1) {
-        const [prevVersion] = await db
-          .select({ result: comparisonVersions.result })
-          .from(comparisonVersions)
-          .where(
-            and(
-              eq(comparisonVersions.comparisonId, comparisonId),
-              eq(comparisonVersions.versionNumber, newVersionNum - 1),
-            ),
-          )
-          .limit(1);
-
-        if (prevVersion?.result) {
-          // Find any active watchlists linked to this comparison
-          const linkedWatchlists = await db
-            .select({ alertThreshold: watchlists.alertThreshold })
-            .from(watchlists)
-            .where(
-              and(
-                eq(watchlists.comparisonId, comparisonId),
-                eq(watchlists.status, "active"),
-              ),
-            );
-
-          let alertThreshold = 0.1;
-          if (linkedWatchlists.length > 0) {
-            alertThreshold = Math.min(...linkedWatchlists.map((w) => Number(w.alertThreshold) || 0.1));
-          }
-
-          const diffResult = computeResultDiff(prevVersion.result, result, alertThreshold);
-          changeSummary = {
-            reason: "completed_run",
-            diff: diffResult.diff,
-            alert: diffResult.thresholdBreached ? {
-              threshold: alertThreshold,
-              message: `Score delta exceeded alert threshold of ${alertThreshold * 100} points.`,
-            } : null,
-          };
-        }
-      }
-
-      await db.insert(comparisonVersions).values({
-        comparisonId,
-        versionNumber: newVersionNum,
-        result: result,
-        sourceCount: sources.length,
-        overallConfidence: String(overallConfidence),
-        changeSummary: changeSummary,
-        createdBy: userId,
-      });
-
-      logger.info("Saved historical snapshot to comparisonVersions", {
-        comparisonId,
-        versionNumber: newVersionNum,
-      });
-    } catch (verr) {
-      logger.error("Failed to save version snapshot", verr instanceof Error ? verr : undefined, {
-        comparisonId,
-      });
-    }
+    await saveComparisonVersion(db, comparisonId, userId, result, sources.length, overallConfidence);
 
     sendComparisonCompleteEmail({
       userId,
@@ -752,73 +849,7 @@ export async function runComparisonJob(
       logger.error("Failed to trigger webhook on completion", { comparisonId, error: err });
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Job failed";
-    logger.error("Comparison job failed", error instanceof Error ? error : undefined, {
-      comparisonId,
-    });
-
-    const db = createDbClient();
-    const [comp] = await db
-      .select({ retryCount: comparisons.retryCount })
-      .from(comparisons)
-      .where(eq(comparisons.id, comparisonId))
-      .limit(1);
-
-    const currentRetries = comp?.retryCount || 0;
-
-    if (currentRetries < MAX_RETRIES) {
-      logger.info("Queueing retry", { comparisonId, retry: currentRetries + 1 });
-
-      await clearDerivedComparisonData(db, comparisonId);
-
-      await db
-        .update(comparisons)
-        .set({
-          status: "queued",
-          errorMessage: `Retry ${currentRetries + 1}/${MAX_RETRIES}: ${message}`,
-          retryCount: currentRetries + 1,
-          updatedAt: new Date(),
-        })
-        .where(eq(comparisons.id, comparisonId));
-    } else {
-      // Build partial result from whatever data exists
-      const partialResult = await buildPartialResult(db, comparisonId);
-
-      await db
-        .update(comparisons)
-        .set({
-          status: "failed",
-          errorMessage: `Failed after ${MAX_RETRIES} retries: ${message}`,
-          result: partialResult,
-          updatedAt: new Date(),
-        })
-        .where(eq(comparisons.id, comparisonId));
-
-      // Phase 3: Trigger outgoing webhooks on failure
-      triggerWebhooks(
-        db,
-        comparisonId,
-        "comparison.failed",
-        { error: `Failed after ${MAX_RETRIES} retries: ${message}` },
-        safeWaitUntil
-      ).catch((err) => {
-        logger.error("Failed to trigger webhook on failure", { comparisonId, error: err });
-      });
-
-      // Phase 10: Mark query analytics for failed job
-      await db
-        .update(queryAnalytics)
-        .set({
-          totalCost: "0",
-          searchesUsed: 0,
-        })
-        .where(eq(queryAnalytics.comparisonId, comparisonId));
-
-      logger.info("Saved partial result for failed comparison", {
-        comparisonId,
-        hasPartialResult: !!partialResult,
-      });
-    }
+    await handleJobFailure(error, comparisonId);
   } finally {
     await redisReleaseLock(lockKey);
   }
