@@ -10,6 +10,7 @@ import {
 import { captureServerEvent } from "../_lib/analytics.js";
 import { sanitizeLlmText } from "../_lib/sanitize.js";
 import { z } from "zod";
+import { logger } from "../_lib/log.js";
 
 export const config = {
   runtime: "nodejs",
@@ -150,7 +151,7 @@ export default async function handler(
 
     return sendJson(response, { answer: answerContent, retrievalCount });
   } catch (error) {
-    console.error("Chat API error:", error);
+    logger.error("Chat API error", error instanceof Error ? error : undefined);
     const status = error instanceof z.ZodError ? 400 : 500;
     return sendJson(
       response,
