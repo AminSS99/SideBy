@@ -71,7 +71,7 @@ export default async function handler(
             or visibility = 'public'
           )
         order by query_embedding <=> ${vectorLiteral}::vector
-        limit ${parsed.limit}
+        limit ${sql.param(parsed.limit)}
       `);
 
       return sendJson(response, {
