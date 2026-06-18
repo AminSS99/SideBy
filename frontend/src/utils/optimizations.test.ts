@@ -25,13 +25,13 @@ describe('optimizations utilities', () => {
     afterEach(() => {
       global.window = originalWindow;
       if (global.window) {
-          global.window.matchMedia = originalMatchMedia as any;
+          global.window.matchMedia = originalMatchMedia as ((query: string) => MediaQueryList);
       }
       vi.unstubAllGlobals();
     });
 
     it('returns false when window is undefined', () => {
-      // @ts-ignore
+      // @ts-expect-error testing window object absence
       delete global.window;
       expect(prefersReducedMotion()).toBe(false);
     });
@@ -39,7 +39,7 @@ describe('optimizations utilities', () => {
     it('returns true when media query matches', () => {
       // Create a mock window with matchMedia if it doesn't exist
       if (!global.window) {
-        // @ts-ignore
+        // @ts-expect-error testing window object absence
         global.window = {};
       }
       global.window.matchMedia = vi.fn().mockImplementation(query => ({
@@ -50,7 +50,7 @@ describe('optimizations utilities', () => {
 
     it('returns false when media query does not match', () => {
       if (!global.window) {
-        // @ts-ignore
+        // @ts-expect-error testing window object absence
         global.window = {};
       }
       global.window.matchMedia = vi.fn().mockImplementation(() => ({
@@ -73,7 +73,7 @@ describe('optimizations utilities', () => {
     });
 
     it('returns false when window is undefined', () => {
-      // @ts-ignore
+      // @ts-expect-error testing window object absence
       delete global.window;
       expect(isMobileDevice()).toBe(false);
     });
@@ -289,14 +289,14 @@ describe('optimizations utilities', () => {
       afterEach(() => {
         global.window = originalWindow;
         if (global.window) {
-            global.window.matchMedia = originalMatchMedia as any;
+            global.window.matchMedia = originalMatchMedia as ((query: string) => MediaQueryList);
         }
         vi.unstubAllGlobals();
       });
 
       it('returns reduced motion config when prefers-reduced-motion matches', () => {
         if (!global.window) {
-          // @ts-ignore
+          // @ts-expect-error testing window object absence
           global.window = {};
         }
         global.window.matchMedia = vi.fn().mockImplementation(query => ({
@@ -314,7 +314,7 @@ describe('optimizations utilities', () => {
 
       it('returns mobile config when device is mobile', () => {
         if (!global.window) {
-          // @ts-ignore
+          // @ts-expect-error testing window object absence
           global.window = {};
         }
         global.window.matchMedia = vi.fn().mockImplementation(() => ({
@@ -335,7 +335,7 @@ describe('optimizations utilities', () => {
 
       it('returns default config for desktop without reduced motion', () => {
         if (!global.window) {
-          // @ts-ignore
+          // @ts-expect-error testing window object absence
           global.window = {};
         }
         global.window.matchMedia = vi.fn().mockImplementation(() => ({
