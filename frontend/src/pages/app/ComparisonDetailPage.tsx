@@ -206,23 +206,42 @@ const ComparisonDetailPage = () => {
     }
   };
 
+  const jobId = job?.id;
+  const jobStatus = job?.status;
+  const hasResult = Boolean(job?.result);
+  const jobFailedStep = job?.failedStep;
+  const jobError = job?.error;
+  const jobRetryable = job?.retryable;
+
+  const trackedStateRef = useRef<{ id?: string; status?: string }>({});
+
   useEffect(() => {
-    if (!job) return;
+    if (!jobId || !jobStatus) return;
+
+    if (
+      trackedStateRef.current.id === jobId &&
+      trackedStateRef.current.status === jobStatus
+    ) {
+      return;
+    }
+
+    trackedStateRef.current = { id: jobId, status: jobStatus };
+
     captureEvent("comparison_viewed", {
-      comparison_id: job.id,
-      status: job.status,
-      has_result: Boolean(job.result),
+      comparison_id: jobId,
+      status: jobStatus,
+      has_result: hasResult,
     });
-    if (job.status === "failed") {
+
+    if (jobStatus === "failed") {
       captureEvent("comparison_failed_viewed", {
-        comparison_id: job.id,
-        failed_step: job.failedStep,
-        error: job.error,
-        retryable: job.retryable,
+        comparison_id: jobId,
+        failed_step: jobFailedStep,
+        error: jobError,
+        retryable: jobRetryable,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [job?.id, job?.status]);
+  }, [jobId, jobStatus, hasResult, jobFailedStep, jobError, jobRetryable]);
 
   useGSAP(() => {
     if (!comparisonQuery.isLoading && result) {
