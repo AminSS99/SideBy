@@ -5,7 +5,7 @@
  * Enforces cost/time guardrails per job.
  */
 import { z } from "zod";
-import { asc, eq, and, sql, or, lte } from "drizzle-orm";
+import { asc, eq, and, sql, or, lte, inArray } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
@@ -1570,16 +1570,23 @@ async function getReusableFactCounts(
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
 
-  for (const entityName of entityNames) {
-    const entitySlug = normalizeEntityForReuse(entityName);
-    if (!entitySlug) continue;
+  const slugs = Array.from(
+    new Set(entityNames.map(normalizeEntityForReuse).filter((s): s is string => !!s))
+  );
 
-    const [row] = await ctx.db
-      .select({ count: sql<number>`count(*)::integer` })
-      .from(entityKnowledge)
-      .where(eq(entityKnowledge.entitySlug, entitySlug));
+  if (slugs.length === 0) return counts;
 
-    counts.set(entitySlug, row?.count || 0);
+  const rows = await ctx.db
+    .select({
+      entitySlug: entityKnowledge.entitySlug,
+      count: sql<number>`count(*)::integer`,
+    })
+    .from(entityKnowledge)
+    .where(inArray(entityKnowledge.entitySlug, slugs))
+    .groupBy(entityKnowledge.entitySlug);
+
+  for (const row of rows) {
+    if (row.entitySlug) counts.set(row.entitySlug, row.count || 0);
   }
 
   return counts;
@@ -1593,27 +1600,48 @@ async function loadReusableFacts(
   const dimensionNames = new Set(dimensions.map((dimension) => dimension.name.toLowerCase()));
   const cachedFacts: ExtractedFact[] = [];
 
-  for (const entity of parsed.entities.slice(0, 2)) {
-    const entitySlug = normalizeEntityForReuse(entity.name);
-    if (!entitySlug) continue;
+  const entities = parsed.entities.slice(0, 2);
+  const slugsToEntities = new Map<string, string>();
+  for (const entity of entities) {
+    const slug = normalizeEntityForReuse(entity.name);
+    if (slug) slugsToEntities.set(slug, entity.name);
+  }
 
-    const rows = await ctx.db
-      .select({
-        dimension: entityKnowledge.dimension,
-        value: entityKnowledge.value,
-        sourceUrl: entityKnowledge.sourceUrl,
-        confidence: entityKnowledge.confidence,
-      })
-      .from(entityKnowledge)
-      .where(eq(entityKnowledge.entitySlug, entitySlug))
-      .orderBy(sql`${entityKnowledge.usageCount} DESC`, sql`${entityKnowledge.lastVerifiedAt} DESC NULLS LAST`)
-      .limit(12);
+  const slugs = Array.from(slugsToEntities.keys());
+  if (slugs.length === 0) return cachedFacts;
 
-    for (const row of rows) {
+  const rows = await ctx.db
+    .select({
+      entitySlug: entityKnowledge.entitySlug,
+      dimension: entityKnowledge.dimension,
+      value: entityKnowledge.value,
+      sourceUrl: entityKnowledge.sourceUrl,
+      confidence: entityKnowledge.confidence,
+    })
+    .from(entityKnowledge)
+    .where(inArray(entityKnowledge.entitySlug, slugs))
+    .orderBy(sql`${entityKnowledge.usageCount} DESC`, sql`${entityKnowledge.lastVerifiedAt} DESC NULLS LAST`);
+
+  // Group by slug in memory to enforce limit
+  const rowsBySlug = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const slug = row.entitySlug;
+    if (!slug) continue;
+    if (!rowsBySlug.has(slug)) {
+      rowsBySlug.set(slug, []);
+    }
+    rowsBySlug.get(slug)!.push(row);
+  }
+
+  for (const [slug, entityName] of slugsToEntities.entries()) {
+    const entityRows = rowsBySlug.get(slug) || [];
+    const limitedRows = entityRows.slice(0, 12);
+
+    for (const row of limitedRows) {
       const dimension = row.dimension || "General";
       if (dimensionNames.size > 0 && !dimensionNames.has(dimension.toLowerCase())) continue;
       cachedFacts.push({
-        entity: entity.name,
+        entity: entityName,
         dimension,
         value: row.value,
         confidence: Math.min(Number(row.confidence || 0.65), 0.85),
