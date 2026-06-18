@@ -5,7 +5,7 @@
  * Enforces cost/time guardrails per job.
  */
 import { z } from "zod";
-import { asc, eq, and, sql, or, lte } from "drizzle-orm";
+import { asc, eq, and, sql, or, lte, inArray } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
@@ -1570,16 +1570,18 @@ async function getReusableFactCounts(
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
 
-  for (const entityName of entityNames) {
-    const entitySlug = normalizeEntityForReuse(entityName);
-    if (!entitySlug) continue;
+  const entitySlugs = Array.from(new Set(entityNames.map(normalizeEntityForReuse).filter((s): s is string => !!s)));
 
-    const [row] = await ctx.db
-      .select({ count: sql<number>`count(*)::integer` })
+  if (entitySlugs.length > 0) {
+    const rows = await ctx.db
+      .select({ entitySlug: entityKnowledge.entitySlug, count: sql<number>`count(*)::integer` })
       .from(entityKnowledge)
-      .where(eq(entityKnowledge.entitySlug, entitySlug));
+      .where(inArray(entityKnowledge.entitySlug, entitySlugs))
+      .groupBy(entityKnowledge.entitySlug);
 
-    counts.set(entitySlug, row?.count || 0);
+    for (const row of rows) {
+      counts.set(row.entitySlug, row.count);
+    }
   }
 
   return counts;
@@ -1593,22 +1595,30 @@ async function loadReusableFacts(
   const dimensionNames = new Set(dimensions.map((dimension) => dimension.name.toLowerCase()));
   const cachedFacts: ExtractedFact[] = [];
 
-  for (const entity of parsed.entities.slice(0, 2)) {
-    const entitySlug = normalizeEntityForReuse(entity.name);
-    if (!entitySlug) continue;
+  const entitiesToFetch = parsed.entities.slice(0, 2)
+    .map(entity => ({ entity, slug: normalizeEntityForReuse(entity.name) }))
+    .filter((e): e is { entity: typeof parsed.entities[0], slug: string } => !!e.slug);
 
-    const rows = await ctx.db
-      .select({
-        dimension: entityKnowledge.dimension,
-        value: entityKnowledge.value,
-        sourceUrl: entityKnowledge.sourceUrl,
-        confidence: entityKnowledge.confidence,
-      })
-      .from(entityKnowledge)
-      .where(eq(entityKnowledge.entitySlug, entitySlug))
-      .orderBy(sql`${entityKnowledge.usageCount} DESC`, sql`${entityKnowledge.lastVerifiedAt} DESC NULLS LAST`)
-      .limit(12);
+  if (entitiesToFetch.length === 0) return cachedFacts;
 
+  const results = await Promise.all(
+    entitiesToFetch.map(({ slug }) =>
+      ctx.db
+        .select({
+          dimension: entityKnowledge.dimension,
+          value: entityKnowledge.value,
+          sourceUrl: entityKnowledge.sourceUrl,
+          confidence: entityKnowledge.confidence,
+        })
+        .from(entityKnowledge)
+        .where(eq(entityKnowledge.entitySlug, slug))
+        .orderBy(sql`${entityKnowledge.usageCount} DESC`, sql`${entityKnowledge.lastVerifiedAt} DESC NULLS LAST`)
+        .limit(12)
+    )
+  );
+
+  entitiesToFetch.forEach(({ entity }, index) => {
+    const rows = results[index];
     for (const row of rows) {
       const dimension = row.dimension || "General";
       if (dimensionNames.size > 0 && !dimensionNames.has(dimension.toLowerCase())) continue;
@@ -1620,7 +1630,7 @@ async function loadReusableFacts(
         citation: row.sourceUrl || undefined,
       });
     }
-  }
+  });
 
   return cachedFacts;
 }
@@ -1948,6 +1958,19 @@ function buildResultJson(
     return match;
   };
 
+  const scoresByDim = new Map<string, Map<string, number>>();
+  for (const s of scores) {
+    if (!scoresByDim.has(s.dimension)) scoresByDim.set(s.dimension, new Map());
+    scoresByDim.get(s.dimension)!.set(s.entity, s.score);
+  }
+
+  const factsByDim = new Map<string, typeof facts>();
+  for (const f of facts) {
+    const dimName = f.dimension || "General";
+    if (!factsByDim.has(dimName)) factsByDim.set(dimName, []);
+    factsByDim.get(dimName)!.push(f);
+  }
+
   return {
     slug: slugOverride || makeResultSlug(nameA, nameB),
     query: parsed.entities.map((e) => e.name).join(" vs "),
@@ -1974,18 +1997,17 @@ function buildResultJson(
       summary: getVerdictText(verdict),
     },
     categories: dimensions.map((dim) => {
-      const dimScoresMap = new Map(
-        scores.filter((s) => s.dimension === dim.name).map((s) => [s.entity, s.score])
-      );
+      const dimScoresMap = scoresByDim.get(dim.name) || new Map();
       const aScore = dimScoresMap.get(entityA?.name) ?? 0;
       const bScore = dimScoresMap.get(entityB?.name) ?? 0;
+
+      const dimFacts = factsByDim.get(dim.name) || [];
 
       return {
         name: dim.name,
         winner: aScore > bScore ? "a" : bScore > aScore ? "b" : "tie",
         verdict: `${dim.name} comparison based on source-backed facts.`,
-        facts: facts
-          .filter((f) => f.dimension === dim.name)
+        facts: dimFacts
           .map((f) => {
             const matchedSource = findSource(f.citation);
             return {
@@ -2003,9 +2025,7 @@ function buildResultJson(
       };
     }),
     dimensions: dimensions.map((dim) => {
-      const dimScoresMap = new Map(
-        scores.filter((s) => s.dimension === dim.name).map((s) => [s.entity, s.score])
-      );
+      const dimScoresMap = scoresByDim.get(dim.name) || new Map();
       return {
         subject: dim.name,
         a: dimScoresMap.get(entityA?.name) ?? 50,
@@ -2099,13 +2119,18 @@ async function buildPartialResult(
 
     const dimById = new Map(dims.map(d => [d.id, d]));
 
+    const scoresByDimName = new Map<string, Map<string, string>>();
+    for (const s of scores) {
+      const dimName = dimById.get(s.dimensionId)?.name;
+      if (dimName) {
+        if (!scoresByDimName.has(dimName)) scoresByDimName.set(dimName, new Map());
+        scoresByDimName.get(dimName)!.set(s.entityId, s.score);
+      }
+    }
+
     const categories = Array.from(factsByDim.entries()).map(([name, dimFacts]) => {
-      const dimScoresMap = new Map(
-        scores.filter((s) => {
-          const dim = dimById.get(s.dimensionId);
-          return dim?.name === name;
-        }).map((s) => [s.entityId, s.score])
-      );
+      const dimScoresMap = scoresByDimName.get(name) || new Map();
+
       const aScore = dimScoresMap.get(entityA.id) ?? 50;
       const bScore = dimScoresMap.get(entityB.id) ?? 50;
       return {
