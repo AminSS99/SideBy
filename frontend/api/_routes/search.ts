@@ -93,7 +93,7 @@ export default async function handler(
         .where(
           and(
             eq(comparisons.status, "completed"),
-            ilike(comparisons.query, `%${parsed.q}%`),
+            ilike(comparisons.query, sql`'%' || ${parsed.q} || '%'`),
             or(
               eq(comparisons.clerkUserId, auth.userId),
               auth.orgId ? eq(comparisons.clerkOrgId, auth.orgId) : eq(comparisons.clerkUserId, auth.userId),
