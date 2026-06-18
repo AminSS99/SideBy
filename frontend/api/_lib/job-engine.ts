@@ -5,7 +5,7 @@
  * Enforces cost/time guardrails per job.
  */
 import { z } from "zod";
-import { asc, eq, and, sql, or, lte } from "drizzle-orm";
+import { asc, eq, and, sql, or, lte, inArray } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
@@ -1569,17 +1569,29 @@ async function getReusableFactCounts(
   entityNames: string[],
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
+  const entitySlugs: string[] = [];
 
   for (const entityName of entityNames) {
     const entitySlug = normalizeEntityForReuse(entityName);
-    if (!entitySlug) continue;
+    if (entitySlug) {
+      entitySlugs.push(entitySlug);
+      counts.set(entitySlug, 0);
+    }
+  }
 
-    const [row] = await ctx.db
-      .select({ count: sql<number>`count(*)::integer` })
-      .from(entityKnowledge)
-      .where(eq(entityKnowledge.entitySlug, entitySlug));
+  if (entitySlugs.length === 0) return counts;
 
-    counts.set(entitySlug, row?.count || 0);
+  const rows = await ctx.db
+    .select({
+      entitySlug: entityKnowledge.entitySlug,
+      count: sql<number>`count(*)::integer`
+    })
+    .from(entityKnowledge)
+    .where(inArray(entityKnowledge.entitySlug, entitySlugs))
+    .groupBy(entityKnowledge.entitySlug);
+
+  for (const row of rows) {
+    counts.set(row.entitySlug, row.count);
   }
 
   return counts;
