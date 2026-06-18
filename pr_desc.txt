@@ -1,0 +1,5 @@
+🎯 **What:** The `getClientIp` function in `route-guard.ts` previously read the `x-forwarded-for` header and unconditionally trusted the first (leftmost) IP in the list. This allowed attackers to easily spoof their IP address by injecting their own `x-forwarded-for` header.
+
+⚠️ **Risk:** If left unfixed, an attacker could completely bypass the application's IP-based rate limiting (caps and burst protection) by constantly changing the spoofed IP in the request header. This could lead to a denial-of-service (DoS), exhaustion of server resources, or abuse of the free tier limits.
+
+🛡️ **Solution:** The `getClientIp` function was updated to prioritize securely managed headers provided by the Vercel edge network (`x-vercel-forwarded-for` and `x-real-ip`). These headers cannot be spoofed by the client because Vercel automatically overwrites them or strips user-provided headers with the `x-vercel-` prefix. If it must fall back to the standard `x-forwarded-for` header, the fix now correctly extracts the last (rightmost) IP in the list, which is the IP appended by the trusted proxy closest to the server, preventing spoofing via injected leftmost IPs.

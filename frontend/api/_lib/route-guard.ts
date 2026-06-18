@@ -10,13 +10,40 @@ import { sendJson } from "./sideby.js";
 import { assertRedisAvailable } from "./redis.js";
 
 export function getClientIp(request: VercelRequest): string | null {
+  // 1. Vercel's trusted forwarded IP
+  const vercelForwarded = request.headers["x-vercel-forwarded-for"];
+  if (typeof vercelForwarded === "string" && vercelForwarded.trim()) {
+    return vercelForwarded.trim();
+  }
+  if (Array.isArray(vercelForwarded) && vercelForwarded[0]?.trim()) {
+    return vercelForwarded[0].trim();
+  }
+
+  // 2. Standard real IP header
+  const realIp = request.headers["x-real-ip"];
+  if (typeof realIp === "string" && realIp.trim()) {
+    return realIp.trim();
+  }
+  if (Array.isArray(realIp) && realIp[0]?.trim()) {
+    return realIp[0].trim();
+  }
+
+  // 3. Fallback to x-forwarded-for
+  // The client can spoof the leftmost IPs, so we take the rightmost (last) IP
+  // which is appended by the proxy closest to our server.
   const forwarded = request.headers["x-forwarded-for"];
-  if (typeof forwarded === "string") {
-    return forwarded.split(",")[0]?.trim() || null;
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    const parts = forwarded.split(",");
+    return parts[parts.length - 1]?.trim() || null;
   }
-  if (Array.isArray(forwarded)) {
-    return forwarded[0]?.trim() || null;
+  if (Array.isArray(forwarded) && forwarded.length > 0) {
+    const lastItem = forwarded[forwarded.length - 1];
+    if (typeof lastItem === "string" && lastItem.trim()) {
+      const parts = lastItem.split(",");
+      return parts[parts.length - 1]?.trim() || null;
+    }
   }
+
   return request.socket?.remoteAddress || null;
 }
 
