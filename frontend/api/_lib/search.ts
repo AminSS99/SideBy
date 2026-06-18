@@ -136,25 +136,32 @@ export async function searchEntitySources(
     `${quotedEntity} ${scopedContext || ""} ${angle}`.trim(),
   );
 
-  const allResults: SearchResult[] = [];
-  const seenUrls = new Set<string>();
-
   console.log(`[Search Entity Sources] Running ${queries.length} queries for entity "${entityName}":`, queries);
-  for (const q of queries) {
+
+  const searchPromises = queries.map(async (q) => {
     try {
       console.log(`[Search Entity Sources] Executing sub-query: "${q}"`);
-      const batch = await searchTavily({ query: q, maxResults: 3, searchDepth: "basic" });
-      for (const r of batch) {
-        if (!seenUrls.has(r.url)) {
-          seenUrls.add(r.url);
-          allResults.push(r);
-        }
-      }
+      return await searchTavily({ query: q, maxResults: 3, searchDepth: "basic" });
     } catch (e) {
       logger.warn("Search query failed", {
         query: q,
         error: e instanceof Error ? e.message : "unknown",
       });
+      return [];
+    }
+  });
+
+  const batches = await Promise.all(searchPromises);
+
+  const allResults: SearchResult[] = [];
+  const seenUrls = new Set<string>();
+
+  for (const batch of batches) {
+    for (const r of batch) {
+      if (!seenUrls.has(r.url)) {
+        seenUrls.add(r.url);
+        allResults.push(r);
+      }
     }
   }
 
