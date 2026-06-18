@@ -10,6 +10,17 @@ import { sendJson } from "./sideby.js";
 import { assertRedisAvailable } from "./redis.js";
 
 export function getClientIp(request: VercelRequest): string | null {
+  // On Vercel, x-vercel-forwarded-for is set by the platform and cannot be spoofed by the client,
+  // making it reliable. x-real-ip is also reliable.
+  const realIp = request.headers["x-real-ip"];
+  if (typeof realIp === "string") return realIp;
+  if (Array.isArray(realIp) && realIp[0]) return realIp[0];
+
+  const vercelForwarded = request.headers["x-vercel-forwarded-for"];
+  if (typeof vercelForwarded === "string") return vercelForwarded;
+  if (Array.isArray(vercelForwarded) && vercelForwarded[0]) return vercelForwarded[0];
+
+  // Fallback to x-forwarded-for if no platform headers are available
   const forwarded = request.headers["x-forwarded-for"];
   if (typeof forwarded === "string") {
     return forwarded.split(",")[0]?.trim() || null;
@@ -17,7 +28,13 @@ export function getClientIp(request: VercelRequest): string | null {
   if (Array.isArray(forwarded)) {
     return forwarded[0]?.trim() || null;
   }
-  return request.socket?.remoteAddress || null;
+
+  // Fallback to direct connection IP if not behind known proxies
+  if (request.socket?.remoteAddress) {
+    return request.socket.remoteAddress;
+  }
+
+  return null;
 }
 
 export async function withRateLimit(
@@ -88,4 +105,3 @@ export async function withApiKeyRateLimit(
   await recordUsage(apiKey.userId, ip, action);
   return result;
 }
-
