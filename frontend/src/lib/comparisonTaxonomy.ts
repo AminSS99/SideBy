@@ -11,6 +11,7 @@ export type ComparisonCategory =
   | "health_fitness"
   | "method_framework"
   | "technical_standard"
+  | "politics_policy"
   | "general_research"
   | "unsupported"
   | "sensitive";
@@ -426,6 +427,34 @@ export const COMPARISON_CATEGORIES: Record<ComparisonCategory, ComparisonCategor
     safetyLevel: "standard",
     keywords: ["compare", "versus", "vs"],
     entityHints: [],
+  },
+  politics_policy: {
+    id: "politics_policy",
+    label: "Politics & Policy",
+    shortLabel: "Politics",
+    description: "Political parties, policies, ideologies, legislative proposals, and governance approaches compared factually.",
+    examples: ["Democrats vs Republicans", "Capitalism vs Socialism", "Universal healthcare vs private healthcare", "Gun control vs gun rights"],
+    blockedExamples: ["Which political party is evil", "Which politician is a better person", "Ranking ethnic groups by political leaning"],
+    defaultDimensions: dims([
+      ["Policy Positions", "Stated platform, legislative priorities, and ideological stance", 1.2],
+      ["Economic Impact", "GDP, employment, deficit, tax, and distributional effects from credible sources", 1.1],
+      ["Social Impact", "Healthcare, education, civil rights, and community outcomes", 1],
+      ["Historical Track Record", "Legislative achievements, governance outcomes, and precedent", 0.95],
+      ["Public Opinion", "Polling data, voter demographics, and approval trends", 0.9],
+      ["Criticisms & Risks", "Common objections, failure modes, and unintended consequences", 0.85],
+    ]),
+    sourceRequirements: ["official party or government pages", "nonpartisan research organizations", "reputable news sources", "academic or policy institute sources"],
+    searchAngles: ["official policy platform", "nonpartisan analysis", "economic impact study", "public opinion polling"],
+    resultTone: "Factual, balanced, and nonpartisan. Present multiple perspectives with sources. Never endorse a party or ideology.",
+    disclaimer: "Political comparisons are informational. SideBy presents sourced facts and multiple perspectives, not endorsements. Verify voting rules and current positions with official sources.",
+    freshnessClass: "volatile",
+    safetyLevel: "informational",
+    keywords: ["politics", "political", "party", "democrat", "republican", "liberal", "conservative", "progressive", "libertarian", "socialist", "capitalism", "communism", "policy", "legislation", "election", "vote", "voting", "congress", "senate", "parliament", "government", "governance", "ideology", "tax policy", "healthcare policy", "immigration", "climate policy", "gun control", "abortion", "welfare"],
+    entityHints: [
+      "democrats", "republicans", "libertarian", "green party", "labour", "tories",
+      "capitalism", "socialism", "communism", "fascism", "progressive", "conservative",
+      "universal healthcare", "private healthcare", "gun control", "gun rights",
+    ],
   },
   unsupported: {
     id: "unsupported",
@@ -885,16 +914,15 @@ export const analyzeComparisonQuery = (rawQuery: string): ComparisonIntent => {
     return {
       category,
       label: definition.label,
-      status: "needs_context",
-      canStart: false,
+      status: "ready",
+      canStart: true,
       safetyLevel: definition.safetyLevel,
-      confidence: Math.min(confidence, 0.42),
+      confidence: Math.min(confidence, 0.52),
       entityA: titleCase(entityA),
       entityB: titleCase(entityB),
-      message: "These may be comparable, but SideBy needs a concrete context before researching a general pair.",
+      message: `Ready to compare ${titleCase(entityA)} and ${titleCase(entityB)}. Add "for ..." for a sharper verdict.`,
       suggestion: `${titleCase(entityA)} vs ${titleCase(entityB)} for a buying, work, study, or planning decision`,
       disclaimer: definition.disclaimer,
-      policyNote: "General comparisons require context.",
       sourceRequirements: definition.sourceRequirements,
       signals,
     };

@@ -3,7 +3,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { cn } from "@/lib/utils";
 import { panelClass } from "./constants";
-import { Terminal } from "lucide-react";
+import { Terminal, Check } from "lucide-react";
 import type { ComparisonActivityStep, ResearchStep } from "./types";
 
 interface ResearchLoaderProps {
@@ -116,6 +116,45 @@ export const ResearchLoader = ({
       { opacity: 1, x: 0, duration: 0.5, ease: "power2.out" }
     );
 
+    // Animate newly completed check icon with springy back pop
+    if (activeStep > 0) {
+      gsap.fromTo(`.step-${activeStep - 1} .check-icon`,
+        { scale: 0, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.8)", clearProps: "transform" }
+      );
+    }
+
+    // Continuous rotation for HUD elements
+    gsap.to(".hud-ring-1", {
+      rotate: 360,
+      duration: 35,
+      repeat: -1,
+      ease: "none",
+      transformOrigin: "center center"
+    });
+    gsap.to(".hud-ring-2", {
+      rotate: -360,
+      duration: 25,
+      repeat: -1,
+      ease: "none",
+      transformOrigin: "center center"
+    });
+    gsap.to(".hud-ring-3", {
+      rotate: 180,
+      duration: 15,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut",
+      transformOrigin: "center center"
+    });
+    gsap.to(".hud-axis", {
+      rotate: 360,
+      duration: 60,
+      repeat: -1,
+      ease: "none",
+      transformOrigin: "center center"
+    });
+
   }, [progress, activeStep]);
 
   return (
@@ -126,6 +165,17 @@ export const ResearchLoader = ({
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] max-w-2xl max-h-2xl bg-orange-600/10 blur-[60px] rounded-full pointer-events-none z-0" 
       />
       
+      {/* Concentric Rotating Cyber HUD Radar Overlay */}
+      <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] opacity-[0.035] z-0">
+        <svg className="w-full h-full" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="46" fill="none" stroke="#ea580c" strokeWidth="0.3" strokeDasharray="3 15" className="hud-ring-1 origin-center" />
+          <circle cx="50" cy="50" r="38" fill="none" stroke="#ea580c" strokeWidth="0.1" strokeDasharray="20 4" className="hud-ring-2 origin-center" />
+          <circle cx="50" cy="50" r="30" fill="none" stroke="#ea580c" strokeWidth="0.2" className="hud-ring-3 origin-center" />
+          <line x1="50" y1="4" x2="50" y2="96" stroke="#ea580c" strokeWidth="0.05" strokeDasharray="2 4" className="hud-axis origin-center" />
+          <line x1="4" y1="50" x2="96" y2="50" stroke="#ea580c" strokeWidth="0.05" strokeDasharray="2 4" className="hud-axis origin-center" />
+        </svg>
+      </div>
+
       {/* Cinematic scanning line */}
       <div 
         ref={scanLineRef}
@@ -181,12 +231,18 @@ export const ResearchLoader = ({
                 <span className="w-6 text-[#fdfbf7]/30 tabular-nums text-xs font-serif italic text-right">
                   0{index + 1}
                 </span>
-                <step.icon
-                  className={cn(
-                    "h-4 w-4 shrink-0",
-                    isActive ? "text-orange-500" : "text-[#fdfbf7]/30",
-                  )}
-                />
+                {index < activeStep ? (
+                  <div className="check-icon flex items-center justify-center h-4 w-4 shrink-0 text-emerald-500">
+                    <Check className="h-3.5 w-3.5" />
+                  </div>
+                ) : (
+                  <step.icon
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      isActive ? "text-orange-500" : "text-[#fdfbf7]/30",
+                    )}
+                  />
+                )}
                 <div className="flex-1 min-w-0">
                   <p className={cn("truncate", isActive ? "text-orange-400 font-bold tracking-wide" : "text-[#fdfbf7]/80")}>
                     {step.label}
@@ -237,7 +293,7 @@ export const ResearchLoader = ({
               )}>
                 {log.status}
               </span>
-              <span>{log.message}</span>
+              <TypewriterText text={log.message} />
             </div>
           ))}
           <div ref={terminalEndRef} className="h-2 flex items-center gap-2">
@@ -247,4 +303,24 @@ export const ResearchLoader = ({
       </div>
     </div>
   );
+};
+
+const TypewriterText = ({ text, speed = 10 }: { text: string; speed?: number }) => {
+  const [displayedText, setDisplayedText] = useState("");
+
+  useEffect(() => {
+    setDisplayedText("");
+    let index = 0;
+    const interval = setInterval(() => {
+      setDisplayedText((prev) => prev + text.charAt(index));
+      index++;
+      if (index >= text.length) {
+        clearInterval(interval);
+      }
+    }, speed);
+
+    return () => clearInterval(interval);
+  }, [text, speed]);
+
+  return <span>{displayedText}</span>;
 };

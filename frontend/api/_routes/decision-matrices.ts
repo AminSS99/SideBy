@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../_lib/auth.js";
 import { canAccessComparison } from "../_lib/db-auth.js";
 import { sendJson } from "../_lib/sideby.js";
+import { queueSnapSolveEvent } from "../_lib/snapsolve-core.js";
 import { createDbClient } from "../../src/db/index.js";
 import { decisionMatrices } from "../../src/db/schema.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -65,6 +66,23 @@ export default async function handler(
           result: body.result,
         })
         .returning();
+      queueSnapSolveEvent({
+        clerkUserId: auth.userId,
+        eventType: "sideby.decision.saved",
+        idempotencyKey: row.id,
+        metadata: {
+          comparison_id: row.comparisonId,
+          decision_id: row.id,
+          status: "saved",
+        },
+      }).catch((error) => {
+        console.warn(JSON.stringify({
+          error: error instanceof Error ? error.message : "Unknown SnapSolve outbox error",
+          matrixId: row.id,
+          timestamp: new Date().toISOString(),
+          type: "snapsolve_outbox_enqueue_failed",
+        }));
+      });
       return sendJson(response, { matrix: row }, 201);
     }
 

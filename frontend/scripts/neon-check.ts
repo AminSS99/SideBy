@@ -12,7 +12,9 @@ const databaseUrl =
   "";
 
 if (!databaseUrl) {
-  throw new Error("Set DATABASE_URL or POSTGRES_URL before checking Neon schema.");
+  throw new Error(
+    "Set DATABASE_URL or POSTGRES_URL before checking Neon schema.",
+  );
 }
 
 const sql = neon(databaseUrl);
@@ -67,6 +69,7 @@ const requiredTables = [
   "knowledge_documents",
   "knowledge_chunks",
   "audit_logs",
+  "snapsolve_outbox",
 ] as const;
 
 const requiredIndexes = [
@@ -116,7 +119,9 @@ const main = async () => {
     [[...new Set(requiredColumns.map(([table]) => table))]],
   )) as ColumnRow[];
 
-  const columns = new Set(columnRows.map((row) => `${row.table_name}.${row.column_name}`));
+  const columns = new Set(
+    columnRows.map((row) => `${row.table_name}.${row.column_name}`),
+  );
   const missingColumns = requiredColumns
     .map(([table, column]) => `${table}.${column}`)
     .filter((column) => !columns.has(column));
@@ -136,14 +141,19 @@ const main = async () => {
 
   if (missingTables.length || missingColumns.length || missingIndexes.length) {
     console.error("Neon schema check failed.");
-    if (missingTables.length) console.error(`Missing tables: ${missingTables.join(", ")}`);
-    if (missingColumns.length) console.error(`Missing columns: ${missingColumns.join(", ")}`);
-    if (missingIndexes.length) console.error(`Missing indexes: ${missingIndexes.join(", ")}`);
+    if (missingTables.length)
+      console.error(`Missing tables: ${missingTables.join(", ")}`);
+    if (missingColumns.length)
+      console.error(`Missing columns: ${missingColumns.join(", ")}`);
+    if (missingIndexes.length)
+      console.error(`Missing indexes: ${missingIndexes.join(", ")}`);
     process.exit(1);
   }
 
   console.log("Neon schema check passed.");
-  console.log(`Verified ${requiredTables.length} tables, ${requiredColumns.length} columns, and ${requiredIndexes.length} indexes.`);
+  console.log(
+    `Verified ${requiredTables.length} tables, ${requiredColumns.length} columns, and ${requiredIndexes.length} indexes.`,
+  );
 };
 
 main().catch((error) => {

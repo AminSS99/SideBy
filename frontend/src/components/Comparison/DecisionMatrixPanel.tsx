@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { Sliders, Trophy, Save, Trash2, HelpCircle, Activity, Sparkles, FolderOpen, Lock } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -47,7 +47,7 @@ export const DecisionMatrixPanel = ({
   }, [result.dimensions]);
 
   // Load saved matrices for this comparison
-  const loadSavedMatrices = async () => {
+  const loadSavedMatrices = useCallback(async () => {
     if (!session) return;
     try {
       setIsLoadingSaved(true);
@@ -60,13 +60,13 @@ export const DecisionMatrixPanel = ({
     } finally {
       setIsLoadingSaved(false);
     }
-  };
+  }, [comparisonId, session]);
 
   useEffect(() => {
     if (session) {
       void loadSavedMatrices();
     }
-  }, [comparisonId, session]);
+  }, [loadSavedMatrices, session]);
 
   // Calculate weighted scores in real-time
   const scores = useMemo(() => {

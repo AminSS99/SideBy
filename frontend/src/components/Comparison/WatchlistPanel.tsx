@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import { Eye, EyeOff, Calendar, AlertTriangle, Play, Pause, Trash2, Sparkles, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
@@ -36,7 +36,7 @@ export const WatchlistPanel = ({
   const [cadence, setCadence] = useState<"daily" | "weekly" | "monthly">("weekly");
   const [alertThreshold, setAlertThreshold] = useState<number>(0.1); // default 10%
 
-  const fetchWatchlist = async () => {
+  const fetchWatchlist = useCallback(async () => {
     if (!session) return;
     try {
       setIsLoading(true);
@@ -58,13 +58,13 @@ export const WatchlistPanel = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [comparisonId, session]);
 
   useEffect(() => {
     if (session) {
       void fetchWatchlist();
     }
-  }, [comparisonId, session]);
+  }, [fetchWatchlist, session]);
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -16,7 +16,10 @@ pnpm exec tsc --noEmit
 # 3. Verify ESLint rules
 pnpm lint
 
-# 4. Compile the optimized production bundles
+# 4. Verify dependency audit threshold
+pnpm audit --audit-level high
+
+# 5. Compile the optimized production bundles
 pnpm run build
 ```
 
@@ -27,14 +30,15 @@ Add the following keys to your project in the Vercel Dashboard under **Project S
 
 ### Frontend & Core Authentication
 * `VITE_CLERK_PUBLISHABLE_KEY`: Clerk Publishable Key (production instance).
+* `VITE_APP_URL`: Canonical production app URL for redirects and generated links.
 * `CLERK_SECRET_KEY`: Clerk Secret API Key.
 * `CLERK_WEBHOOK_SECRET`: Signature verification key for Clerk webhook sync (`/api/webhooks/clerk`).
 
 ### Database & Caching
 * `DATABASE_URL`: Neon PostgreSQL Connection string (pooled).
 * `DATABASE_URL_UNPOOLED`: Neon PostgreSQL Connection string (direct/unpooled for migrations).
-* `REDIS_URL`: Upstash Redis connection string (`redis://...`) for job concurrency locks, execution state, and rate limits.
-* `REDIS_TOKEN`: Upstash Redis auth token.
+* `REDIS_URL`: Upstash Redis REST URL (`https://...`) for job concurrency locks, execution state, and rate limits.
+* `REDIS_TOKEN`: Upstash Redis REST API token.
 
 ### Search & Scraping Web APIs
 * `TAVILY_API_KEY`: Tavily Search Engine API key (for target-entity search & fact extraction).
@@ -46,9 +50,19 @@ Add the following keys to your project in the Vercel Dashboard under **Project S
 * `OPENAI_API_KEY`: OpenAI API key (for generating `text-embedding-3-small` vector spaces).
 
 ### Billing & Subscription Infrastructure
-* `PADDLE_CLIENT_TOKEN`: Paddle client-side js initialization token.
-* `PADDLE_WEBHOOK_SECRET`: Signature verification token for subscription sync (`/api/webhooks/subscriptions`).
-* `NEXT_PUBLIC_PADDLE_ENV`: Set to `production` (default is `sandbox` for testing).
+* `PADDLE_API_KEY`: Paddle server API key for checkout and customer portal sessions.
+* `PADDLE_WEBHOOK_SECRET`: Signature verification token for subscription sync (`/api/webhooks/paddle`).
+* `PADDLE_ENVIRONMENT`: Set to `production` for live billing, `sandbox` for testing.
+* `PADDLE_PRO_PRICE_ID`: Paddle price id for the Pro plan.
+* `PADDLE_TEAM_PRICE_ID`: Paddle price id for the Team plan.
+* `PADDLE_ENTERPRISE_PRICE_ID`: Paddle price id for enterprise checkout, if enabled.
+
+### SnapSolve Ecosystem Bridge
+* `SNAPSOLVE_CORE_URL`: SnapSolve Core base URL for workspace and entitlement resolution.
+* `SNAPSOLVE_SIDEBY_SECRET`: Product HMAC secret registered with SnapSolve Core.
+
+### Scheduled Jobs
+* `CRON_SECRET`: Bearer token required for `/api/jobs/drain` and watchlist cron endpoints.
 
 ### Slack Bot Integration
 * `SLACK_SIGNING_SECRET`: HMAC-SHA256 signature verification key for verifying requests to `/api/integrations/slack/events`.
@@ -65,14 +79,14 @@ Add the following keys to your project in the Vercel Dashboard under **Project S
 To transition billing from sandbox mode to live payments:
 1. Log in to your **Paddle Merchant Dashboard** (production).
 2. Set up the subscription price models and copy the **Product IDs** and **Price IDs**.
-3. Update the subscription configuration file `frontend/api/_lib/billing/config.ts` (if applicable) with the production ID values.
-4. Add the live webhook endpoint URL in Paddle: `https://yourdomain.com/api/webhooks/subscriptions`.
+3. Set `PADDLE_PRO_PRICE_ID`, `PADDLE_TEAM_PRICE_ID`, and optionally `PADDLE_ENTERPRISE_PRICE_ID` in Vercel.
+4. Add the live webhook endpoint URL in Paddle: `https://yourdomain.com/api/webhooks/paddle`.
 5. Select the following event subscriptions in Paddle:
    * `subscription.created`
    * `subscription.updated`
    * `subscription.canceled`
 6. Copy the newly generated **Webhook Secret Key** from Paddle and set it as `PADDLE_WEBHOOK_SECRET` in Vercel.
-7. Change `NEXT_PUBLIC_PADDLE_ENV` to `production` in your Vercel project configuration.
+7. Change `PADDLE_ENVIRONMENT` to `production` in your Vercel project configuration.
 
 ---
 

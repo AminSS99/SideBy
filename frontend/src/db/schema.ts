@@ -917,3 +917,30 @@ export const webhookSubscriptions = pgTable(
   ],
 );
 
+// ─── SnapSolve Ecosystem Outbox ─────────────────────────────────────────────
+
+export const snapSolveOutbox = pgTable(
+  "snapsolve_outbox",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    eventId: text("event_id").notNull().unique(),
+    eventType: text("event_type").notNull(),
+    product: text("product").default("sideby").notNull(),
+    clerkUserId: text("clerk_user_id"),
+    productUserId: text("product_user_id"),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
+    email: text("email"),
+    metadata: jsonb("metadata").default({}).notNull(),
+    status: text("status").default("queued").notNull(),
+    attemptCount: integer("attempt_count").default(0).notNull(),
+    lastError: text("last_error"),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).defaultNow().notNull(),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("snapsolve_outbox_status_next_attempt_idx").on(table.status, table.nextAttemptAt),
+    index("snapsolve_outbox_user_idx").on(table.clerkUserId),
+  ],
+);

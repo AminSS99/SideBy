@@ -7,14 +7,13 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { requireAuth } from "../_lib/auth.js";
 import { getUsageStatus } from "../_lib/rate-limit.js";
 import { sendJson } from "../_lib/sideby.js";
+import { resolveSubscriptionState } from "../_lib/subscription.js";
 import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
   queryAnalytics,
   aiRuns,
   feedback as feedbackTable,
-  organizations,
-  subscriptions,
 } from "../../src/db/schema.js";
 import { comparisonCache } from "../_lib/cache-layer.js";
 import {
@@ -269,47 +268,26 @@ export default async function handler(
       });
     }
 
-    // Standard usage endpoint
-    const db = createDbClient();
-    const [org] = auth.orgId
-      ? await db
-          .select({ plan: organizations.plan })
-          .from(organizations)
-          .where(eq(organizations.id, auth.orgId))
-          .limit(1)
-      : [];
-    const [activeSubscription] = await db
-      .select({ status: subscriptions.status })
-      .from(subscriptions)
-      .where(
-        and(
-          sql`${subscriptions.status} in ('active', 'trialing')`,
-          auth.orgId
-            ? sql`(${subscriptions.organizationId} = ${auth.orgId} OR ${subscriptions.userId} = ${auth.userId})`
-            : eq(subscriptions.userId, auth.userId),
-        ),
-      )
-      .limit(1);
-
-    const plan = org?.plan && org.plan !== "free"
-      ? org.plan
-      : activeSubscription
-        ? "pro"
-        : "free";
+    const subscription = await resolveSubscriptionState({
+      userId: auth.userId,
+      orgId: auth.orgId,
+      feature: "comparison",
+    });
     const status = await getUsageStatus("user", auth.userId);
-    const isUnlimited = plan !== "free";
 
     return sendJson(response, {
-      plan,
-      limits: {
-        comparisonsPerDay: isUnlimited ? Number.MAX_SAFE_INTEGER : Number(process.env.FREE_COMPARISONS_PER_DAY || "5"),
-        followUpsPerDay: isUnlimited ? Number.MAX_SAFE_INTEGER : Number(process.env.FREE_FOLLOWUPS_PER_DAY || "10"),
-        refreshesPerDay: isUnlimited ? Number.MAX_SAFE_INTEGER : Number(process.env.FREE_REFRESHES_PER_DAY || "3"),
-        exportsPerDay: isUnlimited ? Number.MAX_SAFE_INTEGER : Number(process.env.FREE_EXPORTS_PER_DAY || "10"),
-      },
+      plan: subscription.plan,
+      limits: subscription.limits,
       usage: status,
-      billingConfigured: Boolean(process.env.PADDLE_API_KEY),
-      message: isUnlimited ? "Your paid plan is active." : "You are on the free plan.",
+      billingConfigured: subscription.billingConfigured,
+      subscription: {
+        source: subscription.source,
+        status: subscription.status,
+        billingProvider: subscription.billingProvider,
+        entitlement: subscription.entitlement,
+        snapsolveWorkspace: subscription.snapsolveWorkspace,
+      },
+      message: subscription.message,
     });
   } catch (error) {
     const status =

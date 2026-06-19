@@ -33,6 +33,7 @@ import apiKeysIdHandler from "./_routes/api-keys/[id].js";
 import chatHandler from "./_routes/chat.js";
 import csrfHandler from "./_routes/csrf.js";
 import decisionMatricesHandler from "./_routes/decision-matrices.js";
+import ecosystemSessionHandler from "./_routes/ecosystem-session.js";
 import healthHandler from "./_routes/health.js";
 import integrationsSlack from "./_routes/integrations/slack.js";
 import jobsDrain from "./_routes/jobs/drain.js";
@@ -110,6 +111,9 @@ export default async function handler(
   if (segment0 === "projects") {
     request.query.resource = "projects";
     return workspaceHandler(request, response);
+  }
+  if (segment0 === "ecosystem" && segment1 === "session") {
+    return ecosystemSessionHandler(request, response);
   }
 
   // Knowledge base sub-routes

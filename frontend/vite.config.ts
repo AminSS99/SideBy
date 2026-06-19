@@ -3,11 +3,11 @@ import dyadComponentTagger from "@dyad-sh/react-vite-component-tagger";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
-export default defineConfig(() => ({
+export default defineConfig(({ mode }) => ({
   envPrefix: ["VITE_", "NEXT_PUBLIC_"],
   define: {
-    "process.env.NODE_ENV": JSON.stringify("production"),
-    __DEV__: "false",
+    "process.env.NODE_ENV": JSON.stringify(mode === "production" ? "production" : "development"),
+    __DEV__: mode !== "production",
   },
   server: {
     host: "::",

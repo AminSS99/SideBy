@@ -11,6 +11,7 @@ import ReverseProtectedRoute from "@/components/auth/ReverseProtectedRoute";
 import AppShell from "@/components/layout/AppShell";
 import GlobalErrorBoundary from "@/components/ErrorBoundary";
 import ScrollToTop from "@/components/ScrollToTop";
+import { SnapsolveFloatingWidget } from "@/components/layout/SnapsolveFloatingWidget";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
@@ -48,6 +49,7 @@ const SettingsPage = lazy(() => import("./pages/app/SettingsPage"));
 const WorkspacesPage = lazy(() => import("./pages/app/WorkspacesPage"));
 const TeamPage = lazy(() => import("./pages/app/TeamPage"));
 const OnboardingPage = lazy(() => import("./pages/app/OnboardingPage"));
+const DemoOne = lazy(() => import("./components/ui/demo"));
 
 /**
  * Production-grade QueryClient configuration:
@@ -96,6 +98,7 @@ const App = () => {
                 <Toaster />
                 <Sonner />
                 <ScrollToTop />
+                <SnapsolveFloatingWidget />
                   <Suspense fallback={<LazyFallback />}>
                     <Routes>
                     {/* Public marketing pages */}
@@ -112,6 +115,7 @@ const App = () => {
                     <Route path="/legal/refund" element={<RefundPolicy />} />
                     <Route path="/legal/security" element={<SecurityOverview />} />
                     <Route path="/compare/:slug" element={<Compare />} />
+                    <Route path="/demo" element={<DemoOne />} />
 
                     {/* Auth pages — reverse protected so signed-in users get redirected */}
                     <Route

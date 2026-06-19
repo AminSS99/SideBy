@@ -10,6 +10,10 @@ import { normalizeQuery } from "./query-normalizer.js";
 import { isFreshEnough, isStaleButUsable, getFreshnessClass, freshnessLabel } from "./reuse-engine.js";
 import { comparisonCache, trackCacheHit } from "./cache-layer.js";
 import {
+  canAccessComparison as canAccessComparisonRecord,
+  canMutateComparison,
+} from "./db-auth.js";
+import {
   analyzeComparisonQuery,
   summarizeComparisonTaxonomy,
   type ComparisonTaxonomySummary,
@@ -149,27 +153,6 @@ export const sendJson = (response: VercelResponse, payload: unknown, status = 20
     response.setHeader("Cache-Control", "no-store");
   }
   return response.status(status).json(payload);
-};
-
-const isPrivateOwnershipRequired = () =>
-  Boolean(process.env.CLERK_SECRET_KEY) ||
-  process.env.VERCEL === "1" ||
-  process.env.NODE_ENV === "production";
-
-const canAccessComparison = (
-  visibility: "private" | "team" | "public",
-  ownerId: string | null,
-  clerkUserId: string | null,
-) => {
-  if (visibility === "public") return true;
-  if (
-    !isPrivateOwnershipRequired() &&
-    process.env.DEV_ALLOW_PUBLIC_COMPARISON_ACCESS === "true" &&
-    !ownerId
-  ) {
-    return true;
-  }
-  return Boolean(ownerId && clerkUserId && ownerId === clerkUserId);
 };
 
 export interface CreateComparisonInput {
@@ -670,7 +653,8 @@ export const getComparisonJob = async (
   if (!rows[0]) throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
 
   const d = rows[0];
-  if (!canAccessComparison(d.visibility, d.clerkUserId, clerkUserId)) {
+  const hasAccess = await canAccessComparisonRecord(db, clerkUserId, id);
+  if (!hasAccess) {
     throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
   }
 
@@ -734,8 +718,12 @@ export const publishComparison = async (
   id: string,
   clerkUserId: string | null = null,
 ): Promise<ComparisonJob> => {
-  const job = await getComparisonJob(id, clerkUserId);
   const db = createDbClient();
+  if (!clerkUserId || !(await canMutateComparison(db, clerkUserId, id))) {
+    throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
+  }
+
+  const job = await getComparisonJob(id, clerkUserId);
 
   await db
     .update(comparisons)
@@ -749,8 +737,12 @@ export const unpublishComparison = async (
   id: string,
   clerkUserId: string | null = null,
 ): Promise<ComparisonJob> => {
-  const job = await getComparisonJob(id, clerkUserId);
   const db = createDbClient();
+  if (!clerkUserId || !(await canMutateComparison(db, clerkUserId, id))) {
+    throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
+  }
+
+  const job = await getComparisonJob(id, clerkUserId);
 
   await db
     .update(comparisons)

@@ -1,4 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+
+gsap.registerPlugin(ScrollTrigger);
 import {
   Activity,
   BookOpenCheck,
@@ -418,7 +423,7 @@ const ScoreBar = ({ label, score, color }: { label: string; score: number; color
       <span className="font-mono text-[#fdfbf7]">{score.toFixed(1)}</span>
     </div>
     <div className="h-2 overflow-hidden rounded-sm bg-[#252525]">
-      <div className="h-full rounded-sm" style={{ width: `${Math.max(0, Math.min(100, score))}%`, backgroundColor: color }} />
+      <div className="h-full rounded-sm transition-all duration-500 ease-out" style={{ width: `${Math.max(0, Math.min(100, score))}%`, backgroundColor: color }} />
     </div>
   </div>
 );
@@ -516,6 +521,7 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
   const facts = useMemo(() => allFacts(result).slice(0, 8), [result]);
   const graph = useMemo(() => buildGraph(result, facts), [facts, result]);
   const [selectedId, setSelectedId] = useState(graph.nodes[0]?.id || "");
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setSelectedId(graph.nodes[0]?.id || "");
@@ -524,8 +530,50 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
   const nodeMap = new Map(graph.nodes.map((node) => [node.id, node]));
   const selected = nodeMap.get(selectedId) || graph.nodes[0];
 
+  // Compute related nodes for highlighting & dimming
+  const relatedNodeIds = useMemo(() => {
+    if (!selectedId) return new Set<string>();
+    const set = new Set<string>([selectedId]);
+    graph.edges.forEach((edge) => {
+      if (edge.from === selectedId) set.add(edge.to);
+      if (edge.to === selectedId) set.add(edge.from);
+    });
+    return set;
+  }, [graph.edges, selectedId]);
+
+  useGSAP(() => {
+    if (!containerRef.current) return;
+
+    // Staggered node entrance animation when scrolled into view
+    gsap.from(".graph-node-btn", {
+      scrollTrigger: {
+        trigger: containerRef.current,
+        start: "top 85%",
+      },
+      scale: 0.8,
+      opacity: 0,
+      y: 15,
+      stagger: 0.04,
+      duration: 0.8,
+      ease: "back.out(1.5)",
+    });
+  }, { scope: containerRef });
+
+  useGSAP(() => {
+    if (selectedId) {
+      // Flow animation on the active dash array paths
+      const activeLines = gsap.utils.toArray(".graph-active-line");
+      if (activeLines.length) {
+        gsap.fromTo(activeLines,
+          { strokeDashoffset: 10 },
+          { strokeDashoffset: 0, duration: 0.8, repeat: -1, ease: "none" }
+        );
+      }
+    }
+  }, [selectedId]);
+
   return (
-    <section id="evidence-graph" className={cn(panelClass, "overflow-hidden scroll-mt-28")}>
+    <section ref={containerRef} id="evidence-graph" className={cn(panelClass, "overflow-hidden scroll-mt-28")}>
       <div className="p-6 md:p-8">
         <SectionHeader icon={Network} eyebrow="Evidence graph" title="Claim to source map" />
       </div>
@@ -537,6 +585,10 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
               const from = nodeMap.get(edge.from);
               const to = nodeMap.get(edge.to);
               if (!from || !to) return null;
+
+              const isActiveEdge = edge.from === selectedId || edge.to === selectedId;
+              const isDimmedEdge = selectedId && !isActiveEdge;
+
               return (
                 <line
                   key={`${edge.from}-${edge.to}-${index}`}
@@ -544,33 +596,42 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
                   y1={`${from.y}%`}
                   x2={`${to.x}%`}
                   y2={`${to.y}%`}
-                  stroke={edge.color}
-                  strokeOpacity="0.28"
-                  strokeWidth="1"
+                  stroke={isActiveEdge ? "#ea580c" : edge.color}
+                  strokeOpacity={isActiveEdge ? "0.9" : isDimmedEdge ? "0.08" : "0.28"}
+                  strokeWidth={isActiveEdge ? "1.5" : "1"}
+                  strokeDasharray={isActiveEdge ? "5 5" : undefined}
+                  className={cn(
+                    "transition-all duration-300",
+                    isActiveEdge && "graph-active-line"
+                  )}
                 />
               );
             })}
           </svg>
 
-          {graph.nodes.map((node) => (
-            <button
-              key={node.id}
-              type="button"
-              onClick={() => setSelectedId(node.id)}
-              className={cn(
-                "absolute max-w-[170px] -translate-x-1/2 -translate-y-1/2 rounded-sm border bg-[#111]/95 px-3 py-2 text-left shadow-2xl transition-all hover:z-20 hover:border-orange-500/50",
-                selectedId === node.id ? "z-20 border-orange-500/60" : "z-10 border-[#333]",
-              )}
-              style={{ left: `${node.x}%`, top: `${node.y}%` }}
-            >
-              <span className="block text-[8px] font-bold uppercase tracking-widest" style={{ color: node.color }}>
-                {node.type}
-              </span>
-              <span className="mt-1 block truncate text-xs font-medium text-[#fdfbf7]">
-                {node.label}
-              </span>
-            </button>
-          ))}
+          {graph.nodes.map((node) => {
+            const isDimmed = selectedId && !relatedNodeIds.has(node.id);
+            return (
+              <button
+                key={node.id}
+                type="button"
+                onClick={() => setSelectedId(node.id)}
+                className={cn(
+                  "absolute max-w-[170px] -translate-x-1/2 -translate-y-1/2 rounded-sm border bg-[#111]/95 px-3 py-2 text-left shadow-2xl transition-all hover:z-20 hover:border-orange-500/50 graph-node-btn",
+                  selectedId === node.id ? "z-20 border-orange-500/60 scale-105" : "z-10 border-[#333]",
+                  isDimmed ? "opacity-35 hover:opacity-85 scale-95" : "opacity-100"
+                )}
+                style={{ left: `${node.x}%`, top: `${node.y}%` }}
+              >
+                <span className="block text-[8px] font-bold uppercase tracking-widest" style={{ color: node.color }}>
+                  {node.type}
+                </span>
+                <span className="mt-1 block truncate text-xs font-medium text-[#fdfbf7]">
+                  {node.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <aside className="border-t border-[#2a2a2a] bg-[#0c0b0a] p-6 xl:border-l xl:border-t-0">

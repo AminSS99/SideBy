@@ -163,7 +163,7 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
       fullName: clerkUser.fullName,
       imageUrl: clerkUser.imageUrl,
     };
-  }, [clerkUser, isSignedIn, isLoaded]);
+  }, [cachedUser, clerkUser, isSignedIn, isLoaded]);
 
   // Sync user to cache whenever it changes
   useEffect(() => {
@@ -183,6 +183,7 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.removeItem("sideby.activeProjectId");
       localStorage.removeItem("sideby.preferences");
       localStorage.removeItem("sideby.workspaceDraft");
+      localStorage.removeItem("sideby.workspace.cache");
     } catch {
       // Ignore storage errors
     }
@@ -220,7 +221,7 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
         await handleSignOut();
       },
     }),
-    [handleSignOut, isLoaded, user],
+    [cachedUser, handleSignOut, isLoaded, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

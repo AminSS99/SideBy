@@ -13,9 +13,29 @@ type UsageStatus = {
     followUpsPerDay: number;
     refreshesPerDay: number;
     exportsPerDay: number;
+    watchlistsPerDay?: number;
   };
   usage: Record<string, { used: number; limit: number; remaining: number }>;
   billingConfigured: boolean;
+  subscription?: {
+    source: string;
+    status: string;
+    billingProvider: "paddle" | "snapsolve" | "none";
+    entitlement: {
+      allowed: boolean;
+      feature: string;
+      plan: string | null;
+      reason: string | null;
+      source: string | null;
+      workspaceId: string | null;
+    } | null;
+    snapsolveWorkspace: {
+      id: string;
+      name: string;
+      slug: string | null;
+      plan: string | null;
+    } | null;
+  };
   message: string;
 };
 
@@ -110,6 +130,10 @@ const BillingPage = () => {
   const currentPlanName = usage?.plan 
     ? usage.plan.charAt(0).toUpperCase() + usage.plan.slice(1) + " Plan" 
     : "Free Plan";
+  const isSnapSolveManaged =
+    usage?.subscription?.billingProvider === "snapsolve" ||
+    usage?.subscription?.source.startsWith("snapsolve_");
+  const isSnapSolveSourced = usage?.subscription?.source.startsWith("snapsolve_");
 
   return (
     <div ref={containerRef} className="space-y-8 max-w-6xl">
@@ -212,40 +236,75 @@ const BillingPage = () => {
                 <p className="text-sm text-[#fdfbf7]/60 leading-relaxed">
                   Manage your billing profiles, view previous invoices, update card methods, or cancel subscription inside the secure customer portal.
                 </p>
-                <button
-                  onClick={manageSubscription}
-                  disabled={portalLoading}
-                  className="w-full flex items-center justify-center gap-2 rounded-sm bg-orange-600 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700 disabled:opacity-50"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  {portalLoading ? "Opening..." : "Customer Portal"}
-                </button>
+                {usage.subscription && (
+                  <div className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-3 text-xs text-[#fdfbf7]/50">
+                    <p className="font-bold uppercase tracking-widest text-[#fdfbf7]/70">
+                      {isSnapSolveSourced ? "SnapSolve ecosystem" : "Local billing"}
+                    </p>
+                    <p className="mt-1">
+                      Source: {usage.subscription.source.replace(/_/g, " ")}
+                    </p>
+                    {usage.subscription.snapsolveWorkspace && (
+                      <p className="mt-1">
+                        Workspace: {usage.subscription.snapsolveWorkspace.name}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {isSnapSolveManaged ? (
+                  <a
+                    href="https://snapsolve.ink"
+                    className="w-full flex items-center justify-center gap-2 rounded-sm bg-orange-600 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Manage in SnapSolve
+                  </a>
+                ) : (
+                  <button
+                    onClick={manageSubscription}
+                    disabled={portalLoading}
+                    className="w-full flex items-center justify-center gap-2 rounded-sm bg-orange-600 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700 disabled:opacity-50"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    {portalLoading ? "Opening..." : "Customer Portal"}
+                  </button>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-[#fdfbf7]/60 leading-relaxed">
                   Pro and Team plans with higher limits, priority processing, and advanced features are available for checkout.
                 </p>
-                <div className="grid gap-2">
-                  <button
-                    onClick={() => void requestUpgrade("pro")}
-                    className="rounded-sm bg-[#fdfbf7] px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]"
-                  >
-                    Upgrade to Pro
-                  </button>
-                  <button
-                    onClick={() => void requestUpgrade("team")}
-                    className="rounded-sm border border-[#333] px-4 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-emerald-500/40 hover:text-emerald-300"
-                  >
-                    Upgrade Team
-                  </button>
+                {usage?.subscription?.billingProvider === "snapsolve" ? (
                   <a
-                    href="mailto:hello@snapsolve.ink?subject=SideBy%20Team%20Plan"
-                    className="rounded-sm border border-[#333] px-4 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-orange-500/40 hover:text-orange-300"
+                    href="https://snapsolve.ink"
+                    className="flex items-center justify-center gap-2 rounded-sm bg-[#fdfbf7] px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]"
                   >
-                    Contact Sales
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Open SnapSolve Plans
                   </a>
-                </div>
+                ) : (
+                  <div className="grid gap-2">
+                    <button
+                      onClick={() => void requestUpgrade("pro")}
+                      className="rounded-sm bg-[#fdfbf7] px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]"
+                    >
+                      Upgrade to Pro
+                    </button>
+                    <button
+                      onClick={() => void requestUpgrade("team")}
+                      className="rounded-sm border border-[#333] px-4 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-emerald-500/40 hover:text-emerald-300"
+                    >
+                      Upgrade Team
+                    </button>
+                    <a
+                      href="mailto:hello@snapsolve.ink?subject=SideBy%20Team%20Plan"
+                      className="rounded-sm border border-[#333] px-4 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-orange-500/40 hover:text-orange-300"
+                    >
+                      Contact Sales
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </div>

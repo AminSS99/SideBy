@@ -4,6 +4,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { neon } from "@neondatabase/serverless";
 import { getRedis } from "../_lib/redis.js";
+import { checkEnvironment } from "../_lib/env-check.js";
 
 export const config = {
   runtime: "nodejs",
@@ -21,6 +22,8 @@ export default async function handler(
   const checks: Record<string, "ok" | "error" | "not_configured"> = {
     server: "ok",
   };
+  const env = checkEnvironment();
+  checks.environment = env.status;
 
   // Check database
   const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || "";
@@ -55,6 +58,11 @@ export default async function handler(
   return response.status(allOk ? 200 : 503).json({
     status: allOk ? "healthy" : "degraded",
     checks,
+    environment: {
+      missingRequired: env.missingRequired,
+      missingOptional: env.missingOptional,
+      warnings: env.warnings,
+    },
     timestamp: new Date().toISOString(),
   });
 }

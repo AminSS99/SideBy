@@ -7,9 +7,15 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { Webhook } from "svix";
 import { createDbClient } from "../../../src/db/index.js";
-import { users, organizations, memberships, workspaces } from "../../../src/db/schema.js";
+import {
+  users,
+  organizations,
+  memberships,
+  workspaces,
+} from "../../../src/db/schema.js";
 import { eq } from "drizzle-orm";
 import { logger } from "../../_lib/log.js";
+import { captureServerEvent } from "../../_lib/analytics.js";
 
 const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET || "";
 
@@ -36,17 +42,24 @@ export default async function handler(
     await processWebhook(payload);
     return response.status(200).json({ received: true });
   } catch (error) {
-    logger.error("Webhook processing failed", error instanceof Error ? error : undefined, {
-      provider: "clerk",
-    });
-    const message = error instanceof Error ? error.message : "Webhook processing failed";
+    logger.error(
+      "Webhook processing failed",
+      error instanceof Error ? error : undefined,
+      {
+        provider: "clerk",
+      },
+    );
+    const message =
+      error instanceof Error ? error.message : "Webhook processing failed";
     return response.status(400).json({ error: message });
   }
 }
 
 function verifyWebhook(request: VercelRequest): WebhookPayload {
   if (!WEBHOOK_SECRET) {
-    throw new Error("CLERK_WEBHOOK_SECRET is not configured. Set it in your environment variables.");
+    throw new Error(
+      "CLERK_WEBHOOK_SECRET is not configured. Set it in your environment variables.",
+    );
   }
 
   const svix_id = request.headers["svix-id"] as string;
@@ -54,7 +67,9 @@ function verifyWebhook(request: VercelRequest): WebhookPayload {
   const svix_signature = request.headers["svix-signature"] as string;
 
   if (!svix_id || !svix_timestamp || !svix_signature) {
-    throw new Error("Missing Svix headers. Ensure the webhook is sent by Clerk.");
+    throw new Error(
+      "Missing Svix headers. Ensure the webhook is sent by Clerk.",
+    );
   }
 
   const body = JSON.stringify(request.body);
@@ -73,7 +88,9 @@ function verifyWebhook(request: VercelRequest): WebhookPayload {
 
     return payload;
   } catch (err) {
-    throw new Error(`Webhook signature verification failed: ${err instanceof Error ? err.message : "unknown error"}`);
+    throw new Error(
+      `Webhook signature verification failed: ${err instanceof Error ? err.message : "unknown error"}`,
+    );
   }
 }
 
@@ -92,9 +109,9 @@ async function processWebhook(payload: WebhookPayload) {
         image_url?: string;
       };
       const email = userData.email_addresses?.[0]?.email_address ?? null;
-      const name = [userData.first_name, userData.last_name]
-        .filter(Boolean)
-        .join(" ") || null;
+      const name =
+        [userData.first_name, userData.last_name].filter(Boolean).join(" ") ||
+        null;
 
       await db
         .insert(users)
@@ -111,6 +128,14 @@ async function processWebhook(payload: WebhookPayload) {
 
       // Ensure personal workspace exists
       await ensurePersonalWorkspace(db, userData.id, name || email || "User");
+
+      if (type === "user.created") {
+        captureServerEvent(userData.id, "user_signed_up", {
+          email,
+          name,
+          source: "clerk_webhook",
+        });
+      }
       break;
     }
 
