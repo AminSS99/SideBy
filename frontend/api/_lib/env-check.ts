@@ -1,4 +1,5 @@
 import { serverEnv } from "./env.js";
+import { isRuntimeStoreConfigured, getRuntimeStoreKind } from "./redis.js";
 
 type CheckStatus = "ok" | "error" | "not_configured";
 
@@ -26,7 +27,7 @@ export function checkEnvironment(): EnvCheck {
   const requiredInProduction: Array<[string, boolean]> = [
     ["CLERK_SECRET_KEY", present(serverEnv.clerkSecretKey)],
     ["DATABASE_URL or POSTGRES_URL", present(serverEnv.databaseUrl)],
-    ["REDIS_URL/KV_URL + REDIS_TOKEN/KV_REST_API_TOKEN", present(serverEnv.redisUrl) && present(serverEnv.redisToken)],
+    ["Redis or Postgres runtime store", isRuntimeStoreConfigured()],
     ["DEEPSEEK_API_KEY or OPENROUTER_API_KEY", present(serverEnv.deepseekApiKey) || present(serverEnv.openrouterApiKey)],
     ["TAVILY_API_KEY or GOOGLE_SEARCH_API_KEY + GOOGLE_SEARCH_CX", present(serverEnv.tavilyApiKey) || (present(serverEnv.googleSearchApiKey) && present(serverEnv.googleSearchCx))],
     ["OPENAI_API_KEY", present(serverEnv.openaiApiKey)],
@@ -65,6 +66,10 @@ export function checkEnvironment(): EnvCheck {
   );
   if (present(serverEnv.paddleApiKey) && !hasAnyPaddlePrice) {
     warnings.push("PADDLE_API_KEY is set but no PADDLE_*_PRICE_ID values are configured.");
+  }
+
+  if (production && getRuntimeStoreKind() === "postgres") {
+    warnings.push("Redis is not configured; using Postgres runtime fallback for locks, cache, and rate limits.");
   }
 
   return {

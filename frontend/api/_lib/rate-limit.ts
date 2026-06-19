@@ -3,15 +3,16 @@
  * Redis-backed sliding window rate limiting + daily usage caps.
  * No Paddle. Everyone is on the free plan with hard daily limits.
  */
-import { redisGet, redisSet, redisIncrement, getRedis } from "./redis.js";
+import { redisGet, redisIncrement, getRuntimeStoreKind } from "./redis.js";
 import { logger } from "./log.js";
 import { resolveSubscriptionState } from "./subscription.js";
 import type { BillingPlan } from "./subscription.js";
 
-// Warn once if Redis is not configured — rate limits will not be enforced
-const redisAvailable = !!getRedis();
-if (!redisAvailable) {
-  logger.warn("Redis not configured. Rate limits are DISABLED. Set REDIS_URL and REDIS_TOKEN to enable usage caps.");
+const runtimeStore = getRuntimeStoreKind();
+if (runtimeStore === "none") {
+  logger.warn("Runtime store not configured. Rate limits are unavailable. Set REDIS_URL/REDIS_TOKEN or DATABASE_URL.");
+} else if (runtimeStore === "postgres") {
+  logger.warn("Redis not configured. Using Postgres runtime fallback for rate limits.");
 }
 
 // ─── Free Plan Limits (env-overridable) ─────────────────────────────────────

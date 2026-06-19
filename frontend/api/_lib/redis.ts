@@ -3,9 +3,12 @@
  * Compatible with Upstash, Vercel KV, and any Redis-over-HTTP provider.
  */
 import { Redis } from "@upstash/redis";
+import { neon } from "@neondatabase/serverless";
 import { randomUUID } from "crypto";
 
 let redisInstance: Redis | null = null;
+let pgSql: ReturnType<typeof neon> | null = null;
+let pgStoreReady: Promise<void> | null = null;
 let redisWarned = false;
 
 export type RedisLock = {
@@ -18,6 +21,41 @@ const isProductionRuntime = () =>
 
 const allowDevRedisFallback = () =>
   !isProductionRuntime() && process.env.DEV_ALLOW_REDIS_FALLBACK === "true";
+
+function getDatabaseUrl() {
+  return (
+    process.env.DATABASE_URL_UNPOOLED ||
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    ""
+  );
+}
+
+function getPgSql() {
+  if (pgSql) return pgSql;
+  const databaseUrl = getDatabaseUrl();
+  if (!databaseUrl) return null;
+  pgSql = neon(databaseUrl);
+  return pgSql;
+}
+
+async function ensurePgStore() {
+  const sql = getPgSql();
+  if (!sql) return false;
+
+  pgStoreReady ??= sql`
+    create table if not exists sideby_runtime_kv (
+      key text primary key,
+      value jsonb not null,
+      expires_at timestamptz,
+      updated_at timestamptz not null default now()
+    )
+  `.then(() => undefined);
+
+  await pgStoreReady;
+  return true;
+}
 
 export function getRedis(): Redis | null {
   if (redisInstance) return redisInstance;
@@ -37,11 +75,21 @@ export function isRedisConfigured(): boolean {
   return getRedis() !== null;
 }
 
+export function isRuntimeStoreConfigured(): boolean {
+  return isRedisConfigured() || Boolean(getDatabaseUrl());
+}
+
+export function getRuntimeStoreKind(): "redis" | "postgres" | "none" {
+  if (isRedisConfigured()) return "redis";
+  return getDatabaseUrl() ? "postgres" : "none";
+}
+
 export async function assertRedisAvailable(): Promise<void> {
   const redis = getRedis();
   if (!redis) {
     if (allowDevRedisFallback()) return;
-    throw Object.assign(new Error("Redis is required for locks and rate limits."), {
+    if (await ensurePgStore()) return;
+    throw Object.assign(new Error("Redis or DATABASE_URL is required for locks and rate limits."), {
       statusCode: 503,
     });
   }
@@ -57,7 +105,19 @@ export async function assertRedisAvailable(): Promise<void> {
 
 export async function redisGet<T>(key: string): Promise<T | null> {
   const redis = getRedis();
-  if (!redis) return null;
+  if (!redis) {
+    if (!(await ensurePgStore())) return null;
+    const sql = getPgSql();
+    if (!sql) return null;
+    const rows = await sql`
+      select value
+      from sideby_runtime_kv
+      where key = ${key}
+        and (expires_at is null or expires_at > now())
+      limit 1
+    ` as Array<{ value: T }>;
+    return (rows[0]?.value as T | undefined) ?? null;
+  }
   const value = await redis.get<T>(key);
   return value ?? null;
 }
@@ -68,13 +128,30 @@ export async function redisSet<T>(
   ttlSeconds = 3600,
 ): Promise<void> {
   const redis = getRedis();
-  if (!redis) return;
+  if (!redis) {
+    if (!(await ensurePgStore())) return;
+    const sql = getPgSql();
+    if (!sql) return;
+    await sql`
+      insert into sideby_runtime_kv (key, value, expires_at, updated_at)
+      values (${key}, ${JSON.stringify(value)}::jsonb, now() + (${ttlSeconds} * interval '1 second'), now())
+      on conflict (key)
+      do update set value = excluded.value, expires_at = excluded.expires_at, updated_at = now()
+    `;
+    return;
+  }
   await redis.set(key, value, { ex: ttlSeconds });
 }
 
 export async function redisDel(key: string): Promise<void> {
   const redis = getRedis();
-  if (!redis) return;
+  if (!redis) {
+    if (!(await ensurePgStore())) return;
+    const sql = getPgSql();
+    if (!sql) return;
+    await sql`delete from sideby_runtime_kv where key = ${key}`;
+    return;
+  }
   await redis.del(key);
 }
 
@@ -98,7 +175,19 @@ export async function redisAcquireLockToken(
       }
       return { key: lockKey, token: `dev:${randomUUID()}` };
     }
-    return null;
+    if (!(await ensurePgStore())) return null;
+    const sql = getPgSql();
+    if (!sql) return null;
+    const token = randomUUID();
+    const rows = await sql`
+      insert into sideby_runtime_kv (key, value, expires_at, updated_at)
+      values (${lockKey}, ${JSON.stringify({ token })}::jsonb, now() + (${ttlSeconds} * interval '1 second'), now())
+      on conflict (key)
+      do update set value = excluded.value, expires_at = excluded.expires_at, updated_at = now()
+      where sideby_runtime_kv.expires_at is null or sideby_runtime_kv.expires_at <= now()
+      returning key
+    ` as Array<{ key: string }>;
+    return rows.length > 0 ? { key: lockKey, token } : null;
   }
 
   const token = randomUUID();
@@ -112,11 +201,22 @@ export async function redisAcquireLockToken(
 
 export async function redisReleaseLock(lock: RedisLock | string): Promise<void> {
   const redis = getRedis();
-  if (!redis) return;
 
   if (typeof lock === "string") {
     if (allowDevRedisFallback()) return;
     throw new Error("Redis lock release requires a lock token.");
+  }
+
+  if (!redis) {
+    if (!(await ensurePgStore())) return;
+    const sql = getPgSql();
+    if (!sql) return;
+    await sql`
+      delete from sideby_runtime_kv
+      where key = ${lock.key}
+        and value->>'token' = ${lock.token}
+    `;
+    return;
   }
 
   const script = `
@@ -132,7 +232,10 @@ export async function redisReleaseLock(lock: RedisLock | string): Promise<void> 
 
 export async function redisForceReleaseLock(lockKey: string): Promise<void> {
   const redis = getRedis();
-  if (!redis) return;
+  if (!redis) {
+    await redisDel(lockKey);
+    return;
+  }
   await redis.del(lockKey);
 }
 
@@ -142,7 +245,39 @@ export async function redisIncrement(
   ttlSeconds?: number,
 ): Promise<number> {
   const redis = getRedis();
-  if (!redis) return 0;
+  if (!redis) {
+    if (!(await ensurePgStore())) return 0;
+    const sql = getPgSql();
+    if (!sql) return 0;
+    await sql`
+      delete from sideby_runtime_kv
+      where key = ${key}
+        and expires_at is not null
+        and expires_at <= now()
+    `;
+
+    const rows = ttlSeconds
+      ? await sql`
+          insert into sideby_runtime_kv (key, value, expires_at, updated_at)
+          values (${key}, ${JSON.stringify(amount)}::jsonb, now() + (${ttlSeconds} * interval '1 second'), now())
+          on conflict (key)
+          do update set
+            value = to_jsonb(coalesce((sideby_runtime_kv.value #>> '{}')::integer, 0) + ${amount}),
+            updated_at = now()
+          returning (value #>> '{}')::integer as value
+        `
+      : await sql`
+      insert into sideby_runtime_kv (key, value, expires_at, updated_at)
+      values (${key}, ${JSON.stringify(amount)}::jsonb, null, now())
+      on conflict (key)
+      do update set
+        value = to_jsonb(coalesce((sideby_runtime_kv.value #>> '{}')::integer, 0) + ${amount}),
+        updated_at = now()
+      returning (value #>> '{}')::integer as value
+    `;
+    const typedRows = rows as Array<{ value: number | string }>;
+    return Number(typedRows[0]?.value ?? amount);
+  }
   const value = await redis.incrby(key, amount);
   if (ttlSeconds) {
     await redis.expire(key, ttlSeconds);

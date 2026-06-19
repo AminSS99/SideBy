@@ -3,7 +3,7 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { neon } from "@neondatabase/serverless";
-import { getRedis } from "../_lib/redis.js";
+import { assertRedisAvailable, getRedis, getRuntimeStoreKind } from "../_lib/redis.js";
 import { checkEnvironment } from "../_lib/env-check.js";
 
 export const config = {
@@ -49,8 +49,17 @@ export default async function handler(
     } catch {
       checks.redis = "error";
     }
+  } else if (getRuntimeStoreKind() === "postgres") {
+    try {
+      await assertRedisAvailable();
+      checks.redis = "not_configured";
+      checks.runtimeStore = "ok";
+    } catch {
+      checks.runtimeStore = "error";
+    }
   } else {
     checks.redis = "not_configured";
+    checks.runtimeStore = "not_configured";
   }
 
   const allOk = Object.values(checks).every((v) => v === "ok" || v === "not_configured");
