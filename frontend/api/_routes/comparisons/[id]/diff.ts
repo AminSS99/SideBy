@@ -5,6 +5,7 @@ import { sendJson } from "../../../_lib/sideby.js";
 import { createDbClient } from "../../../../src/db/index.js";
 import { comparisonVersions } from "../../../../src/db/schema.js";
 import { computeResultDiff } from "../../../_lib/diff-engine.js";
+import type { DiffResult } from "../../../_lib/diff-engine.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
@@ -61,7 +62,10 @@ export default async function handler(
       return sendJson(response, { error: "One or both versions not found." }, 404);
     }
 
-    const diffResult = computeResultDiff(fromVer.result, toVer.result);
+    const diffResult = computeResultDiff(
+      fromVer.result as DiffResult | null,
+      toVer.result as DiffResult | null,
+    );
 
     return sendJson(response, {
       fromVersion: Number(fromVersion),

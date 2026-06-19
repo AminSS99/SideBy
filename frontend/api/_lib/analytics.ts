@@ -29,7 +29,7 @@ export function captureServerEvent(
 
 export async function shutdownAnalytics() {
   if (posthog) {
-    await posthog.shutdown();
+    await posthog._shutdown();
     posthog = null;
   }
 }

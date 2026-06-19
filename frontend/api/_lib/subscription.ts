@@ -191,10 +191,11 @@ async function resolveSnapSolveState(args: {
     email: args.email,
   });
 
+  const workspace = session?.workspace ?? null;
   const sidebyProduct = session?.products.find((product) => product.slug === "sideby");
-  if (!session?.workspace && !sidebyProduct?.entitlement) return null;
+  if (!workspace && !sidebyProduct?.entitlement) return null;
 
-  const rawPlan = sidebyProduct?.entitlement?.plan ?? session.workspace?.plan ?? null;
+  const rawPlan = sidebyProduct?.entitlement?.plan ?? workspace?.plan ?? null;
   return buildState({
     plan: mapSnapSolvePlan(rawPlan),
     source: "snapsolve_workspace",
@@ -206,10 +207,10 @@ async function resolveSnapSolveState(args: {
           plan: sidebyProduct.entitlement.plan,
           reason: sidebyProduct.entitlement.reason,
           source: sidebyProduct.entitlement.source,
-          workspaceId: session.workspace?.id ?? null,
+          workspaceId: workspace?.id ?? null,
         }
       : null,
-    snapsolveWorkspace: session.workspace,
+    snapsolveWorkspace: workspace,
   });
 }
 
@@ -243,7 +244,11 @@ async function resolveLocalState(userId: string, orgId: string | null): Promise<
     .limit(1);
 
   if (rows.length > 0) {
-    return buildState({ plan: "pro", source: "local_subscription", status: rows[0].status });
+    return buildState({
+      plan: "pro",
+      source: "local_subscription",
+      status: rows[0].status === "trialing" ? "trialing" : "active",
+    });
   }
 
   return buildState({ plan: "free", source: "free_fallback", status: "unknown" });

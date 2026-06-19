@@ -32,10 +32,11 @@ export default async function handler(
     if (!apiKey.userId) {
       return sendJson(response, { error: "API key is not linked to a user." }, 403);
     }
+    const userId = apiKey.userId;
 
     if (request.method === "GET") {
       return sendJson(response, {
-        comparisons: await listComparisonHistory(apiKey.userId, 50),
+        comparisons: await listComparisonHistory(userId, 50),
       });
     }
 
@@ -45,7 +46,7 @@ export default async function handler(
         assertNoLikelySecrets(body.query);
         const job = await createComparisonJob({
           query: body.query,
-          userId: apiKey.userId,
+          userId,
           orgId: apiKey.orgId || undefined,
           workspaceId: body.workspaceId || apiKey.workspaceId || undefined,
           projectId: body.projectId,

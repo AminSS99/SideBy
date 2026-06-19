@@ -31,12 +31,13 @@ export default async function handler(
   try {
     const apiKey = await requireApiKey(request);
     if (!apiKey.userId) return sendJson(response, { error: "API key is not linked to a user." }, 403);
+    const userId = apiKey.userId;
     const id = Array.isArray(request.query.id) ? request.query.id[0] : request.query.id;
     if (!id) return sendJson(response, { error: "Comparison id is required." }, 400);
 
     return withApiKeyRateLimit(request, response, "followUp", apiKey, async () => {
       const body = BodySchema.parse(request.body || {});
-      return sendJson(response, await answerFollowUp(id, apiKey.userId, body.question));
+      return sendJson(response, await answerFollowUp(id, userId, body.question));
     });
   } catch (error) {
     const status =

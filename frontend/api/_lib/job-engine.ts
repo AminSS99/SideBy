@@ -201,6 +201,11 @@ const DimensionSchema = z.object({
   description: LlmStringSchema(1000).optional(),
   weight: z.number().default(1),
 });
+type ComparisonDimension = {
+  name: string;
+  description?: string;
+  weight: number;
+};
 
 const FactSchema = z.object({
   entity: LlmStringSchema(160),
@@ -754,7 +759,10 @@ export async function runComparisonJob(
 
     // Phase 3: Trigger outgoing webhooks on success
     triggerWebhooks(db, comparisonId, "comparison.completed", { result }, safeWaitUntil).catch((err) => {
-      logger.error("Failed to trigger webhook on completion", { comparisonId, error: err });
+      logger.error("Failed to trigger webhook on completion", err instanceof Error ? err : undefined, {
+        comparisonId,
+        error: err instanceof Error ? err.message : String(err),
+      });
     });
 
     safeWaitUntil(queueSnapSolveEvent({
@@ -826,7 +834,10 @@ export async function runComparisonJob(
         { error: `Failed after ${MAX_RETRIES} retries: ${message}` },
         safeWaitUntil
       ).catch((err) => {
-        logger.error("Failed to trigger webhook on failure", { comparisonId, error: err });
+        logger.error("Failed to trigger webhook on failure", err instanceof Error ? err : undefined, {
+          comparisonId,
+          error: err instanceof Error ? err.message : String(err),
+        });
       });
 
       // Phase 10: Mark query analytics for failed job
@@ -1256,7 +1267,7 @@ async function runExtractionStep(
 async function runDimensionStep(
   ctx: JobContext,
   parsed: ParsedQuery,
-) {
+): Promise<ComparisonDimension[]> {
   const runId = await createAiRun(ctx, "dimensions");
   const stepId = await startStep(ctx, runId, "reason", { entities: parsed.entities });
 
@@ -1299,9 +1310,14 @@ async function runDimensionStep(
 
     const templateDimensions = getComparisonCategoryDefinition(normalized.category).defaultDimensions;
     const dimensionsToStore = result.data.length > 0 ? result.data : templateDimensions;
+    const normalizedDimensions = dimensionsToStore.map((dim) => ({
+      name: dim.name,
+      description: dim.description,
+      weight: Number(normalizeDimensionWeight(dim.weight)),
+    }));
 
     // Store dimensions
-    const dimsToInsert = dimensionsToStore.map((dim) => ({
+    const dimsToInsert = normalizedDimensions.map((dim) => ({
       comparisonId: ctx.comparisonId,
       name: dim.name,
       description: dim.description || null,
@@ -1312,7 +1328,7 @@ async function runDimensionStep(
       await ctx.db.insert(comparisonDimensions).values(dimsToInsert);
     }
 
-    return dimensionsToStore;
+    return normalizedDimensions;
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Dimension generation failed";
     const fallbackDimensions = getComparisonCategoryDefinition(ctx.taxonomy.category)
@@ -1344,7 +1360,11 @@ async function runDimensionStep(
         await ctx.db.insert(comparisonDimensions).values(fallbackDimsToInsert);
       }
 
-      return fallbackDimensions;
+      return fallbackDimensions.map((dim) => ({
+        name: dim.name,
+        description: dim.description,
+        weight: Number(normalizeDimensionWeight(dim.weight)),
+      }));
     }
 
     await failStep(ctx, stepId, msg);
@@ -1357,7 +1377,7 @@ async function runFactStep(
   ctx: JobContext,
   parsed: ParsedQuery,
   extracted: ExtractedSource[],
-  dimensions: z.infer<typeof DimensionArraySchema>,
+  dimensions: ComparisonDimension[],
 ) {
   const runId = await createAiRun(ctx, "facts");
   const stepId = await startStep(ctx, runId, "extract", {
@@ -1533,7 +1553,7 @@ async function runFactStep(
 function ensureFactCoverage(
   facts: ExtractedFact[],
   parsed: ParsedQuery,
-  dimensions: z.infer<typeof DimensionArraySchema>,
+  dimensions: ComparisonDimension[],
   extracted: ExtractedSource[],
 ): ExtractedFact[] {
   const completeFacts = [...facts];
@@ -1616,7 +1636,7 @@ async function getReusableFactCounts(
 async function loadReusableFacts(
   ctx: JobContext,
   parsed: ParsedQuery,
-  dimensions: z.infer<typeof DimensionArraySchema>,
+  dimensions: ComparisonDimension[],
 ): Promise<ExtractedFact[]> {
   const dimensionNames = new Set(dimensions.map((dimension) => dimension.name.toLowerCase()));
   const cachedFacts: ExtractedFact[] = [];
@@ -1657,7 +1677,7 @@ async function runScoreStep(
   ctx: JobContext,
   parsed: ParsedQuery,
   facts: z.infer<typeof FactArraySchema>,
-  dimensions: z.infer<typeof DimensionArraySchema>,
+  dimensions: ComparisonDimension[],
 ) {
   const runId = await createAiRun(ctx, "score");
   const stepId = await startStep(ctx, runId, "score", { factCount: facts.length });
@@ -1963,7 +1983,7 @@ function buildResultJson(
   facts: z.infer<typeof FactArraySchema>,
   scores: z.infer<typeof ScoreArraySchema>,
   verdict: z.infer<typeof VerdictSchema>,
-  dimensions: z.infer<typeof DimensionArraySchema>,
+  dimensions: ComparisonDimension[],
   slugOverride?: string,
   taxonomy: ComparisonIntent = analyzeComparisonQuery(parsed.entities.map((e) => e.name).join(" vs ")),
 ) {

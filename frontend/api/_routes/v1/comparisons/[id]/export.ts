@@ -21,13 +21,14 @@ export default async function handler(
   try {
     const apiKey = await requireApiKey(request);
     if (!apiKey.userId) return sendJson(response, { error: "API key is not linked to a user." }, 403);
+    const userId = apiKey.userId;
     const id = Array.isArray(request.query.id) ? request.query.id[0] : request.query.id;
     const formatValue = Array.isArray(request.query.format) ? request.query.format[0] : request.query.format;
     const format = formatValue === "json" ? "json" : "markdown";
     if (!id) return sendJson(response, { error: "Comparison id is required." }, 400);
 
     return withApiKeyRateLimit(request, response, "export", apiKey, async () => {
-      const result = await exportComparison(id, apiKey.userId, format);
+      const result = await exportComparison(id, userId, format);
       return sendJson(response, result);
     });
   } catch (error) {

@@ -124,7 +124,7 @@ export default async function handler(
       const result = job.result;
 
       // Format Block Kit payload
-      const blocks = [
+      const blocks: Array<Record<string, unknown>> = [
         {
           type: "header",
           text: {
@@ -208,7 +208,7 @@ export default async function handler(
 
       logger.info("Slack response posted successfully");
     } catch (err) {
-      logger.error("Slack background runner failed", { error: String(err) });
+      logger.error("Slack background runner failed", undefined, { error: String(err) });
       
       // Post error back to Slack responseUrl
       await fetch(responseUrl, {

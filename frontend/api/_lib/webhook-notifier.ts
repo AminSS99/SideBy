@@ -39,7 +39,7 @@ export async function triggerWebhooks(
       .limit(1);
 
     if (!comp) {
-      logger.error("Webhook trigger failed: comparison not found", { comparisonId });
+      logger.error("Webhook trigger failed: comparison not found", undefined, { comparisonId });
       return;
     }
 
@@ -129,7 +129,7 @@ export async function triggerWebhooks(
           logger.info("Webhook delivered successfully", { url, comparisonId });
         }
       } catch (err) {
-        logger.error("Failed to deliver webhook", {
+        logger.error("Failed to deliver webhook", err instanceof Error ? err : undefined, {
           url,
           comparisonId,
           error: err instanceof Error ? err.message : String(err),
@@ -144,7 +144,7 @@ export async function triggerWebhooks(
       await Promise.all(dispatches);
     }
   } catch (error) {
-    logger.error("Error triggering webhooks", {
+    logger.error("Error triggering webhooks", error instanceof Error ? error : undefined, {
       comparisonId,
       error: error instanceof Error ? error.message : String(error),
     });
