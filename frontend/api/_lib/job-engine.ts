@@ -1042,21 +1042,23 @@ async function runSearchStep(
   }> = [];
 
   try {
-    for (const entity of entities) {
-      checkGuardrails(ctx.guardrails);
-      ctx.guardrails.searchCalls++;
+    await Promise.all(
+      entities.map(async (entity) => {
+        checkGuardrails(ctx.guardrails);
+        ctx.guardrails.searchCalls++;
 
-      const results = await searchEntitySources(entity.name, context, ctx.taxonomy.category);
-      for (const r of results) {
-        allSources.push({
-          title: r.title,
-          url: r.url,
-          content: r.content,
-          score: r.score,
-          entityName: entity.name,
-        });
-      }
-    }
+        const results = await searchEntitySources(entity.name, context, ctx.taxonomy.category);
+        for (const r of results) {
+          allSources.push({
+            title: r.title,
+            url: r.url,
+            content: r.content,
+            score: r.score,
+            entityName: entity.name,
+          });
+        }
+      }),
+    );
 
     // Deduplicate by URL
     const seenUrls = new Set<string>();
@@ -1153,39 +1155,41 @@ async function runExtractionStep(
     const topUrls = selectedSources.map((s) => s.url);
     const sourcesByUrl = new Map(sources.map((s) => [s.url, s]));
 
-    for (const url of topUrls) {
-      checkGuardrails(ctx.guardrails);
-      const page = await extractPage(url);
-      const source = sourcesByUrl.get(url);
-      if (page) {
-        extracted.push({
-          url: page.url,
-          title: page.title || source?.title || "",
-          markdown: page.markdown,
-          entityName: source?.entityName || "",
-        });
+    await Promise.all(
+      topUrls.map(async (url) => {
+        checkGuardrails(ctx.guardrails);
+        const page = await extractPage(url);
+        const source = sourcesByUrl.get(url);
+        if (page) {
+          extracted.push({
+            url: page.url,
+            title: page.title || source?.title || "",
+            markdown: page.markdown,
+            entityName: source?.entityName || "",
+          });
 
-        // Update source with extraction status
-        await ctx.db
-          .update(comparisonSources)
-          .set({
-            contentHash: page.contentHash,
-          })
-          .where(
-            and(
-              eq(comparisonSources.comparisonId, ctx.comparisonId),
-              eq(comparisonSources.url, url),
-            ),
-          );
-      } else if (source?.content) {
-        extracted.push({
-          url: source.url,
-          title: source.title || source.url,
-          markdown: source.content,
-          entityName: source.entityName || "",
-        });
-      }
-    }
+          // Update source with extraction status
+          await ctx.db
+            .update(comparisonSources)
+            .set({
+              contentHash: page.contentHash,
+            })
+            .where(
+              and(
+                eq(comparisonSources.comparisonId, ctx.comparisonId),
+                eq(comparisonSources.url, url),
+              ),
+            );
+        } else if (source?.content) {
+          extracted.push({
+            url: source.url,
+            title: source.title || source.url,
+            markdown: source.content,
+            entityName: source.entityName || "",
+          });
+        }
+      }),
+    );
 
     if (extracted.length === 0 && sources.length > 0) {
       for (const source of sources.slice(0, 6)) {
