@@ -140,7 +140,8 @@ export async function searchEntitySources(
   const seenUrls = new Set<string>();
 
   console.log(`[Search Entity Sources] Running ${queries.length} queries for entity "${entityName}":`, queries);
-  for (const q of queries) {
+
+  await Promise.all(queries.map(async (q) => {
     try {
       console.log(`[Search Entity Sources] Executing sub-query: "${q}"`);
       const batch = await searchTavily({ query: q, maxResults: 3, searchDepth: "basic" });
@@ -156,7 +157,7 @@ export async function searchEntitySources(
         error: e instanceof Error ? e.message : "unknown",
       });
     }
-  }
+  }));
 
   return allResults
     .sort((a, b) => sourcePriority(entityName, b, category) - sourcePriority(entityName, a, category))

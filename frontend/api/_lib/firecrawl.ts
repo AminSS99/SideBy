@@ -103,14 +103,10 @@ export async function extractPage(url: string): Promise<ExtractedPage | null> {
 }
 
 export async function extractPages(urls: string[]): Promise<ExtractedPage[]> {
-  const results: ExtractedPage[] = [];
-
-  for (const url of urls) {
-    const extracted = await extractPage(url);
-    if (extracted) {
-      results.push(extracted);
-    }
-  }
+  const extractedPages = await Promise.all(urls.map((url) => extractPage(url)));
+  const results: ExtractedPage[] = extractedPages.filter(
+    (page): page is ExtractedPage => page !== null
+  );
 
   return results;
 }
