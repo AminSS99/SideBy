@@ -37,7 +37,6 @@ import ecosystemSessionHandler from "./_routes/ecosystem-session.js";
 import healthHandler from "./_routes/health.js";
 import integrationsSlack from "./_routes/integrations/slack.js";
 import jobsDrain from "./_routes/jobs/drain.js";
-import knowledgeHandler from "./_routes/knowledge.js";
 import openapiHandler from "./_routes/openapi.js";
 import promptsHandler from "./_routes/prompts.js";
 import searchHandler from "./_routes/search.js";
@@ -59,6 +58,13 @@ export const config = {
     },
   },
 };
+
+type ApiHandler = (req: VercelRequest, res: VercelResponse) => unknown | Promise<unknown>;
+
+async function loadKnowledgeHandler(): Promise<ApiHandler> {
+  const module = await import("./_routes/knowledge.js");
+  return module.default;
+}
 
 export default async function handler(
   request: VercelRequest,
@@ -130,6 +136,7 @@ export default async function handler(
     } else if (segment1 === "search") {
       request.query.action = "search";
     }
+    const knowledgeHandler = await loadKnowledgeHandler();
     return knowledgeHandler(request, response);
   }
 
@@ -173,13 +180,16 @@ export default async function handler(
   }
 
   // Single-segment routes
-  const singleHandlers: Record<string, (req: VercelRequest, res: VercelResponse) => unknown> = {
+  const singleHandlers: Record<string, ApiHandler> = {
     account: accountHandler,
     chat: chatHandler,
     csrf: csrfHandler,
     "decision-matrices": decisionMatricesHandler,
     health: healthHandler,
-    knowledge: knowledgeHandler,
+    knowledge: async (req, res) => {
+      const knowledgeHandler = await loadKnowledgeHandler();
+      return knowledgeHandler(req, res);
+    },
     openapi: openapiHandler,
     prompts: promptsHandler,
     search: searchHandler,
