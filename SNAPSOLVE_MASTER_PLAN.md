@@ -1,5 +1,7 @@
 # SideBy Master Implementation Plan
 
+> Historical note: this document captures an earlier product-expansion direction and is no longer the source of truth for launch configuration. The current production stack is Clerk, Neon Postgres, Upstash Redis, Vercel Functions, Paddle for local SideBy billing, and SnapSolve Core for ecosystem workspace/entitlement resolution. Use `AGENTS.md`, `DEPLOYMENT_CHECKLIST.md`, and `frontend/.env.example` for current launch guidance.
+
 ## 1. Product Direction
 
 ### Product name

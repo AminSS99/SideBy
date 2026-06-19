@@ -177,10 +177,13 @@ function sourcePriority(
   if (hints.some((domain) => url.includes(domain))) priority += 5;
   if (title.includes(entityName.toLowerCase())) priority += 1;
   if (/\/(docs?|documentation|pricing|features|security|trust|compliance|status)\b/.test(url)) priority += 1.5;
-  if (/\.(gov|edu)\b/.test(url)) priority += category === "place" || category === "finance_info" || category === "health_fitness" ? 3 : 1;
+  if (/\.(gov|edu)\b/.test(url)) priority += category === "place" || category === "finance_info" || category === "health_fitness" || category === "politics_policy" ? 3 : 1;
   if (/investor\.gov|sec\.gov|irs\.gov/.test(url)) priority += category === "finance_info" ? 4 : 0;
   if (/nih\.gov|cdc\.gov|who\.int|mayoclinic\.org|health\.harvard\.edu/.test(url)) {
     priority += category === "health_fitness" ? 4 : 0;
+  }
+  if (/congress\.gov|govtrack\.us|whitehouse\.gov|parliament\.|europarl\./.test(url)) {
+    priority += category === "politics_policy" ? 4 : 0;
   }
   if (/stackoverflow\.com|github\.com|developer\.|docs\./.test(url)) {
     priority += category === "software" || category === "developer_tool" || category === "technical_standard" ? 2 : 0;

@@ -20,6 +20,7 @@ import {
 import { eq } from "drizzle-orm";
 import { runComparisonJob } from "../../../_lib/job-engine.js";
 import { captureServerEvent } from "../../../_lib/analytics.js";
+import { canMutateComparison } from "../../../_lib/db-auth.js";
 import { waitUntil } from "@vercel/functions";
 import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -72,7 +73,8 @@ export default async function handler(
       }
 
       const comp = rows[0];
-      if (comp.clerkUserId !== auth.userId) {
+      const canMutate = await canMutateComparison(db, auth.userId, id);
+      if (!canMutate) {
         return sendJson(response, { error: "Comparison not found." }, 404);
       }
 

@@ -5,9 +5,8 @@
  */
 import { redisGet, redisSet, redisIncrement, getRedis } from "./redis.js";
 import { logger } from "./log.js";
-import { and, eq, inArray, or } from "drizzle-orm";
-import { createDbClient } from "../../src/db/index.js";
-import { organizations, subscriptions } from "../../src/db/schema.js";
+import { resolveSubscriptionState } from "./subscription.js";
+import type { BillingPlan } from "./subscription.js";
 
 // Warn once if Redis is not configured — rate limits will not be enforced
 const redisAvailable = !!getRedis();
@@ -42,40 +41,16 @@ interface RateLimitResult {
   window: string;
 }
 
-type BillingPlan = "free" | "pro" | "team" | "business";
-
 async function getEffectiveBillingPlan(
   userId: string | null,
   orgId: string | null,
+  action: RateLimitAction,
 ): Promise<BillingPlan> {
   if (!userId && !orgId) return "free";
 
   try {
-    const db = createDbClient();
-
-    if (orgId) {
-      const [org] = await db
-        .select({ plan: organizations.plan })
-        .from(organizations)
-        .where(eq(organizations.id, orgId))
-        .limit(1);
-      if (org?.plan && org.plan !== "free") return org.plan;
-    }
-
-    const rows = await db
-      .select({ status: subscriptions.status, organizationId: subscriptions.organizationId })
-      .from(subscriptions)
-      .where(
-        and(
-          inArray(subscriptions.status, ["active", "trialing"]),
-          orgId
-            ? or(eq(subscriptions.organizationId, orgId), eq(subscriptions.userId, userId || ""))
-            : eq(subscriptions.userId, userId || ""),
-        ),
-      )
-      .limit(1);
-
-    return rows.length > 0 ? "pro" : "free";
+    const subscription = await resolveSubscriptionState({ userId, orgId, feature: action });
+    return subscription.plan;
   } catch (error) {
     logger.warn("Unable to resolve billing plan; falling back to free limits", {
       error: error instanceof Error ? error.message : String(error),
@@ -206,7 +181,7 @@ export async function checkRouteLimit(
   action: RateLimitAction,
   orgId: string | null = null,
 ): Promise<RateLimitResult> {
-  const plan = await getEffectiveBillingPlan(userId, orgId);
+  const plan = await getEffectiveBillingPlan(userId, orgId, action);
   if (plan !== "free") {
     const burst = userId
       ? await checkRateLimit("user", userId, action, 60)

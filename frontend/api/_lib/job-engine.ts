@@ -27,7 +27,7 @@ import { computeResultDiff } from "./diff-engine.js";
 import { getPrimaryProvider } from "./providers/index.js";
 import { searchEntitySources } from "./search.js";
 import { extractPage } from "./firecrawl.js";
-import { redisAcquireLock, redisReleaseLock } from "./redis.js";
+import { redisAcquireLockToken, redisForceReleaseLock, redisReleaseLock } from "./redis.js";
 import { logger } from "./log.js";
 import { embedText, embedTexts } from "./embeddings.js";
 import type { AIProvider } from "./ai-adapter.js";
@@ -449,8 +449,8 @@ export async function runComparisonJob(
   orgId?: string,
 ) {
   const lockKey = `job-lock:${comparisonId}`;
-  const acquired = await redisAcquireLock(lockKey, 300);
-  if (!acquired) {
+  const lock = await redisAcquireLockToken(lockKey, 300);
+  if (!lock) {
     logger.warn("Job already running, skipping", { comparisonId });
     return;
   }
@@ -844,7 +844,7 @@ export async function runComparisonJob(
       });
     }
   } finally {
-    await redisReleaseLock(lockKey);
+    await redisReleaseLock(lock);
   }
 }
 
@@ -892,7 +892,7 @@ export async function drainQueuedComparisonJobs(
   // Handle orphans first: release lock and requeue or fail
   for (const row of rows) {
     if (row.status === "running") {
-      await redisReleaseLock(`job-lock:${row.id}`);
+      await redisForceReleaseLock(`job-lock:${row.id}`);
       if (row.retryCount < MAX_RETRIES) {
         await db
           .update(comparisons)
@@ -1902,6 +1902,19 @@ function buildVerdictSlots(
       students: winner || "Depends on learning path",
       powerUsers: winner || "Depends on long-term optionality",
       ecosystem: winner || "Depends on market demand",
+    };
+  }
+
+  if (category === "politics_policy") {
+    return {
+      ...slots,
+      bestOverall: "Depends on values and priorities",
+      bestValue: "Depends on economic priorities",
+      developers: "Depends on policy focus",
+      teams: "Depends on governance priorities",
+      students: "Depends on issue priority",
+      powerUsers: "Depends on ideological alignment",
+      ecosystem: "Depends on regional context",
     };
   }
 

@@ -10,6 +10,45 @@ const PRODUCT_SLUG = "sideby";
 type SnapSolveEventType = "sideby.comparison.completed" | "sideby.decision.saved";
 type SnapSolveOutboxRow = typeof snapSolveOutbox.$inferSelect;
 
+export type SnapSolveWorkspaceSession = {
+  snapsolve_user_id: string;
+  product: string;
+  workspace: {
+    id: string;
+    name: string;
+    slug: string | null;
+    plan: string | null;
+  } | null;
+  products: Array<{
+    slug: string;
+    name: string;
+    tagline: string | null;
+    icon_url: string | null;
+    launch_url: string | null;
+    status: string;
+    enabled: boolean;
+    entitlement: {
+      allowed: boolean;
+      reason: string | null;
+      plan: string | null;
+      source: string | null;
+    } | null;
+  }>;
+  reason: string | null;
+};
+
+export type SnapSolveEntitlement = {
+  allowed: boolean;
+  snapsolve_user_id: string | null;
+  workspace_id: string | null;
+  product: string;
+  feature: string;
+  source: string | null;
+  plan: string | null;
+  reason?: string | null;
+  expires_at?: string | null;
+};
+
 function getConfig() {
   const coreUrl = serverEnv.snapsolveCoreUrl?.replace(/\/+$/, "");
   const secret = serverEnv.snapsolveSidebySecret;
@@ -66,6 +105,75 @@ async function postEvent(row: SnapSolveOutboxRow) {
   }
 
   return true;
+}
+
+async function postSignedJson<T>(endpoint: string, payload: Record<string, unknown>): Promise<T | null> {
+  const config = getConfig();
+  if (!config) return null;
+
+  const body = JSON.stringify({ ...payload, product: PRODUCT_SLUG });
+  const timestamp = new Date().toISOString();
+  const response = await fetch(`${config.coreUrl}${endpoint}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-snapsolve-product": PRODUCT_SLUG,
+      "x-snapsolve-signature": `sha256=${signPayload(config.secret, timestamp, body)}`,
+      "x-snapsolve-timestamp": timestamp,
+    },
+    body,
+    signal: AbortSignal.timeout(3_000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`SnapSolve Core ${endpoint} failed with ${response.status}: ${await response.text()}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function resolveSnapSolveWorkspaceSession(args: {
+  clerkUserId: string;
+  email?: string | null;
+}): Promise<SnapSolveWorkspaceSession | null> {
+  try {
+    return await postSignedJson<SnapSolveWorkspaceSession>("/api/core/v1/workspaces/resolve", {
+      clerk_user_id: args.clerkUserId,
+      email: args.email ?? null,
+      email_verified: Boolean(args.email),
+      product_user_id: args.clerkUserId,
+    });
+  } catch (error) {
+    logger.warn("SnapSolve workspace session unavailable", {
+      error: error instanceof Error ? error.message : String(error),
+      userId: args.clerkUserId,
+    });
+    return null;
+  }
+}
+
+export async function checkSnapSolveEntitlement(args: {
+  clerkUserId: string;
+  email?: string | null;
+  feature?: string | null;
+  workspaceId?: string | null;
+}): Promise<SnapSolveEntitlement | null> {
+  try {
+    return await postSignedJson<SnapSolveEntitlement>("/api/core/v1/entitlements/check", {
+      clerk_user_id: args.clerkUserId,
+      email: args.email ?? null,
+      email_verified: Boolean(args.email),
+      feature: args.feature ?? "*",
+      product_user_id: args.clerkUserId,
+      workspace_id: args.workspaceId ?? null,
+    });
+  } catch (error) {
+    logger.warn("SnapSolve entitlement check unavailable", {
+      error: error instanceof Error ? error.message : String(error),
+      userId: args.clerkUserId,
+    });
+    return null;
+  }
 }
 
 export async function queueSnapSolveEvent(args: {

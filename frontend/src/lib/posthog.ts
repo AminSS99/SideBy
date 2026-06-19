@@ -17,7 +17,6 @@ export function initPostHog() {
     loaded: (ph) => {
       if (import.meta.env.DEV) {
         ph.opt_out_capturing();
-        // eslint-disable-next-line no-console
         console.log("[PostHog] Opted out in development.");
       }
     },

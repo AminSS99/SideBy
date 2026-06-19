@@ -8,6 +8,11 @@ import { randomUUID } from "crypto";
 let redisInstance: Redis | null = null;
 let redisWarned = false;
 
+export type RedisLock = {
+  key: string;
+  token: string;
+};
+
 const isProductionRuntime = () =>
   process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
 
@@ -77,6 +82,13 @@ export async function redisAcquireLock(
   lockKey: string,
   ttlSeconds = 30,
 ): Promise<boolean> {
+  return (await redisAcquireLockToken(lockKey, ttlSeconds)) !== null;
+}
+
+export async function redisAcquireLockToken(
+  lockKey: string,
+  ttlSeconds = 30,
+): Promise<RedisLock | null> {
   const redis = getRedis();
   if (!redis) {
     if (allowDevRedisFallback()) {
@@ -84,21 +96,41 @@ export async function redisAcquireLock(
         redisWarned = true;
         console.warn("Redis lock fallback enabled for local development.");
       }
-      return true;
+      return { key: lockKey, token: `dev:${randomUUID()}` };
     }
-    return false;
+    return null;
   }
 
   const token = randomUUID();
   try {
     const acquired = await redis.set(lockKey, token, { nx: true, ex: ttlSeconds });
-    return acquired === "OK";
+    return acquired === "OK" ? { key: lockKey, token } : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-export async function redisReleaseLock(lockKey: string): Promise<void> {
+export async function redisReleaseLock(lock: RedisLock | string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+
+  if (typeof lock === "string") {
+    if (allowDevRedisFallback()) return;
+    throw new Error("Redis lock release requires a lock token.");
+  }
+
+  const script = `
+    if redis.call("get", KEYS[1]) == ARGV[1] then
+      return redis.call("del", KEYS[1])
+    else
+      return 0
+    end
+  `;
+
+  await redis.eval(script, [lock.key], [lock.token]);
+}
+
+export async function redisForceReleaseLock(lockKey: string): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
   await redis.del(lockKey);
