@@ -1513,6 +1513,7 @@ async function runFactStep(
       } else {
         sourceRow = sourceByUrl.get(citation);
         if (!sourceRow && citation) {
+          // Optimize: Fallback scan over already mapped array, but rare case compared to Map get
           sourceRow = sourceRows.find((source) => citation.includes(source.url));
         }
         sourceCache.set(citation, sourceRow);
@@ -1583,10 +1584,19 @@ function buildFallbackFact(
 ): ExtractedFact | null {
   const entityNeedle = entityName.toLowerCase();
   const dimensionNeedle = dimensionName.toLowerCase().split(/\s+/)[0] || "";
-  const source =
-    extracted.find((item) => item.entityName.toLowerCase() === entityNeedle) ||
-    extracted.find((item) => item.title.toLowerCase().includes(entityNeedle)) ||
-    extracted.find((item) => item.markdown.toLowerCase().includes(entityNeedle));
+
+  const extractedLower = extracted.map((item) => ({
+    ...item,
+    entityNameLower: item.entityName.toLowerCase(),
+    titleLower: item.title.toLowerCase(),
+    markdownLower: item.markdown.toLowerCase(),
+  }));
+  const sourceLower =
+    extractedLower.find((item) => item.entityNameLower === entityNeedle) ||
+    extractedLower.find((item) => item.titleLower.includes(entityNeedle)) ||
+    extractedLower.find((item) => item.markdownLower.includes(entityNeedle));
+
+  const source = sourceLower ? extracted.find((s) => s.url === sourceLower.url) : null;
 
   if (!source) return null;
 
@@ -1595,11 +1605,16 @@ function buildFallbackFact(
     .split(/(?<=[.!?])\s+/)
     .map((sentence) => sentence.trim())
     .filter((sentence) => sentence.length > 40);
+
+  const sentencesLower = sentences.map((s) => s.toLowerCase());
+  const dimIdx = sentencesLower.findIndex((s) => s.includes(dimensionNeedle));
+  const entIdx = sentencesLower.findIndex((s) => s.includes(entityNeedle));
+
   const sentence =
-    sentences.find((item) => item.toLowerCase().includes(dimensionNeedle)) ||
-    sentences.find((item) => item.toLowerCase().includes(entityNeedle)) ||
-    sentences[0] ||
-    source.markdown.replace(/\s+/g, " ").trim().slice(0, 240);
+    (dimIdx !== -1 ? sentences[dimIdx] : undefined) ||
+    (entIdx !== -1 ? sentences[entIdx] : undefined);
+
+  sentence = sentence || sentences[0] || source.markdown.replace(/\s+/g, " ").trim().slice(0, 240);
 
   if (!sentence) return null;
 
@@ -2002,12 +2017,27 @@ function buildResultJson(
 
     let match = sourceByUrl.get(citation);
     if (!match) {
+      // Opt: Fallback scan, still useful but less frequent due to URL parsing if we wanted.
       match = sources.find((source) => citation.includes(source.url) || source.url.includes(citation));
     }
 
     sourceCache.set(citation, match);
     return match;
   };
+
+  // Pre-compute facts by dimension
+  const factsByDim = new Map<string, typeof facts>();
+  for (const f of facts) {
+    if (!factsByDim.has(f.dimension)) factsByDim.set(f.dimension, []);
+    factsByDim.get(f.dimension)!.push(f);
+  }
+
+  // Pre-compute scores by dimension
+  const scoresByDim = new Map<string, Map<string, number>>();
+  for (const s of scores) {
+    if (!scoresByDim.has(s.dimension)) scoresByDim.set(s.dimension, new Map());
+    scoresByDim.get(s.dimension)!.set(s.entity, s.score);
+  }
 
   return {
     slug: slugOverride || makeResultSlug(nameA, nameB),
@@ -2035,19 +2065,16 @@ function buildResultJson(
       summary: getVerdictText(verdict),
     },
     categories: dimensions.map((dim) => {
-      const dimScoresMap = new Map(
-        scores.filter((s) => s.dimension === dim.name).map((s) => [s.entity, s.score])
-      );
+      const dimScoresMap = scoresByDim.get(dim.name) || new Map<string, number>();
       const aScore = dimScoresMap.get(entityA?.name) ?? 0;
       const bScore = dimScoresMap.get(entityB?.name) ?? 0;
+      const dimFacts = factsByDim.get(dim.name) || [];
 
       return {
         name: dim.name,
         winner: aScore > bScore ? "a" : bScore > aScore ? "b" : "tie",
         verdict: `${dim.name} comparison based on source-backed facts.`,
-        facts: facts
-          .filter((f) => f.dimension === dim.name)
-          .map((f) => {
+        facts: dimFacts.map((f) => {
             const matchedSource = findSource(f.citation);
             return {
               entity: f.entity === entityA?.name ? "a" : "b",
@@ -2064,9 +2091,7 @@ function buildResultJson(
       };
     }),
     dimensions: dimensions.map((dim) => {
-      const dimScoresMap = new Map(
-        scores.filter((s) => s.dimension === dim.name).map((s) => [s.entity, s.score])
-      );
+      const dimScoresMap = scoresByDim.get(dim.name) || new Map<string, number>();
       return {
         subject: dim.name,
         a: dimScoresMap.get(entityA?.name) ?? 50,
@@ -2160,13 +2185,21 @@ async function buildPartialResult(
 
     const dimById = new Map(dims.map(d => [d.id, d]));
 
+    const scoresByDimId = new Map<string, Map<string, number>>();
+    for (const s of scores) {
+      if (!scoresByDimId.has(s.dimensionId)) scoresByDimId.set(s.dimensionId, new Map());
+      scoresByDimId.get(s.dimensionId)!.set(s.entityId, s.score);
+    }
+
+    // Reverse lookup from name to id to match what partial build logic needs
+    const dimIdByName = new Map<string, string>();
+    for (const d of dims) {
+      dimIdByName.set(d.name, d.id);
+    }
+
     const categories = Array.from(factsByDim.entries()).map(([name, dimFacts]) => {
-      const dimScoresMap = new Map(
-        scores.filter((s) => {
-          const dim = dimById.get(s.dimensionId);
-          return dim?.name === name;
-        }).map((s) => [s.entityId, s.score])
-      );
+      const dimId = dimIdByName.get(name);
+      const dimScoresMap = (dimId && scoresByDimId.get(dimId)) || new Map<string, number>();
       const aScore = dimScoresMap.get(entityA.id) ?? 50;
       const bScore = dimScoresMap.get(entityB.id) ?? 50;
       return {
@@ -2187,8 +2220,13 @@ async function buildPartialResult(
       };
     });
 
-    const overallVerdict = verdicts.find((v) => v.body)?.body ||
-      `Partial comparison: ${entityA.normalizedName} vs ${entityB.normalizedName}`;
+    let overallVerdict = `Partial comparison: ${entityA.normalizedName} vs ${entityB.normalizedName}`;
+    for (const v of verdicts) {
+      if (v.body) {
+        overallVerdict = v.body;
+        break;
+      }
+    }
 
     return {
       slug: comp.slug,
