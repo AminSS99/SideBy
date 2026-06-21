@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
@@ -100,6 +101,9 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) => {
   const { session, isLoading: authLoading } = useAuth();
+  const { pathname } = useLocation();
+  const sessionUserId = session?.userId ?? null;
+  const shouldLoadWorkspaces = pathname === "/onboarding" || pathname === "/app" || pathname.startsWith("/app/");
   const cachedWorkspaces = useMemo(() => readCachedWorkspaces(), []);
   const [workspaces, setWorkspaces] = useState<WorkspaceRecord[]>(cachedWorkspaces ?? []);
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string | null>(readStoredWorkspaceId);
@@ -127,7 +131,7 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
   }, []);
 
   const refresh = useCallback(async () => {
-    if (!session) {
+    if (!sessionUserId) {
       setWorkspaces([]);
       setError(null);
       setIsLoading(false);
@@ -139,7 +143,8 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
       setIsLoading(true);
       setError(null);
 
-      const res = await apiFetch(buildApiUrl("/api/workspaces"));
+      // Keep workspace retry behavior at the provider level to avoid request amplification.
+      const res = await apiFetch(buildApiUrl("/api/workspaces"), {}, { retries: 0 });
       const data = (await res.json()) as { workspaces: WorkspaceRecord[] };
       applyWorkspaceData(data.workspaces);
     } catch (err) {
@@ -148,14 +153,20 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
     } finally {
       setIsLoading(false);
     }
-  }, [session, applyWorkspaceData]);
+  }, [sessionUserId, applyWorkspaceData]);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!session) {
+    if (!sessionUserId) {
       setWorkspaces([]);
       setIsLoading(false);
       clearCachedWorkspaces();
+      return;
+    }
+    if (!shouldLoadWorkspaces) {
+      // Workspace data is only needed by authenticated app/onboarding routes.
+      setIsLoading(false);
+      setError(null);
       return;
     }
 
@@ -168,7 +179,8 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
       for (let attempt = 0; attempt < 4; attempt++) {
         if (cancelled) return;
         try {
-          const res = await apiFetch(buildApiUrl("/api/workspaces"));
+          // Keep workspace retry behavior at the provider level to avoid request amplification.
+          const res = await apiFetch(buildApiUrl("/api/workspaces"), {}, { retries: 0 });
           const data = (await res.json()) as { workspaces: WorkspaceRecord[] };
           if (cancelled) return;
 
@@ -198,7 +210,7 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
     return () => {
       cancelled = true;
     };
-  }, [session, authLoading, applyWorkspaceData]);
+  }, [sessionUserId, authLoading, shouldLoadWorkspaces, applyWorkspaceData]);
 
   const setActiveWorkspaceId = useCallback((id: string | null) => {
     setActiveWorkspaceIdState(id);
@@ -211,10 +223,11 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
   }, [workspaces, activeWorkspaceId]);
 
   const needsOnboarding = useMemo(() => {
+    if (!shouldLoadWorkspaces) return false;
     if (authLoading || isLoading) return false;
-    if (!session) return false;
+    if (!sessionUserId) return false;
     return workspaces.length === 0;
-  }, [authLoading, isLoading, session, workspaces.length]);
+  }, [authLoading, isLoading, sessionUserId, shouldLoadWorkspaces, workspaces.length]);
 
   const value = useMemo<WorkspaceContextValue>(
     () => ({
