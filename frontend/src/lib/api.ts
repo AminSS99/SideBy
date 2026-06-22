@@ -83,87 +83,111 @@ const isRetryableError = (error: unknown): boolean => {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const pendingRequests = new Map<string, Promise<Response>>();
+
 export const apiFetch = async (
   input: RequestInfo | URL,
   init: RequestInit = {},
   retryOptions?: { retries?: number; retryDelay?: number },
 ) => {
-  const maxRetries = retryOptions?.retries ?? 2;
-  const baseDelay = retryOptions?.retryDelay ?? 1000;
+  const method = (init.method || "GET").toUpperCase();
+  const isCollapsible = method === "GET";
+  const urlString = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+  const cacheKey = isCollapsible ? urlString : null;
 
-  let lastError: Error | undefined;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const token = await getClerkToken();
-      const headers = new Headers(init.headers);
-
-      if (token && !headers.has("Authorization")) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-
-      if (isUnsafeMethod(init.method) && !isCsrfEndpoint(input) && !headers.has("X-SideBy-CSRF")) {
-        const csrfToken = await getCsrfToken(token);
-        if (csrfToken) {
-          headers.set("X-SideBy-CSRF", csrfToken);
-        }
-      }
-
-      const response = await fetch(input, {
-        ...init,
-        headers,
-        credentials: init.credentials ?? "include",
-      });
-
-      if (!response.ok) {
-        let message = `Request failed: ${response.status}`;
-        let code: string | undefined;
-
-        try {
-          const data = (await response.json()) as { error?: string; code?: string };
-          if (data.error) message = data.error;
-          if (data.code) code = data.code;
-        } catch {
-          // Ignore parse errors
-        }
-
-        const error = new ApiError(message, response.status, code);
-
-        // Track API errors in Sentry if available
-        if (typeof window !== "undefined" && "__SENTRY__" in window) {
-          import("@sentry/react").then((Sentry) => {
-            Sentry.captureException(error, {
-              extra: {
-                url: typeof input === "string" ? input : input.toString(),
-                method: init.method || "GET",
-                status: response.status,
-                attempt: attempt + 1,
-              },
-            });
-          }).catch(() => {
-            // Sentry not available, ignore
-          });
-        }
-
-        throw error;
-      }
-
-      return response;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-
-      // Don't retry if it's not a retryable error
-      if (!isRetryableError(error)) {
-        throw error;
-      }
-
-      // Don't sleep on the last attempt
-      if (attempt < maxRetries) {
-        const delay = baseDelay * 2 ** attempt;
-        await sleep(delay);
-      }
-    }
+  if (cacheKey && pendingRequests.has(cacheKey)) {
+    return pendingRequests.get(cacheKey)!.then((res) => res.clone());
   }
 
-  throw lastError;
+  const executeRequest = async () => {
+    const maxRetries = retryOptions?.retries ?? 2;
+    const baseDelay = retryOptions?.retryDelay ?? 1000;
+
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const token = await getClerkToken();
+        const headers = new Headers(init.headers);
+
+        if (token && !headers.has("Authorization")) {
+          headers.set("Authorization", `Bearer ${token}`);
+        }
+
+        if (isUnsafeMethod(init.method) && !isCsrfEndpoint(input) && !headers.has("X-SideBy-CSRF")) {
+          const csrfToken = await getCsrfToken(token);
+          if (csrfToken) {
+            headers.set("X-SideBy-CSRF", csrfToken);
+          }
+        }
+
+        const response = await fetch(input, {
+          ...init,
+          headers,
+          credentials: init.credentials ?? "include",
+        });
+
+        if (!response.ok) {
+          let message = `Request failed: ${response.status}`;
+          let code: string | undefined;
+
+          try {
+            const data = (await response.json()) as { error?: string; code?: string };
+            if (data.error) message = data.error;
+            if (data.code) code = data.code;
+          } catch {
+            // Ignore parse errors
+          }
+
+          const error = new ApiError(message, response.status, code);
+
+          // Track API errors in Sentry if available
+          if (typeof window !== "undefined" && "__SENTRY__" in window) {
+            import("@sentry/react").then((Sentry) => {
+              Sentry.captureException(error, {
+                extra: {
+                  url: typeof input === "string" ? input : input.toString(),
+                  method: init.method || "GET",
+                  status: response.status,
+                  attempt: attempt + 1,
+                },
+              });
+            }).catch(() => {
+              // Sentry not available, ignore
+            });
+          }
+
+          throw error;
+        }
+
+        return response;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        // Don't retry if it's not a retryable error
+        if (!isRetryableError(error)) {
+          throw error;
+        }
+
+        // Don't sleep on the last attempt
+        if (attempt < maxRetries) {
+          const delay = baseDelay * 2 ** attempt;
+          await sleep(delay);
+        }
+      }
+    }
+
+    throw lastError;
+  };
+
+  const requestPromise = executeRequest().finally(() => {
+    if (cacheKey) pendingRequests.delete(cacheKey);
+  });
+
+  if (cacheKey) {
+    pendingRequests.set(cacheKey, requestPromise);
+    return requestPromise.then((res) => res.clone());
+  }
+
+  return requestPromise;
 };
