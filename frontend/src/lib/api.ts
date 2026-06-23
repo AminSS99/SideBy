@@ -83,87 +83,122 @@ const isRetryableError = (error: unknown): boolean => {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const inFlightGetRequests = new Map<string, Promise<Response>>();
+
 export const apiFetch = async (
   input: RequestInfo | URL,
   init: RequestInit = {},
   retryOptions?: { retries?: number; retryDelay?: number },
-) => {
-  const maxRetries = retryOptions?.retries ?? 2;
-  const baseDelay = retryOptions?.retryDelay ?? 1000;
+): Promise<Response> => {
+  const method = (init.method || "GET").toUpperCase();
+  const isGet = method === "GET";
 
-  let lastError: Error | undefined;
+  // Cache key is just the URL, since headers/tokens are uniform per session
+  // and GET shouldn't have a body.
+  const cacheKey = isGet
+    ? typeof input === "string"
+      ? input
+      : input instanceof URL
+        ? input.toString()
+        : input.url
+    : null;
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const token = await getClerkToken();
-      const headers = new Headers(init.headers);
+  if (isGet && cacheKey && inFlightGetRequests.has(cacheKey)) {
+    const response = await inFlightGetRequests.get(cacheKey)!;
+    return response.clone();
+  }
 
-      if (token && !headers.has("Authorization")) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
+  const fetchPromise = (async () => {
+    const maxRetries = retryOptions?.retries ?? 2;
+    const baseDelay = retryOptions?.retryDelay ?? 1000;
 
-      if (isUnsafeMethod(init.method) && !isCsrfEndpoint(input) && !headers.has("X-SideBy-CSRF")) {
-        const csrfToken = await getCsrfToken(token);
-        if (csrfToken) {
-          headers.set("X-SideBy-CSRF", csrfToken);
-        }
-      }
+    let lastError: Error | undefined;
 
-      const response = await fetch(input, {
-        ...init,
-        headers,
-        credentials: init.credentials ?? "include",
-      });
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const token = await getClerkToken();
+        const headers = new Headers(init.headers);
 
-      if (!response.ok) {
-        let message = `Request failed: ${response.status}`;
-        let code: string | undefined;
-
-        try {
-          const data = (await response.json()) as { error?: string; code?: string };
-          if (data.error) message = data.error;
-          if (data.code) code = data.code;
-        } catch {
-          // Ignore parse errors
+        if (token && !headers.has("Authorization")) {
+          headers.set("Authorization", `Bearer ${token}`);
         }
 
-        const error = new ApiError(message, response.status, code);
+        if (isUnsafeMethod(init.method) && !isCsrfEndpoint(input) && !headers.has("X-SideBy-CSRF")) {
+          const csrfToken = await getCsrfToken(token);
+          if (csrfToken) {
+            headers.set("X-SideBy-CSRF", csrfToken);
+          }
+        }
 
-        // Track API errors in Sentry if available
-        if (typeof window !== "undefined" && "__SENTRY__" in window) {
-          import("@sentry/react").then((Sentry) => {
-            Sentry.captureException(error, {
-              extra: {
-                url: typeof input === "string" ? input : input.toString(),
-                method: init.method || "GET",
-                status: response.status,
-                attempt: attempt + 1,
-              },
+        const response = await fetch(input, {
+          ...init,
+          headers,
+          credentials: init.credentials ?? "include",
+        });
+
+        if (!response.ok) {
+          let message = `Request failed: ${response.status}`;
+          let code: string | undefined;
+
+          try {
+            const data = (await response.json()) as { error?: string; code?: string };
+            if (data.error) message = data.error;
+            if (data.code) code = data.code;
+          } catch {
+            // Ignore parse errors
+          }
+
+          const error = new ApiError(message, response.status, code);
+
+          // Track API errors in Sentry if available
+          if (typeof window !== "undefined" && "__SENTRY__" in window) {
+            import("@sentry/react").then((Sentry) => {
+              Sentry.captureException(error, {
+                extra: {
+                  url: typeof input === "string" ? input : input.toString(),
+                  method: init.method || "GET",
+                  status: response.status,
+                  attempt: attempt + 1,
+                },
+              });
+            }).catch(() => {
+              // Sentry not available, ignore
             });
-          }).catch(() => {
-            // Sentry not available, ignore
-          });
+          }
+
+          throw error;
         }
 
-        throw error;
-      }
+        return response;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
 
-      return response;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
+        // Don't retry if it's not a retryable error
+        if (!isRetryableError(error)) {
+          throw error;
+        }
 
-      // Don't retry if it's not a retryable error
-      if (!isRetryableError(error)) {
-        throw error;
+        // Don't sleep on the last attempt
+        if (attempt < maxRetries) {
+          const delay = baseDelay * 2 ** attempt;
+          await sleep(delay);
+        }
       }
+    }
 
-      // Don't sleep on the last attempt
-      if (attempt < maxRetries) {
-        const delay = baseDelay * 2 ** attempt;
-        await sleep(delay);
-      }
+    throw lastError;
+  })();
+
+  if (isGet && cacheKey) {
+    inFlightGetRequests.set(cacheKey, fetchPromise);
+    try {
+      const response = await fetchPromise;
+      return response.clone();
+    } finally {
+      // Remove from map to avoid stale cache, only collapse strictly concurrent requests
+      inFlightGetRequests.delete(cacheKey);
     }
   }
 
-  throw lastError;
+  return fetchPromise;
 };
