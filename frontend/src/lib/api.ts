@@ -83,17 +83,31 @@ const isRetryableError = (error: unknown): boolean => {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const inFlightRequests = new Map<string, Promise<Response>>();
+
 export const apiFetch = async (
   input: RequestInfo | URL,
   init: RequestInit = {},
   retryOptions?: { retries?: number; retryDelay?: number },
 ) => {
-  const maxRetries = retryOptions?.retries ?? 2;
-  const baseDelay = retryOptions?.retryDelay ?? 1000;
+  const isGetRequest = (init.method || "GET").toUpperCase() === "GET";
+  const requestKey =
+    typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
-  let lastError: Error | undefined;
+  if (isGetRequest) {
+    const existingPromise = inFlightRequests.get(requestKey);
+    if (existingPromise) {
+      return existingPromise.then((res) => res.clone());
+    }
+  }
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+  const performFetch = async () => {
+    const maxRetries = retryOptions?.retries ?? 2;
+    const baseDelay = retryOptions?.retryDelay ?? 1000;
+
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const token = await getClerkToken();
       const headers = new Headers(init.headers);
@@ -166,4 +180,20 @@ export const apiFetch = async (
   }
 
   throw lastError;
+  };
+
+  if (isGetRequest) {
+    const fetchPromise = performFetch();
+    inFlightRequests.set(requestKey, fetchPromise);
+    fetchPromise.finally(() => {
+      // Only delete if the promise in the map is the same one we just settled.
+      // This handles edge cases where it might have been overwritten.
+      if (inFlightRequests.get(requestKey) === fetchPromise) {
+        inFlightRequests.delete(requestKey);
+      }
+    });
+    return fetchPromise.then((res) => res.clone());
+  }
+
+  return performFetch();
 };
