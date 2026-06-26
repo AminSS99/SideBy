@@ -83,20 +83,37 @@ const isRetryableError = (error: unknown): boolean => {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const inFlightRequests = new Map<string, Promise<Response>>();
+
 export const apiFetch = async (
   input: RequestInfo | URL,
   init: RequestInit = {},
   retryOptions?: { retries?: number; retryDelay?: number },
 ) => {
-  const maxRetries = retryOptions?.retries ?? 2;
-  const baseDelay = retryOptions?.retryDelay ?? 1000;
+  const method = init.method ? init.method.toUpperCase() : input instanceof Request ? input.method.toUpperCase() : "GET";
+  const isGet = method === "GET";
+  const urlString = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
-  let lastError: Error | undefined;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+  // Request Collapsing: If a GET request to this URL is already in flight, wait for it and clone the response
+  if (isGet && inFlightRequests.has(urlString)) {
     try {
-      const token = await getClerkToken();
-      const headers = new Headers(init.headers);
+      const response = await inFlightRequests.get(urlString)!;
+      return response.clone();
+    } catch (e) {
+      // If the in-flight request fails, we'll just fall through and try again ourselves
+    }
+  }
+
+  const doFetch = async () => {
+    const maxRetries = retryOptions?.retries ?? 2;
+    const baseDelay = retryOptions?.retryDelay ?? 1000;
+
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const token = await getClerkToken();
+        const headers = new Headers(init.headers);
 
       if (token && !headers.has("Authorization")) {
         headers.set("Authorization", `Bearer ${token}`);
@@ -157,13 +174,27 @@ export const apiFetch = async (
         throw error;
       }
 
-      // Don't sleep on the last attempt
-      if (attempt < maxRetries) {
-        const delay = baseDelay * 2 ** attempt;
-        await sleep(delay);
+        // Don't sleep on the last attempt
+        if (attempt < maxRetries) {
+          const delay = baseDelay * 2 ** attempt;
+          await sleep(delay);
+        }
       }
+    }
+
+    throw lastError;
+  };
+
+  if (isGet) {
+    const promise = doFetch();
+    inFlightRequests.set(urlString, promise);
+    try {
+      const response = await promise;
+      return response.clone();
+    } finally {
+      inFlightRequests.delete(urlString);
     }
   }
 
-  throw lastError;
+  return doFetch();
 };
