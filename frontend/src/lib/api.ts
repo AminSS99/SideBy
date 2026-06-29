@@ -83,19 +83,54 @@ const isRetryableError = (error: unknown): boolean => {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const inFlightRequests = new Map<string, Promise<Response>>();
+
 export const apiFetch = async (
   input: RequestInfo | URL,
   init: RequestInit = {},
   retryOptions?: { retries?: number; retryDelay?: number },
-) => {
-  const maxRetries = retryOptions?.retries ?? 2;
-  const baseDelay = retryOptions?.retryDelay ?? 1000;
+): Promise<Response> => {
+  const isGet = !init.method || init.method.toUpperCase() === "GET";
+  let cacheKey = "";
 
-  let lastError: Error | undefined;
+  // Only collapse requests if there's no custom signal (so we don't accidentally abort concurrent requests)
+  // and if it's a simple GET request.
+  const canCollapse = isGet && !init.signal;
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const token = await getClerkToken();
+  if (canCollapse) {
+    const urlString = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    // We stringify the headers so different headers don't share the same cache key
+    let headersString = "";
+    if (init.headers) {
+      if (init.headers instanceof Headers) {
+        const headersObj: Record<string, string> = {};
+        init.headers.forEach((value, key) => {
+          headersObj[key] = value;
+        });
+        headersString = JSON.stringify(headersObj);
+      } else {
+        headersString = JSON.stringify(init.headers);
+      }
+    }
+
+    // We intentionally don't include Clerk token in cacheKey directly
+    // because all concurrent requests from the same client should share the same token anyway.
+    cacheKey = `${urlString}|${headersString}|${init.credentials ?? "default"}`;
+
+    if (inFlightRequests.has(cacheKey)) {
+      return inFlightRequests.get(cacheKey)!.then(res => res.clone());
+    }
+  }
+
+  const fetchPromise = (async () => {
+    const maxRetries = retryOptions?.retries ?? 2;
+    const baseDelay = retryOptions?.retryDelay ?? 1000;
+
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const token = await getClerkToken();
       const headers = new Headers(init.headers);
 
       if (token && !headers.has("Authorization")) {
@@ -166,4 +201,21 @@ export const apiFetch = async (
   }
 
   throw lastError;
+  })();
+
+  if (canCollapse) {
+    inFlightRequests.set(cacheKey, fetchPromise);
+    fetchPromise.finally(() => {
+      // Only delete if it's the same promise
+      if (inFlightRequests.get(cacheKey) === fetchPromise) {
+        inFlightRequests.delete(cacheKey);
+      }
+    });
+    // Return a clone for the original caller too, so subsequent `.then(res => res.clone())`
+    // won't complain if someone reads the body. Actually, `fetchPromise` returns the original response.
+    // If we clone it here, the first caller gets a clone.
+    return fetchPromise.then(res => res.clone());
+  }
+
+  return fetchPromise;
 };
