@@ -83,7 +83,34 @@ const isRetryableError = (error: unknown): boolean => {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const inFlightGets = new Map<string, Promise<Response>>();
+
 export const apiFetch = async (
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  retryOptions?: { retries?: number; retryDelay?: number },
+) => {
+  const method = (init.method || "GET").toUpperCase();
+
+  if (method === "GET") {
+    const cacheKey = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+    if (inFlightGets.has(cacheKey)) {
+      return inFlightGets.get(cacheKey)!.then(res => res.clone());
+    }
+
+    const promise = executeFetch(input, init, retryOptions).finally(() => {
+      inFlightGets.delete(cacheKey);
+    });
+
+    inFlightGets.set(cacheKey, promise);
+    return promise.then(res => res.clone());
+  }
+
+  return executeFetch(input, init, retryOptions);
+};
+
+const executeFetch = async (
   input: RequestInfo | URL,
   init: RequestInit = {},
   retryOptions?: { retries?: number; retryDelay?: number },
