@@ -62,6 +62,7 @@ const ComparisonDetailPage = () => {
   const [isVersionsOpen, setIsVersionsOpen] = useState(false);
   const [viewedHistoricalResult, setViewedHistoricalResult] = useState<ComparisonData | null>(null);
   const [viewedHistoricalVersionNumber, setViewedHistoricalVersionNumber] = useState<number | undefined>(undefined);
+  const [activeTab, setActiveTab] = useState<"overview" | "intelligence" | "metadata">("overview");
   const containerRef = useRef<HTMLDivElement>(null);
 
   const comparisonQuery = useQuery({
@@ -239,6 +240,124 @@ const ComparisonDetailPage = () => {
     }
   }, [comparisonQuery.isLoading, result]);
 
+  const renderWorkbenchGrid = (resultData: ComparisonData, activityData?: ComparisonActivityStep[]) => {
+    return (
+      <div className="space-y-8">
+        {/* Tab Selector on Mobile */}
+        <div className="lg:hidden sticky top-[73px] z-30 -mx-4 px-4 bg-[#050505] border-b border-white/5 py-3 overflow-x-auto no-scrollbar flex items-center gap-1.5">
+          {[
+            { id: "overview", label: "Overview" },
+            { id: "intelligence", label: "Intelligence Matrix" },
+            { id: "metadata", label: "Sources & Tech" }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as "overview" | "intelligence" | "metadata")}
+              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all whitespace-nowrap ${
+                activeTab === tab.id
+                  ? "bg-orange-500 text-white shadow-[0_0_15px_-3px_rgba(249,115,22,0.3)]"
+                  : "text-white/50 bg-[#111] hover:text-white border border-white/5"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Desktop Grid Layout */}
+        <div className="hidden lg:grid grid-cols-12 gap-8 items-start wb-grid">
+          <div className="col-span-8 space-y-10">
+            <ComparisonHeader
+              result={resultData}
+              onRefresh={() => void refresh()}
+              comparisonId={job!.id}
+            />
+            <DecisionIntelligencePanel
+              result={resultData}
+              activity={activityData}
+              comparisonId={job!.id}
+            />
+            <RadarChartPanel result={resultData} />
+            <ConsensusPanel result={resultData} />
+            <FeatureMatrixPanel result={resultData} />
+            <DecisionMatrixPanel result={resultData} comparisonId={job!.id} />
+            <div className="space-y-10">
+              {resultData.categories.map((category, index) => (
+                <CategorySection
+                  key={category.name}
+                  category={category}
+                  entities={resultData.entities}
+                  index={index}
+                />
+              ))}
+            </div>
+          </div>
+          
+          <aside className="col-span-4 space-y-6 sticky top-28 self-start pb-8 h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar">
+            <TableOfContents result={resultData} />
+            <VerdictPanel result={resultData} />
+            <WatchlistPanel result={resultData} comparisonId={job!.id} />
+            <EntityFactPanel result={resultData} facts={entityFacts} />
+            <SourcesPanel sources={resultData.sources} />
+            <RunTelemetryPanel result={resultData} />
+            <FeedbackPanel />
+            <FollowUpPanel comparisonId={job!.id} />
+          </aside>
+        </div>
+
+        {/* Mobile Tab-based Layout */}
+        <div className="lg:hidden space-y-8 pb-20">
+          {activeTab === "overview" && (
+            <div className="space-y-8 animate-fadeIn">
+              <ComparisonHeader
+                result={resultData}
+                onRefresh={() => void refresh()}
+                comparisonId={job!.id}
+              />
+              <VerdictPanel result={resultData} />
+              <RadarChartPanel result={resultData} />
+              <ConsensusPanel result={resultData} />
+              <WatchlistPanel result={resultData} comparisonId={job!.id} />
+            </div>
+          )}
+
+          {activeTab === "intelligence" && (
+            <div className="space-y-8 animate-fadeIn">
+              <DecisionIntelligencePanel
+                result={resultData}
+                activity={activityData}
+                comparisonId={job!.id}
+              />
+              <FeatureMatrixPanel result={resultData} />
+              <DecisionMatrixPanel result={resultData} comparisonId={job!.id} />
+              <div className="space-y-6">
+                {resultData.categories.map((category, index) => (
+                  <CategorySection
+                    key={category.name}
+                    category={category}
+                    entities={resultData.entities}
+                    index={index}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "metadata" && (
+            <div className="space-y-8 animate-fadeIn">
+              <EntityFactPanel result={resultData} facts={entityFacts} />
+              <SourcesPanel sources={resultData.sources} />
+              <RunTelemetryPanel result={resultData} />
+              <FeedbackPanel />
+              <FollowUpPanel comparisonId={job!.id} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div ref={containerRef} className="space-y-8">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -413,46 +532,7 @@ const ComparisonDetailPage = () => {
             </div>
           )}
 
-          {result && (
-            <div className="wb-grid grid gap-10 xl:grid-cols-12 relative items-start">
-              <div className="space-y-10 xl:col-span-8">
-                <ComparisonHeader
-                  result={result}
-                  onRefresh={() => void refresh()}
-                  comparisonId={job.id}
-                />
-                <DecisionIntelligencePanel
-                  result={result}
-                  activity={job.activity}
-                  comparisonId={job.id}
-                />
-                <RadarChartPanel result={result} />
-                <ConsensusPanel result={result} />
-                <FeatureMatrixPanel result={result} />
-                <DecisionMatrixPanel result={result} comparisonId={job.id} />
-                <div className="space-y-10">
-                  {result.categories.map((category, index) => (
-                    <CategorySection
-                      key={category.name}
-                      category={category}
-                      entities={result.entities}
-                      index={index}
-                    />
-                  ))}
-                </div>
-              </div>
-              <aside className="space-y-6 xl:col-span-4 sticky top-6 self-start pb-8 h-[calc(100vh-2rem)] overflow-y-auto no-scrollbar">
-                <TableOfContents result={result} />
-                <VerdictPanel result={result} />
-                <WatchlistPanel result={result} comparisonId={job.id} />
-                <EntityFactPanel result={result} facts={entityFacts} />
-                <SourcesPanel sources={result.sources} />
-                <RunTelemetryPanel result={result} />
-                <FeedbackPanel />
-                <FollowUpPanel comparisonId={job.id} />
-              </aside>
-            </div>
-          )}
+          {result && renderWorkbenchGrid(result, job.activity)}
         </div>
       ) : job.status === "running" || !result ? (
         <ResearchLoader
@@ -463,47 +543,7 @@ const ComparisonDetailPage = () => {
           activity={job.activity}
         />
       ) : (
-        <div className="wb-grid grid gap-10 xl:grid-cols-12 relative items-start">
-          <div className="space-y-10 xl:col-span-8">
-            <ComparisonHeader
-              result={result}
-              onRefresh={() => void refresh()}
-              comparisonId={job.id}
-            />
-            <DecisionIntelligencePanel
-              result={result}
-              activity={job.activity}
-              comparisonId={job.id}
-            />
-            
-            <RadarChartPanel result={result} />
-            <ConsensusPanel result={result} />
-            <FeatureMatrixPanel result={result} />
-            <DecisionMatrixPanel result={result} comparisonId={job.id} />
-
-            <div className="space-y-10">
-              {result.categories.map((category, index) => (
-                <CategorySection
-                  key={category.name}
-                  category={category}
-                  entities={result.entities}
-                  index={index}
-                />
-              ))}
-            </div>
-          </div>
-
-          <aside className="space-y-6 xl:col-span-4 sticky top-6 self-start pb-8 h-[calc(100vh-2rem)] overflow-y-auto no-scrollbar">
-            <TableOfContents result={result} />
-            <VerdictPanel result={result} />
-            <WatchlistPanel result={result} comparisonId={job.id} />
-            <EntityFactPanel result={result} facts={entityFacts} />
-            <SourcesPanel sources={result.sources} />
-            <RunTelemetryPanel result={result} />
-            <FeedbackPanel />
-            <FollowUpPanel comparisonId={job.id} />
-          </aside>
-        </div>
+        renderWorkbenchGrid(result, job.activity)
       )}
 
       {id && (

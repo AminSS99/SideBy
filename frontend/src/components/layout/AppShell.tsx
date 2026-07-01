@@ -73,6 +73,12 @@ const AppShell = () => {
       opacity: 0,
       duration: 0.8,
       ease: "power3.out"
+    }, "-=0.6")
+    .from(".shell-bottom-nav", {
+      y: 40,
+      opacity: 0,
+      duration: 0.8,
+      ease: "back.out(1.2)"
     }, "-=0.6");
   }, { scope: shellRef });
 
@@ -150,7 +156,7 @@ const AppShell = () => {
         </div>
       </div>
 
-      <div className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 gap-4 px-4 py-5 sm:px-6 sm:py-8 lg:grid-cols-[220px_1fr] lg:gap-8 items-start">
+      <div className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 gap-4 px-4 py-5 sm:px-6 sm:py-8 lg:grid-cols-[220px_1fr] lg:gap-8 items-start pb-24 lg:pb-8">
         {/* Desktop Sidebar */}
         <aside className="shell-sidebar hidden lg:flex flex-col rounded-sm border border-white/10 bg-[#0a0a0a] p-4 sticky top-28 h-[calc(100vh-8rem)]">
           <nav className="flex flex-col space-y-1 overflow-y-auto no-scrollbar flex-1">
@@ -263,7 +269,7 @@ const AppShell = () => {
           )}
         </AnimatePresence>
 
-        <main className="shell-main min-w-0 w-full rounded-sm border border-white/10 bg-[#0a0a0a] p-4 sm:p-8 md:p-10 shadow-2xl flex-1 flex flex-col">
+        <main className="shell-main min-w-0 w-full rounded-sm border border-white/10 bg-[#0a0a0a] p-4 sm:p-8 md:p-10 shadow-2xl flex-1 flex flex-col pb-24 lg:pb-10">
           {workspaceError && (
             <div className="mb-6 rounded-sm border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-100">
               {workspaceError}
@@ -276,6 +282,66 @@ const AppShell = () => {
             <BrandFooter />
           </div>
         </main>
+      </div>
+
+      {/* Floating PWA Mobile Bottom Navigation */}
+      <div className="shell-bottom-nav lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[400px] h-16 bg-black/85 border border-white/10 rounded-2xl flex items-center justify-around px-2 shadow-[0_8px_32px_rgba(0,0,0,0.65)] z-50">
+        <NavLink
+          to="/app"
+          end
+          className={({ isActive }) =>
+            `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
+              isActive ? "text-orange-400" : "text-white/40 hover:text-white"
+            }`
+          }
+        >
+          <LayoutDashboard className="h-5 w-5" />
+          <span>Overview</span>
+        </NavLink>
+        
+        <NavLink
+          to="/app/chat"
+          className={({ isActive }) =>
+            `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
+              isActive ? "text-orange-400" : "text-white/40 hover:text-white"
+            }`
+          }
+        >
+          <MessageSquare className="h-5 w-5" />
+          <span>Chat</span>
+        </NavLink>
+
+        <NavLink
+          to="/app/comparisons"
+          className={({ isActive }) =>
+            `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
+              isActive ? "text-orange-400" : "text-white/40 hover:text-white"
+            }`
+          }
+        >
+          <GitCompareArrows className="h-5 w-5" />
+          <span>Compare</span>
+        </NavLink>
+
+        <NavLink
+          to="/app/research"
+          className={({ isActive }) =>
+            `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
+              isActive ? "text-orange-400" : "text-white/40 hover:text-white"
+            }`
+          }
+        >
+          <Microscope className="h-5 w-5" />
+          <span>Research</span>
+        </NavLink>
+
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-white/40 hover:text-white transition-all"
+        >
+          <Menu className="h-5 w-5" />
+          <span>More</span>
+        </button>
       </div>
     </div>
   );

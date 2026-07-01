@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, LoaderCircle, Sparkles, Database, FolderKanban, Check, ToggleRight, ToggleLeft } from "lucide-react";
+import { Send, Bot, User, LoaderCircle, Sparkles, Database, FolderKanban, Check, ToggleRight, ToggleLeft, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { apiFetch } from "@/lib/api";
@@ -42,6 +43,7 @@ const ChatPage = () => {
   const [activeFiles, setActiveFiles] = useState<ActiveKnowledgeFile[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(true);
   const [filesError, setFilesError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -247,13 +249,24 @@ const ChatPage = () => {
 
   return (
     <div ref={containerRef} className="flex h-full flex-col space-y-6">
-      <div className="chat-header">
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-400">
-          Research Assistant
-        </p>
-        <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
-          AI Chat
-        </h1>
+      <div className="chat-header border-b border-white/5 pb-4">
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-400">
+              Research Assistant
+            </p>
+            <h1 className="mt-2 font-serif text-3xl sm:text-4xl text-[#fdfbf7] tracking-tight">
+              AI Chat
+            </h1>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-xl hover:bg-orange-500/20 transition-all shadow-[0_0_15px_-3px_rgba(249,115,22,0.15)] active:scale-[0.98]"
+          >
+            <Database className="h-4 w-4" />
+            <span>Context ({activeFiles.filter((f) => f.active).length})</span>
+          </button>
+        </div>
         <p className="mt-3 text-sm text-[#fdfbf7]/55 leading-relaxed max-w-3xl">
           Ask questions, synthesize findings, or deep dive into specific product details. You can ground the AI by selecting files from your knowledge base.
         </p>
@@ -436,6 +449,128 @@ const ChatPage = () => {
           </div>
         </aside>
       </div>
+
+      {/* Mobile Grounding Context Drawer */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSidebarOpen(false)}
+              className="fixed inset-0 z-[60] bg-black/80 lg:hidden"
+            />
+            {/* Drawer Content */}
+            <motion.aside
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", bounce: 0, duration: 0.35 }}
+              className="fixed inset-y-0 right-0 z-[70] w-[300px] max-w-[85vw] bg-[#0c0b0a] border-l border-[#2a2a2a] shadow-2xl p-6 flex flex-col space-y-4 lg:hidden"
+            >
+              <div className="flex items-center justify-between border-b border-[#2a2a2a] pb-3">
+                <h3 className="flex items-center gap-2 font-serif text-lg text-white">
+                  <Database className="h-4 w-4 text-orange-400" />
+                  Chat Grounding
+                </h3>
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="p-1 text-white/50 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* RAG Context Content */}
+              <div className="space-y-4 overflow-y-auto flex-1 no-scrollbar pr-1">
+                <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-4">
+                  <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/70 border-b border-[#2a2a2a] pb-2 mb-3">
+                    <FolderKanban className="h-3.5 w-3.5 text-emerald-400" />
+                    Active Project
+                  </h4>
+                  <div className="rounded-sm border border-[#333] bg-[#0c0b0a] p-2.5 text-xs text-[#fdfbf7]/70">
+                    {activeProject ? activeProject.name : "Global Workspace (No Project)"}
+                  </div>
+                </div>
+
+                <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-4 flex flex-col">
+                  <div className="flex items-center justify-between border-b border-[#2a2a2a] pb-2 mb-3">
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/70">
+                      Knowledge Base
+                    </h4>
+                    <span className="text-[9px] font-bold uppercase tracking-widest bg-[#1a1a1a] border border-[#333] px-2 py-0.5 rounded-sm">
+                      {activeFiles.some((file) => file.active) ? "RAG Active" : "General"}
+                    </span>
+                  </div>
+
+                  <p className="text-[9px] text-[#fdfbf7]/50 uppercase tracking-widest font-bold mb-3">
+                    Ground AI in indexed files:
+                  </p>
+
+                  <div className="space-y-2">
+                    {isLoadingFiles && (
+                      <div className="flex items-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] p-3 text-xs text-[#fdfbf7]/45">
+                        <LoaderCircle className="h-3.5 w-3.5 animate-spin text-orange-400" />
+                        Loading...
+                      </div>
+                    )}
+
+                    {!isLoadingFiles && filesError && (
+                      <div className="rounded-sm border border-red-500/20 bg-red-500/10 p-3 text-[10px] leading-relaxed text-red-200/80">
+                        {filesError}
+                      </div>
+                    )}
+
+                    {!isLoadingFiles && !filesError && activeFiles.length === 0 && (
+                      <div className="rounded-sm border border-[#333] bg-[#0c0b0a] p-3 text-[11px] leading-relaxed text-[#fdfbf7]/45">
+                        No indexed documents.
+                      </div>
+                    )}
+
+                    {!isLoadingFiles && activeFiles.map(file => (
+                      <button
+                        key={file.id}
+                        onClick={() => toggleFile(file.id)}
+                        className={`w-full flex items-center justify-between gap-3 p-3 rounded-sm border transition-colors ${
+                          file.active
+                            ? "bg-orange-500/10 border-orange-500/30"
+                            : "bg-[#0c0b0a] border-[#333]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`shrink-0 flex h-5 w-5 rounded-sm items-center justify-center border ${
+                            file.active ? "bg-orange-500 border-orange-500 text-white" : "bg-[#1a1a1a] border-[#444] text-transparent"
+                          }`}>
+                            <Check className="h-3 w-3" />
+                          </div>
+                          <span className={`text-[11px] truncate text-left ${file.active ? "text-[#fdfbf7]" : "text-[#fdfbf7]/50"}`}>
+                            {file.filename}
+                          </span>
+                        </div>
+                        {file.active ? (
+                          <ToggleRight className="h-3.5 w-3.5 shrink-0 text-orange-400" />
+                        ) : (
+                          <ToggleLeft className="h-3.5 w-3.5 shrink-0 text-[#fdfbf7]/30" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-[#2a2a2a]">
+                    <p className="text-[9px] text-[#fdfbf7]/40 leading-relaxed">
+                      Active context: <strong className="text-[#fdfbf7]/70">{activeFiles.filter((file) => file.active).length} docs</strong>
+                      <br />
+                      Chunks: <strong className="text-[#fdfbf7]/70">{activeFiles.reduce((sum, file) => sum + (file.active ? file.chunkCount : 0), 0)}</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

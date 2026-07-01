@@ -26,9 +26,12 @@ const InteractiveConstellation: React.FC = () => {
 
     let animationFrameId: number;
     let particles: Particle[] = [];
-    const particleCount = 60;
-    const connectionDistance = 100;
-    const mouseRadius = 120;
+    
+    // Dynamic cap for mobile performance optimization
+    const isMobile = window.innerWidth < 768;
+    const particleCount = isMobile ? 25 : 60;
+    const connectionDistance = isMobile ? 80 : 100;
+    const mouseRadius = isMobile ? 90 : 120;
 
     const resizeCanvas = () => {
       const rect = canvas.getBoundingClientRect();
