@@ -5,7 +5,7 @@
  * Enforces cost/time guardrails per job.
  */
 import { z } from "zod";
-import { asc, eq, and, sql, or, lte } from "drizzle-orm";
+import { asc, eq, and, sql, or, lte, inArray } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
@@ -1558,19 +1558,33 @@ function ensureFactCoverage(
   extracted: ExtractedSource[],
 ): ExtractedFact[] {
   const completeFacts = [...facts];
-  const hasFact = (entity: string, dimension: string) =>
-    completeFacts.some(
-      (fact) =>
-        fact.entity.toLowerCase() === entity.toLowerCase() &&
-        fact.dimension.toLowerCase() === dimension.toLowerCase() &&
-        fact.value.trim().length > 0,
-    );
+
+  const factCache = new Set<string>();
+  for (const fact of completeFacts) {
+    if (fact.value.trim().length > 0) {
+      factCache.add(`${fact.entity.toLowerCase()}|${fact.dimension.toLowerCase()}`);
+    }
+  }
+
+  const extractedLower = extracted.map((item) => ({
+    ...item,
+    entityNameLower: item.entityName.toLowerCase(),
+    titleLower: item.title.toLowerCase(),
+    markdownLower: item.markdown.toLowerCase(),
+  }));
 
   for (const entity of parsed.entities.slice(0, 2)) {
     for (const dimension of dimensions) {
-      if (hasFact(entity.name, dimension.name)) continue;
-      const fallback = buildFallbackFact(entity.name, dimension.name, extracted);
-      if (fallback) completeFacts.push(fallback);
+      const cacheKey = `${entity.name.toLowerCase()}|${dimension.name.toLowerCase()}`;
+      if (factCache.has(cacheKey)) continue;
+
+      const fallback = buildFallbackFact(entity.name, dimension.name, extracted, extractedLower);
+      if (fallback) {
+        completeFacts.push(fallback);
+        if (fallback.value.trim().length > 0) {
+          factCache.add(`${fallback.entity.toLowerCase()}|${fallback.dimension.toLowerCase()}`);
+        }
+      }
     }
   }
 
@@ -1581,16 +1595,11 @@ function buildFallbackFact(
   entityName: string,
   dimensionName: string,
   extracted: ExtractedSource[],
+  extractedLower: Array<ExtractedSource & { entityNameLower: string; titleLower: string; markdownLower: string }>,
 ): ExtractedFact | null {
   const entityNeedle = entityName.toLowerCase();
   const dimensionNeedle = dimensionName.toLowerCase().split(/\s+/)[0] || "";
 
-  const extractedLower = extracted.map((item) => ({
-    ...item,
-    entityNameLower: item.entityName.toLowerCase(),
-    titleLower: item.title.toLowerCase(),
-    markdownLower: item.markdown.toLowerCase(),
-  }));
   const sourceLower =
     extractedLower.find((item) => item.entityNameLower === entityNeedle) ||
     extractedLower.find((item) => item.titleLower.includes(entityNeedle)) ||
@@ -1633,16 +1642,25 @@ async function getReusableFactCounts(
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
 
-  for (const entityName of entityNames) {
-    const entitySlug = normalizeEntityForReuse(entityName);
-    if (!entitySlug) continue;
+  const slugs = entityNames
+    .map(normalizeEntityForReuse)
+    .filter((slug): slug is string => slug !== null);
 
-    const [row] = await ctx.db
-      .select({ count: sql<number>`count(*)::integer` })
-      .from(entityKnowledge)
-      .where(eq(entityKnowledge.entitySlug, entitySlug));
+  if (slugs.length === 0) return counts;
 
-    counts.set(entitySlug, row?.count || 0);
+  const rows = await ctx.db
+    .select({
+      entitySlug: entityKnowledge.entitySlug,
+      count: sql<number>`count(*)::integer`,
+    })
+    .from(entityKnowledge)
+    .where(inArray(entityKnowledge.entitySlug, slugs))
+    .groupBy(entityKnowledge.entitySlug);
+
+  for (const row of rows) {
+    if (row.entitySlug) {
+      counts.set(row.entitySlug, row.count);
+    }
   }
 
   return counts;
