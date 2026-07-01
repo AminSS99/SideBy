@@ -21,6 +21,10 @@ export interface WorkspaceRecord {
   name: string;
   slug: string;
   plan: "free" | "pro" | "team" | "business";
+  snapsolveWorkspaceId: string | null;
+  snapsolveWorkspaceSlug: string | null;
+  snapsolveWorkspaceStatus: string | null;
+  snapsolveSyncError: string | null;
   createdAt: string;
   updatedAt: string;
 }

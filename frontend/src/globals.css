@@ -124,6 +124,75 @@
     break-inside: avoid;
     page-break-inside: avoid;
   }
+
+  /* Custom Clerk Redesign Styles */
+  .clerk-input {
+    background-color: #0c0b0a !important;
+    border: 1px solid #222222 !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    padding: 12px 16px !important;
+    font-size: 14px !important;
+    transition: all 0.2s ease-in-out !important;
+  }
+  .clerk-input:focus {
+    border-color: rgba(249, 115, 22, 0.5) !important;
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.15) !important;
+    background-color: #09090b !important;
+  }
+  input[type="email"].clerk-input,
+  input[name="identifier"].clerk-input {
+    padding-right: 42px !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='20' height='16' x='2' y='4' rx='2'/%3E%3Cpath d='m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 14px center !important;
+    background-size: 18px !important;
+  }
+  .clerk-social-btn {
+    border: 1px solid #222222 !important;
+    background-color: #0c0b0a !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+    font-weight: 500 !important;
+    font-size: 14px !important;
+    transition: all 0.2s ease-in-out !important;
+  }
+  .clerk-social-btn:hover {
+    background-color: #141416 !important;
+    border-color: #333333 !important;
+  }
+  .clerk-primary-btn {
+    background: linear-gradient(135deg, #f97316 0%, #e11d48 100%) !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    padding: 12px 16px !important;
+    transition: all 0.2s ease-in-out !important;
+    border: none !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15) !important;
+  }
+  .clerk-primary-btn:hover {
+    background: linear-gradient(135deg, #ea580c 0%, #be123c 100%) !important;
+    box-shadow: 0 4px 20px rgba(249, 115, 22, 0.25) !important;
+    opacity: 0.95 !important;
+  }
+  .clerk-primary-btn:active {
+    transform: scale(0.98) !important;
+  }
+  .clerk-primary-btn::after {
+    content: " →";
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    display: inline-block;
+    transition: transform 0.2s ease-in-out;
+    margin-left: 6px;
+  }
+  .clerk-primary-btn:hover::after {
+    transform: translateX(4px);
+  }
 }
 
 /* 

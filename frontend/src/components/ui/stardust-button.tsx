@@ -1,9 +1,13 @@
 import React from 'react';
 
-export interface StardustButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface StardustButtonProps extends React.HTMLAttributes<HTMLButtonElement | HTMLAnchorElement> {
   children?: React.ReactNode;
   variant?: 'blue' | 'red';
   shape?: 'pill' | 'circle';
+  href?: string;
+  target?: string;
+  rel?: string;
+  type?: React.ButtonHTMLAttributes<HTMLButtonElement>["type"];
 }
 
 export const StardustButton = ({ 
@@ -12,6 +16,10 @@ export const StardustButton = ({
   className = "",
   variant = 'blue',
   shape = 'pill',
+  href,
+  target,
+  rel,
+  type = "button",
   ...props 
 }: StardustButtonProps) => {
   const buttonStyle = {
@@ -150,24 +158,45 @@ export const StardustButton = ({
     }
   `;
 
-  return (
+  const content = (
     <>
       <style dangerouslySetInnerHTML={{ __html: beforeAfterStyles }} />
-      <button
-        className={`pearl-button ${className}`}
-        style={buttonStyle}
-        onClick={onClick}
-        {...props}
-      >
-        <div className="wrap" style={wrapStyle}>
-          <p style={pStyle}>
-            <span>✧</span>
-            <span>✦</span>
-            {children}
-          </p>
-        </div>
-      </button>
+      <div className="wrap" style={wrapStyle}>
+        <p style={pStyle}>
+          <span>✧</span>
+          <span>✦</span>
+          {children}
+        </p>
+      </div>
     </>
+  );
+
+  if (href) {
+    return (
+      <a
+        className={`pearl-button ${className}`}
+        href={href}
+        target={target}
+        rel={rel}
+        style={buttonStyle}
+        onClick={onClick as React.MouseEventHandler<HTMLAnchorElement>}
+        {...(props as React.AnchorHTMLAttributes<HTMLAnchorElement>)}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button
+      className={`pearl-button ${className}`}
+      style={buttonStyle}
+      onClick={onClick as React.MouseEventHandler<HTMLButtonElement>}
+      type={type}
+      {...(props as React.ButtonHTMLAttributes<HTMLButtonElement>)}
+    >
+      {content}
+    </button>
   );
 };
 

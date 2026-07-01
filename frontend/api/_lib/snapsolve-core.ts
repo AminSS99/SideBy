@@ -49,6 +49,18 @@ export type SnapSolveEntitlement = {
   expires_at?: string | null;
 };
 
+export type SnapSolveProductWorkspace = {
+  status: "linked" | "pending_cockpit_identity" | "disabled";
+  workspace_id: string | null;
+  workspace_slug?: string | null;
+  snapsolve_user_id: string;
+  product: string;
+  external_workspace_id: string;
+  created: boolean;
+  linked: boolean;
+  reason?: string | null;
+};
+
 function getConfig() {
   const coreUrl = serverEnv.snapsolveCoreUrl?.replace(/\/+$/, "");
   const secret = serverEnv.snapsolveSidebySecret;
@@ -171,6 +183,38 @@ export async function checkSnapSolveEntitlement(args: {
     logger.warn("SnapSolve entitlement check unavailable", {
       error: error instanceof Error ? error.message : String(error),
       userId: args.clerkUserId,
+    });
+    return null;
+  }
+}
+
+export async function createOrLinkSnapSolveWorkspace(args: {
+  clerkUserId: string;
+  email?: string | null;
+  externalWorkspaceId: string;
+  workspaceName: string;
+  externalOwnerId?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<SnapSolveProductWorkspace | null> {
+  try {
+    return await postSignedJson<SnapSolveProductWorkspace>("/api/core/v1/workspaces", {
+      clerk_user_id: args.clerkUserId,
+      email: args.email ?? null,
+      email_verified: Boolean(args.email),
+      external_owner_id: args.externalOwnerId ?? args.clerkUserId,
+      external_workspace_id: args.externalWorkspaceId,
+      metadata: {
+        source: "sideby_workspace_create",
+        ...(args.metadata ?? {}),
+      },
+      product_user_id: args.clerkUserId,
+      workspace_name: args.workspaceName,
+    });
+  } catch (error) {
+    logger.warn("SnapSolve workspace link unavailable", {
+      error: error instanceof Error ? error.message : String(error),
+      userId: args.clerkUserId,
+      workspaceId: args.externalWorkspaceId,
     });
     return null;
   }

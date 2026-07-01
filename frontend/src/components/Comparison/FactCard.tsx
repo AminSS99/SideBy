@@ -72,7 +72,7 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
       style={{ borderTopColor: fact.changed ? "#ea580c" : entity.hex }}
     >
       {/* Sweeping Glassmorphic Shine Effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-[1.5s] ease-out z-0 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform [transition-duration:1500ms] ease-out z-0 pointer-events-none" />
 
       {/* Copy Button */}
       <button 

@@ -51,6 +51,7 @@ export const SnapsolveFloatingWidget = () => {
   }, []);
 
   const isDraggingRef = useRef(false);
+  const wasDraggedRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const positionStartRef = useRef({ x: 0, y: 0 });
 
@@ -58,6 +59,7 @@ export const SnapsolveFloatingWidget = () => {
     if (e.button !== 0) return; // Left click only
     
     isDraggingRef.current = true;
+    wasDraggedRef.current = false;
     dragStartRef.current = { x: e.clientX, y: e.clientY };
     positionStartRef.current = { x: posRef.current.x, y: posRef.current.y };
     
@@ -69,6 +71,8 @@ export const SnapsolveFloatingWidget = () => {
     
     const dx = e.clientX - dragStartRef.current.x;
     const dy = e.clientY - dragStartRef.current.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    wasDraggedRef.current = distance >= 5;
     
     setPosition(
       clampPosition(
@@ -95,9 +99,13 @@ export const SnapsolveFloatingWidget = () => {
     const dx = e.clientX - dragStartRef.current.x;
     const dy = e.clientY - dragStartRef.current.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
+    wasDraggedRef.current = distance >= 5;
+  };
 
-    if (distance < 5) {
-      window.open('https://snapsolve.ink', '_blank', 'noopener,noreferrer');
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (wasDraggedRef.current) {
+      e.preventDefault();
+      wasDraggedRef.current = false;
     }
   };
 
@@ -125,7 +133,11 @@ export const SnapsolveFloatingWidget = () => {
         <StardustButton
           variant="red"
           shape="circle"
+          href="https://snapsolve.ink"
+          target="_blank"
+          rel="noopener noreferrer"
           aria-label="Snapsolve"
+          onClick={handleClick}
         >
           {""}
         </StardustButton>

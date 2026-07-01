@@ -39,7 +39,8 @@ export default async function handler(
     const auth = await requireAuth(request);
     const body = CheckoutBodySchema.parse(request.body || {});
     const priceId = getPaddlePriceId(body.plan);
-    const appUrl = process.env.VITE_APP_URL || "http://localhost:5173";
+    const appUrl = (process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5173")
+      .replace(/\/+$/, "");
 
     const transaction = await paddleRequest<PaddleTransactionResponse>("/transactions", {
       method: "POST",

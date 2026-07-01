@@ -31,7 +31,8 @@ export default async function handler(
       .orderBy(desc(comparisons.updatedAt))
       .limit(2000);
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://snapsolve.ink";
+    const baseUrl = (process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://snapsolve.ink")
+      .replace(/\/+$/, "");
 
     // Start XML generation
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;

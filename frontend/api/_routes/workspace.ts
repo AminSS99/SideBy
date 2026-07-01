@@ -6,8 +6,10 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../_lib/auth.js";
 import { canAccessWorkspace, getAccessibleWorkspaces } from "../_lib/db-auth.js";
+import { createOrLinkSnapSolveWorkspace } from "../_lib/snapsolve-core.js";
+import { logger } from "../_lib/log.js";
 import { createDbClient } from "../../src/db/index.js";
-import { projects, workspaces } from "../../src/db/schema.js";
+import { projects, users, workspaces } from "../../src/db/schema.js";
 
 export const config = {
   runtime: "nodejs",
@@ -35,7 +37,7 @@ function getSingleHeader(value: string | string[] | undefined) {
 
 function getAllowedOrigins(requestHost?: string) {
   const origins = new Set<string>();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VITE_APP_URL;
+  const appUrl = process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL;
 
   if (appUrl) {
     origins.add(appUrl.replace(/\/+$/, ""));
@@ -201,6 +203,61 @@ async function handleWorkspaces(
           plan: "free",
         })
         .returning();
+
+      const workspace = inserted[0];
+      try {
+        const [user] = await db
+          .select({ email: users.email })
+          .from(users)
+          .where(eq(users.id, auth.userId))
+          .limit(1);
+
+        const snapSolveWorkspace = await createOrLinkSnapSolveWorkspace({
+          clerkUserId: auth.userId,
+          email: user?.email ?? null,
+          externalOwnerId: ownerId,
+          externalWorkspaceId: workspace.id,
+          workspaceName: name,
+          metadata: {
+            local_workspace_slug: slug,
+            owner_type: ownerType,
+          },
+        });
+
+        if (snapSolveWorkspace) {
+          const [syncedWorkspace] = await db
+            .update(workspaces)
+            .set({
+              snapsolveWorkspaceId: snapSolveWorkspace.workspace_id,
+              snapsolveWorkspaceSlug: snapSolveWorkspace.workspace_slug ?? null,
+              snapsolveWorkspaceStatus: snapSolveWorkspace.status,
+              snapsolveSyncError: snapSolveWorkspace.reason ?? null,
+              updatedAt: new Date(),
+            })
+            .where(eq(workspaces.id, workspace.id))
+            .returning();
+
+          return response.status(201).json({ workspace: syncedWorkspace });
+        }
+
+        const [pendingWorkspace] = await db
+          .update(workspaces)
+          .set({
+            snapsolveWorkspaceStatus: "sync_unavailable",
+            snapsolveSyncError: "SnapSolve Core is not configured or did not accept the workspace link.",
+            updatedAt: new Date(),
+          })
+          .where(eq(workspaces.id, workspace.id))
+          .returning();
+
+        return response.status(201).json({ workspace: pendingWorkspace });
+      } catch (error) {
+        logger.warn("SideBy workspace created without SnapSolve workspace link", {
+          error: error instanceof Error ? error.message : String(error),
+          userId: auth.userId,
+          workspaceId: workspace.id,
+        });
+      }
 
       return response.status(201).json({ workspace: inserted[0] });
     }

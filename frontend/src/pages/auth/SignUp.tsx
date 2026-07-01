@@ -1,5 +1,6 @@
 import React from "react";
 import { SignUp as ClerkSignUp } from "@clerk/clerk-react";
+import { Link } from "react-router-dom";
 import { AlertCircle } from "lucide-react";
 import AuthPageShell from "@/components/auth/AuthPageShell";
 import { envConfig } from "@/config/env";
@@ -48,19 +49,24 @@ const SignUp = () => {
                   card: "bg-transparent shadow-none p-0 w-full max-w-full",
                   headerTitle: "hidden",
                   headerSubtitle: "hidden",
-                  dividerLine: "bg-[#333]",
-                  dividerText: "text-[#fdfbf7]/40 text-[10px] uppercase tracking-widest font-bold",
-                  formFieldLabel: "text-[#fdfbf7]/70 text-[10px] uppercase tracking-widest font-bold",
-                  formFieldInput: "bg-[#0c0b0a] border-[#333] text-[#fdfbf7] rounded-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500",
-                  formButtonPrimary: "bg-[#fdfbf7] text-[#0a0a0a] hover:bg-[#e0e0e0] rounded-sm text-xs uppercase tracking-widest font-bold py-3",
-                  socialButtonsBlockButton: "border border-[#333] bg-[#0c0b0a] hover:bg-[#1a1a1a] text-[#fdfbf7] rounded-sm text-xs font-bold",
-                  socialButtonsBlockButtonText: "font-semibold",
+                  dividerLine: "bg-white/5",
+                  dividerText: "text-white/30 text-xs font-semibold tracking-wider uppercase",
+                  formFieldLabel: "text-white/50 text-[10px] uppercase tracking-widest font-semibold mb-1.5 block text-left",
+                  formFieldInput: "clerk-input",
+                  formButtonPrimary: "clerk-primary-btn w-full",
+                  socialButtonsBlockButton: "clerk-social-btn w-full flex items-center justify-center gap-2 font-medium",
+                  socialButtonsBlockButtonText: "font-medium text-white",
                   footer: "hidden",
                 }
               }}
             />
           </div>
         )}
+        <div className="text-center mt-6">
+          <Link to="/" className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-orange-400 transition-colors font-medium">
+            &larr; Back to comparisons
+          </Link>
+        </div>
       </div>
     </AuthPageShell>
   );

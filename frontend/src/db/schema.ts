@@ -147,12 +147,17 @@ export const workspaces = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull().unique(),
     plan: planEnum("plan").default("free").notNull(),
+    snapsolveWorkspaceId: uuid("snapsolve_workspace_id"),
+    snapsolveWorkspaceSlug: text("snapsolve_workspace_slug"),
+    snapsolveWorkspaceStatus: text("snapsolve_workspace_status"),
+    snapsolveSyncError: text("snapsolve_sync_error"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("workspaces_owner_idx").on(table.ownerId),
     index("workspaces_slug_idx").on(table.slug),
+    index("workspaces_snapsolve_workspace_idx").on(table.snapsolveWorkspaceId),
   ],
 );
 
