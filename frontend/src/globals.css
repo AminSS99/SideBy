@@ -257,3 +257,26 @@ html {
     display: block !important;
   }
 }
+
+/* GPU Hardware Acceleration for GSAP Animations */
+.vp-row,
+.cons-box,
+.cat-takeaway,
+.cat-header-item,
+.sp-item,
+.matrix-row,
+.wb-grid,
+.wb-header {
+  will-change: transform, opacity, background-color;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+}
+
+/* FactCard container custom optimizations */
+.group.relative.overflow-hidden.rounded-sm.border-t-2 {
+  will-change: transform, opacity, border-color, background-color;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+}

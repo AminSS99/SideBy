@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StardustButton } from '../ui/stardust-button';
 
 export const SnapsolveFloatingWidget = () => {
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -102,13 +101,6 @@ export const SnapsolveFloatingWidget = () => {
     wasDraggedRef.current = distance >= 5;
   };
 
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (wasDraggedRef.current) {
-      e.preventDefault();
-      wasDraggedRef.current = false;
-    }
-  };
-
   if (!mounted) return null;
 
   return (
@@ -129,22 +121,25 @@ export const SnapsolveFloatingWidget = () => {
         {/* Deep red ambient glow behind the button */}
         <div className="absolute -inset-2 rounded-full bg-red-600/30 opacity-40 blur-xl group-hover:bg-red-500/50 group-hover:opacity-75 transition-all duration-300 pointer-events-none" />
         
-        {/* Red Stardust Button */}
-        <StardustButton
-          variant="red"
-          shape="circle"
-          href="https://snapsolve.ink"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Snapsolve"
-          onClick={handleClick}
+        {/* SnapSolve ecosystem badge */}
+        <div
+          aria-label="SideBy is part of the SnapSolve ecosystem"
+          className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-red-200/20 bg-[#180202] shadow-[inset_0_0.3rem_0.9rem_rgba(255,230,230,0.3),inset_0_-0.1rem_0.3rem_rgba(0,0,0,0.7),inset_0_-0.4rem_0.9rem_rgba(255,230,230,0.5),0_3rem_3rem_rgba(0,0,0,0.3),0_1rem_1rem_-0.6rem_rgba(0,0,0,0.8)] transition-shadow duration-200 group-hover:shadow-[inset_0_0.3rem_0.5rem_rgba(248,113,113,0.4),inset_0_-0.1rem_0.3rem_rgba(0,0,0,0.7),inset_0_-0.4rem_0.9rem_rgba(239,68,68,0.6),0_3rem_3rem_rgba(0,0,0,0.3),0_1rem_1rem_-0.6rem_rgba(0,0,0,0.8)]"
         >
-          {""}
-        </StardustButton>
+          <div className="absolute -left-[15%] -right-[15%] -top-full bottom-1/4 rounded-full bg-red-500/15 transition-transform duration-300 group-hover:-translate-y-1" />
+          <div className="absolute inset-x-[6%] bottom-[40%] top-[12%] rounded-t-[22px] bg-gradient-to-b from-red-500/25 to-transparent shadow-[inset_0_10px_8px_-10px_rgba(248,113,113,0.6)] transition-all duration-300 group-hover:translate-y-1 group-hover:opacity-40" />
+          <img
+            src="/snapsolve-icon.png"
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            className="relative z-10 h-9 w-9 rounded-full object-cover shadow-[0_0_18px_rgba(248,113,113,0.32)]"
+          />
+        </div>
 
         {/* Beautiful floating tooltip */}
-        <div className="absolute bottom-full right-1/2 translate-x-1/2 mb-3 bg-[#1e0505]/95 text-red-200 border border-red-500/20 text-[10px] uppercase tracking-wider font-semibold font-sans px-2.5 py-1 rounded shadow-2xl opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-none whitespace-nowrap">
-          Snapsolve
+        <div className="absolute bottom-full right-1/2 translate-x-1/2 mb-3 max-w-[min(16rem,calc(100vw-3rem))] bg-[#1e0505]/95 text-red-100 border border-red-500/20 text-[10px] uppercase tracking-wider font-semibold font-sans px-3 py-1.5 rounded shadow-2xl opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-none whitespace-nowrap">
+          Part of the SnapSolve ecosystem
           <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1e0505]/95" />
         </div>
       </div>

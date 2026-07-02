@@ -2,6 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import {
   ArrowLeft,
@@ -64,6 +65,11 @@ const ComparisonDetailPage = () => {
   const [viewedHistoricalVersionNumber, setViewedHistoricalVersionNumber] = useState<number | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<"overview" | "intelligence" | "metadata">("overview");
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    gsap.registerPlugin(ScrollTrigger);
+    ScrollTrigger.refresh();
+  }, [activeTab]);
 
   const comparisonQuery = useQuery({
     queryKey: ["app-comparison", id],
