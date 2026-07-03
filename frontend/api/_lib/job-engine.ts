@@ -617,6 +617,17 @@ export async function runComparisonJob(
     comparisonCache.set(normalized.canonicalSlug, result, 10 * 60 * 1000);
 
     // Phase 11: Save reusable facts to entity knowledge base
+    const knowledgeToInsert = new Map<string, {
+      entitySlug: string;
+      entityDisplayName: string;
+      dimension: string;
+      value: string;
+      sourceUrl: string | null;
+      sourceTitle: string | null;
+      confidence: string;
+      freshnessClass: string;
+    }>();
+
     for (const rawFact of facts) {
       const fact = rawFact as { entity?: string; dimension?: string; value?: string; citation?: string; confidence?: number };
       if (!isReusableFact({ value: fact.value || "", dimension: fact.dimension || "" })) continue;
@@ -624,18 +635,28 @@ export async function runComparisonJob(
       const entitySlug = normalizeEntityForReuse(entityName);
       if (!entitySlug || entitySlug.length < 2) continue;
 
-      await db
-        .insert(entityKnowledge)
-        .values({
+      const dimension = (fact.dimension || "general") as string;
+      const value = (fact.value || "") as string;
+      const compositeKey = `${entitySlug}|${dimension}|${value}`;
+
+      if (!knowledgeToInsert.has(compositeKey)) {
+        knowledgeToInsert.set(compositeKey, {
           entitySlug,
           entityDisplayName: entityName,
-          dimension: (fact.dimension || "general") as string,
-          value: (fact.value || "") as string,
+          dimension,
+          value,
           sourceUrl: (fact.citation || null) as string | null,
           sourceTitle: null,
           confidence: String(fact.confidence || 0.5),
           freshnessClass,
-        })
+        });
+      }
+    }
+
+    if (knowledgeToInsert.size > 0) {
+      await db
+        .insert(entityKnowledge)
+        .values(Array.from(knowledgeToInsert.values()))
         .onConflictDoUpdate({
           target: [entityKnowledge.entitySlug, entityKnowledge.dimension, entityKnowledge.value],
           set: {
