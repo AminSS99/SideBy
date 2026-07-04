@@ -5,7 +5,7 @@
  * Enforces cost/time guardrails per job.
  */
 import { z } from "zod";
-import { asc, eq, and, sql, or, lte } from "drizzle-orm";
+import { asc, eq, and, sql, or, lte, inArray } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
@@ -617,6 +617,8 @@ export async function runComparisonJob(
     comparisonCache.set(normalized.canonicalSlug, result, 10 * 60 * 1000);
 
     // Phase 11: Save reusable facts to entity knowledge base
+    const factsToInsert = new Map<string, typeof entityKnowledge.$inferInsert>();
+
     for (const rawFact of facts) {
       const fact = rawFact as { entity?: string; dimension?: string; value?: string; citation?: string; confidence?: number };
       if (!isReusableFact({ value: fact.value || "", dimension: fact.dimension || "" })) continue;
@@ -624,18 +626,28 @@ export async function runComparisonJob(
       const entitySlug = normalizeEntityForReuse(entityName);
       if (!entitySlug || entitySlug.length < 2) continue;
 
-      await db
-        .insert(entityKnowledge)
-        .values({
+      const dimension = (fact.dimension || "general") as string;
+      const value = (fact.value || "") as string;
+      const compositeKey = `${entitySlug}:${dimension}:${value}`;
+
+      if (!factsToInsert.has(compositeKey)) {
+        factsToInsert.set(compositeKey, {
           entitySlug,
           entityDisplayName: entityName,
-          dimension: (fact.dimension || "general") as string,
-          value: (fact.value || "") as string,
+          dimension,
+          value,
           sourceUrl: (fact.citation || null) as string | null,
           sourceTitle: null,
           confidence: String(fact.confidence || 0.5),
           freshnessClass,
-        })
+        });
+      }
+    }
+
+    if (factsToInsert.size > 0) {
+      await db
+        .insert(entityKnowledge)
+        .values(Array.from(factsToInsert.values()))
         .onConflictDoUpdate({
           target: [entityKnowledge.entitySlug, entityKnowledge.dimension, entityKnowledge.value],
           set: {
@@ -1171,9 +1183,20 @@ async function runExtractionStep(
     const entityNames = Array.from(new Set(sources.map((s) => s.entityName).filter(Boolean)));
     const reusableFactCounts = await getReusableFactCounts(ctx, entityNames);
 
+    const sourcesByEntity = new Map<string, Array<typeof sources[number]>>();
+    for (const source of sources) {
+      if (source.entityName) {
+        if (!sourcesByEntity.has(source.entityName)) {
+          sourcesByEntity.set(source.entityName, []);
+        }
+        sourcesByEntity.get(source.entityName)!.push(source);
+      }
+    }
+
     for (const entityName of entityNames) {
       const sourceLimit = (reusableFactCounts.get(normalizeEntityForReuse(entityName)) || 0) >= 4 ? 1 : 3;
-      for (const source of sources.filter((s) => s.entityName === entityName).slice(0, sourceLimit)) {
+      const entitySources = sourcesByEntity.get(entityName) || [];
+      for (const source of entitySources.slice(0, sourceLimit)) {
         if (selectedUrls.has(source.url)) continue;
         selectedUrls.add(source.url);
         selectedSources.push(source);
@@ -1558,19 +1581,32 @@ function ensureFactCoverage(
   extracted: ExtractedSource[],
 ): ExtractedFact[] {
   const completeFacts = [...facts];
+
+  const factKeys = new Set<string>();
+  for (const fact of completeFacts) {
+    if (fact.value.trim().length > 0) {
+      factKeys.add(`${fact.entity.toLowerCase()}:${fact.dimension.toLowerCase()}`);
+    }
+  }
+
   const hasFact = (entity: string, dimension: string) =>
-    completeFacts.some(
-      (fact) =>
-        fact.entity.toLowerCase() === entity.toLowerCase() &&
-        fact.dimension.toLowerCase() === dimension.toLowerCase() &&
-        fact.value.trim().length > 0,
-    );
+    factKeys.has(`${entity.toLowerCase()}:${dimension.toLowerCase()}`);
+
+  const extractedLower = extracted.map((item) => ({
+    ...item,
+    entityNameLower: item.entityName.toLowerCase(),
+    titleLower: item.title.toLowerCase(),
+    markdownLower: item.markdown.toLowerCase(),
+  }));
 
   for (const entity of parsed.entities.slice(0, 2)) {
     for (const dimension of dimensions) {
       if (hasFact(entity.name, dimension.name)) continue;
-      const fallback = buildFallbackFact(entity.name, dimension.name, extracted);
-      if (fallback) completeFacts.push(fallback);
+      const fallback = buildFallbackFact(entity.name, dimension.name, extracted, extractedLower);
+      if (fallback) {
+        completeFacts.push(fallback);
+        factKeys.add(`${fallback.entity.toLowerCase()}:${fallback.dimension.toLowerCase()}`);
+      }
     }
   }
 
@@ -1581,16 +1617,11 @@ function buildFallbackFact(
   entityName: string,
   dimensionName: string,
   extracted: ExtractedSource[],
+  extractedLower: Array<ExtractedSource & { entityNameLower: string; titleLower: string; markdownLower: string }>,
 ): ExtractedFact | null {
   const entityNeedle = entityName.toLowerCase();
   const dimensionNeedle = dimensionName.toLowerCase().split(/\s+/)[0] || "";
 
-  const extractedLower = extracted.map((item) => ({
-    ...item,
-    entityNameLower: item.entityName.toLowerCase(),
-    titleLower: item.title.toLowerCase(),
-    markdownLower: item.markdown.toLowerCase(),
-  }));
   const sourceLower =
     extractedLower.find((item) => item.entityNameLower === entityNeedle) ||
     extractedLower.find((item) => item.titleLower.includes(entityNeedle)) ||
@@ -1632,17 +1663,21 @@ async function getReusableFactCounts(
   entityNames: string[],
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
+  const entitySlugs = Array.from(new Set(entityNames.map(normalizeEntityForReuse).filter((slug): slug is string => !!slug)));
 
-  for (const entityName of entityNames) {
-    const entitySlug = normalizeEntityForReuse(entityName);
-    if (!entitySlug) continue;
+  if (entitySlugs.length === 0) return counts;
 
-    const [row] = await ctx.db
-      .select({ count: sql<number>`count(*)::integer` })
-      .from(entityKnowledge)
-      .where(eq(entityKnowledge.entitySlug, entitySlug));
+  const rows = await ctx.db
+    .select({
+      entitySlug: entityKnowledge.entitySlug,
+      count: sql<number>`count(*)::integer`
+    })
+    .from(entityKnowledge)
+    .where(inArray(entityKnowledge.entitySlug, entitySlugs))
+    .groupBy(entityKnowledge.entitySlug);
 
-    counts.set(entitySlug, row?.count || 0);
+  for (const row of rows) {
+    counts.set(row.entitySlug, row.count);
   }
 
   return counts;
