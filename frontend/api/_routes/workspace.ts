@@ -3,6 +3,7 @@
  * Rewrites preserve /api/workspaces and /api/projects.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../_lib/auth.js";
 import { canAccessWorkspace, getAccessibleWorkspaces } from "../_lib/db-auth.js";
@@ -15,6 +16,25 @@ export const config = {
   runtime: "nodejs",
   maxDuration: 15,
 };
+
+const CreateProjectSchema = z.object({
+  workspaceId: z.string().min(1, "workspaceId is required."),
+  name: z.string().trim().min(1, "Project name is required."),
+  description: z.string().optional(),
+});
+
+const CreateWorkspaceSchema = z.object({
+  name: z.string().trim().min(1, "Workspace name is required."),
+  slug: z.string().trim().optional(),
+  ownerType: z.enum(["user", "org"]).optional(),
+  ownerId: z.string().optional(),
+});
+
+const UpdateWorkspaceSchema = z.object({
+  workspaceId: z.string().min(1, "workspaceId is required."),
+  name: z.string().trim().optional(),
+  slug: z.string().optional(),
+});
 
 function setCorsHeaders(res: VercelResponse, req: VercelRequest) {
   const origin = getSingleHeader(req.headers.origin);
@@ -111,18 +131,7 @@ async function handleProjects(
     }
 
     if (request.method === "POST") {
-      const body = request.body as {
-        workspaceId?: string;
-        name?: string;
-        description?: string;
-      };
-
-      if (!body.workspaceId) {
-        return response.status(400).json({ error: "workspaceId is required." });
-      }
-      if (!body.name?.trim()) {
-        return response.status(400).json({ error: "Project name is required." });
-      }
+      const body = CreateProjectSchema.parse(request.body || {});
 
       const hasAccess = await canAccessWorkspace(db, auth.userId, body.workspaceId);
       if (!hasAccess) {
@@ -144,6 +153,9 @@ async function handleProjects(
 
     return response.status(405).json({ error: "Method not allowed" });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return response.status(400).json({ error: error.errors[0]?.message || "Invalid request body." });
+    }
     return response.status(getErrorStatus(error)).json({
       error: error instanceof Error ? error.message : "Internal server error.",
     });
@@ -164,17 +176,8 @@ async function handleWorkspaces(
     }
 
     if (request.method === "POST") {
-      const body = request.body as {
-        name?: string;
-        slug?: string;
-        ownerType?: "user" | "org";
-        ownerId?: string;
-      };
-
+      const body = CreateWorkspaceSchema.parse(request.body || {});
       const name = body.name?.trim();
-      if (!name) {
-        return response.status(400).json({ error: "Workspace name is required." });
-      }
 
       const slugBase = (body.slug || name)
         .toLowerCase()
@@ -263,15 +266,7 @@ async function handleWorkspaces(
     }
 
     if (request.method === "PATCH") {
-      const body = request.body as {
-        workspaceId?: string;
-        name?: string;
-        slug?: string;
-      };
-
-      if (!body.workspaceId) {
-        return response.status(400).json({ error: "workspaceId is required." });
-      }
+      const body = UpdateWorkspaceSchema.parse(request.body || {});
 
       const hasAccess = await canAccessWorkspace(db, auth.userId, body.workspaceId);
       if (!hasAccess) {
@@ -300,6 +295,9 @@ async function handleWorkspaces(
 
     return response.status(405).json({ error: "Method not allowed" });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return response.status(400).json({ error: error.errors[0]?.message || "Invalid request body." });
+    }
     return response.status(getErrorStatus(error)).json({
       error: error instanceof Error ? error.message : "Internal server error.",
     });
