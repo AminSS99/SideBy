@@ -12,7 +12,7 @@ type EmailPayload = {
 
 export async function sendEmail(payload: EmailPayload) {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL || "SideBy <notifications@sideby.ai>";
+  const from = process.env.RESEND_FROM_EMAIL || "SideBy <notifications@sideby.ink>";
   if (!apiKey) {
     logger.info("Resend not configured; email skipped", { subject: payload.subject });
     return { skipped: true };

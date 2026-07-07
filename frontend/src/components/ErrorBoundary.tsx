@@ -2,6 +2,7 @@ import React, { Component, type ReactNode, type ErrorInfo } from "react";
 import { brand } from "@/config/brand";
 import { AlertTriangle, RotateCcw, Home } from "lucide-react";
 import { Link } from "react-router-dom";
+import { captureFrontendException } from "@/lib/sentry";
 
 interface Props {
   children: ReactNode;
@@ -43,16 +44,9 @@ class GlobalErrorBoundary extends Component<Props, State> {
       return { error, errorInfo, errorCount: nextCount };
     });
 
-    // Report to Sentry if available
-    if (typeof window !== "undefined" && "__SENTRY__" in window) {
-      import("@sentry/react").then((Sentry) => {
-        Sentry.captureException(error, {
-          extra: { componentStack: errorInfo.componentStack },
-        });
-      }).catch(() => {
-        // Sentry not available, ignore
-      });
-    }
+    captureFrontendException(error, {
+      extra: { componentStack: errorInfo.componentStack },
+    });
   }
 
   handleReset = () => {

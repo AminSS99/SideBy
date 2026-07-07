@@ -19,7 +19,7 @@ import java.util.Objects;
 public class SourceAcquisitionService {
 
     private static final int MAX_CONTENT_CHARS = 12_000;
-    private static final String USER_AGENT = "SideByBot/0.1 (+https://snapsolve.ink)";
+    private static final String USER_AGENT = "SideByBot/0.1 (+https://sideby.ink)";
 
     @Value("${firecrawl.api.key:}")
     private String firecrawlApiKey;

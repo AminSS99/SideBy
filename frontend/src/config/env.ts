@@ -6,6 +6,7 @@ const apiBaseUrl = removeTrailingSlash(
   normalizeEnv(import.meta.env.VITE_API_BASE_URL),
 );
 const pexelsApiKey = normalizeEnv(import.meta.env.VITE_PEXELS_API_KEY);
+const turnstileSiteKey = normalizeEnv(import.meta.env.VITE_CLOUDFLARE_TURNSTILE_SITE_KEY);
 const rawClerkPublishableKey = normalizeEnv(
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
     import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
@@ -54,10 +55,12 @@ const canUseTestAuth = !isProductionBuild;
 export const envConfig = {
   apiBaseUrl,
   pexelsApiKey,
+  turnstileSiteKey,
   clerkPublishableKey,
   isProductionBuild,
   hasApiBaseUrl: apiBaseUrl.length > 0,
   hasPexelsApiKey: pexelsApiKey.length > 0,
+  hasTurnstileConfig: turnstileSiteKey.length > 0,
   hasClerkConfig,
   canUseTestAuth,
   allowClerkTestKeyInProduction,

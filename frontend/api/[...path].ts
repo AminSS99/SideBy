@@ -31,6 +31,7 @@ import accountHandler from "./_routes/account.js";
 import apiKeysHandler from "./_routes/api-keys.js";
 import apiKeysIdHandler from "./_routes/api-keys/[id].js";
 import chatHandler from "./_routes/chat.js";
+import contactHandler from "./_routes/contact.js";
 import csrfHandler from "./_routes/csrf.js";
 import decisionMatricesHandler from "./_routes/decision-matrices.js";
 import ecosystemSessionHandler from "./_routes/ecosystem-session.js";
@@ -48,6 +49,10 @@ import usageHandler from "./_routes/usage.js";
 import watchlistsHandler from "./_routes/watchlists.js";
 import watchlistsRunHandler from "./_routes/watchlists-run.js";
 import workspaceHandler from "./_routes/workspace.js";
+import { captureServerException, initServerSentry, Sentry } from "./_lib/sentry.js";
+import { logger } from "./_lib/log.js";
+
+initServerSentry();
 
 export const config = {
   runtime: "nodejs",
@@ -67,6 +72,34 @@ async function loadKnowledgeHandler(): Promise<ApiHandler> {
 }
 
 export default async function handler(
+  request: VercelRequest,
+  response: VercelResponse,
+) {
+  try {
+    return await routeRequest(request, response);
+  } catch (error) {
+    const exception = error instanceof Error ? error : new Error(String(error));
+    captureServerException(exception, {
+      tags: {
+        route: Array.isArray(request.query.path)
+          ? request.query.path.join("/")
+          : String(request.query.path || request.query["...path"] || "unknown"),
+        method: request.method,
+      },
+    });
+    logger.error("Unhandled API route error", exception, {
+      method: request.method,
+      path: request.url,
+    });
+    await Sentry.flush(2000).catch(() => undefined);
+    if (!response.headersSent) {
+      return response.status(500).json({ error: "Internal server error" });
+    }
+    return undefined;
+  }
+}
+
+async function routeRequest(
   request: VercelRequest,
   response: VercelResponse,
 ) {
@@ -183,6 +216,7 @@ export default async function handler(
   const singleHandlers: Record<string, ApiHandler> = {
     account: accountHandler,
     chat: chatHandler,
+    contact: contactHandler,
     csrf: csrfHandler,
     "decision-matrices": decisionMatricesHandler,
     health: healthHandler,

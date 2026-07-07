@@ -1,12 +1,24 @@
 import { defineConfig } from "vite";
 import dyadComponentTagger from "@dyad-sh/react-vite-component-tagger";
 import react from "@vitejs/plugin-react-swc";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import path from "path";
+
+const hasSentryUploadConfig =
+  Boolean(process.env.SENTRY_AUTH_TOKEN) &&
+  Boolean(process.env.SENTRY_ORG) &&
+  Boolean(process.env.SENTRY_PROJECT);
 
 export default defineConfig(({ mode }) => ({
   envPrefix: ["VITE_", "NEXT_PUBLIC_"],
   define: {
     "process.env.NODE_ENV": JSON.stringify(mode === "production" ? "production" : "development"),
+    __SENTRY_RELEASE__: JSON.stringify(
+      process.env.SENTRY_RELEASE ||
+        process.env.VERCEL_GIT_COMMIT_SHA ||
+        process.env.VITE_SENTRY_RELEASE ||
+        "",
+    ),
     __DEV__: mode !== "production",
   },
   server: {
@@ -22,13 +34,33 @@ export default defineConfig(({ mode }) => ({
           },
         },
   },
-  plugins: [dyadComponentTagger(), react()],
+  plugins: [
+    dyadComponentTagger(),
+    react(),
+    hasSentryUploadConfig &&
+      sentryVitePlugin({
+        org: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        release: {
+          name:
+            process.env.SENTRY_RELEASE ||
+            process.env.VERCEL_GIT_COMMIT_SHA ||
+            process.env.VITE_SENTRY_RELEASE,
+        },
+        sourcemaps: {
+          assets: "./dist/assets/**",
+          filesToDeleteAfterUpload: ["./dist/assets/**/*.map"],
+        },
+      }),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
   build: {
+    sourcemap: hasSentryUploadConfig,
     rollupOptions: {
       output: {
         manualChunks(id) {

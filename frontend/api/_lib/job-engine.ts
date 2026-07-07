@@ -1612,9 +1612,9 @@ function buildFallbackFact(
 
   const sentence =
     (dimIdx !== -1 ? sentences[dimIdx] : undefined) ||
-    (entIdx !== -1 ? sentences[entIdx] : undefined);
-
-  sentence = sentence || sentences[0] || source.markdown.replace(/\s+/g, " ").trim().slice(0, 240);
+    (entIdx !== -1 ? sentences[entIdx] : undefined) ||
+    sentences[0] ||
+    source.markdown.replace(/\s+/g, " ").trim().slice(0, 240);
 
   if (!sentence) return null;
 
@@ -2188,7 +2188,7 @@ async function buildPartialResult(
     const scoresByDimId = new Map<string, Map<string, number>>();
     for (const s of scores) {
       if (!scoresByDimId.has(s.dimensionId)) scoresByDimId.set(s.dimensionId, new Map());
-      scoresByDimId.get(s.dimensionId)!.set(s.entityId, s.score);
+      scoresByDimId.get(s.dimensionId)!.set(s.entityId, Number(s.score));
     }
 
     // Reverse lookup from name to id to match what partial build logic needs

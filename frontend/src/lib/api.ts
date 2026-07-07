@@ -1,4 +1,5 @@
 import { envConfig } from "@/config/env";
+import { captureFrontendException } from "@/lib/sentry";
 
 type ClerkSession = {
   getToken: () => Promise<string | null>;
@@ -156,21 +157,14 @@ const executeFetch = async (
 
         const error = new ApiError(message, response.status, code);
 
-        // Track API errors in Sentry if available
-        if (typeof window !== "undefined" && "__SENTRY__" in window) {
-          import("@sentry/react").then((Sentry) => {
-            Sentry.captureException(error, {
-              extra: {
-                url: typeof input === "string" ? input : input.toString(),
-                method: init.method || "GET",
-                status: response.status,
-                attempt: attempt + 1,
-              },
-            });
-          }).catch(() => {
-            // Sentry not available, ignore
-          });
-        }
+        captureFrontendException(error, {
+          extra: {
+            url: typeof input === "string" ? input : input.toString(),
+            method: init.method || "GET",
+            status: response.status,
+            attempt: attempt + 1,
+          },
+        });
 
         throw error;
       }

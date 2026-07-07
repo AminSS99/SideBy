@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
   chrome.storage.local.get(["apiKey", "hostUrl"], (data) => {
     if (data.apiKey) {
       apiKeyInput.value = data.apiKey;
-      fetchHistory(data.apiKey, data.hostUrl || "https://snapsolve.ink");
+      fetchHistory(data.apiKey, data.hostUrl || "https://sideby.ink");
     } else {
       // Show settings form immediately if no key is configured
       settingsForm.style.display = "flex";
@@ -42,7 +42,7 @@ toggleSettingsBtn.addEventListener("click", () => {
 // Save Settings configuration
 saveSettingsBtn.addEventListener("click", () => {
   const apiKey = apiKeyInput.value.trim();
-  const hostUrl = hostUrlInput.value.trim() || "https://snapsolve.ink";
+  const hostUrl = hostUrlInput.value.trim() || "https://sideby.ink";
 
   if (!apiKey) {
     alert("Please provide an API Key.");
@@ -67,7 +67,7 @@ compareBtn.addEventListener("click", async () => {
 
   chrome.storage.local.get(["apiKey", "hostUrl"], async (data) => {
     const apiKey = data.apiKey;
-    const hostUrl = data.hostUrl || "https://snapsolve.ink";
+    const hostUrl = data.hostUrl || "https://sideby.ink";
 
     if (!apiKey) {
       alert("Please configure your API Key first.");

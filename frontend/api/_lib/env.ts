@@ -56,8 +56,15 @@ export const serverEnv = {
 
   // Observability
   sentryDsn: optional("SENTRY_DSN"),
+  sentryAuthToken: optional("SENTRY_AUTH_TOKEN"),
+  sentryOrg: optional("SENTRY_ORG"),
+  sentryProject: optional("SENTRY_PROJECT"),
   posthogKey: optional("NEXT_PUBLIC_POSTHOG_KEY") || optional("VITE_POSTHOG_KEY"),
   posthogHost: optional("NEXT_PUBLIC_POSTHOG_HOST") || optional("VITE_POSTHOG_HOST"),
+
+  // Edge security
+  turnstileSiteKey: optional("VITE_CLOUDFLARE_TURNSTILE_SITE_KEY"),
+  turnstileSecretKey: optional("CLOUDFLARE_TURNSTILE_SECRET_KEY"),
 
   // SnapSolve ecosystem bridge
   snapsolveCoreUrl: optional("SNAPSOLVE_CORE_URL"),

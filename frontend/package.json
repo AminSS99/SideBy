@@ -9,7 +9,7 @@
     "type": "git",
     "url": "https://github.com/AminSS99/SideBy.git"
   },
-  "homepage": "https://snapsolve.ink",
+  "homepage": "https://sideby.ink",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
@@ -99,6 +99,7 @@
   "devDependencies": {
     "@dyad-sh/react-vite-component-tagger": "^0.8.0",
     "@eslint/js": "^9.9.0",
+    "@sentry/vite-plugin": "^5.3.0",
     "@tailwindcss/typography": "^0.5.20",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

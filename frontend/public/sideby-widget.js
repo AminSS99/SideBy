@@ -5,7 +5,7 @@
       : options.element;
     if (!target) return;
 
-    var baseUrl = options.baseUrl || "https://snapsolve.ink";
+    var baseUrl = options.baseUrl || "https://sideby.ink";
     var slug = options.slug;
     if (!slug) {
       target.textContent = "SideBy widget requires a comparison slug.";

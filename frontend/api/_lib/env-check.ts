@@ -43,6 +43,12 @@ export function checkEnvironment(): EnvCheck {
     ["PADDLE_API_KEY", present(serverEnv.paddleApiKey)],
     ["PADDLE_WEBHOOK_SECRET", present(serverEnv.paddleWebhookSecret)],
     ["SENTRY_DSN", present(serverEnv.sentryDsn)],
+    ["SENTRY_AUTH_TOKEN", present(serverEnv.sentryAuthToken)],
+    ["SENTRY_ORG", present(serverEnv.sentryOrg)],
+    ["SENTRY_PROJECT", present(serverEnv.sentryProject)],
+    ["VITE_CLOUDFLARE_TURNSTILE_SITE_KEY", present(serverEnv.turnstileSiteKey)],
+    ["CLOUDFLARE_TURNSTILE_SECRET_KEY", present(serverEnv.turnstileSecretKey)],
+    ["RESEND_API_KEY", present(serverEnv.resendApiKey)],
     ["POSTHOG_KEY or VITE_POSTHOG_KEY", present(serverEnv.posthogKey)],
     ["BLOB_READ_WRITE_TOKEN", present(serverEnv.blobReadWriteToken)],
   ];
@@ -66,6 +72,18 @@ export function checkEnvironment(): EnvCheck {
   );
   if (present(serverEnv.paddleApiKey) && !hasAnyPaddlePrice) {
     warnings.push("PADDLE_API_KEY is set but no PADDLE_*_PRICE_ID values are configured.");
+  }
+
+  if (present(serverEnv.turnstileSiteKey) !== present(serverEnv.turnstileSecretKey)) {
+    warnings.push("Cloudflare Turnstile site key and secret key should be configured together.");
+  }
+
+  const hasSentrySourceMapConfig =
+    present(serverEnv.sentryAuthToken) &&
+    present(serverEnv.sentryOrg) &&
+    present(serverEnv.sentryProject);
+  if (present(serverEnv.sentryDsn) && !hasSentrySourceMapConfig) {
+    warnings.push("SENTRY_DSN is set but Sentry source map upload variables are incomplete.");
   }
 
   if (production && getRuntimeStoreKind() === "postgres") {

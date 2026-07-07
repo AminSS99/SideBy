@@ -5,10 +5,16 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { brand } from "@/config/brand";
 import { BrandFooter } from "@/components/brand/BrandFooter";
+import { TurnstileWidget } from "@/components/security/TurnstileWidget";
+import { apiFetch } from "@/lib/api";
+import { buildApiUrl, envConfig } from "@/config/env";
 
 const Contact = () => {
   const pageRef = useRef<HTMLDivElement>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   useGSAP(() => {
     const tl = gsap.timeline();
@@ -17,9 +23,38 @@ const Contact = () => {
       .from(".contact-form", { x: 30, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6");
   }, { scope: pageRef });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitted(true);
+    setSubmitError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const payload = {
+      firstName: String(formData.get("firstName") || ""),
+      lastName: String(formData.get("lastName") || ""),
+      email: String(formData.get("email") || ""),
+      message: String(formData.get("message") || ""),
+      turnstileToken,
+    };
+
+    if (envConfig.hasTurnstileConfig && !turnstileToken) {
+      setSubmitError("Complete the security check before sending your message.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await apiFetch(buildApiUrl("/api/contact"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      setIsSubmitted(true);
+      setTurnstileToken("");
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Unable to send your message.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -105,8 +140,11 @@ const Contact = () => {
                 <p className="text-white/50 max-w-sm leading-relaxed mb-8">
                   Thanks for reaching out to SnapSolve Ink. We've received your message and will get back to you shortly.
                 </p>
-                <button 
-                  onClick={() => setIsSubmitted(false)}
+                <button
+                  onClick={() => {
+                    setIsSubmitted(false);
+                    setSubmitError(null);
+                  }}
                   className="text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors"
                 >
                   Send another message
@@ -119,26 +157,44 @@ const Contact = () => {
                 <div className="grid sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-white/50">First Name</label>
-                    <input required type="text" className="w-full rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-orange-500" />
+                    <input required name="firstName" type="text" className="w-full rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-orange-500" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-white/50">Last Name</label>
-                    <input required type="text" className="w-full rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-orange-500" />
+                    <input required name="lastName" type="text" className="w-full rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-orange-500" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-white/50">Work Email</label>
-                  <input required type="email" className="w-full rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-orange-500" />
+                  <input required name="email" type="email" className="w-full rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-orange-500" />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-white/50">How can we help?</label>
-                  <textarea required rows={5} className="w-full resize-none rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-orange-500"></textarea>
+                  <textarea required name="message" rows={5} className="w-full resize-none rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-orange-500"></textarea>
                 </div>
 
-                <button type="submit" className="w-full rounded-sm bg-white px-8 py-4 text-xs font-bold uppercase tracking-widest text-black transition-colors hover:bg-gray-200 mt-4">
-                  Send Message
+                {envConfig.hasTurnstileConfig && (
+                  <TurnstileWidget
+                    siteKey={envConfig.turnstileSiteKey}
+                    onVerify={setTurnstileToken}
+                    onExpire={() => setTurnstileToken("")}
+                  />
+                )}
+
+                {submitError && (
+                  <p className="rounded-sm border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                    {submitError}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full rounded-sm bg-white px-8 py-4 text-xs font-bold uppercase tracking-widest text-black transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60 mt-4"
+                >
+                  {isSubmitting ? "Sending..." : "Send Message"}
                 </button>
               </form>
             )}

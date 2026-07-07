@@ -5,6 +5,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { Search, Sparkles, Zap, ArrowRight, ShieldCheck, Scale, Cpu, Network, BookOpenText } from "lucide-react";
 import { BrandFooter } from "@/components/brand/BrandFooter";
+import { SnapsolveFloatingWidget } from "@/components/layout/SnapsolveFloatingWidget";
 import { AmbientOrbs } from "@/components/AmbientOrbs";
 import { analyzeQueryIntent } from "@/lib/queryIntent";
 import { SUPPORTED_COMPARISON_CATEGORIES } from "@/lib/comparisonTaxonomy";
@@ -491,6 +492,9 @@ const Index = () => {
                 The source-backed AI comparison engine. Every claim is linked to a primary source so you can verify the information and trust the output.
               </p>
               <BrandFooter />
+              <div className="mt-4">
+                <SnapsolveFloatingWidget />
+              </div>
             </div>
             
             <div>

@@ -16,7 +16,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     // Retrieve API key and host configurations
     chrome.storage.local.get(["apiKey", "hostUrl"], async (data) => {
       const apiKey = data.apiKey;
-      const hostUrl = data.hostUrl || "https://snapsolve.ink";
+      const hostUrl = data.hostUrl || "https://sideby.ink";
 
       if (!apiKey) {
         // Open the popup or alert the user to configure their API key

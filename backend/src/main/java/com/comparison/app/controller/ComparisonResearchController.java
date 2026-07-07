@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/comparisons")
 @CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000",
-        "http://127.0.0.1:5173", "http://127.0.0.1:5174", "https://snapsolve.ink" })
+        "http://127.0.0.1:5173", "http://127.0.0.1:5174", "https://sideby.ink" })
 public class ComparisonResearchController {
 
     private final ComparisonResearchService comparisonResearchService;
