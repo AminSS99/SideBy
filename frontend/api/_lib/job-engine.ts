@@ -1633,16 +1633,32 @@ async function getReusableFactCounts(
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
 
-  for (const entityName of entityNames) {
-    const entitySlug = normalizeEntityForReuse(entityName);
-    if (!entitySlug) continue;
+  // Use a Set to deduplicate slugs and avoid redundant processing
+  const slugs = Array.from(new Set(
+    entityNames.map(name => normalizeEntityForReuse(name)).filter(Boolean) as string[]
+  ));
 
-    const [row] = await ctx.db
-      .select({ count: sql<number>`count(*)::integer` })
-      .from(entityKnowledge)
-      .where(eq(entityKnowledge.entitySlug, entitySlug));
+  if (slugs.length === 0) return counts;
 
-    counts.set(entitySlug, row?.count || 0);
+  const rows = await ctx.db
+    .select({
+      slug: entityKnowledge.entitySlug,
+      count: sql<number>`count(*)::integer`
+    })
+    .from(entityKnowledge)
+    .where(inArray(entityKnowledge.entitySlug, slugs))
+    .groupBy(entityKnowledge.entitySlug);
+
+  // Initialize all requested valid slugs to 0
+  for (const slug of slugs) {
+    counts.set(slug, 0);
+  }
+
+  // Populate actual counts from DB
+  for (const row of rows) {
+    if (row.slug) {
+      counts.set(row.slug, row.count);
+    }
   }
 
   return counts;
@@ -1656,33 +1672,52 @@ async function loadReusableFacts(
   const dimensionNames = new Set(dimensions.map((dimension) => dimension.name.toLowerCase()));
   const cachedFacts: ExtractedFact[] = [];
 
-  for (const entity of parsed.entities.slice(0, 2)) {
-    const entitySlug = normalizeEntityForReuse(entity.name);
-    if (!entitySlug) continue;
+  const entitiesToQuery = parsed.entities.slice(0, 2)
+    .map(e => ({ name: e.name, slug: normalizeEntityForReuse(e.name) }))
+    .filter(e => e.slug);
 
-    const rows = await ctx.db
-      .select({
-        dimension: entityKnowledge.dimension,
-        value: entityKnowledge.value,
-        sourceUrl: entityKnowledge.sourceUrl,
-        confidence: entityKnowledge.confidence,
-      })
-      .from(entityKnowledge)
-      .where(eq(entityKnowledge.entitySlug, entitySlug))
-      .orderBy(sql`${entityKnowledge.usageCount} DESC`, sql`${entityKnowledge.lastVerifiedAt} DESC NULLS LAST`)
-      .limit(12);
+  if (entitiesToQuery.length === 0) {
+    return cachedFacts;
+  }
 
-    for (const row of rows) {
-      const dimension = row.dimension || "General";
-      if (dimensionNames.size > 0 && !dimensionNames.has(dimension.toLowerCase())) continue;
-      cachedFacts.push({
-        entity: entity.name,
-        dimension,
-        value: row.value,
-        confidence: Math.min(Number(row.confidence || 0.65), 0.85),
-        citation: row.sourceUrl || undefined,
-      });
-    }
+  const slugs = Array.from(new Set(entitiesToQuery.map(e => e.slug!)));
+
+  const rows = await ctx.db
+    .select({
+      entitySlug: entityKnowledge.entitySlug,
+      dimension: entityKnowledge.dimension,
+      value: entityKnowledge.value,
+      sourceUrl: entityKnowledge.sourceUrl,
+      confidence: entityKnowledge.confidence,
+    })
+    .from(entityKnowledge)
+    .where(inArray(entityKnowledge.entitySlug, slugs))
+    .orderBy(sql`${entityKnowledge.usageCount} DESC`, sql`${entityKnowledge.lastVerifiedAt} DESC NULLS LAST`);
+
+  // We enforce the 12 items limit per entity in memory
+  const entityFactCounts = new Map<string, number>();
+
+  for (const row of rows) {
+    if (!row.entitySlug) continue;
+
+    const currentCount = entityFactCounts.get(row.entitySlug) || 0;
+    if (currentCount >= 12) continue;
+
+    const dimension = row.dimension || "General";
+    if (dimensionNames.size > 0 && !dimensionNames.has(dimension.toLowerCase())) continue;
+
+    entityFactCounts.set(row.entitySlug, currentCount + 1);
+
+    // Map back to original entity name requested
+    const originalName = entitiesToQuery.find(e => e.slug === row.entitySlug)?.name || row.entitySlug;
+
+    cachedFacts.push({
+      entity: originalName,
+      dimension,
+      value: row.value,
+      confidence: Math.min(Number(row.confidence || 0.65), 0.85),
+      citation: row.sourceUrl || undefined,
+    });
   }
 
   return cachedFacts;
