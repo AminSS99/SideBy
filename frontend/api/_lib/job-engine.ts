@@ -1558,19 +1558,31 @@ function ensureFactCoverage(
   extracted: ExtractedSource[],
 ): ExtractedFact[] {
   const completeFacts = [...facts];
+
+  const existingFacts = new Set(
+    completeFacts
+      .filter((fact) => fact.value.trim().length > 0)
+      .map((fact) => `${fact.entity.toLowerCase()}|${fact.dimension.toLowerCase()}`)
+  );
+
   const hasFact = (entity: string, dimension: string) =>
-    completeFacts.some(
-      (fact) =>
-        fact.entity.toLowerCase() === entity.toLowerCase() &&
-        fact.dimension.toLowerCase() === dimension.toLowerCase() &&
-        fact.value.trim().length > 0,
-    );
+    existingFacts.has(`${entity.toLowerCase()}|${dimension.toLowerCase()}`);
+
+  const extractedLower = extracted.map((item) => ({
+    ...item,
+    entityNameLower: item.entityName.toLowerCase(),
+    titleLower: item.title.toLowerCase(),
+    markdownLower: item.markdown.toLowerCase(),
+  }));
 
   for (const entity of parsed.entities.slice(0, 2)) {
     for (const dimension of dimensions) {
       if (hasFact(entity.name, dimension.name)) continue;
-      const fallback = buildFallbackFact(entity.name, dimension.name, extracted);
-      if (fallback) completeFacts.push(fallback);
+      const fallback = buildFallbackFact(entity.name, dimension.name, extracted, extractedLower);
+      if (fallback) {
+        completeFacts.push(fallback);
+        existingFacts.add(`${entity.name.toLowerCase()}|${dimension.name.toLowerCase()}`);
+      }
     }
   }
 
@@ -1581,16 +1593,11 @@ function buildFallbackFact(
   entityName: string,
   dimensionName: string,
   extracted: ExtractedSource[],
+  extractedLower: Array<ExtractedSource & { entityNameLower: string; titleLower: string; markdownLower: string; }>
 ): ExtractedFact | null {
   const entityNeedle = entityName.toLowerCase();
   const dimensionNeedle = dimensionName.toLowerCase().split(/\s+/)[0] || "";
 
-  const extractedLower = extracted.map((item) => ({
-    ...item,
-    entityNameLower: item.entityName.toLowerCase(),
-    titleLower: item.title.toLowerCase(),
-    markdownLower: item.markdown.toLowerCase(),
-  }));
   const sourceLower =
     extractedLower.find((item) => item.entityNameLower === entityNeedle) ||
     extractedLower.find((item) => item.titleLower.includes(entityNeedle)) ||
