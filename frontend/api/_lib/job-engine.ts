@@ -5,7 +5,7 @@
  * Enforces cost/time guardrails per job.
  */
 import { z } from "zod";
-import { asc, eq, and, sql, or, lte } from "drizzle-orm";
+import { asc, eq, and, sql, or, lte, inArray } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
@@ -901,31 +901,47 @@ export async function drainQueuedComparisonJobs(
     .limit(safeLimit * 4);
 
   // Handle orphans first: release lock and requeue or fail
+  const toRequeueIds: string[] = [];
+  const toFailIds: string[] = [];
+  const lockReleasePromises: Promise<void>[] = [];
+
   for (const row of rows) {
     if (row.status === "running") {
-      await redisForceReleaseLock(`job-lock:${row.id}`);
+      lockReleasePromises.push(redisForceReleaseLock(`job-lock:${row.id}`));
       if (row.retryCount < MAX_RETRIES) {
-        await db
-          .update(comparisons)
-          .set({
-            status: "queued",
-            retryCount: row.retryCount + 1,
-            updatedAt: new Date(),
-          })
-          .where(eq(comparisons.id, row.id));
+        toRequeueIds.push(row.id);
         logger.info(`Orphaned job ${row.id} reset to queued (retry ${row.retryCount + 1})`);
       } else {
-        await db
-          .update(comparisons)
-          .set({
-            status: "failed",
-            errorMessage: "Job timed out and exceeded maximum retries.",
-            updatedAt: new Date(),
-          })
-          .where(eq(comparisons.id, row.id));
+        toFailIds.push(row.id);
         logger.error(`Orphaned job ${row.id} exceeded max retries. Marked as failed.`);
       }
     }
+  }
+
+  if (lockReleasePromises.length > 0) {
+    await Promise.all(lockReleasePromises);
+  }
+
+  if (toRequeueIds.length > 0) {
+    await db
+      .update(comparisons)
+      .set({
+        status: "queued",
+        retryCount: sql`${comparisons.retryCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(inArray(comparisons.id, toRequeueIds));
+  }
+
+  if (toFailIds.length > 0) {
+    await db
+      .update(comparisons)
+      .set({
+        status: "failed",
+        errorMessage: "Job timed out and exceeded maximum retries.",
+        updatedAt: new Date(),
+      })
+      .where(inArray(comparisons.id, toFailIds));
   }
 
   const dueRows = rows
