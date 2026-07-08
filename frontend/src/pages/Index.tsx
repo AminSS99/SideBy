@@ -451,7 +451,6 @@ const Index = () => {
               <p className="text-sm text-white/40 max-w-sm leading-relaxed mb-6">
                 The source-backed AI comparison engine. Every claim is linked to a primary source so you can verify the information and trust the output.
               </p>
-              <BrandFooter />
             </div>
             
             <div>
@@ -479,11 +478,14 @@ const Index = () => {
             </div>
           </div>
           
-          <div className="border-t border-[#2a2a2a] pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-white/30">
+          <div className="border-t border-[#2a2a2a] pt-8 grid gap-4 md:grid-cols-3 md:items-center">
+            <p className="text-center text-xs text-white/30 md:text-left">
               &copy; {new Date().getFullYear()} SnapSolve Ink. All rights reserved.
             </p>
-            <div className="flex items-center gap-6">
+            <div className="flex justify-center">
+              <BrandFooter />
+            </div>
+            <div className="flex items-center justify-center gap-6 md:justify-end">
               <a href="#" className="text-white/30 hover:text-white transition-colors">
                 <span className="sr-only">Twitter</span>
                 <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" /></svg>
