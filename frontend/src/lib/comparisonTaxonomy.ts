@@ -569,6 +569,54 @@ const normalize = (value: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
+const entityAliases: Record<string, string> = {
+  "chat gpt": "chatgpt",
+  "gpt chat": "chatgpt",
+  "react js": "react",
+  reactjs: "react",
+  "vue js": "vue",
+  vuejs: "vue",
+  "node js": "node",
+  nodejs: "node",
+  "next js": "next",
+  nextjs: "next",
+  "nuxt js": "nuxt",
+  nuxtjs: "nuxt",
+  "open ai": "openai",
+};
+
+const canonicalEntity = (value: string) => {
+  const normalized = normalize(value)
+    .replace(/\b(the|official|app|website)\b/g, " ")
+    .replace(/\b(inc|llc|ltd|limited|corp|corporation|company|co)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const aliased = entityAliases[normalized] || normalized;
+  return entityAliases[aliased.replace(/[.\s_-]+/g, "")] || aliased.replace(/[.\s_-]+/g, "");
+};
+
+const sameEntityTokenSet = (entityA: string, entityB: string) => {
+  const normalizeTokens = (value: string) =>
+    normalize(value)
+      .split(/\s+/)
+      .map((token) => entityAliases[token] || token)
+      .filter((token) => token && !["the", "official", "inc", "llc", "ltd", "limited", "corp", "corporation", "company", "co"].includes(token))
+      .sort();
+
+  const a = normalizeTokens(entityA);
+  const b = normalizeTokens(entityB);
+  return a.length > 0 && a.length === b.length && a.every((token, index) => token === b[index]);
+};
+
+const areSameComparableEntity = (entityA: string, entityB: string) => {
+  const canonicalA = canonicalEntity(entityA);
+  const canonicalB = canonicalEntity(entityB);
+  if (!canonicalA || !canonicalB) return false;
+  if (canonicalA === canonicalB) return true;
+  if (sameEntityTokenSet(entityA, entityB)) return true;
+  return false;
+};
+
 const cleanEntity = (value: string) =>
   value
     .replace(/\b(for|with|inside|on|because|when|as|to)\b.*$/i, "")
@@ -886,7 +934,7 @@ export const analyzeComparisonQuery = (rawQuery: string): ComparisonIntent => {
   const normalizedA = normalize(entityA);
   const normalizedB = normalize(entityB);
 
-  if (normalizedA === normalizedB) {
+  if (normalizedA === normalizedB || areSameComparableEntity(entityA, entityB)) {
     const { category } = detectComparisonCategory(query, entityA, entityB);
     const definition = getComparisonCategoryDefinition(category);
     return {
@@ -898,7 +946,8 @@ export const analyzeComparisonQuery = (rawQuery: string): ComparisonIntent => {
       confidence: 0.95,
       entityA: titleCase(entityA),
       entityB: titleCase(entityB),
-      message: "Both sides look identical. Choose two different options.",
+      message: "Both sides look like the same option. Choose two distinct things to compare, or add a qualifier like version, plan, region, or use case.",
+      suggestion: `${titleCase(entityA)} vs another option for your use case`,
       disclaimer: definition.disclaimer,
       sourceRequirements: definition.sourceRequirements,
       signals: [],
