@@ -15,8 +15,8 @@
       "purpose": "any"
     },
     {
-      "src": "/snapsolve-icon.png",
-      "sizes": "921x921",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     }
