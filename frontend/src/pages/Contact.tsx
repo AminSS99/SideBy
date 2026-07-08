@@ -1,10 +1,9 @@
 import React, { useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { Mail, MessageSquare, ArrowRight, CheckCircle2 } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { brand } from "@/config/brand";
 import { BrandFooter } from "@/components/brand/BrandFooter";
+import { MarketingNav } from "@/components/brand/MarketingNav";
 
 const Contact = () => {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -32,24 +31,7 @@ const Contact = () => {
         <div className="absolute top-0 right-0 h-[400px] w-[400px] rounded-full bg-orange-600/[0.04] blur-[60px] -translate-y-1/2 translate-x-1/3" />
       </div>
 
-      <header className="relative z-40 bg-transparent pt-6">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
-          <Link to="/" className="flex items-center gap-4 group">
-            <img src="/sideby.ico" alt="SideBy" className="h-10 w-10 object-contain rounded-sm transition-all group-hover:opacity-80" />
-            <div>
-              <p className="font-serif text-lg tracking-tight text-[#fdfbf7] transition-colors group-hover:text-orange-50">{brand.productName}</p>
-            </div>
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link to="/pricing" className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-white transition-colors">
-              Pricing
-            </Link>
-            <Link to="/auth/sign-in" className="rounded-sm bg-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-black transition-colors hover:bg-gray-200">
-              Sign In
-            </Link>
-          </div>
-        </div>
-      </header>
+      <MarketingNav />
 
       <main className="flex-1 relative z-10 mx-auto w-full max-w-7xl px-6 lg:px-8 pt-24 pb-32">
         <div className="contact-header mb-20 max-w-2xl">

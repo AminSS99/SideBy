@@ -2,8 +2,8 @@ import React, { useRef } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { brand } from "@/config/brand";
 import { BrandFooter } from "@/components/brand/BrandFooter";
+import { MarketingNav } from "@/components/brand/MarketingNav";
 
 interface LegalPageShellProps {
   title: string;
@@ -22,17 +22,7 @@ export const LegalPageShell = ({ title, lastUpdated, children }: LegalPageShellP
 
   return (
     <div ref={pageRef} className="min-h-screen bg-[#030303] text-[#fdfbf7] selection:bg-orange-500/30 flex flex-col">
-      <header className="border-b border-[#2a2a2a] bg-[#030303] sticky top-0 z-40">
-        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-6">
-          <Link to="/" className="flex items-center gap-4 group">
-            <img src="/sideby.ico" alt="SideBy" className="h-7 w-7 object-contain rounded-sm group-hover:opacity-80 transition-all" />
-            <span className="font-serif tracking-tight text-[#fdfbf7] group-hover:text-orange-50 transition-colors">SideBy</span>
-          </Link>
-          <Link to="/contact" className="text-[10px] font-bold uppercase tracking-widest text-white/50 hover:text-white transition-colors">
-            Contact Support
-          </Link>
-        </div>
-      </header>
+      <MarketingNav />
 
       <main className="flex-1 mx-auto w-full max-w-4xl px-6 py-16 md:py-24">
         <div className="legal-header mb-16 border-b border-[#2a2a2a] pb-8">

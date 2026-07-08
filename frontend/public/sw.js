@@ -3,7 +3,10 @@ const ASSETS = [
   "/",
   "/index.html",
   "/manifest.json",
-  "/sideby.ico",
+  "/favicon.ico",
+  "/favicon-48x48.png",
+  "/icon-192.png",
+  "/snapsolve-icon.png",
   "/icon.svg",
 ];
 

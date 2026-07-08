@@ -1,5 +1,12 @@
 User-agent: Googlebot
 Allow: /
+Allow: /favicon.ico
+Allow: /favicon-48x48.png
+
+User-agent: Googlebot-Image
+Allow: /
+Allow: /favicon.ico
+Allow: /favicon-48x48.png
 
 User-agent: Bingbot
 Allow: /
@@ -12,3 +19,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://sideby.ink/sitemap.xml

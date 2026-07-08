@@ -8,6 +8,14 @@ export const config = {
   maxDuration: 15,
 };
 
+const escapeXml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+
 export default async function handler(
   request: VercelRequest,
   response: VercelResponse
@@ -31,8 +39,9 @@ export default async function handler(
       .orderBy(desc(comparisons.updatedAt))
       .limit(2000);
 
-    const baseUrl = (process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://snapsolve.ink")
+    const baseUrl = (process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://sideby.ink")
       .replace(/\/+$/, "");
+    const xmlBaseUrl = escapeXml(baseUrl);
 
     // Start XML generation
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
@@ -43,16 +52,20 @@ export default async function handler(
       { path: "", priority: "1.0", changefreq: "daily" },
       { path: "/pricing", priority: "0.8", changefreq: "weekly" },
       { path: "/features", priority: "0.8", changefreq: "weekly" },
-      { path: "/features", priority: "0.8", changefreq: "weekly" },
       { path: "/about", priority: "0.7", changefreq: "monthly" },
       { path: "/contact", priority: "0.7", changefreq: "monthly" },
       { path: "/blog", priority: "0.6", changefreq: "weekly" },
       { path: "/docs", priority: "0.6", changefreq: "weekly" },
+      { path: "/legal/privacy", priority: "0.4", changefreq: "yearly" },
+      { path: "/legal/terms", priority: "0.4", changefreq: "yearly" },
+      { path: "/legal/cookies", priority: "0.3", changefreq: "yearly" },
+      { path: "/legal/refund", priority: "0.3", changefreq: "yearly" },
+      { path: "/legal/security", priority: "0.5", changefreq: "monthly" },
     ];
 
     for (const page of staticPages) {
       xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}${page.path}</loc>\n`;
+      xml += `    <loc>${xmlBaseUrl}${escapeXml(page.path)}</loc>\n`;
       xml += `    <changefreq>${page.changefreq}</changefreq>\n`;
       xml += `    <priority>${page.priority}</priority>\n`;
       xml += `  </url>\n`;
@@ -63,7 +76,7 @@ export default async function handler(
       if (!row.slug) continue;
       const lastmod = row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString();
       xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}/compare/${row.slug}</loc>\n`;
+      xml += `    <loc>${xmlBaseUrl}/compare/${escapeXml(encodeURIComponent(row.slug))}</loc>\n`;
       xml += `    <lastmod>${lastmod}</lastmod>\n`;
       xml += `    <changefreq>weekly</changefreq>\n`;
       xml += `    <priority>0.6</priority>\n`;
@@ -72,7 +85,7 @@ export default async function handler(
 
     xml += `</urlset>`;
 
-    response.setHeader("Content-Type", "application/xml");
+    response.setHeader("Content-Type", "application/xml; charset=utf-8");
     response.setHeader("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=600");
     return response.status(200).send(xml);
   } catch (error) {

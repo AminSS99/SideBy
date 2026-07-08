@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import { Check, ArrowRight } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { brand } from "@/config/brand";
 import { GlowCard } from "@/components/GlowCard";
+import { MarketingNav } from "@/components/brand/MarketingNav";
 
 const tiers = [
   {
@@ -74,20 +74,7 @@ const Pricing = () => {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
       </div>
       
-      {/* Header */}
-      <header className="absolute left-0 right-0 top-0 z-40 bg-transparent">
-        <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-6 lg:px-8">
-          <Link to="/" className="flex items-center gap-4 group">
-            <img src="/sideby.ico" alt="SideBy" className="h-10 w-10 object-contain rounded-sm transition-all group-hover:opacity-80" />
-            <div>
-              <p className="font-serif text-lg tracking-tight text-[#fdfbf7] transition-colors group-hover:text-orange-50">{brand.productName}</p>
-            </div>
-          </Link>
-          <Link to="/auth/sign-in" className="text-sm font-bold uppercase tracking-widest text-white/60 hover:text-white transition-colors">
-            Sign In
-          </Link>
-        </div>
-      </header>
+      <MarketingNav />
 
       <div className="pricing-header pt-40 text-center px-6 relative z-10">
         <h1 className="font-serif text-5xl md:text-7xl tracking-tight text-[#fdfbf7] mb-6">

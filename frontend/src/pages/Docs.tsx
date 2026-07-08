@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Book, Code, Key, Zap, Layers, FileSearch, Search, ShieldCheck } from "lucide-react";
-import { brand } from "@/config/brand";
 import { BrandFooter } from "@/components/brand/BrandFooter";
+import { MarketingNav } from "@/components/brand/MarketingNav";
 
 const docCategories = [
   {
@@ -63,22 +63,7 @@ const Docs = () => {
 
   return (
     <div ref={pageRef} className="min-h-screen bg-[#030303] text-[#fdfbf7] selection:bg-orange-500/30 flex flex-col">
-      <header className="relative z-40 border-b border-[#2a2a2a] bg-[#030303] pt-4 pb-4">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 lg:px-8">
-          <Link to="/" className="flex items-center gap-4 group">
-            <img src="/sideby.ico" alt="SideBy" className="h-8 w-8 object-contain rounded-sm transition-all group-hover:opacity-80" />
-            <div className="flex items-center gap-2">
-              <span className="font-serif tracking-tight text-[#fdfbf7] group-hover:text-orange-50 transition-colors">{brand.productName}</span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/30 border-l border-[#333] pl-2">Documentation</span>
-            </div>
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link to="/app" className="text-xs font-bold uppercase tracking-widest text-orange-400 hover:text-orange-300 transition-colors">
-              Go to App &rarr;
-            </Link>
-          </div>
-        </div>
-      </header>
+      <MarketingNav />
 
       <main className="flex-1 relative z-10 mx-auto w-full max-w-7xl px-6 lg:px-8 pt-16 pb-32">
         <div className="docs-header text-center max-w-3xl mx-auto mb-12">

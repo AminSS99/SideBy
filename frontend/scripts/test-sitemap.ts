@@ -48,7 +48,7 @@ async function runTest() {
   console.log("Invoking XML Sitemap handler...");
   
   try {
-    const { default: handler } = await import("../api/seo/sitemap.js");
+    const { default: handler } = await import("../api/_routes/seo/sitemap.ts");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await handler(mockRequest as any, mockResponse as any);
   } catch (err) {

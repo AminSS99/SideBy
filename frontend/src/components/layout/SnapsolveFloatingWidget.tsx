@@ -10,10 +10,11 @@ export const SnapsolveFloatingWidget = () => {
 
   const buttonSize = 48; // Diameter of the circle StardustButton
   const margin = 20;
+  const bottomSafeArea = 88;
 
   const clampPosition = (x: number, y: number) => {
     const maxX = window.innerWidth - buttonSize - margin;
-    const maxY = window.innerHeight - buttonSize - margin;
+    const maxY = window.innerHeight - buttonSize - bottomSafeArea;
     return {
       x: Math.max(margin, Math.min(x, maxX)),
       y: Math.max(margin, Math.min(y, maxY)),
@@ -24,7 +25,7 @@ export const SnapsolveFloatingWidget = () => {
     setMounted(true);
     // Position it in bottom-right corner by default
     let initialX = window.innerWidth - buttonSize - margin - 10;
-    let initialY = window.innerHeight - buttonSize - margin - 10;
+    let initialY = window.innerHeight - buttonSize - bottomSafeArea - 10;
 
     try {
       const saved = localStorage.getItem('snapsolve-widget-pos');

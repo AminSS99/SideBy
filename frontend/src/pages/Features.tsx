@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import { Network, Database, Lock, Zap, FileSearch, TerminalSquare } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { brand } from "@/config/brand";
 import { BrandFooter } from "@/components/brand/BrandFooter";
+import { MarketingNav } from "@/components/brand/MarketingNav";
 import { GlowCard } from "@/components/GlowCard";
 
 const Features = () => {
@@ -61,26 +61,9 @@ const Features = () => {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
       </div>
 
-      <header className="relative z-40 bg-transparent pt-6">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
-          <Link to="/" className="flex items-center gap-4 group">
-            <img src="/sideby.ico" alt="SideBy" className="h-10 w-10 object-contain rounded-sm transition-all group-hover:opacity-80" />
-            <div>
-              <p className="font-serif text-lg tracking-tight text-[#fdfbf7] transition-colors group-hover:text-orange-50">{brand.productName}</p>
-            </div>
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link to="/pricing" className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-white transition-colors">
-              Pricing
-            </Link>
-            <Link to="/app" className="rounded-sm border border-[#333] bg-[#0c0b0a] px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition-all hover:bg-[#1a1a1a]">
-              Sign In
-            </Link>
-          </div>
-        </div>
-      </header>
+      <MarketingNav />
 
-      <main className="flex-1 relative z-10 mx-auto w-full max-w-7xl px-6 lg:px-8 pt-24 pb-32">
+      <main className="flex-1 relative z-10 mx-auto w-full max-w-7xl px-6 lg:px-8 pt-24 pb-20">
         <div className="feat-header text-center max-w-3xl mx-auto mb-20">
           <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500 mb-4">
             Platform Capabilities
@@ -105,7 +88,7 @@ const Features = () => {
           ))}
         </div>
 
-        <div className="mt-24 rounded-sm border border-orange-500/30 bg-orange-500/10 p-12 text-center relative overflow-hidden">
+        <div className="mt-20 rounded-sm border border-orange-500/30 bg-orange-500/10 p-12 text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/20 blur-[80px] rounded-full pointer-events-none" />
           <h2 className="font-serif text-3xl md:text-4xl text-white mb-6 relative z-10">Ready to stop digging through tabs?</h2>
           <Link to="/auth/sign-up" className="relative z-10 inline-block rounded-sm bg-white px-8 py-4 text-xs font-bold uppercase tracking-widest text-black transition-colors hover:bg-gray-200">

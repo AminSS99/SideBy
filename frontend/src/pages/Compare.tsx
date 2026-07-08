@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Sparkles, Search, Loader2, ArrowRight } from "lucide-react";
+import { Sparkles, Loader2, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { brand } from "@/config/brand";
+import { MarketingNav } from "@/components/brand/MarketingNav";
 import { buildApiUrl } from "@/config/env";
 import { apiFetch } from "@/lib/api";
 
@@ -141,26 +142,7 @@ const Compare = () => {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
       </div>
       
-      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#030303]/90">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-4 group" aria-label={brand.productName}>
-            <div className="flex h-10 w-10 items-center justify-center border border-[#333] bg-[#111] transition-all group-hover:border-orange-500/50">
-               <img src="/sideby.ico" alt="SideBy" className="h-8 w-8 object-contain rounded-sm transition-opacity group-hover:opacity-80" />
-            </div>
-            <div>
-              <p className="font-serif text-sm tracking-tight text-[#fdfbf7] group-hover:text-orange-50 transition-colors">{brand.productName}</p>
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#fdfbf7]/40">Research Engine</p>
-            </div>
-          </Link>
-          <Link
-            to="/"
-            className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-4 py-2 text-xs font-bold uppercase tracking-widest text-white/50 transition-all hover:border-white/20 hover:text-white"
-          >
-            <Search className="mr-2 inline h-3 w-3" />
-            New Comparison
-          </Link>
-        </div>
-      </header>
+      <MarketingNav />
 
       <main className="relative z-10 mx-auto max-w-7xl px-4 pb-24 pt-12 sm:px-6">
         {isLoading ? (
