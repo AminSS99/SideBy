@@ -1,4 +1,4 @@
-import { requireApiKey } from "../../../_lib/api-key-auth.js";
+import { assertApiKeyScope, requireApiKey } from "../../../_lib/api-key-auth.js";
 import { getComparisonJob, sendJson } from "../../../_lib/sideby.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
@@ -17,6 +17,7 @@ export default async function handler(
 
   try {
     const apiKey = await requireApiKey(request);
+    assertApiKeyScope(apiKey, "comparisons:read");
     const id = Array.isArray(request.query.id) ? request.query.id[0] : request.query.id;
     if (!id) return sendJson(response, { error: "Comparison id is required." }, 400);
     return sendJson(response, await getComparisonJob(id, apiKey.userId));

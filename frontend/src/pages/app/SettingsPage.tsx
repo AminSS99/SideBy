@@ -565,7 +565,7 @@ type WebhookRecord = {
   eventTypes: string[];
   active: boolean;
   workspaceId: string | null;
-  secret: string;
+  secret: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -756,22 +756,29 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
                     </span>
                   </div>
                   
-                  {/* Signing Secret */}
                   <div className="flex items-center gap-2 pt-1">
                     <span className="text-[10px] text-[#fdfbf7]/40 uppercase tracking-widest">Secret:</span>
-                    <code className="text-xs font-mono text-cyan-400 bg-cyan-500/5 px-2 py-0.5 rounded">
-                      {sub.secret}
-                    </code>
-                    <button
-                      onClick={async () => {
-                        const ok = await copyText(sub.secret);
-                        toast[ok ? "success" : "error"](ok ? "Secret copied." : "Clipboard permission is blocked.");
-                      }}
-                      className="text-[#fdfbf7]/40 hover:text-cyan-400 transition-colors p-1"
-                      title="Copy signing secret"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </button>
+                    {sub.secret ? (
+                      <>
+                        <code className="text-xs font-mono text-cyan-400 bg-cyan-500/5 px-2 py-0.5 rounded">
+                          {sub.secret}
+                        </code>
+                        <button
+                          onClick={async () => {
+                            const ok = await copyText(sub.secret || "");
+                            toast[ok ? "success" : "error"](ok ? "Secret copied." : "Clipboard permission is blocked.");
+                          }}
+                          className="text-[#fdfbf7]/40 hover:text-cyan-400 transition-colors p-1"
+                          title="Copy signing secret"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-xs text-[#fdfbf7]/30">
+                        Hidden after creation
+                      </span>
+                    )}
                   </div>
                 </div>
 

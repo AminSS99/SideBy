@@ -21,7 +21,12 @@ export const config = {
 const CreateApiKeySchema = z.object({
   name: z.string().trim().min(1).max(120),
   workspaceId: z.string().uuid().optional(),
-  scopes: z.array(z.string().trim().min(1).max(80)).max(20).default(["comparisons:read", "comparisons:write"]),
+  scopes: z.array(z.string().trim().min(1).max(80)).max(20).default([
+    "comparisons:read",
+    "comparisons:write",
+    "comparisons:export",
+    "comparisons:followups",
+  ]),
 });
 
 function serializeKey(row: typeof apiKeys.$inferSelect) {

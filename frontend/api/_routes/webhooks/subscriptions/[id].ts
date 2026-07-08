@@ -2,6 +2,7 @@ import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../../../_lib/auth.js";
 import { sendJson } from "../../../_lib/sideby.js";
+import { assertSafeWebhookUrl } from "../../../_lib/webhook-url.js";
 import { createDbClient } from "../../../../src/db/index.js";
 import { webhookSubscriptions } from "../../../../src/db/schema.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -74,7 +75,10 @@ export default async function handler(
         updatedAt: new Date(),
       };
 
-      if (body.url !== undefined) updateData.url = body.url;
+      if (body.url !== undefined) {
+        assertSafeWebhookUrl(body.url);
+        updateData.url = body.url;
+      }
       if (body.eventTypes !== undefined) updateData.eventTypes = body.eventTypes;
       if (body.active !== undefined) updateData.active = body.active;
 
@@ -91,7 +95,7 @@ export default async function handler(
           eventTypes: row.eventTypes,
           active: row.active,
           workspaceId: row.workspaceId,
-          secret: row.secret,
+          secret: null,
           createdAt: row.createdAt.toISOString(),
           updatedAt: row.updatedAt.toISOString(),
         },

@@ -1,4 +1,4 @@
-import { requireApiKey } from "../../../../_lib/api-key-auth.js";
+import { assertApiKeyScope, requireApiKey } from "../../../../_lib/api-key-auth.js";
 import { exportComparison } from "../../../../_lib/export-engine.js";
 import { sendJson } from "../../../../_lib/sideby.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -20,6 +20,7 @@ export default async function handler(
 
   try {
     const apiKey = await requireApiKey(request);
+    assertApiKeyScope(apiKey, "comparisons:export");
     if (!apiKey.userId) return sendJson(response, { error: "API key is not linked to a user." }, 403);
     const userId = apiKey.userId;
     const id = Array.isArray(request.query.id) ? request.query.id[0] : request.query.id;

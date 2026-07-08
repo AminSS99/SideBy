@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../../_lib/auth.js";
 import { canAccessWorkspace } from "../../_lib/db-auth.js";
 import { sendJson } from "../../_lib/sideby.js";
+import { assertSafeWebhookUrl } from "../../_lib/webhook-url.js";
 import { createDbClient } from "../../../src/db/index.js";
 import { webhookSubscriptions, workspaces } from "../../../src/db/schema.js";
 import crypto from "crypto";
@@ -26,14 +27,14 @@ const CreateSubscriptionSchema = z.object({
   ).min(1, "At least one event type must be selected"),
 });
 
-function serializeSubscription(row: typeof webhookSubscriptions.$inferSelect) {
+function serializeSubscription(row: typeof webhookSubscriptions.$inferSelect, includeSecret = false) {
   return {
     id: row.id,
     url: row.url,
     eventTypes: row.eventTypes,
     active: row.active,
     workspaceId: row.workspaceId,
-    secret: row.secret,
+    secret: includeSecret ? row.secret : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -65,6 +66,7 @@ export default async function handler(
 
     if (request.method === "POST") {
       const body = CreateSubscriptionSchema.parse(request.body || {});
+      assertSafeWebhookUrl(body.url);
       let orgId = auth.orgId || null;
 
       if (body.workspaceId) {
@@ -94,7 +96,7 @@ export default async function handler(
         })
         .returning();
 
-      return sendJson(response, { subscription: serializeSubscription(row) }, 201);
+      return sendJson(response, { subscription: serializeSubscription(row, true) }, 201);
     }
 
     return sendJson(response, { error: "Method not allowed" }, 405);

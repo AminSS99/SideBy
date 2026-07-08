@@ -1,6 +1,6 @@
 import { waitUntil } from "@vercel/functions";
 import { z } from "zod";
-import { requireApiKey } from "../../../_lib/api-key-auth.js";
+import { assertApiKeyScope, requireApiKey } from "../../../_lib/api-key-auth.js";
 import { createComparisonJob, listComparisonHistory, sendJson } from "../../../_lib/sideby.js";
 import { assertNoLikelySecrets } from "../../../_lib/secret-scan.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -35,12 +35,14 @@ export default async function handler(
     const userId = apiKey.userId;
 
     if (request.method === "GET") {
+      assertApiKeyScope(apiKey, "comparisons:read");
       return sendJson(response, {
         comparisons: await listComparisonHistory(userId, 50),
       });
     }
 
     if (request.method === "POST") {
+      assertApiKeyScope(apiKey, "comparisons:write");
       return withApiKeyRateLimit(request, response, "comparison", apiKey, async () => {
         const body = CreateBodySchema.parse(request.body || {});
         assertNoLikelySecrets(body.query);

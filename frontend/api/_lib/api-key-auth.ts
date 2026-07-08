@@ -64,3 +64,14 @@ export async function requireApiKey(request: VercelRequest) {
     scopes: row.scopes as string[],
   };
 }
+
+export function assertApiKeyScope(
+  apiKey: { scopes: string[] },
+  requiredScope: string,
+) {
+  if (!apiKey.scopes.includes(requiredScope)) {
+    throw Object.assign(new Error(`API key is missing required scope: ${requiredScope}.`), {
+      statusCode: 403,
+    });
+  }
+}
