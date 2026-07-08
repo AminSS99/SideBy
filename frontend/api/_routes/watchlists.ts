@@ -30,6 +30,10 @@ const WatchlistSchema = z.object({
   channels: z.record(z.unknown()).default({}),
 });
 
+const UpdateWatchlistSchema = z.object({
+  status: z.enum(["active", "paused"]).default("paused"),
+});
+
 function nextRunFor(cadence: "daily" | "weekly" | "monthly") {
   const next = new Date();
   next.setUTCDate(next.getUTCDate() + (cadence === "daily" ? 1 : cadence === "weekly" ? 7 : 30));
@@ -104,14 +108,30 @@ export default async function handler(
       return await withRateLimit(request, response, "watchlist", async () => {
         const id = Array.isArray(request.query.id) ? request.query.id[0] : request.query.id;
         if (!id) return sendJson(response, { error: "Watchlist id is required." }, 400);
+        const body = UpdateWatchlistSchema.parse(request.body || {});
+
+        const [existing] = await db
+          .select()
+          .from(watchlists)
+          .where(and(eq(watchlists.id, id), eq(watchlists.createdBy, auth.userId)))
+          .limit(1);
+
+        if (!existing) return sendJson(response, { error: "Watchlist not found." }, 404);
+
+        const cadence = ["daily", "weekly", "monthly"].includes(existing.cadence)
+          ? existing.cadence as "daily" | "weekly" | "monthly"
+          : "weekly";
 
         const [row] = await db
           .update(watchlists)
-          .set({ status: "paused", updatedAt: new Date() })
+          .set({
+            status: body.status,
+            nextRunAt: body.status === "active" ? (existing.nextRunAt || nextRunFor(cadence)) : existing.nextRunAt,
+            updatedAt: new Date(),
+          })
           .where(and(eq(watchlists.id, id), eq(watchlists.createdBy, auth.userId)))
           .returning();
 
-        if (!row) return sendJson(response, { error: "Watchlist not found." }, 404);
         return sendJson(response, { watchlist: row });
       });
     }

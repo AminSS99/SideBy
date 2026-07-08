@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, useRef } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { Eye, EyeOff, Calendar, AlertTriangle, Play, Pause, Trash2, Sparkles, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
@@ -35,6 +35,25 @@ export const WatchlistPanel = ({
   // Form options
   const [cadence, setCadence] = useState<"daily" | "weekly" | "monthly">("weekly");
   const [alertThreshold, setAlertThreshold] = useState<number>(0.1); // default 10%
+  const monitorName = `${result.entities.a.name} vs ${result.entities.b.name}`;
+
+  const agentSignals = [
+    {
+      icon: Sparkles,
+      title: "Recrawl sources",
+      text: "Refreshes the cited sources behind this comparison on schedule.",
+    },
+    {
+      icon: AlertTriangle,
+      title: "Detect drift",
+      text: "Flags material score and fact changes before the decision gets stale.",
+    },
+    {
+      icon: Calendar,
+      title: "Keep history",
+      text: "Preserves the run cadence, last check, and next check for review.",
+    },
+  ];
 
   const fetchWatchlist = useCallback(async () => {
     if (!session) return;
@@ -80,7 +99,7 @@ export const WatchlistPanel = ({
         body: JSON.stringify({
           comparisonId,
           query: result.query,
-          name: `Watchlist: ${result.entities.a.name} vs ${result.entities.b.name}`,
+          name: `AI Monitor: ${monitorName}`,
           cadence,
           alertThreshold,
         }),
@@ -98,17 +117,19 @@ export const WatchlistPanel = ({
 
   const handlePauseToggle = async () => {
     if (!activeWatchlist) return;
+    const nextStatus = activeWatchlist.status === "active" ? "paused" : "active";
     try {
       setIsSubmitting(true);
-      // Simply call PUT or PATCH to pause.
       const res = await apiFetch(buildApiUrl(`/api/watchlists?id=${activeWatchlist.id}`), {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
       });
       if (!res.ok) throw new Error("Failed to update status.");
-      toast.success("Watchlist paused.");
+      toast.success(nextStatus === "active" ? "AI monitor resumed." : "AI monitor paused.");
       void fetchWatchlist();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error pausing watchlist.");
+      toast.error(err instanceof Error ? err.message : "Error updating watchlist.");
     } finally {
       setIsSubmitting(false);
     }
@@ -145,21 +166,25 @@ export const WatchlistPanel = ({
           </div>
           <div>
             <h3 className="font-serif text-2xl text-[#fdfbf7] tracking-tight">Competitive Monitoring</h3>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mt-1">Automatic Watchlist Crawler</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mt-1">AI Research Monitor</p>
           </div>
         </div>
+        <span className="hidden sm:inline-flex h-7 items-center rounded-sm border border-cyan-500/20 bg-cyan-500/10 px-3 text-[9px] font-bold uppercase tracking-widest text-cyan-300">
+          Agent Mode
+        </span>
       </div>
 
       <div className="p-6 md:p-8 space-y-6">
         {isLoading ? (
-          <div className="text-sm text-[#fdfbf7]/40 py-4 italic">Loading watchlist crawler configuration...</div>
+          <div className="text-sm text-[#fdfbf7]/40 py-4 italic">Loading AI monitor configuration...</div>
         ) : activeWatchlist ? (
           // Active Watchlist Details
           <div className="space-y-6">
             <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-cyan-400">Status</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-cyan-400">Monitor</span>
+                  <h4 className="mt-1 font-serif text-lg text-[#fdfbf7]">{activeWatchlist.name}</h4>
                   <div className="flex items-center gap-2 mt-1">
                     <span className={cn(
                       "h-2 w-2 rounded-full",
@@ -169,20 +194,33 @@ export const WatchlistPanel = ({
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  {activeWatchlist.status === "active" && (
-                    <button
-                      onClick={handlePauseToggle}
-                      className="flex items-center gap-1.5 h-8 px-3 rounded-sm border border-yellow-500/20 bg-yellow-500/5 text-[9px] font-bold uppercase tracking-widest text-yellow-400 hover:bg-yellow-500/10 transition-colors"
-                    >
-                      <Pause className="h-3 w-3" /> Pause
-                    </button>
-                  )}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handlePauseToggle}
+                    disabled={isSubmitting}
+                    className={cn(
+                      "flex h-8 items-center gap-1.5 rounded-sm border px-3 text-[9px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50",
+                      activeWatchlist.status === "active"
+                        ? "border-yellow-500/20 bg-yellow-500/5 text-yellow-400 hover:bg-yellow-500/10"
+                        : "border-emerald-500/20 bg-emerald-500/5 text-emerald-400 hover:bg-emerald-500/10",
+                    )}
+                  >
+                    {activeWatchlist.status === "active" ? (
+                      <>
+                        <Pause className="h-3 w-3" /> Pause
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-3 w-3" /> Resume
+                      </>
+                    )}
+                  </button>
                   <button
                     onClick={handleUnsubscribe}
-                    className="flex items-center gap-1.5 h-8 px-3 rounded-sm border border-red-500/20 bg-red-500/5 text-[9px] font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/10 transition-colors"
+                    disabled={isSubmitting}
+                    className="flex h-8 items-center gap-1.5 rounded-sm border border-red-500/20 bg-red-500/5 px-3 text-[9px] font-bold uppercase tracking-widest text-red-400 transition-colors hover:bg-red-500/10 disabled:opacity-50"
                   >
-                    <Trash2 className="h-3 w-3" /> Unsubscribe
+                    <Trash2 className="h-3 w-3" /> Remove
                   </button>
                 </div>
               </div>
@@ -217,22 +255,31 @@ export const WatchlistPanel = ({
             <div className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4 text-[10px] text-[#fdfbf7]/40 flex items-start gap-2.5">
               <Calendar className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-[#fdfbf7]/60 uppercase tracking-widest block mb-0.5">Automated Cron Execution</span>
-                When the crawler detects fact drift or index change exceeding {(Number(activeWatchlist.alertThreshold) * 100).toFixed(0)}%, you will receive email/webhook notifications automatically.
+                <span className="font-bold text-[#fdfbf7]/60 uppercase tracking-widest block mb-0.5">Automated Research Agent</span>
+                SideBy will recrawl sources and refresh this comparison on schedule. When fact or score drift exceeds {(Number(activeWatchlist.alertThreshold) * 100).toFixed(0)}%, the monitor can trigger email or webhook alerts.
               </div>
             </div>
           </div>
         ) : !session ? (
           <div className="space-y-6">
             <p className="text-xs text-[#fdfbf7]/60 leading-relaxed">
-              Keep this comparison fresh automatically. SideBy will execute background research runs on a scheduled cadence and alert you if the scoring index drifts.
+              Turn this comparison into a scheduled AI research agent. SideBy recrawls sources, refreshes scoring, and flags material changes before your decision goes stale.
             </p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {agentSignals.map((signal) => (
+                <div key={signal.title} className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
+                  <signal.icon className="mb-3 h-4 w-4 text-cyan-400" />
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/70">{signal.title}</div>
+                  <p className="mt-2 text-[10px] leading-relaxed text-[#fdfbf7]/45">{signal.text}</p>
+                </div>
+              ))}
+            </div>
             <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-6 text-center space-y-4">
               <Lock className="h-8 w-8 text-cyan-400 mx-auto" />
               <div>
-                <h5 className="font-serif text-base text-[#fdfbf7]">Competitive Watchlists</h5>
+                <h5 className="font-serif text-base text-[#fdfbf7]">AI Research Monitors</h5>
                 <p className="text-[10px] text-[#fdfbf7]/50 mt-1 max-w-xs mx-auto">
-                  Sign up to track this comparison, get notified on Slack or Email when metrics shift, and access version history.
+                  Sign up to track this comparison, receive change alerts, and keep a version trail of refreshed research.
                 </p>
               </div>
               <a
@@ -247,8 +294,18 @@ export const WatchlistPanel = ({
           // Watchlist Subscribing Form
           <form onSubmit={handleSubscribe} className="space-y-6">
             <p className="text-xs text-[#fdfbf7]/60 leading-relaxed">
-              Keep this comparison fresh automatically. SideBy will execute background research runs on a scheduled cadence and alert you if the scoring index drifts.
+              Turn <span className="font-semibold text-[#fdfbf7]">{monitorName}</span> into a scheduled AI research monitor. SideBy recrawls sources, reruns scoring, and flags meaningful changes before your decision goes stale.
             </p>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {agentSignals.map((signal) => (
+                <div key={signal.title} className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
+                  <signal.icon className="mb-3 h-4 w-4 text-cyan-400" />
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/70">{signal.title}</div>
+                  <p className="mt-2 text-[10px] leading-relaxed text-[#fdfbf7]/45">{signal.text}</p>
+                </div>
+              ))}
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Cadence Selection */}
@@ -303,7 +360,7 @@ export const WatchlistPanel = ({
               className="w-full h-11 flex items-center justify-center gap-2 rounded-sm bg-cyan-600 text-xs font-bold uppercase tracking-widest text-white hover:bg-cyan-700 transition-colors disabled:opacity-50"
             >
               <Eye className="h-4 w-4" />
-              {isSubmitting ? "Starting Watchlist..." : "Subscribe to Watchlist"}
+              {isSubmitting ? "Starting Monitor..." : "Start AI Monitor"}
             </button>
           </form>
         )}
