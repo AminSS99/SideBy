@@ -1605,17 +1605,27 @@ function ensureFactCoverage(
   const hasFact = (entity: string, dimension: string) =>
     existingFacts.has(`${entity.toLowerCase()}|${dimension.toLowerCase()}`);
 
-  const extractedLower = extracted.map((item) => ({
-    ...item,
-    entityNameLower: item.entityName.toLowerCase(),
-    titleLower: item.title.toLowerCase(),
-    markdownLower: item.markdown.toLowerCase(),
-  }));
+  const extractedLower = extracted.map((item) => {
+    const sentences = item.markdown
+      .replace(/\s+/g, " ")
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => sentence.trim())
+      .filter((sentence) => sentence.length > 40);
+
+    return {
+      ...item,
+      entityNameLower: item.entityName.toLowerCase(),
+      titleLower: item.title.toLowerCase(),
+      markdownLower: item.markdown.toLowerCase(),
+      sentences,
+      sentencesLower: sentences.map((s) => s.toLowerCase()),
+    };
+  });
 
   for (const entity of parsed.entities.slice(0, 2)) {
     for (const dimension of dimensions) {
       if (hasFact(entity.name, dimension.name)) continue;
-      const fallback = buildFallbackFact(entity.name, dimension.name, extracted, extractedLower);
+      const fallback = buildFallbackFact(entity.name, dimension.name, extractedLower);
       if (fallback) {
         completeFacts.push(fallback);
         existingFacts.add(`${entity.name.toLowerCase()}|${dimension.name.toLowerCase()}`);
@@ -1629,36 +1639,26 @@ function ensureFactCoverage(
 function buildFallbackFact(
   entityName: string,
   dimensionName: string,
-  extracted: ExtractedSource[],
-  extractedLower: Array<ExtractedSource & { entityNameLower: string; titleLower: string; markdownLower: string; }>
+  extractedLower: Array<ExtractedSource & { entityNameLower: string; titleLower: string; markdownLower: string; sentences: string[]; sentencesLower: string[]; }>
 ): ExtractedFact | null {
   const entityNeedle = entityName.toLowerCase();
   const dimensionNeedle = dimensionName.toLowerCase().split(/\s+/)[0] || "";
 
-  const sourceLower =
+  const source =
     extractedLower.find((item) => item.entityNameLower === entityNeedle) ||
     extractedLower.find((item) => item.titleLower.includes(entityNeedle)) ||
     extractedLower.find((item) => item.markdownLower.includes(entityNeedle));
 
-  const source = sourceLower ? extracted.find((s) => s.url === sourceLower.url) : null;
-
   if (!source) return null;
 
-  const sentences = source.markdown
-    .replace(/\s+/g, " ")
-    .split(/(?<=[.!?])\s+/)
-    .map((sentence) => sentence.trim())
-    .filter((sentence) => sentence.length > 40);
-
-  const sentencesLower = sentences.map((s) => s.toLowerCase());
-  const dimIdx = sentencesLower.findIndex((s) => s.includes(dimensionNeedle));
-  const entIdx = sentencesLower.findIndex((s) => s.includes(entityNeedle));
+  const dimIdx = source.sentencesLower.findIndex((s) => s.includes(dimensionNeedle));
+  const entIdx = source.sentencesLower.findIndex((s) => s.includes(entityNeedle));
 
   const sentence =
-    (dimIdx !== -1 ? sentences[dimIdx] : undefined) ||
-    (entIdx !== -1 ? sentences[entIdx] : undefined);
-
-  sentence = sentence || sentences[0] || source.markdown.replace(/\s+/g, " ").trim().slice(0, 240);
+    (dimIdx !== -1 ? source.sentences[dimIdx] : undefined) ||
+    (entIdx !== -1 ? source.sentences[entIdx] : undefined) ||
+    source.sentences[0] ||
+    source.markdown.replace(/\s+/g, " ").trim().slice(0, 240);
 
   if (!sentence) return null;
 
