@@ -1,7 +1,5 @@
-const CACHE_NAME = "sideby-cache-v1";
+const CACHE_NAME = "sideby-cache-v2";
 const ASSETS = [
-  "/",
-  "/index.html",
   "/manifest.json",
   "/favicon.ico",
   "/favicon-48x48.png",
@@ -31,9 +29,8 @@ self.addEventListener("activate", (e) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 // Fetch Event
@@ -42,6 +39,10 @@ self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
 
   const url = new URL(e.request.url);
+
+  if (!["http:", "https:"].includes(url.protocol) || url.origin !== self.location.origin) {
+    return;
+  }
 
   // Avoid intercepting API calls, Clerk auth endpoints, or PostHog/Sentry domains
   if (
@@ -54,12 +55,14 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // Handle SPA routing: serve index.html for navigation requests
+  if (url.pathname.startsWith("/assets/") || url.pathname === "/sw.js") {
+    return;
+  }
+
+  // Handle SPA routing with network-first HTML so hashed asset URLs never go stale.
   if (e.request.mode === "navigate") {
     e.respondWith(
-      caches.match("/index.html").then((cachedResponse) => {
-        return cachedResponse || fetch(e.request);
-      })
+      fetch(e.request, { cache: "no-store" }).catch(() => fetch("/index.html", { cache: "no-store" }))
     );
     return;
   }
@@ -68,7 +71,7 @@ self.addEventListener("fetch", (e) => {
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
       const fetchPromise = fetch(e.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === "basic") {
           const cacheCopy = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(e.request, cacheCopy);
