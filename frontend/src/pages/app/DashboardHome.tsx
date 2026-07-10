@@ -12,13 +12,11 @@ import {
   UserPlus,
   Activity,
   ArrowRight,
-  Search,
   Zap,
   ShieldCheck,
   Scale,
   GitCompareArrows
 } from "lucide-react";
-import { AreaChart, Area, ResponsiveContainer } from "recharts";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { brand } from "@/config/brand";
@@ -49,10 +47,6 @@ const formatTimestamp = (value: string) =>
     dateStyle: "medium",
     timeStyle: "short",
   });
-
-// Phase 1: Real usage analytics from PostHog/usage events will be wired in Phase 6.
-// For now, the activity section shows a setup state when no data is available.
-const miniChartData: { runs: number }[] = [];
 
 const onboardingExamples = [
   "React vs Vue for a SaaS",
@@ -153,43 +147,26 @@ const DashboardHome = () => {
             Welcome, {user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'Researcher'}
           </h1>
           <p className="mt-3 text-sm text-[#fdfbf7]/60 leading-relaxed max-w-2xl">
-            This is your workspace overview. From here you can launch new orchestration jobs, invite team members, or review past research.
+            This is your workspace overview. From here you can launch new comparisons, invite team members, or review past research.
           </p>
         </div>
         
-        {/* Mini Telemetry Chart */}
+        {/* Activity Summary */}
         <div className="flex items-center gap-4 rounded-sm border border-[#2a2a2a] bg-[#111] p-4 shrink-0">
           <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">7d Activity</p>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">Total Runs</p>
             <div className="flex items-center gap-2">
               <Activity className="h-3.5 w-3.5 text-emerald-400" />
               {comparisonsLoading ? (
                 <span className="text-xs text-[#fdfbf7]/50">Loading...</span>
-              ) : comparisons.length === 0 ? (
-                <span className="text-xs text-[#fdfbf7]/50">No activity yet</span>
               ) : (
                 <>
                   <span className="font-serif text-xl text-[#fdfbf7]">{comparisons.length}</span>
-                  <span className="text-xs text-[#fdfbf7]/50">runs</span>
+                  <span className="text-xs text-[#fdfbf7]/50">comparisons</span>
                 </>
               )}
             </div>
           </div>
-          {miniChartData.length > 0 && (
-            <div className="h-12 w-24 ml-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={miniChartData}>
-                  <defs>
-                    <linearGradient id="colorMini" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <Area type="monotone" dataKey="runs" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorMini)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          )}
         </div>
       </div>
 

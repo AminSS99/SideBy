@@ -4,6 +4,7 @@ import { createDbClient } from "../../../src/db/index.js";
 import { users } from "../../../src/db/schema.js";
 import { createComparisonJob, sendJson } from "../../_lib/sideby.js";
 import { logger } from "../../_lib/log.js";
+import { checkRateLimit } from "../../_lib/rate-limit.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
@@ -12,7 +13,7 @@ export const config = {
 };
 
 // Parse urlencoded helper since Vercel bodyParser parses JSON automatically but not urlencoded
-function parseUrlenocded(bodyStr: string): Record<string, string> {
+function parseUrlencoded(bodyStr: string): Record<string, string> {
   const params = new URLSearchParams(bodyStr);
   const result: Record<string, string> = {};
   for (const [key, value] of params.entries()) {
@@ -91,8 +92,20 @@ export default async function handler(
     return sendJson(response, { error: "Invalid signature" }, 401);
   }
 
-  // 2. Parse payload parameters
-  const params = parseUrlenocded(rawBody);
+  // 2. Rate limit by IP to prevent abuse
+  const forwarded = request.headers["x-forwarded-for"];
+  const ip = (typeof forwarded === "string" ? forwarded.split(",")[0]?.trim() : null) || request.socket?.remoteAddress || "unknown";
+  const rateLimitKey = `slack:${ip}`;
+  const limit = await checkRateLimit("ip", rateLimitKey, "comparison", 5);
+  if (!limit.allowed) {
+    return sendJson(response, {
+      response_type: "ephemeral",
+      text: "⚠️ Rate limit reached. Please wait a moment before trying again.",
+    });
+  }
+
+  // 3. Parse payload parameters
+  const params = parseUrlencoded(rawBody);
   const query = (params.text || "").trim();
   const responseUrl = params.response_url;
 

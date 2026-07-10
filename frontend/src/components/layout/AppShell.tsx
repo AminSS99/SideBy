@@ -4,9 +4,9 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  GitCompareArrows, LayoutDashboard, Layers3, FolderKanban, Settings,
+  GitCompareArrows, Layers3, FolderKanban, Settings,
   LogOut, MessageSquare, Microscope, Database, Activity, CreditCard,
-  Search, Terminal, Users, Menu, X, AlertCircle, ChevronDown, Clock3
+  Search, Terminal, Users, Menu, X, ChevronDown, Clock3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
@@ -30,7 +30,6 @@ const advancedNavItems = [
   { to: "/app/research", label: "Research", icon: Microscope },
   { to: "/app/prompts", label: "Prompts", icon: Terminal },
   { to: "/app/analytics", label: "Analytics", icon: Activity },
-  { to: "/app/quality", label: "Quality", icon: AlertCircle },
   { to: "/app/billing", label: "Billing", icon: CreditCard },
   { to: "/app/workspaces", label: "Workspaces", icon: Layers3 },
   { to: "/app/projects", label: "Projects", icon: FolderKanban },

@@ -11,7 +11,11 @@ const clerkSecretKey = () => process.env.CLERK_SECRET_KEY || "";
 const isProductionRuntime = () =>
   process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
 
-const isTestAuthEnabled = () => !isProductionRuntime();
+const isTestAuthEnabled = () => {
+  if (isProductionRuntime()) return false;
+  const host = process.env.VERCEL_URL || process.env.HOST || "";
+  return host === "localhost" || host.startsWith("localhost:");
+};
 
 export interface AuthContext {
   userId: string | null;

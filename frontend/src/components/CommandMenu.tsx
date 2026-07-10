@@ -13,7 +13,6 @@ import {
   Users,
   Terminal,
   Activity,
-  AlertCircle,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -144,14 +143,6 @@ export function CommandMenu({ open, setOpen }: { open: boolean, setOpen: (open: 
               <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white opacity-0 group-aria-selected:opacity-100 transition-opacity" />
               <Activity className="mr-3 h-4 w-4 text-white/30 group-aria-selected:text-white transition-colors" />
               <span>Analytics</span>
-            </CommandItem>
-            <CommandItem
-              onSelect={() => runCommand(() => navigate("/app/quality"))}
-              className="text-[#fdfbf7]/60 aria-selected:bg-white/5 aria-selected:text-white cursor-pointer rounded-sm mb-1 group relative overflow-hidden"
-            >
-              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white opacity-0 group-aria-selected:opacity-100 transition-opacity" />
-              <AlertCircle className="mr-3 h-4 w-4 text-white/30 group-aria-selected:text-white transition-colors" />
-              <span>Quality</span>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => navigate("/app/billing"))}

@@ -6,6 +6,7 @@ import { sendJson } from "../../../_lib/sideby.js";
 import { requireAuth } from "../../../_lib/auth.js";
 import { withRateLimit } from "../../../_lib/route-guard.js";
 import { queueComparisonRefresh } from "../../../_lib/refresh-engine.js";
+import { logger } from "../../../_lib/log.js";
 import { createDbClient } from "../../../../src/db/index.js";
 import {
   aiRuns,
@@ -104,9 +105,11 @@ export default async function handler(
           .where(eq(comparisons.id, id));
 
         if (process.env.DISABLE_IN_PROCESS_JOBS === "true") {
-          console.log(`[DISABLE_IN_PROCESS_JOBS] Comparison retry job ${id} queued for external worker.`);
+          logger.info("Comparison retry queued for external worker", { comparisonId: id });
         } else {
-          waitUntil(runComparisonJob(id, auth.userId, comp.query, auth.orgId).catch(() => {}));
+          waitUntil(runComparisonJob(id, auth.userId, comp.query, auth.orgId).catch((err) => {
+            logger.error("Comparison retry failed", err instanceof Error ? err : undefined, { comparisonId: id });
+          }));
         }
 
         captureServerEvent(auth.userId, "comparison_retried", { comparison_id: id });

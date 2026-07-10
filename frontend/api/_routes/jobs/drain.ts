@@ -1,4 +1,5 @@
 import { waitUntil } from "@vercel/functions";
+import { timingSafeEqual } from "crypto";
 import { drainQueuedComparisonJobs } from "../../_lib/job-engine.js";
 import { sendJson } from "../../_lib/sideby.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -20,8 +21,10 @@ function isAuthorized(request: VercelRequest) {
   }
 
   const header = request.headers.authorization;
-  const value = Array.isArray(header) ? header[0] : header;
-  return value === `Bearer ${secret}`;
+  const raw = Array.isArray(header) ? header[0] : header;
+  const token = raw?.replace("Bearer ", "") || "";
+  if (token.length !== secret.length) return false;
+  return timingSafeEqual(Buffer.from(token), Buffer.from(secret));
 }
 
 export default async function handler(

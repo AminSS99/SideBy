@@ -101,7 +101,9 @@ export default async function handler(
       signatureValid: false,
       processedAt: new Date(),
       errorMessage: error instanceof Error ? error.message : "Webhook processing failed",
-    }).catch(() => {});
+    }).catch((dbErr) => {
+      logger.error("Failed to log webhook error event", dbErr instanceof Error ? dbErr : undefined);
+    });
 
     return response.status(400).json({
       error: error instanceof Error ? error.message : "Webhook processing failed",

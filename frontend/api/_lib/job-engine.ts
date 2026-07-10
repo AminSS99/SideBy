@@ -52,11 +52,14 @@ const safeWaitUntil = (promise: Promise<unknown>) => {
     try {
       vercelWaitUntil(promise);
       return;
-    } catch (e) {
-      // Fallback
+    } catch {
+      // waitUntil not available in this context; fall through to fire-and-forget
     }
   }
-  promise.catch(() => {});
+  promise.catch((err) => {
+    // Log but don't throw — background task failures shouldn't crash the handler
+    logger.warn("Background task failed", { error: err instanceof Error ? err.message : String(err) });
+  });
 };
 
 // ─── Guardrails ─────────────────────────────────────────────────────────────

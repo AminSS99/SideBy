@@ -133,7 +133,6 @@ const ComparisonsPage = () => {
       const data = (await res.json()) as { comparisons: ComparisonHistoryItem[] };
       setItems(data.comparisons);
     } catch (loadError) {
-      console.error("Failed to load comparisons:", loadError);
       setItems([]);
       setError(loadError instanceof Error ? loadError.message : "Unable to load saved comparisons.");
     } finally {

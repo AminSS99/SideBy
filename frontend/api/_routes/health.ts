@@ -1,10 +1,10 @@
 /**
  * GET /api/health — basic health check
+ * Returns only pass/fail status. Does NOT expose DB URLs, Redis hosts, or internal details.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { neon } from "@neondatabase/serverless";
 import { assertRedisAvailable, getRedis, getRuntimeStoreKind } from "../_lib/redis.js";
-import { checkEnvironment } from "../_lib/env-check.js";
 
 export const config = {
   runtime: "nodejs",
@@ -19,11 +19,8 @@ export default async function handler(
     return response.status(405).json({ error: "Method not allowed" });
   }
 
-  const checks: Record<string, "ok" | "error" | "not_configured"> = {
-    server: "ok",
-  };
-  const env = checkEnvironment();
-  checks.environment = env.status;
+  let dbOk = false;
+  let cacheOk = false;
 
   // Check database
   const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || "";
@@ -31,42 +28,36 @@ export default async function handler(
     try {
       const sql = neon(dbUrl);
       await sql`select 1`;
-      checks.database = "ok";
-    } catch (err) {
-      console.error("Health check DB connection failed:", err);
-      checks.database = "error";
+      dbOk = true;
+    } catch {
+      dbOk = false;
     }
-  } else {
-    checks.database = "not_configured";
   }
 
-  // Check Redis
+  // Check cache layer
   const redis = getRedis();
   if (redis) {
     try {
       await redis.get("health-check");
-      checks.redis = "ok";
+      cacheOk = true;
     } catch {
-      checks.redis = "error";
+      cacheOk = false;
     }
   } else if (getRuntimeStoreKind() === "postgres") {
     try {
       await assertRedisAvailable();
-      checks.redis = "not_configured";
-      checks.runtimeStore = "ok";
+      cacheOk = true;
     } catch {
-      checks.runtimeStore = "error";
+      cacheOk = false;
     }
   } else {
-    checks.redis = "not_configured";
-    checks.runtimeStore = "not_configured";
+    cacheOk = true; // no cache configured is not a failure
   }
 
-  const allOk = Object.values(checks).every((v) => v === "ok" || v === "not_configured");
+  const healthy = dbOk && cacheOk;
 
-  return response.status(allOk ? 200 : 503).json({
-    status: allOk ? "healthy" : "degraded",
-    checks,
+  return response.status(healthy ? 200 : 503).json({
+    status: healthy ? "ok" : "degraded",
     timestamp: new Date().toISOString(),
   });
 }
