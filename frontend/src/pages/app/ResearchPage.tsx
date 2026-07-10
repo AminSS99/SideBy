@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Microscope, Sparkles, FileText, Clock3, ArrowRight, Loader2, Settings2, Globe, Cpu, SlidersHorizontal } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -29,6 +29,13 @@ const ResearchPage = () => {
   const [domains, setDomains] = useState("");
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const researchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    return () => {
+      if (researchTimeoutRef.current) clearTimeout(researchTimeoutRef.current);
+    };
+  }, []);
   const [reports, setReports] = useState<ResearchReport[]>([
     {
       id: "1",
@@ -70,7 +77,7 @@ const ResearchPage = () => {
     setIsResearching(true);
 
     // Simulate research job completion
-    setTimeout(() => {
+    researchTimeoutRef.current = setTimeout(() => {
       setReports((prev) => 
         prev.map((report) => 
           report.id === newReport.id 

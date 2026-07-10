@@ -38,46 +38,36 @@ export default async function handler(
     const db = createDbClient();
 
     if (request.method === "GET") {
-      const [user] = await db.select().from(users).where(eq(users.id, auth.userId)).limit(1);
-      const accessibleWorkspaces = await getAccessibleWorkspaces(db, auth.userId);
-      const comparisonRows = await db
-        .select()
-        .from(comparisons)
-        .where(eq(comparisons.clerkUserId, auth.userId));
-      const promptRows = await db
-        .select()
-        .from(promptTemplates)
-        .where(eq(promptTemplates.createdBy, auth.userId));
-      const keyRows = await db
-        .select({
-          id: apiKeys.id,
-          name: apiKeys.name,
-          keyPrefix: apiKeys.keyPrefix,
-          scopes: apiKeys.scopes,
-          lastUsedAt: apiKeys.lastUsedAt,
-          revokedAt: apiKeys.revokedAt,
-          createdAt: apiKeys.createdAt,
-        })
-        .from(apiKeys)
-        .where(eq(apiKeys.userId, auth.userId));
-      const [settings] = await db
-        .select()
-        .from(userSettings)
-        .where(eq(userSettings.userId, auth.userId))
-        .limit(1);
-      const watchlistRows = await db
-        .select()
-        .from(watchlists)
-        .where(eq(watchlists.createdBy, auth.userId));
+      const [user, accessibleWorkspaces, comparisonRows, promptRows, keyRows, settingsRow, watchlistRows] =
+        await Promise.all([
+          db.select().from(users).where(eq(users.id, auth.userId)).limit(1),
+          getAccessibleWorkspaces(db, auth.userId),
+          db.select().from(comparisons).where(eq(comparisons.clerkUserId, auth.userId)),
+          db.select().from(promptTemplates).where(eq(promptTemplates.createdBy, auth.userId)),
+          db
+            .select({
+              id: apiKeys.id,
+              name: apiKeys.name,
+              keyPrefix: apiKeys.keyPrefix,
+              scopes: apiKeys.scopes,
+              lastUsedAt: apiKeys.lastUsedAt,
+              revokedAt: apiKeys.revokedAt,
+              createdAt: apiKeys.createdAt,
+            })
+            .from(apiKeys)
+            .where(eq(apiKeys.userId, auth.userId)),
+          db.select().from(userSettings).where(eq(userSettings.userId, auth.userId)).limit(1),
+          db.select().from(watchlists).where(eq(watchlists.createdBy, auth.userId)),
+        ]);
 
       return sendJson(response, {
         exportedAt: new Date().toISOString(),
-        user,
+        user: user[0] ?? null,
         workspaces: accessibleWorkspaces,
         comparisons: comparisonRows,
         promptTemplates: promptRows,
         apiKeys: keyRows,
-        settings,
+        settings: settingsRow[0] ?? null,
         watchlists: watchlistRows,
       });
     }

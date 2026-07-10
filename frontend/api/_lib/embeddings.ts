@@ -71,10 +71,11 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
     }
 
     const data = (await response.json()) as {
-      data: Array<{ embedding: number[] }>;
+      data: Array<{ embedding: number[] }> | undefined;
     };
 
-    results.push(...data.data.map((d) => d.embedding));
+    const embeddings = data.data ?? [];
+    results.push(...embeddings.map((d) => d.embedding));
   }
 
   return results;

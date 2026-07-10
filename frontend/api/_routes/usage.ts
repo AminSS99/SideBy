@@ -50,152 +50,163 @@ export default async function handler(
 
       const db = createDbClient();
 
-      const failedJobs = await db
-        .select({
-          id: comparisons.id,
-          query: comparisons.query,
-          slug: comparisons.slug,
-          errorMessage: comparisons.errorMessage,
-          retryCount: comparisons.retryCount,
-          updatedAt: comparisons.updatedAt,
-          totalCost: queryAnalytics.totalCost,
-        })
-        .from(comparisons)
-        .leftJoin(queryAnalytics, eq(comparisons.id, queryAnalytics.comparisonId))
-        .where(eq(comparisons.status, "failed"))
-        .orderBy(desc(comparisons.updatedAt))
-        .limit(20);
+      const [
+        failedJobs,
+        lowConfidence,
+        highCost,
+        categories,
+        safetyLevels,
+        taxonomyStatuses,
+        policyNotes,
+        vagueCountResult,
+        totalCompletedResult,
+        totalFailedResult,
+        avgCostResult,
+        feedbackSummary,
+        totalReusedResult,
+        totalQueriesResult,
+        totalBlockedResult,
+        providerSpend,
+      ] = await Promise.all([
+        db
+          .select({
+            id: comparisons.id,
+            query: comparisons.query,
+            slug: comparisons.slug,
+            errorMessage: comparisons.errorMessage,
+            retryCount: comparisons.retryCount,
+            updatedAt: comparisons.updatedAt,
+            totalCost: queryAnalytics.totalCost,
+          })
+          .from(comparisons)
+          .leftJoin(queryAnalytics, eq(comparisons.id, queryAnalytics.comparisonId))
+          .where(eq(comparisons.status, "failed"))
+          .orderBy(desc(comparisons.updatedAt))
+          .limit(20),
+        db
+          .select({
+            id: comparisons.id,
+            query: comparisons.query,
+            slug: comparisons.slug,
+            overallConfidence: comparisons.overallConfidence,
+            updatedAt: comparisons.updatedAt,
+          })
+          .from(comparisons)
+          .where(
+            and(
+              eq(comparisons.status, "completed"),
+              sql`${comparisons.overallConfidence} IS NOT NULL`,
+              sql`${comparisons.overallConfidence}::numeric < 0.7`,
+            ),
+          )
+          .orderBy(desc(comparisons.updatedAt))
+          .limit(20),
+        db
+          .select({
+            id: comparisons.id,
+            query: comparisons.query,
+            slug: comparisons.slug,
+            totalCost: comparisons.totalCost,
+            updatedAt: comparisons.updatedAt,
+          })
+          .from(comparisons)
+          .where(sql`${comparisons.totalCost} IS NOT NULL`)
+          .orderBy(desc(comparisons.totalCost))
+          .limit(20),
+        db
+          .select({
+            category: queryAnalytics.queryCategory,
+            status: queryAnalytics.taxonomyStatus,
+            safetyLevel: queryAnalytics.safetyLevel,
+            count: sql<number>`count(*)::integer`,
+          })
+          .from(queryAnalytics)
+          .where(sql`${queryAnalytics.queryCategory} IS NOT NULL`)
+          .groupBy(queryAnalytics.queryCategory, queryAnalytics.taxonomyStatus, queryAnalytics.safetyLevel)
+          .orderBy(desc(sql`count(*)`)),
+        db
+          .select({
+            safetyLevel: queryAnalytics.safetyLevel,
+            count: sql<number>`count(*)::integer`,
+          })
+          .from(queryAnalytics)
+          .where(sql`${queryAnalytics.safetyLevel} IS NOT NULL`)
+          .groupBy(queryAnalytics.safetyLevel)
+          .orderBy(desc(sql`count(*)`)),
+        db
+          .select({
+            status: queryAnalytics.taxonomyStatus,
+            count: sql<number>`count(*)::integer`,
+          })
+          .from(queryAnalytics)
+          .where(sql`${queryAnalytics.taxonomyStatus} IS NOT NULL`)
+          .groupBy(queryAnalytics.taxonomyStatus)
+          .orderBy(desc(sql`count(*)`)),
+        db
+          .select({
+            note: queryAnalytics.policyNote,
+            count: sql<number>`count(*)::integer`,
+          })
+          .from(queryAnalytics)
+          .where(sql`${queryAnalytics.policyNote} IS NOT NULL`)
+          .groupBy(queryAnalytics.policyNote)
+          .orderBy(desc(sql`count(*)`))
+          .limit(20),
+        db
+          .select({ count: sql<number>`count(*)::integer` })
+          .from(queryAnalytics)
+          .where(eq(queryAnalytics.isVague, true)),
+        db
+          .select({ count: sql<number>`count(*)::integer` })
+          .from(comparisons)
+          .where(eq(comparisons.status, "completed")),
+        db
+          .select({ count: sql<number>`count(*)::integer` })
+          .from(comparisons)
+          .where(eq(comparisons.status, "failed")),
+        db
+          .select({ avg: sql<number>`avg(${comparisons.totalCost})::float` })
+          .from(comparisons)
+          .where(sql`${comparisons.totalCost} IS NOT NULL`),
+        db
+          .select({
+            rating: feedbackTable.rating,
+            count: sql<number>`count(*)::integer`,
+          })
+          .from(feedbackTable)
+          .where(sql`${feedbackTable.rating} IS NOT NULL`)
+          .groupBy(feedbackTable.rating)
+          .orderBy(feedbackTable.rating),
+        db
+          .select({ count: sql<number>`count(*)::integer` })
+          .from(queryAnalytics)
+          .where(sql`${queryAnalytics.reusedFromId} IS NOT NULL`),
+        db
+          .select({ count: sql<number>`count(*)::integer` })
+          .from(queryAnalytics),
+        db
+          .select({ count: sql<number>`count(*)::integer` })
+          .from(queryAnalytics)
+          .where(sql`${queryAnalytics.safetyLevel} = 'blocked' OR ${queryAnalytics.taxonomyStatus} IN ('sensitive', 'unsupported')`),
+        db
+          .select({
+            provider: aiRuns.provider,
+            totalCost: sql<number>`sum(${aiRuns.estimatedCost})::float`,
+            callCount: sql<number>`count(*)::integer`,
+          })
+          .from(aiRuns)
+          .where(sql`${aiRuns.estimatedCost} IS NOT NULL`)
+          .groupBy(aiRuns.provider)
+          .orderBy(desc(sql`sum(${aiRuns.estimatedCost})`)),
+      ]);
 
-      const lowConfidence = await db
-        .select({
-          id: comparisons.id,
-          query: comparisons.query,
-          slug: comparisons.slug,
-          overallConfidence: comparisons.overallConfidence,
-          updatedAt: comparisons.updatedAt,
-        })
-        .from(comparisons)
-        .where(
-          and(
-            eq(comparisons.status, "completed"),
-            sql`${comparisons.overallConfidence} IS NOT NULL`,
-            sql`${comparisons.overallConfidence}::numeric < 0.7`,
-          ),
-        )
-        .orderBy(desc(comparisons.updatedAt))
-        .limit(20);
-
-      const highCost = await db
-        .select({
-          id: comparisons.id,
-          query: comparisons.query,
-          slug: comparisons.slug,
-          totalCost: comparisons.totalCost,
-          updatedAt: comparisons.updatedAt,
-        })
-        .from(comparisons)
-        .where(sql`${comparisons.totalCost} IS NOT NULL`)
-        .orderBy(desc(comparisons.totalCost))
-        .limit(20);
-
-      const categories = await db
-        .select({
-          category: queryAnalytics.queryCategory,
-          status: queryAnalytics.taxonomyStatus,
-          safetyLevel: queryAnalytics.safetyLevel,
-          count: sql<number>`count(*)::integer`,
-        })
-        .from(queryAnalytics)
-        .where(sql`${queryAnalytics.queryCategory} IS NOT NULL`)
-        .groupBy(queryAnalytics.queryCategory, queryAnalytics.taxonomyStatus, queryAnalytics.safetyLevel)
-        .orderBy(desc(sql`count(*)`));
-
-      const safetyLevels = await db
-        .select({
-          safetyLevel: queryAnalytics.safetyLevel,
-          count: sql<number>`count(*)::integer`,
-        })
-        .from(queryAnalytics)
-        .where(sql`${queryAnalytics.safetyLevel} IS NOT NULL`)
-        .groupBy(queryAnalytics.safetyLevel)
-        .orderBy(desc(sql`count(*)`));
-
-      const taxonomyStatuses = await db
-        .select({
-          status: queryAnalytics.taxonomyStatus,
-          count: sql<number>`count(*)::integer`,
-        })
-        .from(queryAnalytics)
-        .where(sql`${queryAnalytics.taxonomyStatus} IS NOT NULL`)
-        .groupBy(queryAnalytics.taxonomyStatus)
-        .orderBy(desc(sql`count(*)`));
-
-      const policyNotes = await db
-        .select({
-          note: queryAnalytics.policyNote,
-          count: sql<number>`count(*)::integer`,
-        })
-        .from(queryAnalytics)
-        .where(sql`${queryAnalytics.policyNote} IS NOT NULL`)
-        .groupBy(queryAnalytics.policyNote)
-        .orderBy(desc(sql`count(*)`))
-        .limit(20);
-
-      const [vagueCount] = await db
-        .select({ count: sql<number>`count(*)::integer` })
-        .from(queryAnalytics)
-        .where(eq(queryAnalytics.isVague, true));
-
-      const [totalCompleted] = await db
-        .select({ count: sql<number>`count(*)::integer` })
-        .from(comparisons)
-        .where(eq(comparisons.status, "completed"));
-
-      const [totalFailed] = await db
-        .select({ count: sql<number>`count(*)::integer` })
-        .from(comparisons)
-        .where(eq(comparisons.status, "failed"));
-
-      const [avgCost] = await db
-        .select({ avg: sql<number>`avg(${comparisons.totalCost})::float` })
-        .from(comparisons)
-        .where(sql`${comparisons.totalCost} IS NOT NULL`);
-
-      const feedbackSummary = await db
-        .select({
-          rating: feedbackTable.rating,
-          count: sql<number>`count(*)::integer`,
-        })
-        .from(feedbackTable)
-        .where(sql`${feedbackTable.rating} IS NOT NULL`)
-        .groupBy(feedbackTable.rating)
-        .orderBy(feedbackTable.rating);
-
-      // Phase 12: Cache and provider stats
-      const [totalReused] = await db
-        .select({ count: sql<number>`count(*)::integer` })
-        .from(queryAnalytics)
-        .where(sql`${queryAnalytics.reusedFromId} IS NOT NULL`);
-
-      const [totalQueries] = await db
-        .select({ count: sql<number>`count(*)::integer` })
-        .from(queryAnalytics);
-
-      const [totalBlocked] = await db
-        .select({ count: sql<number>`count(*)::integer` })
-        .from(queryAnalytics)
-        .where(sql`${queryAnalytics.safetyLevel} = 'blocked' OR ${queryAnalytics.taxonomyStatus} IN ('sensitive', 'unsupported')`);
-
-      const providerSpend = await db
-        .select({
-          provider: aiRuns.provider,
-          totalCost: sql<number>`sum(${aiRuns.estimatedCost})::float`,
-          callCount: sql<number>`count(*)::integer`,
-        })
-        .from(aiRuns)
-        .where(sql`${aiRuns.estimatedCost} IS NOT NULL`)
-        .groupBy(aiRuns.provider)
-        .orderBy(desc(sql`sum(${aiRuns.estimatedCost})`));
+      const vagueCount = vagueCountResult[0];
+      const totalCompleted = totalCompletedResult[0];
+      const totalFailed = totalFailedResult[0];
+      const avgCost = avgCostResult[0];
+      const totalReused = totalReusedResult[0];
+      const totalQueries = totalQueriesResult[0];
+      const totalBlocked = totalBlockedResult[0];
 
       return sendJson(response, {
         stats: {

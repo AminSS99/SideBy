@@ -1,6 +1,7 @@
 import { eq, desc } from "drizzle-orm";
 import { createDbClient } from "../../../src/db/index.js";
 import { comparisons } from "../../../src/db/schema.js";
+import { logger } from "../../../_lib/log.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
@@ -89,7 +90,7 @@ export default async function handler(
     response.setHeader("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=600");
     return response.status(200).send(xml);
   } catch (error) {
-    console.error("Failed to generate sitemap:", error);
+    logger.error("Failed to generate sitemap", error instanceof Error ? error : undefined);
     return response.status(500).end("Internal Server Error");
   }
 }

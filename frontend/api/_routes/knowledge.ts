@@ -10,6 +10,7 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { del, put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import formidable from "formidable";
 import type { File as FormidableFile } from "formidable";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -52,13 +53,13 @@ type ParsedUpload = {
   file: FormidableFile;
 };
 
-type SearchBody = {
-  query?: string;
-  workspaceId?: string;
-  projectId?: string | null;
-  documentIds?: string[];
-  topK?: number;
-};
+const SearchBodySchema = z.object({
+  query: z.string().trim().min(1).max(500),
+  workspaceId: z.string().uuid(),
+  projectId: z.string().uuid().nullable().optional(),
+  documentIds: z.array(z.string().uuid()).max(25).optional(),
+  topK: z.number().int().min(1).max(50).optional(),
+});
 
 export default async function handler(
   request: VercelRequest,
@@ -121,21 +122,14 @@ async function searchDocuments(
 ) {
   try {
     const auth = await requireAuth(request);
-    const body = request.body as SearchBody;
-
-    if (!body.query?.trim()) {
-      return sendJson(response, { error: "query is required." }, 400);
-    }
-    if (!body.workspaceId) {
-      return sendJson(response, { error: "workspaceId is required." }, 400);
-    }
+    const body = SearchBodySchema.parse(request.body || {});
 
     const db = createDbClient();
     const chunks = await searchKnowledgeChunks(db, {
       userId: auth.userId,
       workspaceId: body.workspaceId,
       projectId: body.projectId || null,
-      documentIds: Array.isArray(body.documentIds) ? body.documentIds : undefined,
+      documentIds: body.documentIds,
       query: body.query,
       topK: body.topK,
     });

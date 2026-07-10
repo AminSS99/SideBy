@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { requireAuth } from "../_lib/auth.js";
 import { resolveSnapSolveWorkspaceSession } from "../_lib/snapsolve-core.js";
+import { sendJson } from "../_lib/sideby.js";
+import { logger } from "../_lib/log.js";
 import { z } from "zod";
 
 export const config = {
@@ -14,7 +16,7 @@ const EcosystemSessionBodySchema = z.object({
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
   if (request.method !== "POST") {
-    return response.status(405).json({ error: "Method not allowed" });
+    return sendJson(response, { error: "Method not allowed" }, 405);
   }
 
   try {
@@ -25,8 +27,23 @@ export default async function handler(request: VercelRequest, response: VercelRe
       email: body.email ?? null,
     });
 
-    return response.status(200).json({ session });
-  } catch {
-    return response.status(200).json({ session: null });
+    return sendJson(response, { session });
+  } catch (error) {
+    const status =
+      error instanceof z.ZodError
+        ? 400
+        : error instanceof Error && "statusCode" in error
+          ? (error as Error & { statusCode: number }).statusCode
+          : 500;
+
+    if (status >= 500) {
+      logger.error("Ecosystem session failed", error instanceof Error ? error : undefined);
+    }
+
+    return sendJson(response, {
+      error: error instanceof z.ZodError
+        ? error.errors[0]?.message || "Invalid request."
+        : error instanceof Error ? error.message : "Unable to create session.",
+    }, status);
   }
 }

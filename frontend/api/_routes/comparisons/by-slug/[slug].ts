@@ -7,6 +7,7 @@ import { createDbClient } from "../../../../src/db/index.js";
 import { comparisons } from "../../../../src/db/schema.js";
 import { sendJson } from "../../../_lib/sideby.js";
 import { authenticateRequest } from "../../../_lib/auth.js";
+import { logger } from "../../../_lib/log.js";
 import { analyzeComparisonQuery, summarizeComparisonTaxonomy } from "../../../../src/lib/comparisonTaxonomy.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
@@ -119,7 +120,7 @@ export default async function handler(
       error: d.errorMessage,
     });
   } catch (error) {
-    console.error("by-slug error:", error);
+    logger.error("by-slug error", error instanceof Error ? error : undefined);
     return sendJson(
       response,
       { error: error instanceof Error ? error.message : "Unable to load comparison." },

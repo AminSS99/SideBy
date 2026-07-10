@@ -473,14 +473,18 @@ export const createComparisonJob = async (
       db.update(comparisons)
         .set({ status: "queued", progress: 0, activeStep: 0, updatedAt: new Date() })
         .where(eq(comparisons.id, reusedSource.id))
-        .catch(() => {});
+        .catch((e) => {
+          logger.warn("Failed to queue background refresh", { error: String(e) });
+        });
       logger.info(`[DISABLE_IN_PROCESS_JOBS] Background refresh for source ${reusedSource.id} queued for external worker.`);
     } else {
       const bgRefresh = runComparisonJob(reusedSource.id, input.userId, input.query, input.orgId).catch((e) => {
         logger.warn(`Background refresh failed for ${reusedSource!.id}`, { error: e instanceof Error ? e.message : String(e) });
       });
       if (scheduleResearch) scheduleResearch(bgRefresh);
-      else bgRefresh.catch(() => {});
+      else bgRefresh.catch((e) => {
+        logger.error("Unscheduled background refresh failed", e instanceof Error ? e : undefined);
+      });
     }
 
     logger.info("Serving stale comparison + enqueued background refresh", {

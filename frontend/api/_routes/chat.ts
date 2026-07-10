@@ -1,6 +1,7 @@
 import { sendJson } from "../_lib/sideby.js";
 import { isAuthEnabled, requireAuth } from "../_lib/auth.js";
 import { llmChat, llmChatStream, type LLMMessage } from "../_lib/llm.js";
+import { logger } from "../_lib/log.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createDbClient } from "../../src/db/index.js";
 import {
@@ -152,7 +153,7 @@ export default async function handler(
 
       return sendJson(response, { answer: answerContent, retrievalCount });
     } catch (error) {
-      console.error("Chat API error:", error);
+      logger.error("Chat API error", error instanceof Error ? error : undefined);
       const status = error instanceof z.ZodError ? 400 : 500;
       return sendJson(
         response,
