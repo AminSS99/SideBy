@@ -5,12 +5,17 @@
 import { sendJson } from "../../../_lib/sideby.js";
 import { requireAuth } from "../../../_lib/auth.js";
 import { publishComparison, unpublishComparison } from "../../../_lib/sideby.js";
+import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
   runtime: "nodejs",
   maxDuration: 15,
 };
+
+const VisibilityBodySchema = z.object({
+  action: z.enum(["publish", "unpublish"]).default("publish"),
+});
 
 export default async function handler(
   request: VercelRequest,
@@ -29,22 +34,26 @@ export default async function handler(
       return sendJson(response, { error: "Comparison id is required." }, 400);
     }
 
-    const body = request.body as { action?: "publish" | "unpublish" };
-    const action = body.action || "publish";
+    const body = VisibilityBodySchema.parse(request.body || {});
 
-    if (action === "publish") {
+    if (body.action === "publish") {
       return sendJson(response, await publishComparison(id, auth.userId));
     } else {
       return sendJson(response, await unpublishComparison(id, auth.userId));
     }
   } catch (error) {
     const status =
-      error instanceof Error && "statusCode" in error
+      error instanceof z.ZodError
+        ? 400
+        : error instanceof Error && "statusCode" in error
         ? (error as Error & { statusCode: number }).statusCode
         : 500;
     return sendJson(
       response,
-      { error: error instanceof Error ? error.message : "Unable to update visibility." },
+      { error: error instanceof z.ZodError
+        ? error.errors[0]?.message || "Invalid request body."
+        : error instanceof Error ? error.message : "Unable to update visibility."
+      },
       status,
     );
   }

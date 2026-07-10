@@ -23,6 +23,7 @@ const FREE_LIMITS = {
   refreshesPerDay: Number(process.env.FREE_REFRESHES_PER_DAY || "3"),
   exportsPerDay: Number(process.env.FREE_EXPORTS_PER_DAY || "10"),
   watchlistsPerDay: Number(process.env.FREE_WATCHLISTS_PER_DAY || "5"),
+  chatPerDay: Number(process.env.FREE_CHAT_PER_DAY || "50"),
 };
 
 // ─── Rate Limit Types ───────────────────────────────────────────────────────
@@ -32,7 +33,8 @@ export type RateLimitAction =
   | "followUp"
   | "refresh"
   | "export"
-  | "watchlist";
+  | "watchlist"
+  | "chat";
 
 interface RateLimitResult {
   allowed: boolean;
@@ -111,6 +113,40 @@ export async function checkUsageLimit(
   };
 }
 
+export async function checkAndRecordUsage(
+  keyType: "user" | "ip" | "org",
+  keyValue: string,
+  action: RateLimitAction,
+): Promise<RateLimitResult> {
+  const limit = FREE_LIMITS[`${action}sPerDay` as keyof typeof FREE_LIMITS];
+  const key = dailyKey(keyType, keyValue, action);
+  const ttl = getSecondsUntilMidnightUTC();
+
+  const newCount = await redisIncrement(key, 1, ttl);
+  const tomorrow = new Date();
+  tomorrow.setUTCHours(24, 0, 0, 0);
+  const resetAt = tomorrow.getTime();
+
+  if (newCount > limit) {
+    logger.warn("Usage limit exceeded", { keyType, keyValue, action, current: newCount, limit });
+    return {
+      allowed: false,
+      limit,
+      remaining: 0,
+      resetAt,
+      window: "daily",
+    };
+  }
+
+  return {
+    allowed: true,
+    limit,
+    remaining: limit - newCount,
+    resetAt,
+    window: "daily",
+  };
+}
+
 export async function incrementUsage(
   keyType: "user" | "ip" | "org",
   keyValue: string,
@@ -126,7 +162,7 @@ export async function getUsageStatus(
   keyType: "user" | "ip" | "org",
   keyValue: string,
 ): Promise<Record<RateLimitAction, { used: number; limit: number; remaining: number }>> {
-  const actions: RateLimitAction[] = ["comparison", "followUp", "refresh", "export", "watchlist"];
+  const actions: RateLimitAction[] = ["comparison", "followUp", "refresh", "export", "watchlist", "chat"];
   const status = {} as Record<RateLimitAction, { used: number; limit: number; remaining: number }>;
 
   for (const action of actions) {

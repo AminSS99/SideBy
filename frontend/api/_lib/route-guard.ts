@@ -4,7 +4,7 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { authenticateRequest } from "./auth.js";
-import { checkRouteLimit, recordUsage, formatLimitError } from "./rate-limit.js";
+import { checkRouteLimit, checkAndRecordUsage, formatLimitError } from "./rate-limit.js";
 import type { RateLimitAction } from "./rate-limit.js";
 import { sendJson } from "./sideby.js";
 import { assertRedisAvailable } from "./redis.js";
@@ -49,9 +49,14 @@ export async function withRateLimit(
   response.setHeader("X-RateLimit-Remaining", String(limitResult.remaining));
   response.setHeader("X-RateLimit-Reset", String(Math.floor(limitResult.resetAt / 1000)));
 
-  // Record usage after successful handler
   const result = await handler();
-  await recordUsage(auth.userId, ip, action);
+
+  // Record usage atomically after successful handler
+  if (auth.userId) {
+    await checkAndRecordUsage("user", auth.userId, action);
+  } else if (ip) {
+    await checkAndRecordUsage("ip", ip, action);
+  }
   return result;
 }
 
@@ -83,9 +88,14 @@ export async function withApiKeyRateLimit(
   response.setHeader("X-RateLimit-Remaining", String(limitResult.remaining));
   response.setHeader("X-RateLimit-Reset", String(Math.floor(limitResult.resetAt / 1000)));
 
-  // Record usage after successful handler
   const result = await handler();
-  await recordUsage(apiKey.userId, ip, action);
+
+  // Record usage atomically after successful handler
+  if (apiKey.userId) {
+    await checkAndRecordUsage("user", apiKey.userId, action);
+  } else if (ip) {
+    await checkAndRecordUsage("ip", ip, action);
+  }
   return result;
 }
 

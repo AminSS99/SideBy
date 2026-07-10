@@ -67,11 +67,6 @@ export default async function handler(
   return response.status(allOk ? 200 : 503).json({
     status: allOk ? "healthy" : "degraded",
     checks,
-    environment: {
-      missingRequired: env.missingRequired,
-      missingOptional: env.missingOptional,
-      warnings: env.warnings,
-    },
     timestamp: new Date().toISOString(),
   });
 }

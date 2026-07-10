@@ -60,56 +60,58 @@ export default async function handler(
     const action = body.action;
 
     if (action === "retry") {
-      // Retry failed comparison
-      const db = createDbClient();
-      const rows = await db
-        .select({ clerkUserId: comparisons.clerkUserId, query: comparisons.query, status: comparisons.status })
-        .from(comparisons)
-        .where(eq(comparisons.id, id))
-        .limit(1);
+      // Retry failed comparison (with rate limit)
+      return withRateLimit(request, response, "refresh", async () => {
+        const db = createDbClient();
+        const rows = await db
+          .select({ clerkUserId: comparisons.clerkUserId, query: comparisons.query, status: comparisons.status })
+          .from(comparisons)
+          .where(eq(comparisons.id, id))
+          .limit(1);
 
-      if (rows.length === 0) {
-        return sendJson(response, { error: "Comparison not found." }, 404);
-      }
+        if (rows.length === 0) {
+          return sendJson(response, { error: "Comparison not found." }, 404);
+        }
 
-      const comp = rows[0];
-      const canMutate = await canMutateComparison(db, auth.userId, id);
-      if (!canMutate) {
-        return sendJson(response, { error: "Comparison not found." }, 404);
-      }
+        const comp = rows[0];
+        const canMutate = await canMutateComparison(db, auth.userId, id);
+        if (!canMutate) {
+          return sendJson(response, { error: "Comparison not found." }, 404);
+        }
 
-      if (comp.status !== "failed") {
-        return sendJson(response, { error: "Only failed comparisons can be retried." }, 400);
-      }
+        if (comp.status !== "failed") {
+          return sendJson(response, { error: "Only failed comparisons can be retried." }, 400);
+        }
 
-      await db.delete(comparisonFacts).where(eq(comparisonFacts.comparisonId, id));
-      await db.delete(comparisonScores).where(eq(comparisonScores.comparisonId, id));
-      await db.delete(comparisonVerdicts).where(eq(comparisonVerdicts.comparisonId, id));
-      await db.delete(comparisonSources).where(eq(comparisonSources.comparisonId, id));
-      await db.delete(comparisonDimensions).where(eq(comparisonDimensions.comparisonId, id));
-      await db.delete(comparisonEntities).where(eq(comparisonEntities.comparisonId, id));
-      await db.delete(aiRuns).where(eq(aiRuns.comparisonId, id));
+        await db.delete(comparisonFacts).where(eq(comparisonFacts.comparisonId, id));
+        await db.delete(comparisonScores).where(eq(comparisonScores.comparisonId, id));
+        await db.delete(comparisonVerdicts).where(eq(comparisonVerdicts.comparisonId, id));
+        await db.delete(comparisonSources).where(eq(comparisonSources.comparisonId, id));
+        await db.delete(comparisonDimensions).where(eq(comparisonDimensions.comparisonId, id));
+        await db.delete(comparisonEntities).where(eq(comparisonEntities.comparisonId, id));
+        await db.delete(aiRuns).where(eq(aiRuns.comparisonId, id));
 
-      await db
-        .update(comparisons)
-        .set({
-          status: "queued",
-          progress: 0,
-          activeStep: 0,
-          retryCount: 0,
-          errorMessage: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(comparisons.id, id));
+        await db
+          .update(comparisons)
+          .set({
+            status: "queued",
+            progress: 0,
+            activeStep: 0,
+            retryCount: 0,
+            errorMessage: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(comparisons.id, id));
 
-      if (process.env.DISABLE_IN_PROCESS_JOBS === "true") {
-        console.log(`[DISABLE_IN_PROCESS_JOBS] Comparison retry job ${id} queued for external worker.`);
-      } else {
-        waitUntil(runComparisonJob(id, auth.userId, comp.query, auth.orgId).catch(() => {}));
-      }
+        if (process.env.DISABLE_IN_PROCESS_JOBS === "true") {
+          console.log(`[DISABLE_IN_PROCESS_JOBS] Comparison retry job ${id} queued for external worker.`);
+        } else {
+          waitUntil(runComparisonJob(id, auth.userId, comp.query, auth.orgId).catch(() => {}));
+        }
 
-      captureServerEvent(auth.userId, "comparison_retried", { comparison_id: id });
-      return sendJson(response, { success: true, message: "Comparison research restarted." });
+        captureServerEvent(auth.userId, "comparison_retried", { comparison_id: id });
+        return sendJson(response, { success: true, message: "Comparison research restarted." });
+      });
     }
 
     // Refresh comparison (with rate limit)

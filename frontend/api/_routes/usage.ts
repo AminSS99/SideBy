@@ -43,6 +43,11 @@ export default async function handler(
       : request.query.type;
 
     if (queryType === "quality") {
+      // Restrict quality dashboard to org admins/owners
+      if (!auth.orgRole || !["org:admin", "admin", "owner"].includes(auth.orgRole)) {
+        return sendJson(response, { error: "Admin access required." }, 403);
+      }
+
       const db = createDbClient();
 
       const failedJobs = await db

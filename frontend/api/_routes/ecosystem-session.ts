@@ -1,11 +1,16 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { requireAuth } from "../_lib/auth.js";
 import { resolveSnapSolveWorkspaceSession } from "../_lib/snapsolve-core.js";
+import { z } from "zod";
 
 export const config = {
   runtime: "nodejs",
   maxDuration: 15,
 };
+
+const EcosystemSessionBodySchema = z.object({
+  email: z.string().email().max(254).nullable().optional(),
+});
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
   if (request.method !== "POST") {
@@ -14,10 +19,10 @@ export default async function handler(request: VercelRequest, response: VercelRe
 
   try {
     const auth = await requireAuth(request);
-    const body = request.body as { email?: string | null } | undefined;
+    const body = EcosystemSessionBodySchema.parse(request.body || {});
     const session = await resolveSnapSolveWorkspaceSession({
       clerkUserId: auth.userId,
-      email: typeof body?.email === "string" ? body.email : null,
+      email: body.email ?? null,
     });
 
     return response.status(200).json({ session });

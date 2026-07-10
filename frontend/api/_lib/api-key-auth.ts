@@ -7,7 +7,14 @@ import { apiKeys } from "../../src/db/schema.js";
 const API_KEY_PREFIX = "sb_live";
 
 function keyPepper() {
-  return process.env.API_KEY_PEPPER || process.env.CLERK_SECRET_KEY || "sideby-dev-api-key-pepper";
+  const pepper = process.env.API_KEY_PEPPER || process.env.CLERK_SECRET_KEY;
+  if (!pepper) {
+    throw Object.assign(
+      new Error("API_KEY_PEPPER or CLERK_SECRET_KEY environment variable is required."),
+      { statusCode: 503 },
+    );
+  }
+  return pepper;
 }
 
 export function hashApiKey(secret: string) {

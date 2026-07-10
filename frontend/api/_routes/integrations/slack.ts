@@ -75,15 +75,20 @@ export default async function handler(
   const slackTimestamp = request.headers["x-slack-request-timestamp"] as string;
   const signingSecret = process.env.SLACK_SIGNING_SECRET;
 
-  if (signingSecret && slackSignature && slackTimestamp) {
-    const isValid = verifySlackSignature(rawBody, slackTimestamp, slackSignature, signingSecret);
-    if (!isValid) {
-      logger.warn("Slack signature validation failed");
-      return sendJson(response, { error: "Invalid signature" }, 401);
-    }
-  } else if (signingSecret) {
-    logger.warn("Slack signing secret configured but signature headers missing");
+  if (!signingSecret) {
+    logger.error("SLACK_SIGNING_SECRET is not configured");
+    return sendJson(response, { error: "Slack integration not configured." }, 503);
+  }
+
+  if (!slackSignature || !slackTimestamp) {
+    logger.warn("Slack signature headers missing");
     return sendJson(response, { error: "Unauthorized" }, 401);
+  }
+
+  const isValid = verifySlackSignature(rawBody, slackTimestamp, slackSignature, signingSecret);
+  if (!isValid) {
+    logger.warn("Slack signature validation failed");
+    return sendJson(response, { error: "Invalid signature" }, 401);
   }
 
   // 2. Parse payload parameters
