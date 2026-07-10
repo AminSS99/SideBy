@@ -18,6 +18,7 @@ import {
   summarizeComparisonTaxonomy,
   type ComparisonTaxonomySummary,
 } from "../../src/lib/comparisonTaxonomy.js";
+import { validateComparisonQuery } from "./comparison-validator.js";
 
 export type EntityKey = "a" | "b";
 
@@ -310,7 +311,7 @@ export const createComparisonJob = async (
   input: CreateComparisonInput,
   scheduleResearch?: ResearchScheduler,
 ): Promise<ComparisonJob> => {
-  const intent = analyzeComparisonQuery(input.query);
+  const { intent } = await validateComparisonQuery(input.query);
   if (!intent.canStart) {
     throw Object.assign(new Error(intent.message), {
       statusCode: 422,

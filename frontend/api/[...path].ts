@@ -9,6 +9,7 @@ import comparisonsIdDiff from "./_routes/comparisons/[id]/diff.js";
 import comparisonsIdManage from "./_routes/comparisons/[id]/manage.js";
 import comparisonsIdVersions from "./_routes/comparisons/[id]/versions.js";
 import comparisonsIdVisibility from "./_routes/comparisons/[id]/visibility.js";
+import comparisonsValidate from "./_routes/comparisons/validate.js";
 
 // V1 routes
 import v1ComparisonsIndex from "./_routes/v1/comparisons/index.js";
@@ -86,6 +87,9 @@ export default async function handler(
 
   // Comparisons
   if (segment0 === "comparisons") {
+    if (segment1 === "validate") {
+      return comparisonsValidate(request, response);
+    }
     if (segment1 === "create") {
       return comparisonsIndex(request, response);
     }

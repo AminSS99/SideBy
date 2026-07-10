@@ -26,8 +26,11 @@ export default async function handler(
   }
 
   const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    return sendJson(response, { error: "CRON_SECRET not configured." }, 503);
+  }
   const header = Array.isArray(request.headers.authorization) ? request.headers.authorization[0] : request.headers.authorization;
-  if (secret && header !== `Bearer ${secret}`) return sendJson(response, { error: "Not found." }, 404);
+  if (header !== `Bearer ${secret}`) return sendJson(response, { error: "Not found." }, 404);
 
   const db = createDbClient();
   const due = await db

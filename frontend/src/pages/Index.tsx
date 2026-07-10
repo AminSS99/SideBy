@@ -3,13 +3,16 @@ import { useNavigate, Link } from "react-router-dom";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { Search, Sparkles, Zap, ArrowRight, ShieldCheck, Scale, Cpu, Network, BookOpenText } from "lucide-react";
+import { Search, Sparkles, Zap, ArrowRight, ShieldCheck, Scale, Cpu, Network, BookOpenText, Loader2 } from "lucide-react";
 import { BrandFooter } from "@/components/brand/BrandFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { AmbientOrbs } from "@/components/AmbientOrbs";
-import { analyzeQueryIntent } from "@/lib/queryIntent";
+import { analyzeQueryIntent, type QueryIntent } from "@/lib/queryIntent";
 import { SUPPORTED_COMPARISON_CATEGORIES } from "@/lib/comparisonTaxonomy";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { apiFetch } from "@/lib/api";
+import { buildApiUrl } from "@/config/env";
+import { useAuth } from "@/contexts/AuthContext";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -33,10 +36,72 @@ const quickStartComparisons = [
 const Index = () => {
   usePageTitle("AI-Powered Comparisons");
   const [query, setQuery] = useState("");
-  const queryIntent = analyzeQueryIntent(query);
+  const localQueryIntent = analyzeQueryIntent(query);
+  const [validatedIntent, setValidatedIntent] = useState<QueryIntent | null>(null);
+  const [validatedQuery, setValidatedQuery] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
+  const validationSequence = useRef(0);
+  const queryIntent = validatedQuery === query.trim() && validatedIntent
+    ? validatedIntent
+    : localQueryIntent;
+  const { session } = useAuth();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
+
+  const validateQuery = async (value: string) => {
+    const clean = value.trim();
+    const localIntent = analyzeQueryIntent(clean);
+    if (!localIntent.canStart) {
+      setValidatedQuery(clean);
+      setValidatedIntent(localIntent);
+      return localIntent;
+    }
+
+    const sequence = ++validationSequence.current;
+    setIsValidating(true);
+    try {
+      const response = await apiFetch(buildApiUrl("/api/comparisons/validate"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: clean }),
+      }, { retries: 0 });
+      const data = await response.json() as { intent: QueryIntent };
+      if (sequence === validationSequence.current) {
+        setValidatedQuery(clean);
+        setValidatedIntent(data.intent);
+      }
+      return data.intent;
+    } catch {
+      const fallback = localIntent.category === "general_research" && localIntent.confidence < 0.6
+        ? {
+            ...localIntent,
+            canStart: false,
+            status: "needs_context" as const,
+            message: "We could not verify that these options share a meaningful comparison frame. Add a concrete use case or try again.",
+          }
+        : localIntent;
+      if (sequence === validationSequence.current) {
+        setValidatedQuery(clean);
+        setValidatedIntent(fallback);
+      }
+      return fallback;
+    } finally {
+      if (sequence === validationSequence.current) setIsValidating(false);
+    }
+  };
+
+  useEffect(() => {
+    const clean = query.trim();
+    setValidatedIntent(null);
+    setValidatedQuery("");
+    if (!clean || !localQueryIntent.canStart) return;
+
+    const timeout = window.setTimeout(() => {
+      void validateQuery(clean);
+    }, 450);
+    return () => window.clearTimeout(timeout);
+  }, [query, localQueryIntent.canStart]);
 
   // Parallax Effect
   useEffect(() => {
@@ -227,14 +292,31 @@ const Index = () => {
     return () => mm.revert();
   }, { scope: containerRef });
 
+  const beginComparison = async (value: string) => {
+    const clean = value.trim();
+    if (!clean) return;
+    setQuery(clean);
+
+    const intent = validatedQuery === clean && validatedIntent
+      ? validatedIntent
+      : await validateQuery(clean);
+    if (!intent.canStart) return;
+
+    const destination = `/app/comparisons?q=${encodeURIComponent(clean)}`;
+    if (session) {
+      navigate(destination);
+      return;
+    }
+    navigate(`/auth/sign-in?redirect_url=${encodeURIComponent(destination)}`);
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim() || !queryIntent.canStart) return;
-    navigate(`/app/comparisons?q=${encodeURIComponent(query.trim())}`);
+    void beginComparison(query);
   };
 
   const handleQuickStart = (q: string) => {
-    navigate(`/app/comparisons?q=${encodeURIComponent(q)}`);
+    void beginComparison(q);
   };
 
   return (
@@ -277,10 +359,14 @@ const Index = () => {
               />
               <button
                 type="submit"
-                disabled={Boolean(query.trim()) && !queryIntent.canStart}
+                disabled={isValidating || (Boolean(query.trim()) && !queryIntent.canStart)}
                 className="mt-2 flex w-full items-center justify-center gap-2 rounded-sm bg-[#fdfbf7] px-6 py-4 font-bold uppercase tracking-widest text-xs text-black hover:bg-[#e0e0e0] transition-colors active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:absolute sm:inset-y-2 sm:right-2 sm:mt-0 sm:w-auto sm:py-0"
               >
-                Compare <ArrowRight className="h-3.5 w-3.5" />
+                {isValidating ? (
+                  <>Checking <Loader2 className="h-3.5 w-3.5 animate-spin" /></>
+                ) : (
+                  <>Compare <ArrowRight className="h-3.5 w-3.5" /></>
+                )}
               </button>
             </div>
             {query.trim() && (
@@ -292,7 +378,7 @@ const Index = () => {
               ].join(" ")}>
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <span className="font-bold uppercase tracking-widest text-[9px]">
-                    AI preflight - {Math.round(queryIntent.confidence * 100)}%
+                    {isValidating ? "Checking comparison fit" : `Comparison fit - ${Math.round(queryIntent.confidence * 100)}%`}
                   </span>
                   {queryIntent.categoryLabel && (
                     <span className="text-[9px] uppercase tracking-widest opacity-70">
@@ -312,6 +398,9 @@ const Index = () => {
                 )}
               </div>
             )}
+            <p className="mt-3 text-center text-[10px] text-white/25">
+              We verify the pair first. Sign in only when it is ready for research.
+            </p>
           </form>
 
           {/* Quick-start one-click comparisons */}

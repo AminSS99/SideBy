@@ -1,0 +1,162 @@
+[
+  {
+    "query": "democrats vs republicans",
+    "expectedRelation": "political",
+    "expectedCanStart": false,
+    "category": "political",
+    "reason": "Political parties should be blocked",
+    "layer": "rules"
+  },
+  {
+    "query": "is trump better than biden",
+    "expectedRelation": "political",
+    "expectedCanStart": false,
+    "category": "political",
+    "reason": "Political figures should be blocked",
+    "layer": "ai"
+  },
+  {
+    "query": "christianity vs islam",
+    "expectedRelation": "unsafe",
+    "expectedCanStart": false,
+    "category": "sensitive",
+    "reason": "Religious comparison is sensitive",
+    "layer": "rules"
+  },
+  {
+    "query": "who is smarter men or women",
+    "expectedRelation": "personal",
+    "expectedCanStart": false,
+    "category": "sensitive",
+    "reason": "Protected class attribute comparison",
+    "layer": "ai"
+  },
+  {
+    "query": "tall people vs short people",
+    "expectedRelation": "personal",
+    "expectedCanStart": false,
+    "category": "sensitive",
+    "reason": "Personal attribute comparison",
+    "layer": "rules"
+  },
+  {
+    "query": "my ex girlfriend",
+    "expectedRelation": "personal",
+    "expectedCanStart": false,
+    "category": "sensitive",
+    "reason": "Personal relationship query",
+    "layer": "ai"
+  },
+  {
+    "query": "how to hack a website",
+    "expectedRelation": "unsafe",
+    "expectedCanStart": false,
+    "category": "sensitive",
+    "reason": "Harmful technical request",
+    "layer": "ai"
+  },
+  {
+    "query": "cats",
+    "expectedRelation": "unrelated",
+    "expectedCanStart": false,
+    "category": "incomparable",
+    "reason": "Single entity, not a comparison",
+    "layer": "rules"
+  },
+  {
+    "query": "best restaurants near me",
+    "expectedRelation": "unrelated",
+    "expectedCanStart": false,
+    "category": "incomparable",
+    "reason": "Recommendation request, not a comparison",
+    "layer": "ai"
+  },
+  {
+    "query": "what should I eat for dinner",
+    "expectedRelation": "unrelated",
+    "expectedCanStart": false,
+    "category": "incomparable",
+    "reason": "Personal recommendation, not comparable",
+    "layer": "ai"
+  },
+  {
+    "query": "things that are blue",
+    "expectedRelation": "unrelated",
+    "expectedCanStart": false,
+    "category": "incomparable",
+    "reason": "Not a comparison between two entities",
+    "layer": "ai"
+  },
+  {
+    "query": "React vs Vue for a SaaS dashboard",
+    "expectedRelation": "comparable",
+    "expectedCanStart": true,
+    "category": "developer_tool",
+    "reason": "Valid software framework comparison",
+    "layer": "rules"
+  },
+  {
+    "query": "Supabase vs Firebase",
+    "expectedRelation": "comparable",
+    "expectedCanStart": true,
+    "category": "developer_tool",
+    "reason": "Valid BaaS comparison",
+    "layer": "rules"
+  },
+  {
+    "query": "ChatGPT Plus vs Claude Pro",
+    "expectedRelation": "comparable",
+    "expectedCanStart": true,
+    "category": "ai_tool",
+    "reason": "Valid AI product comparison",
+    "layer": "rules"
+  },
+  {
+    "query": "Notion vs Linear for project management",
+    "expectedRelation": "comparable",
+    "expectedCanStart": true,
+    "category": "software",
+    "reason": "Valid productivity tool comparison",
+    "layer": "rules"
+  },
+  {
+    "query": "Cursor vs Windsurf",
+    "expectedRelation": "comparable",
+    "expectedCanStart": true,
+    "category": "developer_tool",
+    "reason": "Valid AI code editor comparison",
+    "layer": "rules"
+  },
+  {
+    "query": "Tesla Model 3 vs BMW i4",
+    "expectedRelation": "comparable",
+    "expectedCanStart": true,
+    "category": "product",
+    "reason": "Valid product comparison",
+    "layer": "rules"
+  },
+  {
+    "query": "apple vs orange nutrition",
+    "expectedRelation": "comparable",
+    "expectedCanStart": true,
+    "category": "general_research",
+    "reason": "Valid food comparison with context",
+    "layer": "rules"
+  },
+  {
+    "query": "MIT vs Stanford for computer science",
+    "expectedRelation": "comparable",
+    "expectedCanStart": true,
+    "category": "education",
+    "reason": "Valid education comparison",
+    "layer": "rules"
+  },
+  {
+    "query": "React vs React",
+    "expectedRelation": "unrelated",
+    "expectedCanStart": false,
+    "category": "incomparable",
+    "reason": "Same entity comparison",
+    "layer": "rules"
+  }
+]

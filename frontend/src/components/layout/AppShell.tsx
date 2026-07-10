@@ -3,10 +3,10 @@ import { Link, NavLink, Outlet, useNavigate, useLocation, Navigate } from "react
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  GitCompareArrows, LayoutDashboard, Layers3, FolderKanban, Settings, 
-  LogOut, MessageSquare, Microscope, Database, Activity, CreditCard, 
-  Search, Terminal, Users, Menu, X, AlertCircle 
+import {
+  GitCompareArrows, LayoutDashboard, Layers3, FolderKanban, Settings,
+  LogOut, MessageSquare, Microscope, Database, Activity, CreditCard,
+  Search, Terminal, Users, Menu, X, AlertCircle, ChevronDown, Clock3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
@@ -17,20 +17,23 @@ import { BrandFooter } from "@/components/brand/BrandFooter";
 
 import { usePageTitle } from "@/hooks/usePageTitle";
 
-const navItems = [
-  { to: "/app", label: "Overview", icon: LayoutDashboard, end: true },
+const primaryNavItems = [
+  { to: "/app/comparisons", label: "Compare", icon: GitCompareArrows },
+  { to: "/app", label: "History", icon: Clock3, end: true },
+  { to: "/app/uploads", label: "Sources", icon: Database },
+  { to: "/app/team", label: "Team", icon: Users },
+  { to: "/app/settings", label: "Settings", icon: Settings },
+];
+
+const advancedNavItems = [
   { to: "/app/chat", label: "AI Chat", icon: MessageSquare },
-  { to: "/app/comparisons", label: "Comparisons", icon: GitCompareArrows },
   { to: "/app/research", label: "Research", icon: Microscope },
-  { to: "/app/uploads", label: "Knowledge Base", icon: Database },
-  { to: "/app/prompts", label: "Prompt Studio", icon: Terminal },
+  { to: "/app/prompts", label: "Prompts", icon: Terminal },
   { to: "/app/analytics", label: "Analytics", icon: Activity },
   { to: "/app/quality", label: "Quality", icon: AlertCircle },
-  { to: "/app/team", label: "Team", icon: Users },
   { to: "/app/billing", label: "Billing", icon: CreditCard },
   { to: "/app/workspaces", label: "Workspaces", icon: Layers3 },
   { to: "/app/projects", label: "Projects", icon: FolderKanban },
-  { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
 const AppShell = () => {
@@ -47,6 +50,7 @@ const AppShell = () => {
   const shellRef = useRef<HTMLDivElement>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -160,7 +164,7 @@ const AppShell = () => {
         {/* Desktop Sidebar */}
         <aside className="shell-sidebar hidden lg:flex flex-col rounded-sm border border-white/10 bg-[#0a0a0a] p-4 sticky top-28 h-[calc(100vh-8rem)]">
           <nav className="flex flex-col space-y-1 overflow-y-auto no-scrollbar flex-1">
-            {navItems.map((item) => (
+            {primaryNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -186,6 +190,57 @@ const AppShell = () => {
                 )}
               </NavLink>
             ))}
+
+            <div className="pt-4 mt-2">
+              <button
+                onClick={() => setAdvancedOpen(!advancedOpen)}
+                className="flex w-full items-center justify-between rounded-sm px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-white/30 hover:text-white/50 transition-colors"
+              >
+                <span>Advanced</span>
+                <ChevronDown className={`h-3 w-3 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              <AnimatePresence>
+                {advancedOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-1 space-y-1">
+                      {advancedNavItems.map((item) => (
+                        <NavLink
+                          key={item.to}
+                          to={item.to}
+                          end={item.end}
+                          className={({ isActive }) =>
+                            [
+                              "relative flex shrink-0 items-center gap-3 rounded-sm px-4 py-2 text-xs uppercase tracking-widest font-bold transition-all group overflow-hidden",
+                              isActive
+                                ? "text-orange-400"
+                                : "text-white/35 hover:text-white/70",
+                            ].join(" ")
+                          }
+                        >
+                          {({ isActive }) => (
+                            <>
+                              {isActive && (
+                                <div className="absolute inset-0 bg-orange-500/10 border border-orange-500/20 rounded-sm z-0" />
+                              )}
+                              <div className="absolute inset-0 bg-white/[0.03] translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out z-0" />
+                              <item.icon className="relative z-10 h-3.5 w-3.5 shrink-0" />
+                              <span className="relative z-10">{item.label}</span>
+                            </>
+                          )}
+                        </NavLink>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </nav>
           
           <div className="pt-6 mt-6 border-t border-white/10 px-2">
@@ -234,7 +289,7 @@ const AppShell = () => {
                 </div>
 
                 <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-                  {navItems.map((item) => (
+                  {primaryNavItems.map((item) => (
                     <NavLink
                       key={item.to}
                       to={item.to}
@@ -251,6 +306,38 @@ const AppShell = () => {
                       <span>{item.label}</span>
                     </NavLink>
                   ))}
+
+                  <div className="pt-3 mt-2">
+                    <button
+                      onClick={() => setAdvancedOpen(!advancedOpen)}
+                      className="flex w-full items-center justify-between rounded-sm px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-white/30 hover:text-white/50 transition-colors"
+                    >
+                      <span>Advanced</span>
+                      <ChevronDown className={`h-3 w-3 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {advancedOpen && (
+                      <div className="mt-1 space-y-1">
+                        {advancedNavItems.map((item) => (
+                          <NavLink
+                            key={item.to}
+                            to={item.to}
+                            end={item.end}
+                            className={({ isActive }) =>
+                              `flex items-center gap-3 rounded-sm px-4 py-2.5 text-xs uppercase tracking-widest font-bold transition-all ${
+                                isActive
+                                  ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                                  : "text-white/40 hover:bg-[#1a1a1a] hover:text-white/70 border border-transparent"
+                              }`
+                            }
+                          >
+                            <item.icon className="h-3.5 w-3.5 shrink-0" />
+                            <span>{item.label}</span>
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </nav>
 
                 <div className="p-4 border-t border-[#2a2a2a]">
@@ -287,31 +374,6 @@ const AppShell = () => {
       {/* Floating PWA Mobile Bottom Navigation */}
       <div className="shell-bottom-nav lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[400px] h-16 bg-black/85 border border-white/10 rounded-2xl flex items-center justify-around px-2 shadow-[0_8px_32px_rgba(0,0,0,0.65)] z-50">
         <NavLink
-          to="/app"
-          end
-          className={({ isActive }) =>
-            `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
-              isActive ? "text-orange-400" : "text-white/40 hover:text-white"
-            }`
-          }
-        >
-          <LayoutDashboard className="h-5 w-5" />
-          <span>Overview</span>
-        </NavLink>
-        
-        <NavLink
-          to="/app/chat"
-          className={({ isActive }) =>
-            `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
-              isActive ? "text-orange-400" : "text-white/40 hover:text-white"
-            }`
-          }
-        >
-          <MessageSquare className="h-5 w-5" />
-          <span>Chat</span>
-        </NavLink>
-
-        <NavLink
           to="/app/comparisons"
           className={({ isActive }) =>
             `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
@@ -324,15 +386,40 @@ const AppShell = () => {
         </NavLink>
 
         <NavLink
-          to="/app/research"
+          to="/app"
+          end
           className={({ isActive }) =>
             `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
               isActive ? "text-orange-400" : "text-white/40 hover:text-white"
             }`
           }
         >
-          <Microscope className="h-5 w-5" />
-          <span>Research</span>
+          <Clock3 className="h-5 w-5" />
+          <span>History</span>
+        </NavLink>
+
+        <NavLink
+          to="/app/uploads"
+          className={({ isActive }) =>
+            `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
+              isActive ? "text-orange-400" : "text-white/40 hover:text-white"
+            }`
+          }
+        >
+          <Database className="h-5 w-5" />
+          <span>Sources</span>
+        </NavLink>
+
+        <NavLink
+          to="/app/team"
+          className={({ isActive }) =>
+            `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
+              isActive ? "text-orange-400" : "text-white/40 hover:text-white"
+            }`
+          }
+        >
+          <Users className="h-5 w-5" />
+          <span>Team</span>
         </NavLink>
 
         <button

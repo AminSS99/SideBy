@@ -491,7 +491,7 @@ export const COMPARISON_CATEGORIES: Record<ComparisonCategory, ComparisonCategor
 };
 
 export const SUPPORTED_COMPARISON_CATEGORIES = Object.values(COMPARISON_CATEGORIES).filter(
-  (category) => !["unsupported", "sensitive"].includes(category.id),
+  (category) => !["unsupported", "sensitive", "politics_policy"].includes(category.id),
 );
 
 const vaguePatterns = [
@@ -525,6 +525,21 @@ const protectedClassTerms = [
   "race", "ethnicity", "ethnic", "gender", "sex", "sexuality", "orientation",
   "nationality", "immigrant", "disabled", "disability", "autistic", "religious group",
   "men vs women", "women vs men", "black people", "white people", "asian people",
+];
+
+const politicalSubjectTerms = [
+  "politics", "political", "politician", "candidate", "election", "vote", "voting",
+  "democrat", "democrats", "republican", "republicans", "liberal", "liberals",
+  "conservative", "conservatives", "progressive", "progressives", "libertarian", "libertarians",
+  "socialist", "socialism", "capitalist", "capitalism", "communism", "communist",
+  "political party", "ideology", "government", "congress", "senate", "parliament",
+  "immigration policy", "tax policy", "gun control", "abortion policy",
+];
+
+const personalAttributeTerms = [
+  "personality", "appearance", "attractiveness", "beauty", "intelligence", "iq",
+  "height", "weight", "age", "body", "character", "morality", "ethics",
+  "salary", "income", "wealth", "reputation", "popularity", "talent",
 ];
 
 const rankingHarmTerms = [
@@ -696,8 +711,8 @@ const categoryScore = (
   for (const hint of definition.entityHints) {
     const normalizedHint = normalize(hint);
     if (!normalizedHint) continue;
-    if (a.includes(normalizedHint) || normalizedHint.includes(a)) score += 3;
-    if (b.includes(normalizedHint) || normalizedHint.includes(b)) score += 3;
+    if (a.includes(normalizedHint)) score += 3;
+    if (b.includes(normalizedHint)) score += 3;
     if (q.includes(normalizedHint)) score += 1;
   }
 
@@ -734,6 +749,24 @@ const detectPolicySignals = (query: string, entityA: string, entityB: string): P
   const q = normalize(query);
   const joined = `${normalize(entityA)} ${normalize(entityB)} ${q}`;
   const signals: PolicySignal[] = [];
+
+  if (includesWordAny(joined, politicalSubjectTerms)) {
+    signals.push({
+      id: "political-subject",
+      label: "Political subject",
+      message: "SideBy does not process political subjects or political person-to-person comparisons.",
+      severity: "block",
+    });
+  }
+
+  if (includesWordAny(joined, personalAttributeTerms)) {
+    signals.push({
+      id: "personal-attribute",
+      label: "Personal attribute",
+      message: "SideBy compares products, tools, services, and other decision options—not personal attributes or human qualities.",
+      severity: "block",
+    });
+  }
 
   if (includesAny(joined, religionTerms)) {
     signals.push({
@@ -863,6 +896,23 @@ export const analyzeComparisonQuery = (rawQuery: string): ComparisonIntent => {
       entityB: null,
       message: "This is too short to compare confidently.",
       suggestion: `${query} vs another option`,
+      sourceRequirements: [],
+      signals: [],
+    };
+  }
+
+  if ((query.match(/\s+vs\.?\s+/gi) || []).length > 1) {
+    return {
+      category: "unsupported",
+      label: COMPARISON_CATEGORIES.unsupported.label,
+      status: "needs_entities",
+      canStart: false,
+      safetyLevel: "blocked",
+      confidence: 0.96,
+      entityA: null,
+      entityB: null,
+      message: "Compare exactly two options at a time.",
+      suggestion: "Astra vs Astro for a web project",
       sourceRequirements: [],
       signals: [],
     };

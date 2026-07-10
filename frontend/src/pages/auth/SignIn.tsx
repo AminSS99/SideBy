@@ -1,6 +1,6 @@
 import React from "react";
 import { SignIn as ClerkSignIn } from "@clerk/clerk-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { AlertCircle } from "lucide-react";
 import AuthPageShell from "@/components/auth/AuthPageShell";
 import { envConfig } from "@/config/env";
@@ -9,6 +9,11 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 
 const SignIn = () => {
   usePageTitle("Sign In");
+  const [searchParams] = useSearchParams();
+  const requestedRedirect = searchParams.get("redirect_url") || "/app";
+  const redirectUrl = requestedRedirect.startsWith("/app") && !requestedRedirect.startsWith("//")
+    ? requestedRedirect
+    : "/app";
   return (
     <AuthPageShell
       eyebrow="Private beta"
@@ -42,7 +47,7 @@ const SignIn = () => {
               routing="path"
               path="/auth/sign-in"
               signUpUrl="/auth/sign-up"
-              fallbackRedirectUrl="/app"
+              fallbackRedirectUrl={redirectUrl}
               appearance={{
                 elements: {
                   rootBox: "w-full",

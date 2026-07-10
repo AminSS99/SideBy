@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { 
-  Clock3, 
-  ExternalLink, 
-  FolderKanban, 
-  Layers3, 
-  Sparkles, 
+import {
+  Clock3,
+  ExternalLink,
+  FolderKanban,
+  Layers3,
+  Sparkles,
   Workflow,
   Plus,
   UploadCloud,
@@ -15,7 +15,8 @@ import {
   Search,
   Zap,
   ShieldCheck,
-  Scale
+  Scale,
+  GitCompareArrows
 } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
 import gsap from "gsap";
@@ -192,38 +193,38 @@ const DashboardHome = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Link to="/app/comparisons" className="dash-action group flex flex-col items-center justify-center gap-3 rounded-sm border border-[#2a2a2a] bg-[#111] p-6 transition-all hover:border-orange-500/50 hover:bg-[#1a110a]">
-          <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7] group-hover:bg-orange-500/10 group-hover:border-orange-500/30 group-hover:text-orange-400 transition-colors">
-            <Plus className="h-5 w-5" />
-          </div>
-          <div className="text-center">
-            <h3 className="text-sm font-bold text-[#fdfbf7] group-hover:text-orange-400 transition-colors">New Comparison</h3>
-            <p className="text-[10px] text-[#fdfbf7]/40 mt-1 uppercase tracking-widest">Start orchestration</p>
-          </div>
-        </Link>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Link to="/app/comparisons" className="dash-action group flex flex-col items-center justify-center gap-3 rounded-sm border border-orange-500/20 bg-orange-500/5 p-6 transition-all hover:border-orange-500/50 hover:bg-[#1a110a]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-orange-500/10 border border-orange-500/30 text-orange-400 group-hover:bg-orange-500/20 transition-colors">
+              <Plus className="h-5 w-5" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-sm font-bold text-orange-400 group-hover:text-orange-300 transition-colors">New Comparison</h3>
+              <p className="text-[10px] text-[#fdfbf7]/40 mt-1 uppercase tracking-widest">Compare two options</p>
+            </div>
+          </Link>
 
-        <Link to="/app/uploads" className="dash-action group flex flex-col items-center justify-center gap-3 rounded-sm border border-[#2a2a2a] bg-[#111] p-6 transition-all hover:border-blue-500/50 hover:bg-[#0a111a]">
-          <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7] group-hover:bg-blue-500/10 group-hover:border-blue-500/30 group-hover:text-blue-400 transition-colors">
-            <UploadCloud className="h-5 w-5" />
-          </div>
-          <div className="text-center">
-            <h3 className="text-sm font-bold text-[#fdfbf7] group-hover:text-blue-400 transition-colors">Upload Context</h3>
-            <p className="text-[10px] text-[#fdfbf7]/40 mt-1 uppercase tracking-widest">Add to Knowledge Base</p>
-          </div>
-        </Link>
+          <Link to="/app/uploads" className="dash-action group flex flex-col items-center justify-center gap-3 rounded-sm border border-[#2a2a2a] bg-[#111] p-6 transition-all hover:border-blue-500/50 hover:bg-[#0a111a]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7] group-hover:bg-blue-500/10 group-hover:border-blue-500/30 group-hover:text-blue-400 transition-colors">
+              <UploadCloud className="h-5 w-5" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-sm font-bold text-[#fdfbf7] group-hover:text-blue-400 transition-colors">Upload Sources</h3>
+              <p className="text-[10px] text-[#fdfbf7]/40 mt-1 uppercase tracking-widest">Add to knowledge base</p>
+            </div>
+          </Link>
 
-        <Link to="/app/team" className="dash-action group flex flex-col items-center justify-center gap-3 rounded-sm border border-[#2a2a2a] bg-[#111] p-6 transition-all hover:border-purple-500/50 hover:bg-[#130a1a]">
-          <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7] group-hover:bg-purple-500/10 group-hover:border-purple-500/30 group-hover:text-purple-400 transition-colors">
-            <UserPlus className="h-5 w-5" />
-          </div>
-          <div className="text-center">
-            <h3 className="text-sm font-bold text-[#fdfbf7] group-hover:text-purple-400 transition-colors">Invite Team</h3>
-            <p className="text-[10px] text-[#fdfbf7]/40 mt-1 uppercase tracking-widest">Collaborate on research</p>
-          </div>
-        </Link>
-      </div>
+          <Link to="/app/team" className="dash-action group flex flex-col items-center justify-center gap-3 rounded-sm border border-[#2a2a2a] bg-[#111] p-6 transition-all hover:border-purple-500/50 hover:bg-[#130a1a]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7] group-hover:bg-purple-500/10 group-hover:border-purple-500/30 group-hover:text-purple-400 transition-colors">
+              <UserPlus className="h-5 w-5" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-sm font-bold text-[#fdfbf7] group-hover:text-purple-400 transition-colors">Invite Team</h3>
+              <p className="text-[10px] text-[#fdfbf7]/40 mt-1 uppercase tracking-widest">Collaborate on research</p>
+            </div>
+          </Link>
+        </div>
 
       {/* Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -253,9 +254,9 @@ const DashboardHome = () => {
       <div className="dash-card rounded-sm border border-[#2a2a2a] bg-[#111] p-6 sm:p-8">
         <div className="flex items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
           <div>
-            <h2 className="font-serif text-2xl text-[#fdfbf7]">Recent orchestration jobs</h2>
+            <h2 className="font-serif text-2xl text-[#fdfbf7]">Recent Comparisons</h2>
             <p className="mt-1 text-[10px] text-[#fdfbf7]/40 uppercase tracking-widest font-bold">
-              Attached to your beta account
+              Your comparison history
             </p>
           </div>
           <Link
@@ -277,14 +278,14 @@ const DashboardHome = () => {
             Loading research records...
           </div>
         ) : comparisons.length === 0 ? (
-          <div className="mt-8 rounded-sm border border-dashed border-[#333] bg-[#0c0b0a] p-8 sm:p-12 text-center">
-            <div className="mb-8">
-              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-sm border border-orange-500/20 bg-orange-500/10 text-orange-400">
-                <Search className="h-8 w-8" />
-              </div>
-              <h3 className="font-serif text-2xl text-[#fdfbf7] mb-3">
-                Create your first comparison
-              </h3>
+            <div className="mt-8 rounded-sm border border-dashed border-[#333] bg-[#0c0b0a] p-8 sm:p-12 text-center">
+              <div className="mb-8">
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-sm border border-orange-500/20 bg-orange-500/10 text-orange-400">
+                  <GitCompareArrows className="h-8 w-8" />
+                </div>
+                <h3 className="font-serif text-2xl text-[#fdfbf7] mb-3">
+                  Create your first comparison
+                </h3>
               <p className="text-sm text-[#fdfbf7]/50 max-w-md mx-auto leading-relaxed">
                 Enter any two products, technologies, or topics and let SideBy research them side by side with cited sources.
               </p>

@@ -14,7 +14,10 @@ function isProductionRuntime() {
 
 function isAuthorized(request: VercelRequest) {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return !isProductionRuntime();
+  if (!secret) {
+    if (isProductionRuntime()) return false;
+    return true;
+  }
 
   const header = request.headers.authorization;
   const value = Array.isArray(header) ? header[0] : header;

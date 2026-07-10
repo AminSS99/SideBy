@@ -27,8 +27,13 @@ const ReverseProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (session) {
     // Redirect to the page they came from (if any) or the app dashboard
-    const from = (location.state as { from?: { pathname?: string } })?.from?.pathname;
-    return <Navigate to={from || "/app"} replace />;
+    const stateFrom = (location.state as { from?: { pathname?: string; search?: string } })?.from;
+    const requestedRedirect = new URLSearchParams(location.search).get("redirect_url");
+    const safeRedirect = requestedRedirect?.startsWith("/app") && !requestedRedirect.startsWith("//")
+      ? requestedRedirect
+      : null;
+    const from = stateFrom?.pathname ? `${stateFrom.pathname}${stateFrom.search || ""}` : null;
+    return <Navigate to={safeRedirect || from || "/app"} replace />;
   }
 
   return <>{children}</>;

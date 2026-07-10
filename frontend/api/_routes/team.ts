@@ -23,6 +23,17 @@ const InviteBodySchema = z.object({
   role: z.enum(["admin", "member", "viewer"]).default("member"),
 });
 
+const PatchBodySchema = z.object({
+  workspaceId: z.string().uuid(),
+  membershipId: z.string().min(1),
+  role: z.enum(["admin", "member", "viewer"]),
+});
+
+const DeleteBodySchema = z.object({
+  workspaceId: z.string().uuid(),
+  membershipId: z.string().min(1),
+});
+
 async function resolveOrgWorkspace(
   db: ReturnType<typeof createDbClient>,
   userId: string,
@@ -107,6 +118,65 @@ async function createClerkInvitation(params: {
   }
 
   return (await response.json()) as { id?: string };
+}
+
+async function updateClerkMembership(params: {
+  organizationId: string;
+  userId: string;
+  role: "admin" | "member" | "viewer";
+}) {
+  const secret = process.env.CLERK_SECRET_KEY;
+  if (!secret) {
+    throw Object.assign(new Error("Clerk secret key is required."), { statusCode: 503 });
+  }
+
+  const response = await fetch(
+    `https://api.clerk.com/v1/organizations/${params.organizationId}/memberships/${params.userId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ role: clerkRole(params.role) }),
+    },
+  );
+
+  if (!response.ok) {
+    throw Object.assign(
+      new Error(`Clerk role update failed: ${response.status} ${await response.text()}`),
+      { statusCode: 502 },
+    );
+  }
+
+  return response.json();
+}
+
+async function removeClerkMember(params: {
+  organizationId: string;
+  userId: string;
+}) {
+  const secret = process.env.CLERK_SECRET_KEY;
+  if (!secret) {
+    throw Object.assign(new Error("Clerk secret key is required."), { statusCode: 503 });
+  }
+
+  const response = await fetch(
+    `https://api.clerk.com/v1/organizations/${params.organizationId}/memberships/${params.userId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${secret}`,
+      },
+    },
+  );
+
+  if (!response.ok && response.status !== 404) {
+    throw Object.assign(
+      new Error(`Clerk member removal failed: ${response.status} ${await response.text()}`),
+      { statusCode: 502 },
+    );
+  }
 }
 
 export default async function handler(
@@ -201,6 +271,70 @@ export default async function handler(
           createdAt: invite.createdAt.toISOString(),
         },
       }, 201);
+    }
+
+    if (request.method === "PATCH") {
+      const body = PatchBodySchema.parse(request.body || {});
+      const workspace = await resolveOrgWorkspace(db, auth.userId, body.workspaceId);
+      await assertOrgAdmin(db, auth.userId, workspace.ownerId);
+
+      const [targetMembership] = await db
+        .select({ userId: memberships.userId, role: memberships.role })
+        .from(memberships)
+        .where(eq(memberships.id, body.membershipId))
+        .limit(1);
+
+      if (!targetMembership) {
+        return sendJson(response, { error: "Membership not found." }, 404);
+      }
+
+      if (targetMembership.role === "owner") {
+        return sendJson(response, { error: "Cannot change the owner's role." }, 403);
+      }
+
+      await updateClerkMembership({
+        organizationId: workspace.ownerId,
+        userId: targetMembership.userId,
+        role: body.role,
+      });
+
+      await db
+        .update(memberships)
+        .set({ role: body.role, updatedAt: new Date() })
+        .where(eq(memberships.id, body.membershipId));
+
+      return sendJson(response, { success: true, role: body.role });
+    }
+
+    if (request.method === "DELETE") {
+      const body = DeleteBodySchema.parse(request.body || {});
+      const workspace = await resolveOrgWorkspace(db, auth.userId, body.workspaceId);
+      await assertOrgAdmin(db, auth.userId, workspace.ownerId);
+
+      const [targetMembership] = await db
+        .select({ userId: memberships.userId, role: memberships.role })
+        .from(memberships)
+        .where(eq(memberships.id, body.membershipId))
+        .limit(1);
+
+      if (!targetMembership) {
+        return sendJson(response, { error: "Membership not found." }, 404);
+      }
+
+      if (targetMembership.role === "owner") {
+        return sendJson(response, { error: "Cannot remove the workspace owner." }, 403);
+      }
+
+      await removeClerkMember({
+        organizationId: workspace.ownerId,
+        userId: targetMembership.userId,
+      });
+
+      await db
+        .delete(memberships)
+        .where(eq(memberships.id, body.membershipId));
+
+      return sendJson(response, { success: true });
     }
 
     return sendJson(response, { error: "Method not allowed" }, 405);
