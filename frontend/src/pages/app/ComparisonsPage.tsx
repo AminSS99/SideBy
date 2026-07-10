@@ -192,33 +192,37 @@ const ComparisonsPage = () => {
     }
   }, [isLoading]);
 
+  const searchableItems = useMemo(() => {
+    return items.map((item) => ({
+      item,
+      searchString: `${item.query} ${item.entityA || ""} ${item.entityB || ""}`.toLowerCase(),
+    }));
+  }, [items]);
+
   const filteredItems = useMemo(() => {
     const needle = query.trim().toLowerCase();
 
-    return items.filter((item) => {
-      const filterMatch =
-        filter === "all" || item.status === filter || item.visibility === filter;
-      const textMatch =
-        !needle ||
-        item.query.toLowerCase().includes(needle) ||
-        item.entityA?.toLowerCase().includes(needle) ||
-        item.entityB?.toLowerCase().includes(needle);
+    return searchableItems.filter(({ item, searchString }) => {
+      const filterMatch = filter === "all" || item.status === filter || item.visibility === filter;
+      if (!filterMatch) return false;
+      if (!needle) return true;
+      return searchString.includes(needle);
+    }).map((obj) => obj.item);
+  }, [filter, searchableItems, query]);
 
-      return filterMatch && textMatch;
-    });
-  }, [filter, items, query]);
+  const counts = useMemo(() => {
+    let completed = 0, running = 0, failed = 0, publicVis = 0, privateVis = 0;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.status === "completed") completed++;
+      else if (item.status === "running") running++;
+      else if (item.status === "failed") failed++;
 
-  const counts = useMemo(
-    () => ({
-      all: items.length,
-      completed: items.filter((item) => item.status === "completed").length,
-      running: items.filter((item) => item.status === "running").length,
-      failed: items.filter((item) => item.status === "failed").length,
-      public: items.filter((item) => item.visibility === "public").length,
-      private: items.filter((item) => item.visibility === "private").length,
-    }),
-    [items],
-  );
+      if (item.visibility === "public") publicVis++;
+      else if (item.visibility === "private") privateVis++;
+    }
+    return { all: items.length, completed, running, failed, public: publicVis, private: privateVis };
+  }, [items]);
 
   const publish = async (item: ComparisonHistoryItem) => {
     try {

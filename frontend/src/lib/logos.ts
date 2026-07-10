@@ -234,14 +234,19 @@ const knownDomains: Record<string, string> = {
   digitalocean: "digitalocean.com",
 };
 
+const logoEntries = Object.entries(knownLogos);
+const domainEntries = Object.entries(knownDomains);
+
 export const getEntityLogo = (entityName: string): string | null => {
   const key = entityName.toLowerCase().trim();
   if (knownLogos[key]) return knownLogos[key];
 
-  const match = Object.entries(knownLogos).find(([k]) =>
-    key.includes(k) || k.includes(key),
-  );
-  if (match) return match[1];
+  for (let i = 0; i < logoEntries.length; i++) {
+    const k = logoEntries[i][0];
+    if (key.includes(k) || k.includes(key)) {
+      return logoEntries[i][1];
+    }
+  }
 
   return null;
 };
@@ -251,10 +256,12 @@ export const getEntityFavicon = (entityName: string): string | null => {
   const domain = knownDomains[key];
   if (domain) return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
-  const match = Object.entries(knownDomains).find(([k]) =>
-    key.includes(k) || k.includes(key),
-  );
-  if (match) return `https://www.google.com/s2/favicons?domain=${match[1]}&sz=64`;
+  for (let i = 0; i < domainEntries.length; i++) {
+    const k = domainEntries[i][0];
+    if (key.includes(k) || k.includes(key)) {
+      return `https://www.google.com/s2/favicons?domain=${domainEntries[i][1]}&sz=64`;
+    }
+  }
 
   return null;
 };

@@ -276,19 +276,21 @@ const QualityPage = () => {
           <p className="text-sm text-white/30">No category data yet.</p>
         ) : (
           <div className="flex flex-wrap gap-3">
-            {data.categories.map((cat) => {
+            {(() => {
               const max = Math.max(...data.categories.map((c) => c.count));
-              const pct = Math.max(1, Math.round((cat.count / max) * 100));
-              return (
-                <div key={cat.category} className="rounded-sm border border-white/[0.06] bg-[#0c0b0a] p-4 min-w-[140px]">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mb-2">{cat.category}</p>
-                  <p className="font-serif text-2xl text-[#fdfbf7] mb-1">{cat.count}</p>
-                  <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
-                    <div className="h-full bg-purple-500/50 rounded-full" style={{ width: `${pct}%` }} />
+              return data.categories.map((cat) => {
+                const pct = Math.max(1, Math.round((cat.count / max) * 100));
+                return (
+                  <div key={cat.category} className="rounded-sm border border-white/[0.06] bg-[#0c0b0a] p-4 min-w-[140px]">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mb-2">{cat.category}</p>
+                    <p className="font-serif text-2xl text-[#fdfbf7] mb-1">{cat.count}</p>
+                    <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
+                      <div className="h-full bg-purple-500/50 rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         )}
       </div>
