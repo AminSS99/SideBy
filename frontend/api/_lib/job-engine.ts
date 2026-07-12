@@ -1616,62 +1616,57 @@ function ensureFactCoverage(
   }));
 
   for (const entity of parsed.entities.slice(0, 2)) {
+    const entityNeedle = entity.name.toLowerCase();
+
+    const sourceLower =
+      extractedLower.find((item) => item.entityNameLower === entityNeedle) ||
+      extractedLower.find((item) => item.titleLower.includes(entityNeedle)) ||
+      extractedLower.find((item) => item.markdownLower.includes(entityNeedle));
+
+    const source = sourceLower ? extracted.find((s) => s.url === sourceLower.url) : null;
+    let sentences: string[] = [];
+    let sentencesLower: string[] = [];
+    let entIdx = -1;
+
+    if (source) {
+      sentences = source.markdown
+        .replace(/\s+/g, " ")
+        .split(/(?<=[.!?])\s+/)
+        .map((sentence) => sentence.trim())
+        .filter((sentence) => sentence.length > 40);
+
+      sentencesLower = sentences.map((s) => s.toLowerCase());
+      entIdx = sentencesLower.findIndex((s) => s.includes(entityNeedle));
+    }
+
     for (const dimension of dimensions) {
       if (hasFact(entity.name, dimension.name)) continue;
-      const fallback = buildFallbackFact(entity.name, dimension.name, extracted, extractedLower);
-      if (fallback) {
-        completeFacts.push(fallback);
+
+      if (!source) continue;
+
+      const dimensionNeedle = dimension.name.toLowerCase().split(/\s+/)[0] || "";
+      const dimIdx = sentencesLower.findIndex((s) => s.includes(dimensionNeedle));
+
+      let sentence =
+        (dimIdx !== -1 ? sentences[dimIdx] : undefined) ||
+        (entIdx !== -1 ? sentences[entIdx] : undefined);
+
+      sentence = sentence || sentences[0] || source.markdown.replace(/\s+/g, " ").trim().slice(0, 240);
+
+      if (sentence) {
+        completeFacts.push({
+          entity: entity.name,
+          dimension: dimension.name,
+          value: sentence.slice(0, 420),
+          confidence: 0.55,
+          citation: source.url,
+        });
         existingFacts.add(`${entity.name.toLowerCase()}|${dimension.name.toLowerCase()}`);
       }
     }
   }
 
   return completeFacts;
-}
-
-function buildFallbackFact(
-  entityName: string,
-  dimensionName: string,
-  extracted: ExtractedSource[],
-  extractedLower: Array<ExtractedSource & { entityNameLower: string; titleLower: string; markdownLower: string; }>
-): ExtractedFact | null {
-  const entityNeedle = entityName.toLowerCase();
-  const dimensionNeedle = dimensionName.toLowerCase().split(/\s+/)[0] || "";
-
-  const sourceLower =
-    extractedLower.find((item) => item.entityNameLower === entityNeedle) ||
-    extractedLower.find((item) => item.titleLower.includes(entityNeedle)) ||
-    extractedLower.find((item) => item.markdownLower.includes(entityNeedle));
-
-  const source = sourceLower ? extracted.find((s) => s.url === sourceLower.url) : null;
-
-  if (!source) return null;
-
-  const sentences = source.markdown
-    .replace(/\s+/g, " ")
-    .split(/(?<=[.!?])\s+/)
-    .map((sentence) => sentence.trim())
-    .filter((sentence) => sentence.length > 40);
-
-  const sentencesLower = sentences.map((s) => s.toLowerCase());
-  const dimIdx = sentencesLower.findIndex((s) => s.includes(dimensionNeedle));
-  const entIdx = sentencesLower.findIndex((s) => s.includes(entityNeedle));
-
-  const sentence =
-    (dimIdx !== -1 ? sentences[dimIdx] : undefined) ||
-    (entIdx !== -1 ? sentences[entIdx] : undefined);
-
-  sentence = sentence || sentences[0] || source.markdown.replace(/\s+/g, " ").trim().slice(0, 240);
-
-  if (!sentence) return null;
-
-  return {
-    entity: entityName,
-    dimension: dimensionName,
-    value: sentence.slice(0, 420),
-    confidence: 0.55,
-    citation: source.url,
-  };
 }
 
 async function getReusableFactCounts(
