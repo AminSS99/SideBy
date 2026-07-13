@@ -5,6 +5,7 @@ import { useGSAP } from "@gsap/react";
 import { ArrowRight, Calendar, Clock } from "lucide-react";
 import { BrandFooter } from "@/components/brand/BrandFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const blogPosts = [
   {
@@ -37,6 +38,7 @@ const blogPosts = [
 ];
 
 const Blog = () => {
+  usePageTitle("Blog");
   const pageRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {

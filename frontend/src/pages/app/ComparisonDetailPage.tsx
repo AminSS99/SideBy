@@ -39,6 +39,7 @@ import {
   VersionHistoryUI,
   DecisionMatrixPanel,
   WatchlistPanel,
+  StickyDecisionBar,
 } from "@/components/Comparison/ComparisonEngine";
 
 type ComparisonJob = {
@@ -51,8 +52,10 @@ type ComparisonJob = {
   visibility?: "private" | "team" | "public";
   error?: string | null;
   failedStep?: string | null;
-  retryable?: boolean;
   activity?: ComparisonActivityStep[];
+  sourcesFound?: number;
+  factsExtracted?: number;
+  dimensionsScored?: number;
 };
 
 const ComparisonDetailPage = () => {
@@ -64,7 +67,12 @@ const ComparisonDetailPage = () => {
   const [viewedHistoricalResult, setViewedHistoricalResult] = useState<ComparisonData | null>(null);
   const [viewedHistoricalVersionNumber, setViewedHistoricalVersionNumber] = useState<number | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<"overview" | "intelligence" | "metadata">("overview");
+  const [isDecisionBarDismissed, setIsDecisionBarDismissed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsDecisionBarDismissed(false);
+  }, [id]);
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
@@ -547,6 +555,9 @@ const ComparisonDetailPage = () => {
           activeStep={job.activeStep}
           steps={researchSteps}
           activity={job.activity}
+          sourcesFound={job.sourcesFound}
+          factsExtracted={job.factsExtracted}
+          dimensionsScored={job.dimensionsScored}
         />
       ) : (
         renderWorkbenchGrid(result, job.activity)
@@ -562,6 +573,17 @@ const ComparisonDetailPage = () => {
             setViewedHistoricalVersionNumber(verNum);
           }}
           activeVersionNumber={viewedHistoricalVersionNumber}
+        />
+      )}
+
+      {result && job?.status === "completed" && !isDecisionBarDismissed && (
+        <StickyDecisionBar
+          result={result}
+          onScrollToEvidence={() => {
+            const el = document.getElementById("feature-matrix") || document.getElementById("decision-matrix");
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+          }}
+          onDismiss={() => setIsDecisionBarDismissed(true)}
         />
       )}
     </div>

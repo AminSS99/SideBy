@@ -124,6 +124,7 @@ export const SnapsolveFloatingWidget = () => {
         
         {/* SnapSolve ecosystem badge */}
         <div
+          role="img"
           aria-label="SideBy is part of the SnapSolve ecosystem"
           className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-red-200/20 bg-[#180202] shadow-[inset_0_0.3rem_0.9rem_rgba(255,230,230,0.3),inset_0_-0.1rem_0.3rem_rgba(0,0,0,0.7),inset_0_-0.4rem_0.9rem_rgba(255,230,230,0.5),0_3rem_3rem_rgba(0,0,0,0.3),0_1rem_1rem_-0.6rem_rgba(0,0,0,0.8)] transition-shadow duration-200 group-hover:shadow-[inset_0_0.3rem_0.5rem_rgba(248,113,113,0.4),inset_0_-0.1rem_0.3rem_rgba(0,0,0,0.7),inset_0_-0.4rem_0.9rem_rgba(239,68,68,0.6),0_3rem_3rem_rgba(0,0,0,0.3),0_1rem_1rem_-0.6rem_rgba(0,0,0,0.8)]"
         >

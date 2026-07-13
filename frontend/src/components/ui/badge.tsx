@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- variant factory is intentionally co-located with its primitive. */
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 

@@ -47,9 +47,9 @@ export const serverEnv = {
   knowledgeMaxUploadBytes: Number(optional("KNOWLEDGE_MAX_UPLOAD_BYTES") || "26214400"),
 
   // Billing
-  paddleApiKey: optional("PADDLE_API_KEY"),
-  paddleWebhookSecret: optional("PADDLE_WEBHOOK_SECRET"),
-  paddleEnvironment: optional("PADDLE_ENVIRONMENT") || "sandbox",
+  dodoApiKey: optional("DODO_PAYMENTS_API_KEY"),
+  dodoWebhookSecret: optional("DODO_PAYMENTS_WEBHOOK_SECRET"),
+  dodoEnvironment: optional("DODO_PAYMENTS_ENVIRONMENT") || "sandbox",
 
   // Email
   resendApiKey: optional("RESEND_API_KEY"),
@@ -108,7 +108,7 @@ export function assertRedisConfigured(): void {
 }
 
 export function assertBillingConfigured(): void {
-  if (!serverEnv.paddleApiKey) {
-    throw new Error("Paddle not configured. Set PADDLE_API_KEY.");
+  if (!serverEnv.dodoApiKey) {
+    throw new Error("Dodo Payments not configured. Set DODO_PAYMENTS_API_KEY.");
   }
 }

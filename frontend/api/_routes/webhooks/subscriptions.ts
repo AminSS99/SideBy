@@ -61,7 +61,7 @@ export default async function handler(
         .orderBy(desc(webhookSubscriptions.createdAt))
         .limit(50);
 
-      return sendJson(response, { subscriptions: rows.map(serializeSubscription) });
+      return sendJson(response, { subscriptions: rows.map((row) => serializeSubscription(row)) });
     }
 
     if (request.method === "POST") {

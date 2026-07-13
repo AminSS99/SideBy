@@ -1,7 +1,7 @@
 /**
  * SideBy Rate Limiter
  * Redis-backed sliding window rate limiting + daily usage caps.
- * No Paddle. Everyone is on the free plan with hard daily limits.
+ * Subscription-aware plan limits with free-plan daily usage caps.
  */
 import { redisGet, redisIncrement, getRuntimeStoreKind } from "./redis.js";
 import { logger } from "./log.js";

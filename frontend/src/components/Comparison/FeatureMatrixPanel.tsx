@@ -6,12 +6,15 @@ import { useGSAP } from "@gsap/react";
 import type { ComparisonData } from './types';
 import { panelClass } from './constants';
 import { cn } from '@/lib/utils';
+import { ScoreDetailDrawer } from "./ScoreDetailDrawer";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const matrixData = useMemo(() => {
     const term = filter.toLowerCase();
@@ -128,7 +131,23 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
                   const isBWinner = cat.winner === 'b';
 
                   return (
-                    <div key={j} className="matrix-row grid grid-cols-[1.2fr_1fr_1fr] border-b border-[#2a2a2a] hover:bg-[#151515] transition-colors group relative">
+                    <div
+                      key={j}
+                      onClick={() => {
+                        setSelectedCategory(cat.category);
+                        setIsDrawerOpen(true);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedCategory(cat.category);
+                          setIsDrawerOpen(true);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      className="matrix-row grid grid-cols-[1.2fr_1fr_1fr] border-b border-[#2a2a2a] hover:bg-[#151515] transition-colors group relative cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
+                    >
                       <div className="p-5 pl-6 text-sm text-[#fdfbf7]/90 font-medium sticky left-0 z-10 bg-[#0c0b0a] group-hover:bg-[#151515] border-r border-[#2a2a2a] transition-colors">
                         {row.label}
                       </div>
@@ -174,7 +193,23 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
                 </div>
                 <div className="space-y-3">
                   {cat.rows.map((row, j) => (
-                    <div key={j} className="matrix-row rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
+                    <div
+                      key={j}
+                      onClick={() => {
+                        setSelectedCategory(cat.category);
+                        setIsDrawerOpen(true);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedCategory(cat.category);
+                          setIsDrawerOpen(true);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      className="matrix-row rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4 cursor-pointer hover:border-orange-500/35 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
+                    >
                       <p className="text-xs font-bold text-[#fdfbf7]/70 mb-2">{row.label}</p>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -194,6 +229,13 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
           </div>
         )}
       </div>
+
+      <ScoreDetailDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        dimensionSubject={selectedCategory}
+        result={result}
+      />
     </div>
   );
 };

@@ -6,8 +6,10 @@ import { useGSAP } from "@gsap/react";
 import { BrandFooter } from "@/components/brand/BrandFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { GlowCard } from "@/components/GlowCard";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const Features = () => {
+  usePageTitle("Features");
   const pageRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {

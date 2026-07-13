@@ -3,16 +3,14 @@ import { useNavigate, Link } from "react-router-dom";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { Search, Sparkles, Zap, ArrowRight, ShieldCheck, Scale, Cpu, Network, BookOpenText, Loader2 } from "lucide-react";
+import { Sparkles, Zap, ArrowRight, ShieldCheck, Scale, Cpu, Network, BookOpenText } from "lucide-react";
 import { BrandFooter } from "@/components/brand/BrandFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { AmbientOrbs } from "@/components/AmbientOrbs";
-import { analyzeQueryIntent, type QueryIntent } from "@/lib/queryIntent";
 import { SUPPORTED_COMPARISON_CATEGORIES } from "@/lib/comparisonTaxonomy";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { apiFetch } from "@/lib/api";
-import { buildApiUrl } from "@/config/env";
 import { useAuth } from "@/contexts/AuthContext";
+import { ComparisonComposer } from "@/components/ComparisonComposer";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -24,84 +22,13 @@ const featuredComparisons = SUPPORTED_COMPARISON_CATEGORIES.flatMap((category) =
   })),
 ).slice(0, 9);
 
-const quickStartComparisons = [
-  "React vs Vue for a SaaS",
-  "Supabase vs Firebase",
-  "Cursor vs Windsurf",
-  "Notion vs Linear",
-  "ChatGPT Plus vs Claude Pro",
-  "ETFs vs mutual funds",
-];
-
 const Index = () => {
-  usePageTitle("AI-Powered Comparisons");
-  const [query, setQuery] = useState("");
-  const localQueryIntent = analyzeQueryIntent(query);
-  const [validatedIntent, setValidatedIntent] = useState<QueryIntent | null>(null);
-  const [validatedQuery, setValidatedQuery] = useState("");
-  const [isValidating, setIsValidating] = useState(false);
-  const validationSequence = useRef(0);
-  const queryIntent = validatedQuery === query.trim() && validatedIntent
-    ? validatedIntent
-    : localQueryIntent;
+  usePageTitle("AI Comparison Tool");
   const { session } = useAuth();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
 
-  const validateQuery = async (value: string) => {
-    const clean = value.trim();
-    const localIntent = analyzeQueryIntent(clean);
-    if (!localIntent.canStart) {
-      setValidatedQuery(clean);
-      setValidatedIntent(localIntent);
-      return localIntent;
-    }
-
-    const sequence = ++validationSequence.current;
-    setIsValidating(true);
-    try {
-      const response = await apiFetch(buildApiUrl("/api/comparisons/validate"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: clean }),
-      }, { retries: 0 });
-      const data = await response.json() as { intent: QueryIntent };
-      if (sequence === validationSequence.current) {
-        setValidatedQuery(clean);
-        setValidatedIntent(data.intent);
-      }
-      return data.intent;
-    } catch {
-      const fallback = localIntent.category === "general_research" && localIntent.confidence < 0.6
-        ? {
-            ...localIntent,
-            canStart: false,
-            status: "needs_context" as const,
-            message: "We could not verify that these options share a meaningful comparison frame. Add a concrete use case or try again.",
-          }
-        : localIntent;
-      if (sequence === validationSequence.current) {
-        setValidatedQuery(clean);
-        setValidatedIntent(fallback);
-      }
-      return fallback;
-    } finally {
-      if (sequence === validationSequence.current) setIsValidating(false);
-    }
-  };
-
-  useEffect(() => {
-    const clean = query.trim();
-    setValidatedIntent(null);
-    setValidatedQuery("");
-    if (!clean || !localQueryIntent.canStart) return;
-
-    const timeout = window.setTimeout(() => {
-      void validateQuery(clean);
-    }, 450);
-    return () => window.clearTimeout(timeout);
-  }, [query, localQueryIntent.canStart]);
 
   // Parallax Effect
   useEffect(() => {
@@ -153,14 +80,14 @@ const Index = () => {
     const mm = gsap.matchMedia();
 
     mm.add("(prefers-reduced-motion: reduce)", () => {
-      gsap.set(".hero-badge, .parallax-title, .parallax-desc, .hero-search, .hero-featured, .starter-card, .feature-card, .orch-card", {
+      gsap.set(".hero-badge, .parallax-title, .parallax-desc, .hero-composer, .starter-card, .feature-card, .orch-card", {
         clearProps: "all",
         opacity: 1,
       });
     });
 
     mm.add("(prefers-reduced-motion: no-preference)", () => {
-      gsap.set(".hero-badge, .parallax-title, .parallax-desc, .hero-search, .hero-featured", {
+      gsap.set(".hero-badge, .parallax-title, .parallax-desc, .hero-composer", {
         willChange: "transform, opacity, filter",
       });
       gsap.set(".starter-card, .feature-card, .orch-card", {
@@ -173,19 +100,8 @@ const Index = () => {
       tl.from(".hero-badge", { y: 24, opacity: 0, filter: "blur(10px)", duration: 0.8 })
         .from(".parallax-title", { y: 44, opacity: 0, filter: "blur(14px)", duration: 1.15 }, "-=0.48")
         .from(".parallax-desc", { y: 24, opacity: 0, filter: "blur(8px)", duration: 0.82 }, "-=0.72")
-        .from(".hero-search", { y: 28, opacity: 0, scale: 0.97, filter: "blur(10px)", duration: 0.9, ease: "back.out(1.25)" }, "-=0.5")
-        .from(".hero-featured", { y: 16, opacity: 0, duration: 0.72 }, "-=0.5")
-        .from(".quick-start-chip", { y: 16, opacity: 0, stagger: 0.045, duration: 0.48, ease: "power3.out" }, "-=0.5")
+        .from(".hero-composer", { y: 28, opacity: 0, scale: 0.97, filter: "blur(10px)", duration: 0.9, ease: "back.out(1.25)" }, "-=0.5")
         .from(".starter-card", { y: 18, rotateX: -4, stagger: 0.045, duration: 0.55, ease: "power3.out" }, "-=0.25");
-
-      gsap.to(".hero-search-shell", {
-        boxShadow: "0 28px 80px rgba(234,88,12,0.18)",
-        borderColor: "rgba(234,88,12,0.45)",
-        duration: 1.8,
-        yoyo: true,
-        repeat: -1,
-        ease: "sine.inOut",
-      });
 
       gsap.from(".feature-card", {
         scrollTrigger: {
@@ -292,17 +208,8 @@ const Index = () => {
     return () => mm.revert();
   }, { scope: containerRef });
 
-  const beginComparison = async (value: string) => {
-    const clean = value.trim();
-    if (!clean) return;
-    setQuery(clean);
-
-    const intent = validatedQuery === clean && validatedIntent
-      ? validatedIntent
-      : await validateQuery(clean);
-    if (!intent.canStart) return;
-
-    const destination = `/app/comparisons?q=${encodeURIComponent(clean)}`;
+  const beginComparison = (serializedQuery: string) => {
+    const destination = `/app/comparisons?q=${encodeURIComponent(serializedQuery)}`;
     if (session) {
       navigate(destination);
       return;
@@ -310,13 +217,8 @@ const Index = () => {
     navigate(`/auth/sign-in?redirect_url=${encodeURIComponent(destination)}`);
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    void beginComparison(query);
-  };
-
   const handleQuickStart = (q: string) => {
-    void beginComparison(q);
+    beginComparison(q);
   };
 
   return (
@@ -345,86 +247,14 @@ const Index = () => {
             SideBy turns messy research into an evidence map: sources, facts, scoring dimensions, and a verdict you can audit before you act.
           </p>
 
-          <form onSubmit={handleSearch} className="hero-search mt-10 w-full max-w-2xl group transform-translate-z-10">
-            <div className="hero-search-shell relative rounded-sm border border-transparent">
-              <div className="pointer-events-none absolute left-0 top-0 flex h-[66px] items-center pl-5">
-                <Search className="h-5 w-5 text-white/30 group-focus-within:text-orange-500 transition-colors" />
-              </div>
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="e.g., Supabase vs Firebase..."
-                className="w-full rounded-sm border border-[#333] bg-[#0c0b0a] py-5 pl-14 pr-5 text-base text-white placeholder:text-white/20 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all shadow-[0_20px_40px_rgba(0,0,0,0.4)] sm:pr-36 sm:text-lg"
-              />
-              <button
-                type="submit"
-                disabled={isValidating || (Boolean(query.trim()) && !queryIntent.canStart)}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-sm bg-[#fdfbf7] px-6 py-4 font-bold uppercase tracking-widest text-xs text-black hover:bg-[#e0e0e0] transition-colors active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:absolute sm:inset-y-2 sm:right-2 sm:mt-0 sm:w-auto sm:py-0"
-              >
-                {isValidating ? (
-                  <>Checking <Loader2 className="h-3.5 w-3.5 animate-spin" /></>
-                ) : (
-                  <>Compare <ArrowRight className="h-3.5 w-3.5" /></>
-                )}
-              </button>
-            </div>
-            {query.trim() && (
-              <div className={[
-                "mt-3 rounded-sm border px-4 py-3 text-left text-xs leading-relaxed",
-                queryIntent.canStart
-                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200/80"
-                  : "border-amber-500/25 bg-amber-500/10 text-amber-100/80",
-              ].join(" ")}>
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="font-bold uppercase tracking-widest text-[9px]">
-                    {isValidating ? "Checking comparison fit" : `Comparison fit - ${Math.round(queryIntent.confidence * 100)}%`}
-                  </span>
-                  {queryIntent.categoryLabel && (
-                    <span className="text-[9px] uppercase tracking-widest opacity-70">
-                      {queryIntent.categoryLabel}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1">{queryIntent.message}</p>
-                {queryIntent.suggestion && (
-                  <button
-                    type="button"
-                    onClick={() => setQuery(queryIntent.suggestion || "")}
-                    className="mt-2 text-[10px] font-bold uppercase tracking-widest text-white/70 underline decoration-white/20 underline-offset-4 hover:text-white"
-                  >
-                    Try: {queryIntent.suggestion}
-                  </button>
-                )}
-              </div>
-            )}
-            <p className="mt-3 text-center text-[10px] text-white/25">
-              We verify the pair first. Sign in only when it is ready for research.
-            </p>
-          </form>
+          <ComparisonComposer onStart={beginComparison} className="hero-composer mt-10" />
 
-          {/* Quick-start one-click comparisons */}
-          <div className="hero-featured mt-16 flex flex-col items-center">
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30 mb-4">Try one-click research</p>
-            <div className="flex flex-wrap justify-center gap-3 max-w-3xl">
-              {quickStartComparisons.map((comp) => (
-                <button
-                  key={comp}
-                  type="button"
-                  onClick={() => handleQuickStart(comp)}
-                  className="quick-start-chip rounded-full border border-white/[0.06] bg-[#111] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/40 transition-all hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-400"
-                >
-                  {comp}
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* Starter comparisons */}
           <div className="mt-12 flex w-full max-w-5xl flex-col items-center rounded-sm border border-white/[0.08] bg-white/[0.025] px-4 py-7 shadow-[0_28px_80px_rgba(0,0,0,0.35)] sm:px-6 sm:py-8">
             <div className="mb-6 flex w-full flex-col items-start justify-between gap-2 sm:flex-row sm:items-end">
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/55">Starter comparisons</p>
-              <p className="text-xs text-white/35">Pick one and SideBy starts the research map.</p>
+              <p className="text-xs text-white/60">Pick one and SideBy starts the research map.</p>
             </div>
             <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {featuredComparisons.map((comp) => {
@@ -436,8 +266,8 @@ const Index = () => {
                     className="starter-card group relative min-h-[150px] overflow-hidden rounded-sm border border-white/[0.1] bg-[#11100e] p-5 text-left shadow-[0_14px_36px_rgba(0,0,0,0.28)] transition-all hover:-translate-y-1 hover:border-orange-500/35 hover:bg-[#1a110a] hover:shadow-[0_0_34px_rgba(234,88,12,0.1)]"
                   >
                     <div className="mb-3 flex items-center justify-between">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-orange-500/70">{comp.category}</span>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-white/35">Policy mapped</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-orange-400">{comp.category}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-white/60">Policy mapped</span>
                     </div>
                     <p className="font-serif text-lg text-[#fdfbf7] mb-2 group-hover:text-orange-400 transition-colors">
                       {comp.label}
@@ -537,7 +367,7 @@ const Index = () => {
                 <img src="/sideby.ico" alt="SideBy" className="h-7 w-7 object-contain rounded-sm" />
                 <span className="font-serif text-lg tracking-tight text-[#fdfbf7]">SideBy</span>
               </div>
-              <p className="text-sm text-white/40 max-w-sm leading-relaxed mb-6">
+              <p className="text-sm text-white/60 max-w-sm leading-relaxed mb-6">
                 The source-backed AI comparison engine. Every claim is linked to a primary source so you can verify the information and trust the output.
               </p>
             </div>
@@ -545,41 +375,41 @@ const Index = () => {
             <div>
               <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/80 mb-6">Product</h4>
               <ul className="space-y-4">
-                <li><Link to="/features" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Features</Link></li>
-                <li><Link to="/docs" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Documentation</Link></li>
-                <li><Link to="/app" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Workbench</Link></li>
-                <li><Link to="/pricing" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Pricing</Link></li>
+                <li><Link to="/features" className="text-sm text-white/60 hover:text-orange-400 transition-colors">Features</Link></li>
+                <li><Link to="/docs" className="text-sm text-white/60 hover:text-orange-400 transition-colors">Documentation</Link></li>
+                <li><Link to="/app" className="text-sm text-white/60 hover:text-orange-400 transition-colors">Workbench</Link></li>
+                <li><Link to="/pricing" className="text-sm text-white/60 hover:text-orange-400 transition-colors">Pricing</Link></li>
               </ul>
             </div>
             
             <div>
               <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/80 mb-6">Company</h4>
               <ul className="space-y-4">
-                <li><Link to="/about" className="text-sm text-white/40 hover:text-orange-400 transition-colors">About SnapSolve Ink</Link></li>
-                <li><Link to="/blog" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Blog</Link></li>
-                <li><Link to="/contact" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Contact Sales</Link></li>
-                <li><Link to="/legal/privacy" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Privacy Policy</Link></li>
-                <li><Link to="/legal/terms" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Terms of Service</Link></li>
-                <li><Link to="/legal/cookies" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Cookies Policy</Link></li>
-                <li><Link to="/legal/refund" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Refund Policy</Link></li>
-                <li><Link to="/legal/security" className="text-sm text-white/40 hover:text-orange-400 transition-colors">Security Overview</Link></li>
+                <li><Link to="/about" className="text-sm text-white/60 hover:text-orange-400 transition-colors">About SnapSolve Ink</Link></li>
+                <li><Link to="/blog" className="text-sm text-white/60 hover:text-orange-400 transition-colors">Blog</Link></li>
+                <li><Link to="/contact" className="text-sm text-white/60 hover:text-orange-400 transition-colors">Contact Sales</Link></li>
+                <li><Link to="/legal/privacy" className="text-sm text-white/60 hover:text-orange-400 transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/legal/terms" className="text-sm text-white/60 hover:text-orange-400 transition-colors">Terms of Service</Link></li>
+                <li><Link to="/legal/cookies" className="text-sm text-white/60 hover:text-orange-400 transition-colors">Cookies Policy</Link></li>
+                <li><Link to="/legal/refund" className="text-sm text-white/60 hover:text-orange-400 transition-colors">Refund Policy</Link></li>
+                <li><Link to="/legal/security" className="text-sm text-white/60 hover:text-orange-400 transition-colors">Security Overview</Link></li>
               </ul>
             </div>
           </div>
           
           <div className="border-t border-[#2a2a2a] pt-8 grid gap-4 md:grid-cols-3 md:items-center">
-            <p className="text-center text-xs text-white/30 md:text-left">
+            <p className="text-center text-xs text-white/60 md:text-left">
               &copy; {new Date().getFullYear()} SnapSolve Ink. All rights reserved.
             </p>
             <div className="flex justify-center">
               <BrandFooter />
             </div>
             <div className="flex items-center justify-center gap-6 md:justify-end">
-              <a href="#" className="text-white/30 hover:text-white transition-colors">
+              <a href="#" className="text-white/60 hover:text-white transition-colors">
                 <span className="sr-only">Twitter</span>
                 <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" /></svg>
               </a>
-              <a href="#" className="text-white/30 hover:text-white transition-colors">
+              <a href="#" className="text-white/60 hover:text-white transition-colors">
                 <span className="sr-only">GitHub</span>
                 <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" /></svg>
               </a>

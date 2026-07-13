@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Users, Mail, Shield, ShieldAlert, ShieldCheck, User, Trash2, Edit2, GitCompareArrows, Database } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -47,7 +47,7 @@ const TeamPage = () => {
       .from(".team-content", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.4");
   }, { scope: containerRef });
 
-  const loadTeam = async () => {
+  const loadTeam = useCallback(async () => {
     if (!activeWorkspace?.id) return;
     setTeamError(null);
     const response = await apiFetch(buildApiUrl(`/api/team?workspaceId=${activeWorkspace.id}`));
@@ -64,7 +64,7 @@ const TeamPage = () => {
       status: "invited" as const,
       joinedAt: invite.createdAt,
     })));
-  };
+  }, [activeWorkspace?.id]);
 
   useEffect(() => {
     void loadTeam().catch((error) => {
@@ -72,7 +72,7 @@ const TeamPage = () => {
       setInvitations([]);
       setTeamError(error instanceof Error ? error.message : "Unable to load team.");
     });
-  }, [activeWorkspace?.id]);
+  }, [loadTeam]);
 
   const directoryMembers = useMemo<TeamMember[]>(() => {
     if (!user?.email) return members;

@@ -40,8 +40,8 @@ export function checkEnvironment(): EnvCheck {
   }
 
   const optional: Array<[string, boolean]> = [
-    ["PADDLE_API_KEY", present(serverEnv.paddleApiKey)],
-    ["PADDLE_WEBHOOK_SECRET", present(serverEnv.paddleWebhookSecret)],
+    ["DODO_PAYMENTS_API_KEY", present(serverEnv.dodoApiKey)],
+    ["DODO_PAYMENTS_WEBHOOK_SECRET", present(serverEnv.dodoWebhookSecret)],
     ["SENTRY_DSN", present(serverEnv.sentryDsn)],
     ["POSTHOG_KEY or VITE_POSTHOG_KEY", present(serverEnv.posthogKey)],
     ["BLOB_READ_WRITE_TOKEN", present(serverEnv.blobReadWriteToken)],
@@ -59,13 +59,13 @@ export function checkEnvironment(): EnvCheck {
     if (production) missingRequired.push(message);
   }
 
-  const hasAnyPaddlePrice = Boolean(
-    process.env.PADDLE_PRO_PRICE_ID ||
-      process.env.PADDLE_TEAM_PRICE_ID ||
-      process.env.PADDLE_ENTERPRISE_PRICE_ID,
+  const hasAnyDodoProduct = Boolean(
+    process.env.DODO_PRO_PRODUCT_ID ||
+      process.env.DODO_TEAM_PRODUCT_ID ||
+      process.env.DODO_ENTERPRISE_PRODUCT_ID,
   );
-  if (present(serverEnv.paddleApiKey) && !hasAnyPaddlePrice) {
-    warnings.push("PADDLE_API_KEY is set but no PADDLE_*_PRICE_ID values are configured.");
+  if (present(serverEnv.dodoApiKey) && !hasAnyDodoProduct) {
+    warnings.push("DODO_PAYMENTS_API_KEY is set but no DODO_*_PRODUCT_ID values are configured.");
   }
 
   if (production && getRuntimeStoreKind() === "postgres") {

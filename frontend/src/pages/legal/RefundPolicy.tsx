@@ -24,7 +24,7 @@ const RefundPolicy = () => {
 
       <h2>3. Processing of Refunds</h2>
       <p>
-        Once approved, your refund will be processed through our merchant platform (Paddle) back to your original payment method. Please note the following timelines:
+        Once approved, your refund will be processed through our merchant platform (Dodo Payments) back to your original payment method. Please note the following timelines:
       </p>
       <ul>
         <li>Refund approvals are typically resolved within 2-3 business days.</li>

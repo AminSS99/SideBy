@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- provider and hook form one public workspace module. */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";

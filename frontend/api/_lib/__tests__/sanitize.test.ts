@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeLlmText, sanitizeLlmStringArray } from '../sanitize';
+import { sanitizeLlmText, sanitizeLlmStringArray } from '../sanitize.js';
 
 describe('sanitizeLlmText', () => {
   it('returns clean text unmodified', () => {

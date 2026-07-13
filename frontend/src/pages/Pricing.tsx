@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { GlowCard } from "@/components/GlowCard";
 import { MarketingNav } from "@/components/brand/MarketingNav";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const tiers = [
   {
@@ -13,7 +14,7 @@ const tiers = [
     annualPrice: "$0",
     description: "Perfect for testing the engine.",
     features: [
-      "10 AI comparisons per month",
+      "5 AI comparisons per day",
       "Standard execution speed",
       "Basic document research",
       "Public comparison links",
@@ -28,7 +29,7 @@ const tiers = [
     period: "/mo",
     description: "For professionals needing deeper research.",
     features: [
-      "500 AI comparisons per month",
+      "Unlimited AI comparisons",
       "Highest execution speed",
       "Advanced file uploads (PDF, CSV)",
       "Private & team links",
@@ -57,6 +58,7 @@ const tiers = [
 ];
 
 const Pricing = () => {
+  usePageTitle("Pricing");
   const pageRef = useRef<HTMLDivElement>(null);
   const [isAnnual, setIsAnnual] = useState(true);
 

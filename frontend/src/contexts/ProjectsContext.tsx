@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- provider and hook form one public projects module. */
 import React, {
   createContext,
   useCallback,

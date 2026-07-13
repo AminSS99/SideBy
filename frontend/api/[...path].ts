@@ -1,4 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { initServerSentry, Sentry } from "./_lib/sentry.js";
+
+// Initialize Sentry at module level
+initServerSentry();
 
 // Comparison routes
 import comparisonsIndex from "./_routes/comparisons/index.js";
@@ -19,7 +23,7 @@ import v1ComparisonsIdFollowups from "./_routes/v1/comparisons/[id]/followups.js
 
 // Webhook routes
 import webhooksClerk from "./_routes/webhooks/clerk.js";
-import webhooksPaddle from "./_routes/webhooks/paddle.js";
+import webhooksDodo from "./_routes/webhooks/dodo.js";
 import webhooksSubscriptions from "./_routes/webhooks/subscriptions.js";
 import webhooksSubscriptionsId from "./_routes/webhooks/subscriptions/[id].js";
 
@@ -68,6 +72,25 @@ async function loadKnowledgeHandler(): Promise<ApiHandler> {
 }
 
 export default async function handler(
+  request: VercelRequest,
+  response: VercelResponse,
+) {
+  try {
+    await routeRequest(request, response);
+  } catch (error) {
+    console.error("Unhandled API error:", error);
+    Sentry.captureException(error);
+    // Ensure all Sentry events are sent before lambdas exit
+    await Sentry.flush(2000);
+
+    return response.status(500).json({
+      error: "Internal Server Error",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+async function routeRequest(
   request: VercelRequest,
   response: VercelResponse,
 ) {
@@ -158,7 +181,7 @@ export default async function handler(
   // Webhooks
   if (segment0 === "webhooks") {
     if (segment1 === "clerk") return webhooksClerk(request, response);
-    if (segment1 === "paddle") return webhooksPaddle(request, response);
+    if (segment1 === "dodo") return webhooksDodo(request, response);
     if (segment1 === "subscriptions") {
       if (segment2) {
         request.query.id = segment2;

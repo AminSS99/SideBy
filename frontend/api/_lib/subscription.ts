@@ -18,6 +18,7 @@ export type SubscriptionFeature =
   | "refresh"
   | "export"
   | "watchlist"
+  | "chat"
   | "knowledgeUpload"
   | "team";
 
@@ -27,7 +28,7 @@ export type SubscriptionState = {
   status: "active" | "trialing" | "inactive" | "unknown";
   isUnlimited: boolean;
   billingConfigured: boolean;
-  billingProvider: "paddle" | "snapsolve" | "none";
+  billingProvider: "dodo" | "snapsolve" | "none";
   entitlement: {
     allowed: boolean;
     feature: string;
@@ -80,15 +81,23 @@ export function getPlanLimits(plan: BillingPlan): SubscriptionLimits {
   return getFreeLimits();
 }
 
+export function normalizePlan(productId?: string | null): BillingPlan {
+  if (!productId) return "free";
+  if (productId === process.env.DODO_PRO_PRODUCT_ID) return "pro";
+  if (productId === process.env.DODO_TEAM_PRODUCT_ID) return "team";
+  if (productId === process.env.DODO_ENTERPRISE_PRODUCT_ID) return "business";
+  return "free";
+}
+
 export function isBillingConfigured() {
-  const paddleReady = Boolean(
-    process.env.PADDLE_API_KEY &&
-      (process.env.PADDLE_PRO_PRICE_ID || process.env.PADDLE_TEAM_PRICE_ID || process.env.PADDLE_ENTERPRISE_PRICE_ID),
+  const dodoReady = Boolean(
+    process.env.DODO_PAYMENTS_API_KEY &&
+      (process.env.DODO_PRO_PRODUCT_ID || process.env.DODO_TEAM_PRODUCT_ID || process.env.DODO_ENTERPRISE_PRODUCT_ID),
   );
   const snapsolveReady = Boolean(process.env.SNAPSOLVE_CORE_URL && process.env.SNAPSOLVE_SIDEBY_SECRET);
   return {
-    billingConfigured: paddleReady || snapsolveReady,
-    billingProvider: paddleReady ? "paddle" as const : snapsolveReady ? "snapsolve" as const : "none" as const,
+    billingConfigured: dodoReady || snapsolveReady,
+    billingProvider: dodoReady ? "dodo" as const : snapsolveReady ? "snapsolve" as const : "none" as const,
   };
 }
 
@@ -231,7 +240,7 @@ async function resolveLocalState(userId: string, orgId: string | null): Promise<
   }
 
   const rows = await db
-    .select({ status: subscriptions.status })
+    .select({ status: subscriptions.status, planId: subscriptions.providerPlanId })
     .from(subscriptions)
     .where(
       and(
@@ -244,8 +253,9 @@ async function resolveLocalState(userId: string, orgId: string | null): Promise<
     .limit(1);
 
   if (rows.length > 0) {
+    const plan = normalizePlan(rows[0].planId);
     return buildState({
-      plan: "pro",
+      plan,
       source: "local_subscription",
       status: rows[0].status === "trialing" ? "trialing" : "active",
     });

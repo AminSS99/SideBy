@@ -523,11 +523,11 @@ export async function runComparisonJob(
 
     // Step 4: Generate dimensions
     const dimensions = await runDimensionStep(ctx, parsed);
-    await updateComparisonProgress(ctx, 60, 4);
+    await updateComparisonProgress(ctx, 60, 4, { dimensionsCount: dimensions.length });
 
     // Step 5: Extract facts
     const facts = await runFactStep(ctx, parsed, extracted, dimensions);
-    await updateComparisonProgress(ctx, 75, 4);
+    await updateComparisonProgress(ctx, 75, 4, { factsCount: facts.length });
 
     // Step 6: Score
     const scores = await runScoreStep(ctx, parsed, facts, dimensions);
@@ -614,6 +614,8 @@ export async function runComparisonJob(
         overallConfidence: String(overallConfidence),
         freshnessClass,
         queryEmbedding,
+        dimensionsCount: dimensions.length,
+        factsCount: facts.length,
       })
       .where(eq(comparisons.id, comparisonId));
 
@@ -1657,7 +1659,7 @@ function buildFallbackFact(
   const dimIdx = sentencesLower.findIndex((s) => s.includes(dimensionNeedle));
   const entIdx = sentencesLower.findIndex((s) => s.includes(entityNeedle));
 
-  const sentence =
+  let sentence =
     (dimIdx !== -1 ? sentences[dimIdx] : undefined) ||
     (entIdx !== -1 ? sentences[entIdx] : undefined);
 
@@ -2270,7 +2272,7 @@ async function buildPartialResult(
     const scoresByDimId = new Map<string, Map<string, number>>();
     for (const s of scores) {
       if (!scoresByDimId.has(s.dimensionId)) scoresByDimId.set(s.dimensionId, new Map());
-      scoresByDimId.get(s.dimensionId)!.set(s.entityId, s.score);
+      scoresByDimId.get(s.dimensionId)!.set(s.entityId, Number(s.score));
     }
 
     // Reverse lookup from name to id to match what partial build logic needs

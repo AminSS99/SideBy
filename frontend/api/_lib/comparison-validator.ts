@@ -32,6 +32,28 @@ export type ComparisonValidation = {
 };
 
 const CACHE_TTL_SECONDS = 300;
+const TECHNICAL_CATEGORIES = new Set<ComparisonCategory>([
+  "software",
+  "developer_tool",
+  "ai_tool",
+  "technical_standard",
+]);
+
+/**
+ * The taxonomy has already identified a concrete technical category before
+ * the model is called. Models can over-index on lexical similarity (for
+ * example, Astra vs Astro), so a non-sensitive technical pair should not be
+ * rejected solely because the model labelled it unrelated/similar-only.
+ */
+export function shouldAcceptTechnicalMismatch(
+  deterministic: ComparisonIntent,
+  result: z.infer<typeof AiValidationSchema>,
+): boolean {
+  return deterministic.canStart
+    && TECHNICAL_CATEGORIES.has(deterministic.category)
+    && !deterministic.signals.some((signal) => signal.severity === "block")
+    && (result.relation === "unrelated" || result.relation === "similar_only");
+}
 
 function normalizeQuery(query: string): string {
   return query.trim().toLowerCase().replace(/\s+/g, " ");
@@ -39,7 +61,7 @@ function normalizeQuery(query: string): string {
 
 function cacheKey(normalized: string): string {
   const hash = createHash("sha256").update(normalized).digest("hex").slice(0, 16);
-  return `validation:${hash}`;
+  return `validation:v2:${hash}`;
 }
 
 const FALLBACK_COUNTER_KEY = "validation:fallback_counter";
@@ -176,7 +198,10 @@ export async function validateComparisonQuery(query: string): Promise<Comparison
       { temperature: 0, maxTokens: 350, timeoutMs: 8000 },
     );
 
-    if (!result.data.comparable || result.data.relation !== "comparable") {
+    if (
+      (!result.data.comparable || result.data.relation !== "comparable")
+      && !shouldAcceptTechnicalMismatch(deterministic, result.data)
+    ) {
       const validation: ComparisonValidation = {
         intent: rejectedIntent(deterministic, result.data),
         relation: result.data.relation,
@@ -188,7 +213,9 @@ export async function validateComparisonQuery(query: string): Promise<Comparison
       return validation;
     }
 
-    const category = result.data.category === "unsupported"
+    const category = shouldAcceptTechnicalMismatch(deterministic, result.data)
+      ? deterministic.category
+      : result.data.category === "unsupported"
       ? deterministic.category
       : result.data.category as ComparisonCategory;
     const definition = getComparisonCategoryDefinition(category);
@@ -198,7 +225,9 @@ export async function validateComparisonQuery(query: string): Promise<Comparison
         category,
         label: definition.label,
         confidence: Math.max(deterministic.confidence, result.data.confidence),
-        message: result.data.reason,
+        message: shouldAcceptTechnicalMismatch(deterministic, result.data)
+          ? `Ready to compare ${deterministic.entityA} and ${deterministic.entityB} as ${definition.label.toLowerCase()}.`
+          : result.data.reason,
         suggestion: result.data.suggestedQuery || deterministic.suggestion,
         sourceRequirements: definition.sourceRequirements,
       },

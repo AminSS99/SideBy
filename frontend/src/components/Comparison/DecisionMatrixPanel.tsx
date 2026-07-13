@@ -10,6 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { ComparisonData } from "./types";
 import { panelClass } from "./constants";
 
+import { ScoreDetailDrawer } from "./ScoreDetailDrawer";
+
 type DecisionMatrixRecord = {
   id: string;
   name: string;
@@ -28,6 +30,9 @@ export const DecisionMatrixPanel = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const { session } = useAuth();
   
+  const [selectedDimension, setSelectedDimension] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
   // Weights state: maps dimension subject -> slider value (1-5)
   const [weights, setWeights] = useState<Record<string, number>>({});
   const [savedMatrices, setSavedMatrices] = useState<DecisionMatrixRecord[]>([]);
@@ -226,12 +231,29 @@ export const DecisionMatrixPanel = ({
             {result.dimensions.map((dim) => {
               const currentWeight = weights[dim.subject] ?? 3;
               return (
-                <div key={dim.subject} className="rounded-sm border border-[#1f1f1f] bg-[#0c0b0a] p-4 space-y-2">
+                <div
+                  key={dim.subject}
+                  className="rounded-sm border border-[#1f1f1f] bg-[#0c0b0a] p-4 space-y-2 hover:border-orange-500/35 hover:bg-[#1a110a] transition-all"
+                >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-[#fdfbf7]">{dim.subject}</span>
-                    <span className="text-xs font-mono font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
-                      w={currentWeight}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDimension(dim.subject);
+                          setIsDrawerOpen(true);
+                        }}
+                        aria-label={`View evidence for ${dim.subject}`}
+                        className="inline-flex items-center gap-1 rounded border border-[#333] px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-orange-500/35 hover:text-orange-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
+                      >
+                        <HelpCircle className="h-3 w-3" />
+                        Evidence
+                      </button>
+                      <span className="text-xs font-mono font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
+                        w={currentWeight}
+                      </span>
+                    </div>
                   </div>
                   
                   <div className="flex items-center gap-4">
@@ -243,6 +265,7 @@ export const DecisionMatrixPanel = ({
                       step="1"
                       value={currentWeight}
                       onChange={(e) => handleSliderChange(dim.subject, parseInt(e.target.value))}
+                      aria-label={`Importance of ${dim.subject}`}
                       className="w-full h-1 bg-[#1f1f1f] rounded-lg appearance-none cursor-pointer accent-orange-500"
                     />
                     <span className="text-[9px] font-bold text-[#fdfbf7]/30 uppercase tracking-widest shrink-0">Critical</span>
@@ -409,6 +432,13 @@ export const DecisionMatrixPanel = ({
           Made by SnapSolve Ink
         </a>
       </div>
+
+      <ScoreDetailDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        dimensionSubject={selectedDimension}
+        result={result}
+      />
     </div>
   );
 };

@@ -1,8 +1,6 @@
 const CACHE_NAME = "sideby-cache-v2";
 const ASSETS = [
   "/manifest.json",
-  "/favicon.ico",
-  "/favicon-48x48.png",
   "/icon-192.png",
   "/snapsolve-icon.png",
   "/icon.svg",

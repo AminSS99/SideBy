@@ -23,8 +23,9 @@ import { useProjects } from "@/contexts/ProjectsContext";
 import { captureEvent } from "@/lib/posthog";
 import { EmptyState } from "@/components/EmptyState";
 import { GlowCard } from "@/components/GlowCard";
-import { analyzeQueryIntent } from "@/lib/queryIntent";
+import { ComparisonComposer } from "@/components/ComparisonComposer";
 import { SUPPORTED_COMPARISON_CATEGORIES } from "@/lib/comparisonTaxonomy";
+
 
 type ComparisonStatus = "running" | "completed" | "failed";
 type ComparisonVisibility = "private" | "team" | "public";
@@ -61,7 +62,11 @@ type ComparisonJob = {
       b: { name: string };
     };
   } | null;
+  sourcesFound?: number;
+  factsExtracted?: number;
+  dimensionsScored?: number;
 };
+
 
 type FilterKey = "all" | ComparisonStatus | ComparisonVisibility;
 
@@ -111,14 +116,11 @@ const ComparisonsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [newComparison, setNewComparison] = useState("");
+  const [composerQuery, setComposerQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
   const [isCreating, setIsCreating] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
-  const newComparisonIntent = useMemo(
-    () => analyzeQueryIntent(newComparison),
-    [newComparison],
-  );
+
 
   const load = useCallback(async () => {
     try {
@@ -149,12 +151,7 @@ const ComparisonsPage = () => {
   useEffect(() => {
     const q = searchParams.get("q");
     if (q) {
-      setNewComparison(q);
-      // Auto-focus the input
-      const input = document.querySelector<HTMLInputElement>("input[placeholder*='Start:']");
-      if (input) {
-        input.focus();
-      }
+      setComposerQuery(q);
       // Clear the param so refresh doesn't re-trigger
       navigate("/app/comparisons", { replace: true });
     }
@@ -250,21 +247,7 @@ const ComparisonsPage = () => {
     }
   };
 
-  const startComparison = async (value = newComparison) => {
-    const clean = value.trim();
-    if (!clean) {
-      toast.error("Enter a comparison query first.");
-      return;
-    }
-
-    const intent = analyzeQueryIntent(clean);
-    if (!intent.canStart) {
-      toast.error("Comparison needs two concrete options.", {
-        description: intent.message,
-      });
-      return;
-    }
-
+  const startComparison = async (clean: string) => {
     try {
       setIsCreating(true);
       const res = await apiFetch(buildApiUrl("/api/comparisons"), {
@@ -284,7 +267,7 @@ const ComparisonsPage = () => {
       const job = (await res.json()) as ComparisonJob;
       const historyItem = jobToHistoryItem(job);
       setItems((current) => [historyItem, ...current.filter((item) => item.id !== job.id)]);
-      setNewComparison("");
+      setComposerQuery("");
       captureEvent("comparison_created_frontend", {
         query: clean,
         workspace_id: activeWorkspace?.id,
@@ -333,75 +316,13 @@ const ComparisonsPage = () => {
           </p>
         </div>
 
-        <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="hidden h-10 w-10 items-center justify-center rounded-sm bg-[#1a1a1a] text-orange-500 border border-[#333] sm:flex">
-              <GitCompareArrows className="h-4 w-4" />
-            </div>
-            <input
-              value={newComparison}
-              onChange={(event) => setNewComparison(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  void startComparison();
-                }
-              }}
-              placeholder="Start: Product A vs Product B"
-              className="h-10 min-w-0 bg-transparent px-3 text-sm text-[#fdfbf7] outline-none placeholder:text-[#fdfbf7]/30 sm:w-64"
-            />
-            <button
-              type="button"
-              onClick={() => void startComparison()}
-              disabled={isCreating || (Boolean(newComparison.trim()) && !newComparisonIntent.canStart)}
-              className="inline-flex h-10 items-center justify-center rounded-sm bg-[#fdfbf7] px-6 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] disabled:opacity-50"
-            >
-              {isCreating ? "Starting..." : "Start"}
-            </button>
-          </div>
-          {newComparison.trim() && (
-            <div className={[
-              "mt-3 rounded-sm border px-3 py-2 text-xs leading-relaxed",
-              newComparisonIntent.canStart
-                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200/80"
-                : "border-amber-500/25 bg-amber-500/10 text-amber-100/80",
-            ].join(" ")}>
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-[9px] font-bold uppercase tracking-widest">
-                  AI preflight - {Math.round(newComparisonIntent.confidence * 100)}%
-                </span>
-                {newComparisonIntent.categoryLabel && (
-                  <span className="text-[9px] uppercase tracking-widest opacity-70">
-                    {newComparisonIntent.categoryLabel}
-                  </span>
-                )}
-              </div>
-              <p className="mt-1">{newComparisonIntent.message}</p>
-              {newComparisonIntent.suggestion && (
-                <button
-                  type="button"
-                  onClick={() => setNewComparison(newComparisonIntent.suggestion || "")}
-                  className="mt-2 text-[10px] font-bold uppercase tracking-widest text-white/70 underline decoration-white/20 underline-offset-4 hover:text-white"
-                >
-                  Try: {newComparisonIntent.suggestion}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {examples.map((example) => (
-          <button
-            key={example}
-            type="button"
-            onClick={() => void startComparison(example)}
-            disabled={isCreating}
-            className="rounded-sm border border-[#333] bg-[#111] px-4 py-2 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 transition-all hover:border-orange-500/40 hover:bg-orange-500/10 hover:text-orange-400 disabled:opacity-40"
-          >
-            {example}
-          </button>
-        ))}
+        <ComparisonComposer
+          key={composerQuery}
+          initialQuery={composerQuery}
+          onStart={startComparison}
+          isCreating={isCreating}
+          className="w-full xl:max-w-xl shrink-0"
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -415,6 +336,8 @@ const ComparisonsPage = () => {
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#fdfbf7]/30" />
             <input
+              id="filter-comparisons-input"
+              aria-label="Search previous comparisons"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by query or entity"
@@ -503,9 +426,13 @@ const jobToHistoryItem = (job: ComparisonJob): ComparisonHistoryItem => ({
   sourceCount: job.result?.sourceCount || 0,
   progress: job.progress,
   updatedAt: new Date().toISOString(),
-  summary: job.result?.verdict.summary || null,
-  entityA: job.result?.entities.a.name || null,
-  entityB: job.result?.entities.b.name || null,
+  // The create endpoint can legitimately return an early, partial result
+  // while the asynchronous research job is still enriching it. The detail
+  // page fetches the complete job independently, so history construction
+  // must not prevent navigation when these optional preview fields are absent.
+  summary: job.result?.verdict?.summary || null,
+  entityA: job.result?.entities?.a?.name || null,
+  entityB: job.result?.entities?.b?.name || null,
   queryCategory: job.result?.taxonomy?.label || null,
   taxonomyStatus: job.result?.taxonomy?.status || null,
   safetyLevel: job.result?.taxonomy?.safetyLevel || null,

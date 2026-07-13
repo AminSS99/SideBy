@@ -135,7 +135,7 @@ const AuthPageShell = ({
                   <span className="block font-serif text-2xl tracking-tight text-[#fdfbf7] group-hover:text-orange-50 transition-colors">
                     {brand.productName}
                   </span>
-                  <span className="block text-[9px] uppercase tracking-[0.3em] text-[#fdfbf7]/40 mt-0.5">
+                  <span className="block text-[9px] uppercase tracking-[0.3em] text-[#fdfbf7]/60 mt-0.5">
                     Operated by {brand.companyName}
                   </span>
                 </div>

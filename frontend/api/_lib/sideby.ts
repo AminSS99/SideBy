@@ -40,6 +40,9 @@ export type ComparisonJob = {
     label: string;
     confidence: number | null;
   };
+  sourcesFound?: number;
+  factsExtracted?: number;
+  dimensionsScored?: number;
 };
 
 export type ComparisonActivityStep = {
@@ -716,6 +719,9 @@ export const getComparisonJob = async (
     failedStep,
     retryable: d.status === "failed",
     activity,
+    sourcesFound: d.sourceCount,
+    factsExtracted: d.factsCount,
+    dimensionsScored: d.dimensionsCount,
   };
 };
 

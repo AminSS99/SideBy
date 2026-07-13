@@ -32,37 +32,26 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes("node_modules")) {
-            if (id.includes("@clerk")) {
-              return "vendor-react-core";
-            }
-            if (id.includes("recharts") || id.includes("react-smooth") || id.includes("d3")) {
-              return "vendor-react-core";
-            }
-            if (id.includes("gsap")) {
-              return "vendor-gsap";
-            }
-            if (id.includes("framer-motion")) {
-              return "vendor-react-core";
-            }
-            if (id.includes("lucide-react")) {
-              return "vendor-react-core";
-            }
-            if (id.includes("@radix-ui") || id.includes("class-variance-authority")) {
-              return "vendor-react-core";
-            }
-            if (id.includes("@sentry")) {
-              return "vendor-react-core";
-            }
-            if (id.includes("@tanstack")) {
-              return "vendor-react-core";
-            }
-            if (id.includes("react") || id.includes("scheduler")) {
-              return "vendor-react-core";
-            }
-            return "vendor";
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("@clerk")) return "vendor-auth";
+          if (id.includes("gsap") || id.includes("framer-motion")) return "vendor-animation";
+          if (id.includes("lucide-react")) return "vendor-icons";
+          if (id.includes("@sentry")) return "vendor-observability";
+          if (id.includes("@tanstack")) return "vendor-data";
+          if (id.includes("recharts") || id.includes("d3-")) return "vendor-charts";
+          if (id.includes("posthog-js")) return "vendor-analytics";
+          if (
+            id.includes("@radix-ui") ||
+            id.includes("vaul") ||
+            id.includes("cmdk") ||
+            id.includes("embla-carousel-react") ||
+            id.includes("class-variance-authority")
+          ) {
+            return "vendor-ui";
           }
+          return undefined;
         },
+        onlyExplicitManualChunks: true,
       },
     },
   },

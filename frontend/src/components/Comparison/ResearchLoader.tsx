@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { panelClass } from "./constants";
 import { Terminal, Check } from "lucide-react";
 import type { ComparisonActivityStep, ResearchStep } from "./types";
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "framer-motion";
 
 interface ResearchLoaderProps {
   query: string;
@@ -12,7 +13,22 @@ interface ResearchLoaderProps {
   activeStep: number;
   steps: ResearchStep[];
   activity?: ComparisonActivityStep[];
+  sourcesFound?: number;
+  factsExtracted?: number;
+  dimensionsScored?: number;
 }
+
+const NumberTicker = ({ value, reducedMotion }: { value: number; reducedMotion: boolean }) => {
+  const motionValue = useMotionValue(0);
+  const springValue = useSpring(motionValue, { stiffness: 75, damping: 15 });
+  const rounded = useTransform(springValue, (latest) => Math.round(latest));
+
+  useEffect(() => {
+    motionValue.set(value);
+  }, [value, motionValue]);
+
+  return reducedMotion ? <span>{value}</span> : <motion.span>{rounded}</motion.span>;
+};
 
 const TERMINAL_LOGS = [
   "Initializing deep extraction subroutines...",
@@ -34,7 +50,11 @@ export const ResearchLoader = ({
   activeStep,
   steps,
   activity = [],
+  sourcesFound = 0,
+  factsExtracted = 0,
+  dimensionsScored = 0,
 }: ResearchLoaderProps) => {
+  const prefersReducedMotion = useReducedMotion() ?? false;
   const containerRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
@@ -67,8 +87,8 @@ export const ResearchLoader = ({
 
   // Auto-scroll terminal
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeLogs, liveLogs]);
+    terminalEndRef.current?.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth" });
+  }, [activeLogs, liveLogs, prefersReducedMotion]);
 
   const scanLineTweenRef = useRef<gsap.core.Tween | null>(null);
 
@@ -77,85 +97,104 @@ export const ResearchLoader = ({
     if (barRef.current) {
       gsap.to(barRef.current, {
         width: `${progress}%`,
-        duration: 0.8,
+        duration: prefersReducedMotion ? 0 : 0.8,
         ease: "power2.out",
       });
     }
 
     // Pulse glow effect
     if (glowRef.current) {
-      gsap.to(glowRef.current, {
-        opacity: 0.2 + (progress / 100) * 0.4,
-        scale: 1 + (progress / 100) * 0.15,
-        duration: 1,
-        ease: "power2.out",
-      });
+      if (prefersReducedMotion) {
+        gsap.set(glowRef.current, { opacity: 0.3, scale: 1 });
+      } else {
+        gsap.to(glowRef.current, {
+          opacity: 0.2 + (progress / 100) * 0.4,
+          scale: 1 + (progress / 100) * 0.15,
+          duration: 1,
+          ease: "power2.out",
+        });
+      }
     }
 
     // Scanning line effect over the entire container
     if (scanLineRef.current) {
-      if (scanLineTweenRef.current) {
-        scanLineTweenRef.current.kill();
-      }
-      scanLineTweenRef.current = gsap.fromTo(scanLineRef.current,
-        { top: "0%", opacity: 0 },
-        {
-          top: "100%",
-          opacity: 0.5,
-          duration: 3,
-          repeat: -1,
-          yoyo: true,
-          ease: "linear"
+      if (prefersReducedMotion) {
+        scanLineTweenRef.current?.kill();
+        gsap.set(scanLineRef.current, { opacity: 0 });
+      } else {
+        if (scanLineTweenRef.current) {
+          scanLineTweenRef.current.kill();
         }
-      );
+        scanLineTweenRef.current = gsap.fromTo(scanLineRef.current,
+          { top: "0%", opacity: 0 },
+          {
+            top: "100%",
+            opacity: 0.5,
+            duration: 3,
+            repeat: -1,
+            yoyo: true,
+            ease: "linear"
+          }
+        );
+      }
     }
 
     // Animate newly active steps
-    gsap.fromTo(`.step-${activeStep}`,
-      { opacity: 0.3, x: -10 },
-      { opacity: 1, x: 0, duration: 0.5, ease: "power2.out" }
-    );
-
-    // Animate newly completed check icon with springy back pop
-    if (activeStep > 0) {
-      gsap.fromTo(`.step-${activeStep - 1} .check-icon`,
-        { scale: 0, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.8)", clearProps: "transform" }
+    if (prefersReducedMotion) {
+      gsap.set(`.step-${activeStep}`, { opacity: 1, x: 0 });
+    } else {
+      gsap.fromTo(`.step-${activeStep}`,
+        { opacity: 0.3, x: -10 },
+        { opacity: 1, x: 0, duration: 0.5, ease: "power2.out" }
       );
     }
 
-    // Continuous rotation for HUD elements
-    gsap.to(".hud-ring-1", {
-      rotate: 360,
-      duration: 35,
-      repeat: -1,
-      ease: "none",
-      transformOrigin: "center center"
-    });
-    gsap.to(".hud-ring-2", {
-      rotate: -360,
-      duration: 25,
-      repeat: -1,
-      ease: "none",
-      transformOrigin: "center center"
-    });
-    gsap.to(".hud-ring-3", {
-      rotate: 180,
-      duration: 15,
-      repeat: -1,
-      yoyo: true,
-      ease: "sine.inOut",
-      transformOrigin: "center center"
-    });
-    gsap.to(".hud-axis", {
-      rotate: 360,
-      duration: 60,
-      repeat: -1,
-      ease: "none",
-      transformOrigin: "center center"
-    });
+    // Animate newly completed check icon with springy back pop
+    if (activeStep > 0) {
+      if (prefersReducedMotion) {
+        gsap.set(`.step-${activeStep - 1} .check-icon`, { scale: 1, opacity: 1 });
+      } else {
+        gsap.fromTo(`.step-${activeStep - 1} .check-icon`,
+          { scale: 0, opacity: 0 },
+          { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.8)", clearProps: "transform" }
+        );
+      }
+    }
 
-  }, [progress, activeStep]);
+    if (!prefersReducedMotion) {
+      // Continuous rotation for HUD elements
+      gsap.to(".hud-ring-1", {
+        rotate: 360,
+        duration: 35,
+        repeat: -1,
+        ease: "none",
+        transformOrigin: "center center"
+      });
+      gsap.to(".hud-ring-2", {
+        rotate: -360,
+        duration: 25,
+        repeat: -1,
+        ease: "none",
+        transformOrigin: "center center"
+      });
+      gsap.to(".hud-ring-3", {
+        rotate: 180,
+        duration: 15,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut",
+        transformOrigin: "center center"
+      });
+      gsap.to(".hud-axis", {
+        rotate: 360,
+        duration: 60,
+        repeat: -1,
+        ease: "none",
+        transformOrigin: "center center"
+      });
+    }
+
+  }, [progress, activeStep, prefersReducedMotion]);
 
   return (
     <div ref={containerRef} className={cn(panelClass, "relative overflow-hidden min-h-[600px] shadow-2xl flex flex-col")}>
@@ -187,7 +226,7 @@ export const ResearchLoader = ({
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500 mb-4 flex items-center gap-3">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
+                <span className={cn("absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75", !prefersReducedMotion && "animate-ping")} />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
               </span>
               Orchestration Active
@@ -211,6 +250,34 @@ export const ResearchLoader = ({
               className="h-full bg-gradient-to-r from-orange-600 to-orange-400 rounded-full"
               style={{ width: "0%" }}
             />
+          </div>
+        </div>
+
+        {/* Live counters ticker */}
+        <div className="mb-10 grid grid-cols-3 gap-4 max-w-xl mx-auto w-full">
+          <div className="rounded-sm border border-[#1f1f1f] bg-black/40 p-3 text-center">
+            <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1">
+              Sources Mapped
+            </span>
+            <span className="text-xl font-mono font-bold text-white">
+              <NumberTicker value={sourcesFound} reducedMotion={prefersReducedMotion} />
+            </span>
+          </div>
+          <div className="rounded-sm border border-[#1f1f1f] bg-black/40 p-3 text-center">
+            <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1">
+              Facts Extracted
+            </span>
+            <span className="text-xl font-mono font-bold text-white">
+              <NumberTicker value={factsExtracted} reducedMotion={prefersReducedMotion} />
+            </span>
+          </div>
+          <div className="rounded-sm border border-[#1f1f1f] bg-black/40 p-3 text-center">
+            <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1">
+              Dimensions Scored
+            </span>
+            <span className="text-xl font-mono font-bold text-white">
+              <NumberTicker value={dimensionsScored} reducedMotion={prefersReducedMotion} />
+            </span>
           </div>
         </div>
 
@@ -254,7 +321,7 @@ export const ResearchLoader = ({
                   )}
                 </div>
                 {isActive && (
-                  <span className="text-orange-500 animate-pulse text-lg">
+                  <span className={cn("text-orange-500 text-lg", !prefersReducedMotion && "animate-pulse")}>
                     ▍
                   </span>
                 )}
@@ -293,11 +360,11 @@ export const ResearchLoader = ({
               )}>
                 {log.status}
               </span>
-              <TypewriterText text={log.message} />
+              <TypewriterText text={log.message} reducedMotion={prefersReducedMotion} />
             </div>
           ))}
           <div ref={terminalEndRef} className="h-2 flex items-center gap-2">
-            <span className="text-emerald-500 animate-pulse">_</span>
+            <span className={cn("text-emerald-500", !prefersReducedMotion && "animate-pulse")}>_</span>
           </div>
         </div>
       </div>
@@ -305,10 +372,15 @@ export const ResearchLoader = ({
   );
 };
 
-const TypewriterText = ({ text, speed = 10 }: { text: string; speed?: number }) => {
+const TypewriterText = ({ text, speed = 10, reducedMotion = false }: { text: string; speed?: number; reducedMotion?: boolean }) => {
   const [displayedText, setDisplayedText] = useState("");
 
   useEffect(() => {
+    if (reducedMotion) {
+      setDisplayedText(text);
+      return;
+    }
+
     setDisplayedText("");
     let index = 0;
     const interval = setInterval(() => {
@@ -320,7 +392,7 @@ const TypewriterText = ({ text, speed = 10 }: { text: string; speed?: number }) 
     }, speed);
 
     return () => clearInterval(interval);
-  }, [text, speed]);
+  }, [text, speed, reducedMotion]);
 
-  return <span>{displayedText}</span>;
+  return <span>{reducedMotion ? text : displayedText}</span>;
 };

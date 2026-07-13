@@ -4,8 +4,10 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { BrandFooter } from "@/components/brand/BrandFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const About = () => {
+  usePageTitle("About");
   const pageRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {

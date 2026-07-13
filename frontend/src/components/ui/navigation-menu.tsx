@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- navigation context helpers belong with the menu primitives. */
 import * as React from "react";
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu";
 import { cva } from "class-variance-authority";

@@ -34,14 +34,28 @@ jobs:
         working-directory: frontend
         run: pnpm exec tsc --noEmit
 
+      - name: API type check
+        working-directory: frontend
+        run: pnpm typecheck:api
+
       - name: Lint
         working-directory: frontend
         run: pnpm lint
 
       - name: Test
         working-directory: frontend
-        run: pnpm exec vitest run
+        run: pnpm test
 
       - name: Build
         working-directory: frontend
         run: pnpm build
+
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser smoke tests
+        working-directory: frontend
+        env:
+          SMOKE_ORIGIN: https://sideby.ink
+        run: pnpm test:e2e

@@ -5,6 +5,7 @@ import { useGSAP } from "@gsap/react";
 import { Book, Code, Key, Zap, Layers, FileSearch, Search, ShieldCheck } from "lucide-react";
 import { BrandFooter } from "@/components/brand/BrandFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const docCategories = [
   {
@@ -52,6 +53,7 @@ const docCategories = [
 ];
 
 const Docs = () => {
+  usePageTitle("Docs");
   const pageRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {

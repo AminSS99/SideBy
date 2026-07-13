@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- provider and hook form one public auth module. */
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { useClerk, useUser } from "@clerk/clerk-react";
 import { envConfig } from "@/config/env";

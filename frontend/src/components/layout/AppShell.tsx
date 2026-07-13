@@ -118,7 +118,7 @@ const AppShell = () => {
                 <span className="font-serif text-lg tracking-tight text-white group-hover:text-orange-50 transition-colors">
                   {brand.productName}
                 </span>
-                <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.24em] text-white/35">
+                <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.24em] text-white/60">
                   Operated by {brand.companyName}
                 </p>
               </div>
@@ -141,7 +141,7 @@ const AppShell = () => {
               <p className="text-sm font-semibold text-white">
                 {user?.email ?? "Guest"}
               </p>
-              <p className="truncate text-xs text-white/40">
+              <p className="truncate text-xs text-white/60">
                 {workspaceLoading
                   ? "Loading workspace..."
                   : activeWorkspace?.name || brand.operatedByLine}
@@ -193,7 +193,7 @@ const AppShell = () => {
             <div className="pt-4 mt-2">
               <button
                 onClick={() => setAdvancedOpen(!advancedOpen)}
-                className="flex w-full items-center justify-between rounded-sm px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-white/30 hover:text-white/50 transition-colors"
+                className="flex w-full items-center justify-between rounded-sm px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-white/60 hover:text-white/80 transition-colors"
               >
                 <span>Advanced</span>
                 <ChevronDown className={`h-3 w-3 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
@@ -309,7 +309,7 @@ const AppShell = () => {
                   <div className="pt-3 mt-2">
                     <button
                       onClick={() => setAdvancedOpen(!advancedOpen)}
-                      className="flex w-full items-center justify-between rounded-sm px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-white/30 hover:text-white/50 transition-colors"
+                      className="flex w-full items-center justify-between rounded-sm px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-white/60 hover:text-white/80 transition-colors"
                     >
                       <span>Advanced</span>
                       <ChevronDown className={`h-3 w-3 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />

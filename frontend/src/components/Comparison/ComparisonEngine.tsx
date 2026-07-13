@@ -21,3 +21,5 @@ export * from "./DecisionIntelligencePanel";
 export * from "./VersionHistoryUI";
 export * from "./DecisionMatrixPanel";
 export * from "./WatchlistPanel";
+export * from "./ScoreDetailDrawer";
+export * from "./StickyDecisionBar";

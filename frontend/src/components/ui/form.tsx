@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- form context helpers belong with the form primitives. */
 import * as React from "react";
 import * as LabelPrimitive from "@radix-ui/react-label";
 import { Slot } from "@radix-ui/react-slot";

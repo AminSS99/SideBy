@@ -24,6 +24,22 @@ const SignIn = () => {
       footerHref="/auth/sign-up"
     >
       <div className="space-y-6">
+        {envConfig.canUseTestAuth && (
+          <div className="rounded border border-orange-500/30 bg-orange-500/10 p-4 text-center">
+            <p className="text-orange-400 text-xs font-semibold uppercase tracking-wider mb-2">Test Environment</p>
+            <button
+              id="test-auth-btn"
+              onClick={() => {
+                localStorage.setItem("sideby.test.auth", "true");
+                window.location.href = redirectUrl;
+              }}
+              className="w-full py-2 px-4 bg-[#fdfbf7] hover:bg-[#e0e0e0] text-[#0a0a0a] rounded font-bold transition-colors text-xs uppercase tracking-wider"
+            >
+              Sign in with Mock Account
+            </button>
+          </div>
+        )}
+
         {!envConfig.hasClerkConfig ? (
           <div className="rounded-sm border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-500">
             <div className="flex items-start gap-3">

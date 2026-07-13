@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- variant factory is intentionally co-located with its primitive. */
 import * as React from "react";
 import * as TogglePrimitive from "@radix-ui/react-toggle";
 import { cva, type VariantProps } from "class-variance-authority";

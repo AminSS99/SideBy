@@ -20,7 +20,7 @@ type UsageStatus = {
   subscription?: {
     source: string;
     status: string;
-    billingProvider: "paddle" | "snapsolve" | "none";
+    billingProvider: "dodo" | "snapsolve" | "none";
     entitlement: {
       allowed: boolean;
       feature: string;
@@ -85,13 +85,12 @@ const BillingPage = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           plan,
-          returnUrl: window.location.href,
         }),
       });
       const data = (await response.json()) as { checkoutUrl?: string | null };
       if (!data.checkoutUrl) {
         toast.error("Checkout is not available yet.", {
-          description: "Check your Paddle price configuration.",
+          description: "Check your Dodo Payments product configuration.",
         });
         return;
       }
@@ -349,7 +348,7 @@ const BillingPage = () => {
         </div>
       </div>
 
-      <div className="mt-12 pt-6 border-t border-[#1f1f1f] text-center text-xs text-[#fdfbf7]/30">
+      <div className="mt-12 pt-6 border-t border-[#1f1f1f] text-center text-xs text-[#fdfbf7]/60">
         <a href="https://snapsolve.ink" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
           Made by SnapSolve Ink
         </a>

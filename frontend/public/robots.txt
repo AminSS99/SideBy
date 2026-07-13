@@ -1,11 +1,9 @@
 User-agent: Googlebot
 Allow: /
-Allow: /favicon.ico
 Allow: /icon.svg
 
 User-agent: Googlebot-Image
 Allow: /
-Allow: /favicon.ico
 Allow: /icon.svg
 
 User-agent: Bingbot

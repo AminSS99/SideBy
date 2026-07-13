@@ -49,7 +49,11 @@ const shouldBlockClerkTestKey =
 const clerkPublishableKey =
   shouldBlockClerkTestKey || isMalformedClerkKey ? "" : rawClerkPublishableKey;
 const hasClerkConfig = clerkPublishableKey.length > 0;
-const canUseTestAuth = !isProductionBuild;
+const canUseTestAuth =
+  !isProductionBuild ||
+  (typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1"));
 
 export const envConfig = {
   apiBaseUrl,

@@ -92,7 +92,7 @@ export const users = pgTable(
     email: text("email"),
     name: text("name"),
     avatarUrl: text("avatar_url"),
-    paddleCustomerId: text("paddle_customer_id"),
+    providerCustomerId: text("provider_customer_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -108,7 +108,7 @@ export const organizations = pgTable(
     slug: text("slug").notNull().unique(),
     name: text("name"),
     plan: planEnum("plan").default("free").notNull(),
-    paddleCustomerId: text("paddle_customer_id"),
+    providerCustomerId: text("provider_customer_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -204,6 +204,8 @@ export const comparisons = pgTable(
     progress: integer("progress").default(0).notNull(),
     activeStep: integer("active_step").default(0).notNull(),
     sourceCount: integer("source_count").default(0).notNull(),
+    factsCount: integer("facts_count").default(0).notNull(),
+    dimensionsCount: integer("dimensions_count").default(0).notNull(),
     overallConfidence: numeric("overall_confidence", { precision: 4, scale: 3 }),
     result: jsonb("result"),
     errorMessage: text("error_message"),
@@ -585,8 +587,8 @@ export const subscriptions = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     organizationId: text("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
     userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
-    paddleSubscriptionId: text("paddle_subscription_id").notNull().unique(),
-    paddlePlanId: text("paddle_plan_id").notNull(),
+    providerSubscriptionId: text("provider_subscription_id").notNull().unique(),
+    providerPlanId: text("provider_plan_id").notNull(),
     status: subscriptionStatusEnum("status").default("trialing").notNull(),
     currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
@@ -597,7 +599,7 @@ export const subscriptions = pgTable(
   (table) => [
     index("subscriptions_org_idx").on(table.organizationId),
     index("subscriptions_user_idx").on(table.userId),
-    index("subscriptions_paddle_idx").on(table.paddleSubscriptionId),
+    index("subscriptions_provider_idx").on(table.providerSubscriptionId),
   ],
 );
 
@@ -777,7 +779,7 @@ export const webhookEvents = pgTable(
   "webhook_events",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    provider: text("provider").notNull(), // clerk, paddle
+    provider: text("provider").notNull(), // clerk, dodo
     eventType: text("event_type").notNull(),
     payload: jsonb("payload"),
     signatureValid: boolean("signature_valid").default(false),

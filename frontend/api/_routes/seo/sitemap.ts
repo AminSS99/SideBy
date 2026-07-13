@@ -1,7 +1,7 @@
 import { eq, desc } from "drizzle-orm";
 import { createDbClient } from "../../../src/db/index.js";
 import { comparisons } from "../../../src/db/schema.js";
-import { logger } from "../../../_lib/log.js";
+import { logger } from "../../_lib/log.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
