@@ -11,7 +11,7 @@ export function initServerSentry() {
     return;
   }
 
-  Sentry.init({
+  const options: Sentry.NodeOptions = {
     dsn,
     environment: process.env.NODE_ENV || "development",
     tracesSampleRate: process.env.VERCEL === "1" ? 0.1 : 1.0,
@@ -27,7 +27,9 @@ export function initServerSentry() {
       }
       return event;
     },
-  });
+  };
+
+  Sentry.init(options);
 }
 
 export { Sentry };
