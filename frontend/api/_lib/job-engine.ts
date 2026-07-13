@@ -1608,70 +1608,62 @@ function ensureFactCoverage(
   const hasFact = (entity: string, dimension: string) =>
     existingFacts.has(`${entity.toLowerCase()}|${dimension.toLowerCase()}`);
 
-  const extractedLower = extracted.map((item) => ({
-    ...item,
-    entityNameLower: item.entityName.toLowerCase(),
-    titleLower: item.title.toLowerCase(),
-    markdownLower: item.markdown.toLowerCase(),
-  }));
+  const extractedProcessed = extracted.map((item) => {
+    const sentences = item.markdown
+      .replace(/\s+/g, " ")
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => sentence.trim())
+      .filter((sentence) => sentence.length > 40);
+
+    return {
+      ...item,
+      entityNameLower: item.entityName.toLowerCase(),
+      titleLower: item.title.toLowerCase(),
+      markdownLower: item.markdown.toLowerCase(),
+      sentences,
+      sentencesLower: sentences.map((s) => s.toLowerCase()),
+    };
+  });
 
   for (const entity of parsed.entities.slice(0, 2)) {
+    const entityNeedle = entity.name.toLowerCase();
+
+    // Optimize: Find the most relevant source for the entity outside the dimension loop
+    const sourceData =
+      extractedProcessed.find((item) => item.entityNameLower === entityNeedle) ||
+      extractedProcessed.find((item) => item.titleLower.includes(entityNeedle)) ||
+      extractedProcessed.find((item) => item.markdownLower.includes(entityNeedle));
+
+    if (!sourceData) continue;
+
     for (const dimension of dimensions) {
       if (hasFact(entity.name, dimension.name)) continue;
-      const fallback = buildFallbackFact(entity.name, dimension.name, extracted, extractedLower);
-      if (fallback) {
-        completeFacts.push(fallback);
-        existingFacts.add(`${entity.name.toLowerCase()}|${dimension.name.toLowerCase()}`);
+
+      const dimensionNeedle = dimension.name.toLowerCase().split(/\s+/)[0] || "";
+
+      const dimIdx = sourceData.sentencesLower.findIndex((s) => s.includes(dimensionNeedle));
+      const entIdx = sourceData.sentencesLower.findIndex((s) => s.includes(entityNeedle));
+
+      let sentence =
+        (dimIdx !== -1 ? sourceData.sentences[dimIdx] : undefined) ||
+        (entIdx !== -1 ? sourceData.sentences[entIdx] : undefined);
+
+      sentence = sentence || sourceData.sentences[0] || sourceData.markdown.replace(/\s+/g, " ").trim().slice(0, 240);
+
+      if (sentence) {
+        completeFacts.push({
+          entity: entity.name,
+          dimension: dimension.name,
+          value: sentence.slice(0, 420),
+          confidence: 0.55,
+          citation: sourceData.url,
+        });
+        existingFacts.add(`${entityNeedle}|${dimension.name.toLowerCase()}`);
       }
     }
   }
 
   return completeFacts;
-}
-
-function buildFallbackFact(
-  entityName: string,
-  dimensionName: string,
-  extracted: ExtractedSource[],
-  extractedLower: Array<ExtractedSource & { entityNameLower: string; titleLower: string; markdownLower: string; }>
-): ExtractedFact | null {
-  const entityNeedle = entityName.toLowerCase();
-  const dimensionNeedle = dimensionName.toLowerCase().split(/\s+/)[0] || "";
-
-  const sourceLower =
-    extractedLower.find((item) => item.entityNameLower === entityNeedle) ||
-    extractedLower.find((item) => item.titleLower.includes(entityNeedle)) ||
-    extractedLower.find((item) => item.markdownLower.includes(entityNeedle));
-
-  const source = sourceLower ? extracted.find((s) => s.url === sourceLower.url) : null;
-
-  if (!source) return null;
-
-  const sentences = source.markdown
-    .replace(/\s+/g, " ")
-    .split(/(?<=[.!?])\s+/)
-    .map((sentence) => sentence.trim())
-    .filter((sentence) => sentence.length > 40);
-
-  const sentencesLower = sentences.map((s) => s.toLowerCase());
-  const dimIdx = sentencesLower.findIndex((s) => s.includes(dimensionNeedle));
-  const entIdx = sentencesLower.findIndex((s) => s.includes(entityNeedle));
-
-  const sentence =
-    (dimIdx !== -1 ? sentences[dimIdx] : undefined) ||
-    (entIdx !== -1 ? sentences[entIdx] : undefined);
-
-  sentence = sentence || sentences[0] || source.markdown.replace(/\s+/g, " ").trim().slice(0, 240);
-
-  if (!sentence) return null;
-
-  return {
-    entity: entityName,
-    dimension: dimensionName,
-    value: sentence.slice(0, 420),
-    confidence: 0.55,
-    citation: source.url,
-  };
 }
 
 async function getReusableFactCounts(
