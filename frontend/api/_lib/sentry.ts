@@ -11,7 +11,7 @@ export function initServerSentry() {
     return;
   }
 
-  const options: Sentry.NodeOptions = {
+  const options = {
     dsn,
     environment: process.env.NODE_ENV || "development",
     tracesSampleRate: process.env.VERCEL === "1" ? 0.1 : 1.0,
@@ -29,7 +29,9 @@ export function initServerSentry() {
     },
   };
 
-  Sentry.init(options);
+  // Vercel's function compiler narrows Sentry.init to BaseNodeOptions even
+  // though the Node SDK accepts the standard DSN-bearing NodeOptions at runtime.
+  Sentry.init(options as unknown as Parameters<typeof Sentry.init>[0]);
 }
 
 export { Sentry };

@@ -60,8 +60,9 @@ backend/src/main/resources/application-*.properties
 # Shadcn UI components (can be regenerated)
 frontend/src/components/ui/
 
-# Hooks (standard utility hooks)
-frontend/src/hooks/
+# Local, unused hook experiments. Application hooks must be committed.
+frontend/src/hooks/useComparisonEngine.ts
+frontend/src/hooks/useScrollReveal.ts
 
 # Lock files (regenerated on install)
 frontend/package-lock.json
