@@ -140,6 +140,30 @@ const isRecentSource = (source: ComparisonSource) => {
 const sourceKey = (source: Pick<ComparisonSource, "url" | "title">) =>
   `${source.url || "source"}:${source.title || ""}`;
 
+const sourceQualityWeight = (source: ComparisonSource) => {
+  const reliability = sourceReliability(source);
+  if (isOfficialSource(source)) return 1;
+  if (reliability.includes("review") || reliability.includes("analysis")) return 0.72;
+  if (reliability.includes("community")) return 0.52;
+  return 0.6;
+};
+
+const sourceQualitySummary = (sources: ComparisonSource[]) => {
+  if (sources.length === 0) return { score: 0, official: 0, recent: 0 };
+
+  const score = sources.reduce((total, source) => {
+    const evidenceConfidence = source.confidence ?? 0.75;
+    const freshnessWeight = isRecentSource(source) ? 1 : 0.85;
+    return total + sourceQualityWeight(source) * evidenceConfidence * freshnessWeight;
+  }, 0) / sources.length;
+
+  return {
+    score: Math.round(score * 100),
+    official: Math.round((sources.filter(isOfficialSource).length / sources.length) * 100),
+    recent: Math.round((sources.filter(isRecentSource).length / sources.length) * 100),
+  };
+};
+
 export const DecisionIntelligencePanel = ({
   result,
   activity = [],
@@ -945,6 +969,7 @@ const StatusBadge = ({ status }: { status: string }) => (
 
 const SourceQualityPanel = ({ result }: { result: ComparisonData }) => {
   const [mode, setMode] = useState<"balanced" | "official" | "recent" | "community" | "contradictions">("balanced");
+  const quality = useMemo(() => sourceQualitySummary(result.sources), [result.sources]);
   const sources = useMemo(() => {
     if (mode === "balanced") return result.sources;
     if (mode === "official") return result.sources.filter(isOfficialSource);
@@ -956,6 +981,19 @@ const SourceQualityPanel = ({ result }: { result: ComparisonData }) => {
   return (
     <section id="source-quality" className={cn(panelClass, "p-6 md:p-8 scroll-mt-28")}>
       <SectionHeader icon={BookOpenCheck} eyebrow="Source quality mode" title="Trust filters" />
+
+      <div className="mb-5 grid grid-cols-3 gap-2">
+        {[
+          { label: "Quality", value: quality.score ? `${quality.score}/100` : "—" },
+          { label: "Official", value: `${quality.official}%` },
+          { label: "Fresh ≤30d", value: `${quality.recent}%` },
+        ].map((metric) => (
+          <div key={metric.label} className="rounded-sm border border-[#2a2a2a] bg-[#111] p-3">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">{metric.label}</p>
+            <p className="mt-1 text-sm font-semibold text-[#fdfbf7]">{metric.value}</p>
+          </div>
+        ))}
+      </div>
 
       <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {(["balanced", "official", "recent", "community", "contradictions"] as const).map((item) => (

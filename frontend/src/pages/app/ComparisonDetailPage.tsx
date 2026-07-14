@@ -13,6 +13,7 @@ import {
   XCircle,
   AlertTriangle,
   Clock,
+  GitCompare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -58,6 +59,21 @@ type ComparisonJob = {
   dimensionsScored?: number;
 };
 
+type VersionChangeSummary = {
+  diff?: {
+    scores?: unknown[];
+    facts?: { added?: unknown[]; removed?: unknown[] };
+  };
+  alert?: { message?: string } | null;
+};
+
+type ComparisonVersion = {
+  id: string;
+  versionNumber: number;
+  changeSummary: VersionChangeSummary;
+  createdAt: string;
+};
+
 const ComparisonDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -97,6 +113,27 @@ const ComparisonDetailPage = () => {
 
   const job = comparisonQuery.data;
   const result = viewedHistoricalResult || job?.result;
+  const versionsQuery = useQuery({
+    queryKey: ["comparison-latest-change", id],
+    queryFn: async () => {
+      const res = await apiFetch(buildApiUrl(`/api/comparisons/${id}/versions`));
+      if (!res.ok) throw new Error("Unable to load comparison history.");
+      const data = (await res.json()) as { versions: ComparisonVersion[] };
+      return data.versions;
+    },
+    enabled: Boolean(id && job?.status === "completed"),
+    staleTime: 30_000,
+  });
+  const latestRefreshChange = useMemo(() => {
+    const versions = versionsQuery.data || [];
+    if (versions.length < 2) return null;
+    const latest = versions[versions.length - 1];
+    const scores = latest.changeSummary?.diff?.scores?.length || 0;
+    const addedFacts = latest.changeSummary?.diff?.facts?.added?.length || 0;
+    const removedFacts = latest.changeSummary?.diff?.facts?.removed?.length || 0;
+    if (scores === 0 && addedFacts === 0 && removedFacts === 0 && !latest.changeSummary?.alert) return null;
+    return { versionNumber: latest.versionNumber, scores, addedFacts, removedFacts, alert: latest.changeSummary?.alert };
+  }, [versionsQuery.data]);
   const latestActivityError = useMemo(() => {
     return job?.activity?.find((step) => step.status === "failed" && step.error)?.error ?? null;
   }, [job?.activity]);
@@ -450,6 +487,23 @@ const ComparisonDetailPage = () => {
             Return to latest
           </button>
         </div>
+      )}
+
+      {!viewedHistoricalResult && latestRefreshChange && (
+        <button
+          type="button"
+          onClick={() => setIsVersionsOpen(true)}
+          className="flex w-full items-start gap-3 rounded-3xl border border-emerald-500/25 bg-emerald-500/5 p-4 text-left transition-colors hover:border-emerald-400/45 hover:bg-emerald-500/10"
+        >
+          <GitCompare className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
+          <span>
+            <span className="block text-sm font-bold text-white">What changed since the last refresh</span>
+            <span className="mt-1 block text-xs leading-relaxed text-white/60">
+              V{latestRefreshChange.versionNumber}: {latestRefreshChange.scores} score change{latestRefreshChange.scores === 1 ? "" : "s"}, {latestRefreshChange.addedFacts} fact{latestRefreshChange.addedFacts === 1 ? "" : "s"} added, and {latestRefreshChange.removedFacts} removed.
+              {latestRefreshChange.alert?.message ? ` ${latestRefreshChange.alert.message}` : ""}
+            </span>
+          </span>
+        </button>
       )}
 
       {comparisonQuery.isLoading ? (

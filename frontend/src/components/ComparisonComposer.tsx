@@ -20,6 +20,14 @@ const SUGGESTIONS = [
   "Notion vs Linear for project management",
 ];
 
+const COMPARISON_TEMPLATES = [
+  { label: "BaaS", context: "a production BaaS" },
+  { label: "Hosting", context: "hosting a web application" },
+  { label: "AI tools", context: "an AI workflow" },
+  { label: "Laptops", context: "software development" },
+  { label: "Cities", context: "remote work" },
+];
+
 export function ComparisonComposer({
   onStart,
   isCreating = false,
@@ -132,6 +140,35 @@ export function ComparisonComposer({
             </button>
           </div>
         )}
+
+        <div className="border-t border-[#1f1f1f] pt-4">
+          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.2em] text-[#fdfbf7]/55">
+            Comparison template
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {COMPARISON_TEMPLATES.map((template) => {
+              const isSelected = context.trim().toLowerCase() === template.context.toLowerCase();
+              return (
+                <button
+                  key={template.label}
+                  type="button"
+                  onClick={() => {
+                    setContext(template.context);
+                    setShowContextInput(true);
+                  }}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors",
+                    isSelected
+                      ? "border-orange-500/50 bg-orange-500/10 text-orange-300"
+                      : "border-[#2a2a2a] bg-black/40 text-[#fdfbf7]/60 hover:border-orange-500/30 hover:text-orange-300",
+                  )}
+                >
+                  {template.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Validation / Preflight Feedback Banner */}
         {serializedQuery.trim().length > 0 && (
