@@ -23,6 +23,7 @@ const AiValidationSchema = z.object({
   confidence: z.number().min(0).max(1),
   sameEntity: z.boolean(),
   entityResolutionConfidence: z.number().min(0).max(1),
+  canonicalEntity: z.string().min(1).max(120).nullable(),
   reason: z.string().min(1).max(280),
   suggestedQuery: z.string().max(180).nullable(),
 });
@@ -182,6 +183,7 @@ const sameEntityIntent = (
   canStart: false,
   safetyLevel: "blocked",
   confidence: Math.max(base.confidence, result.entityResolutionConfidence),
+  resolvedEntity: result.canonicalEntity || base.resolvedEntity || base.entityA || undefined,
   message: "These names resolve to the same option. Choose two distinct products, projects, plans, versions, or regions to compare.",
   suggestion: `${base.entityA || "Option A"} vs another option for your use case`,
   policyNote: "Duplicate entity",
@@ -230,6 +232,7 @@ export async function validateComparisonQuery(query: string): Promise<Comparison
             "Software projects, frameworks, products, services, methods, standards, places, courses, and roles can be comparable when they serve a shared choice.",
             "Reject unrelated concepts, merely similar terms, political subjects, people, protected groups, and personal attributes or human qualities.",
             "First resolve identity using the supplied search evidence. Set sameEntity=true only when both inputs refer to the exact same real option, including spelling variants, repeated letters, alternate casing, or a common brand alias.",
+            "When sameEntity=true, canonicalEntity must be the common official product or project name; otherwise set canonicalEntity to null.",
             "Do not set sameEntity for distinct projects that merely have similar names (for example Astra and Astro), or when the evidence is insufficient to establish identity.",
             "Do not reject an unfamiliar but plausible new product solely because search evidence is sparse.",
             "Do not rank politicians, parties, ideologies, religions, people, appearance, intelligence, personality, or morality.",

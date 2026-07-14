@@ -181,6 +181,12 @@ export function ComparisonComposer({
                   : queryIntent.message}
             </p>
 
+            {isBlocked && queryIntent.resolvedEntity && !isValidating && !isIncomplete && (
+              <p className="mt-3 inline-flex items-center rounded-md border border-orange-500/20 bg-orange-500/[0.06] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-orange-200">
+                Resolved identity: {queryIntent.resolvedEntity}
+              </p>
+            )}
+
             {/* Blocked or Warning Suggesion chip */}
             {queryIntent.suggestion && !isValidating && !isIncomplete && (
               <button

@@ -37,6 +37,7 @@ describe("comparison taxonomy eligibility", () => {
     expect(intent.canStart).toBe(false);
     expect(intent.status).toBe("incomparable");
     expect(intent.message).toMatch(/same option/i);
+    expect(intent.resolvedEntity).toBe("Supabase");
   });
 
   it("does not advertise political comparisons as supported", () => {

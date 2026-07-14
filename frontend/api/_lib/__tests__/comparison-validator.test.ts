@@ -23,6 +23,7 @@ const aiMismatch = {
   confidence: 0.8,
   sameEntity: false,
   entityResolutionConfidence: 0.8,
+  canonicalEntity: null,
   reason: "Names are similar.",
   suggestedQuery: null,
 };

@@ -13,6 +13,7 @@ export type QueryIntent = {
   confidence: number;
   entityA: string | null;
   entityB: string | null;
+  resolvedEntity?: string;
   category: ComparisonCategory | null;
   categoryLabel?: string;
   safetyLevel?: SafetyLevel;
@@ -31,6 +32,7 @@ export const analyzeQueryIntent = (rawQuery: string): QueryIntent => {
     confidence: intent.confidence,
     entityA: intent.entityA,
     entityB: intent.entityB,
+    resolvedEntity: intent.resolvedEntity,
     category: intent.category,
     categoryLabel: intent.label,
     safetyLevel: intent.safetyLevel,

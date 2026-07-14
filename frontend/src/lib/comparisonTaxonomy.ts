@@ -73,6 +73,8 @@ export type ComparisonIntent = ComparisonTaxonomySummary & {
   canStart: boolean;
   entityA: string | null;
   entityB: string | null;
+  /** Canonical option when both inputs resolve to the same entity. */
+  resolvedEntity?: string;
   message: string;
   suggestion?: string;
   signals: PolicySignal[];
@@ -623,35 +625,37 @@ const sameEntityTokenSet = (entityA: string, entityB: string) => {
   return a.length > 0 && a.length === b.length && a.every((token, index) => token === b[index]);
 };
 
-const areSameComparableEntity = (entityA: string, entityB: string) => {
+const resolveSameComparableEntity = (entityA: string, entityB: string): string | null => {
   const canonicalA = canonicalEntity(entityA);
   const canonicalB = canonicalEntity(entityB);
-  if (!canonicalA || !canonicalB) return false;
-  if (canonicalA === canonicalB) return true;
-  if (sameEntityTokenSet(entityA, entityB)) return true;
+  if (!canonicalA || !canonicalB) return null;
+  if (canonicalA === canonicalB) return canonicalA;
+  if (sameEntityTokenSet(entityA, entityB)) return canonicalA;
 
   // Catalog names are concrete options. When one side is a catalog name and
   // the other is just a repeated-character or small-edit variant of it, the
   // pair is almost certainly a typo rather than two alternatives to compare.
   // Keep a narrow exception list for real, intentionally similar projects.
   const pairKey = [canonicalA, canonicalB].sort().join(":");
-  if (DISTINCT_SIMILAR_ENTITY_PAIRS.has(pairKey)) return false;
+  if (DISTINCT_SIMILAR_ENTITY_PAIRS.has(pairKey)) return null;
 
   const isKnownA = KNOWN_ENTITY_NAMES.has(canonicalA);
   const isKnownB = KNOWN_ENTITY_NAMES.has(canonicalB);
-  if (isKnownA === isKnownB) return false;
+  if (isKnownA === isKnownB) return null;
 
   const knownEntity = isKnownA ? canonicalA : canonicalB;
   const candidate = isKnownA ? canonicalB : canonicalA;
   const collapsedCandidate = candidate.replace(/(.)\1+/g, "$1");
-  if (collapsedCandidate === knownEntity) return true;
+  if (collapsedCandidate === knownEntity) return knownEntity;
 
   const longestLength = Math.max(knownEntity.length, candidate.length);
   const permittedEdits = longestLength >= 7
     ? Math.max(2, Math.floor(longestLength * 0.25))
     : 1;
   return longestLength >= 5
-    && levenshteinDistance(knownEntity, candidate) <= permittedEdits;
+    && levenshteinDistance(knownEntity, candidate) <= permittedEdits
+    ? knownEntity
+    : null;
 };
 
 const levenshteinDistance = (left: string, right: string): number => {
@@ -1036,7 +1040,11 @@ export const analyzeComparisonQuery = (rawQuery: string): ComparisonIntent => {
   const normalizedA = normalize(entityA);
   const normalizedB = normalize(entityB);
 
-  if (normalizedA === normalizedB || areSameComparableEntity(entityA, entityB)) {
+  const resolvedDuplicate = normalizedA === normalizedB
+    ? canonicalEntity(entityA)
+    : resolveSameComparableEntity(entityA, entityB);
+
+  if (resolvedDuplicate) {
     const { category } = detectComparisonCategory(query, entityA, entityB);
     const definition = getComparisonCategoryDefinition(category);
     return {
@@ -1048,6 +1056,7 @@ export const analyzeComparisonQuery = (rawQuery: string): ComparisonIntent => {
       confidence: 0.95,
       entityA: titleCase(entityA),
       entityB: titleCase(entityB),
+      resolvedEntity: titleCase(resolvedDuplicate),
       message: "Both sides look like the same option. Choose two distinct things to compare, or add a qualifier like version, plan, region, or use case.",
       suggestion: `${titleCase(entityA)} vs another option for your use case`,
       disclaimer: definition.disclaimer,
