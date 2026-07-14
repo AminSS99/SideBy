@@ -37,6 +37,7 @@ import accountHandler from "./_routes/account.js";
 import apiKeysHandler from "./_routes/api-keys.js";
 import apiKeysIdHandler from "./_routes/api-keys/[id].js";
 import chatHandler from "./_routes/chat.js";
+import comparisonContextHandler from "./_routes/comparison-context.js";
 import csrfHandler from "./_routes/csrf.js";
 import decisionMatricesHandler from "./_routes/decision-matrices.js";
 import ecosystemSessionHandler from "./_routes/ecosystem-session.js";
@@ -212,6 +213,7 @@ async function routeRequest(
   const singleHandlers: Record<string, ApiHandler> = {
     account: accountHandler,
     chat: chatHandler,
+    "comparison-context": comparisonContextHandler,
     csrf: csrfHandler,
     "decision-matrices": decisionMatricesHandler,
     health: healthHandler,

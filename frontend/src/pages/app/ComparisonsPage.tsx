@@ -27,6 +27,7 @@ import { captureEvent } from "@/lib/posthog";
 import { EmptyState } from "@/components/EmptyState";
 import { GlowCard } from "@/components/GlowCard";
 import { ComparisonComposer } from "@/components/ComparisonComposer";
+import { MultiOptionBracketComposer, type BracketRun } from "@/components/MultiOptionBracketComposer";
 import { SUPPORTED_COMPARISON_CATEGORIES } from "@/lib/comparisonTaxonomy";
 
 
@@ -350,6 +351,23 @@ const ComparisonsPage = () => {
     }
   };
 
+  const startMultiOptionBracket = async (options: string[], context: string): Promise<BracketRun[]> => {
+    setIsCreating(true);
+    try {
+      const pairs = options.flatMap((left, index) => options.slice(index + 1).map((right) => `${left} vs ${right}${context.trim() ? ` for ${context.trim()}` : ""}`));
+      const runs: BracketRun[] = [];
+      for (const query of pairs) {
+        const res = await apiFetch(buildApiUrl("/api/comparisons"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, workspaceId: activeWorkspace?.id, projectId: activeProject?.id }) });
+        const data = await res.json() as ComparisonJob & { error?: string };
+        if (!res.ok) throw new Error(data.error || `Unable to start ${query}.`);
+        setItems((current) => [jobToHistoryItem(data), ...current.filter((item) => item.id !== data.id)]);
+        runs.push({ id: data.id, query, status: data.status });
+      }
+      captureEvent("comparison_bracket_created", { option_count: options.length, pair_count: pairs.length });
+      return runs;
+    } finally { setIsCreating(false); }
+  };
+
   return (
     <div ref={containerRef} className="space-y-8">
       <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
@@ -379,6 +397,8 @@ const ComparisonsPage = () => {
         <Metric label="Completed" value={counts.completed} />
         <Metric label="Favorites" value={counts.favorites} />
       </div>
+
+      <MultiOptionBracketComposer onStart={startMultiOptionBracket} isCreating={isCreating} />
 
       <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">

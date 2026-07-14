@@ -1,9 +1,12 @@
 import React, { useState } from "react";
-import { Sparkles, Plus, ArrowRight, Loader2, ShieldAlert, X } from "lucide-react";
+import { Sparkles, Plus, ArrowRight, Loader2, ShieldAlert, X, Link2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useComparisonValidation } from "@/hooks/useComparisonValidation";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
+import { buildApiUrl } from "@/config/env";
+import { toast } from "sonner";
 
 interface ComparisonComposerProps {
   onStart: (query: string) => void | Promise<void>;
@@ -54,6 +57,25 @@ export function ComparisonComposer({
   });
 
   const [showContextInput, setShowContextInput] = useState(Boolean(context));
+  const [contextUrl, setContextUrl] = useState("");
+  const [isImportingUrl, setIsImportingUrl] = useState(false);
+
+  const importUrlContext = async () => {
+    if (!contextUrl.trim()) return;
+    try {
+      setIsImportingUrl(true);
+      const response = await apiFetch(buildApiUrl("/api/comparison-context"), {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: contextUrl.trim() }),
+      });
+      const data = await response.json() as { context?: string; source?: { title: string }; error?: string };
+      if (!response.ok || !data.context) throw new Error(data.error || "Unable to import URL context.");
+      setContext(data.context);
+      setShowContextInput(true);
+      toast.success("Requirements imported.", { description: `Grounded in ${data.source?.title || "the supplied URL"}.` });
+    } catch (error) {
+      toast.error("Unable to import URL context.", { description: error instanceof Error ? error.message : "Try a public HTTPS URL." });
+    } finally { setIsImportingUrl(false); }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,25 +131,10 @@ export function ComparisonComposer({
 
         {/* Toggleable Context Field */}
         {showContextInput ? (
-          <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
-            <Input
-              type="text"
-              value={context}
-              onChange={(e) => setContext(e.target.value)}
-              placeholder="Context or Use Case (optional, e.g. for real-time SaaS)"
-              className="h-11 bg-black border-[#222] focus-visible:ring-orange-500/50 text-white placeholder:text-[#ffffff20] rounded-lg font-medium transition-all"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setContext("");
-                setShowContextInput(false);
-              }}
-              aria-label="Remove comparison context"
-              className="p-2 bg-transparent text-[#fdfbf7]/40 hover:text-white transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
+          <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="flex items-center gap-2"><Input type="text" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Context or Use Case (optional, e.g. for real-time SaaS)" className="h-11 bg-black border-[#222] focus-visible:ring-orange-500/50 text-white placeholder:text-[#ffffff20] rounded-lg font-medium transition-all" /><button type="button" onClick={() => { setContext(""); setShowContextInput(false); }} aria-label="Remove comparison context" className="p-2 bg-transparent text-[#fdfbf7]/40 hover:text-white transition-colors"><X className="h-4 w-4" /></button></div>
+            <div className="flex gap-2"><Input type="url" value={contextUrl} onChange={(event) => setContextUrl(event.target.value)} placeholder="Import requirements from a public URL" className="h-9 bg-black border-[#222] text-xs text-white placeholder:text-[#ffffff20]" /><button type="button" onClick={() => void importUrlContext()} disabled={!contextUrl.trim() || isImportingUrl} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-orange-500/30 px-3 text-[9px] font-bold uppercase tracking-widest text-orange-300 disabled:opacity-40"><Link2 className="h-3 w-3" />{isImportingUrl ? "Importing" : "Import URL"}</button></div>
+            <p className="text-[9px] text-[#fdfbf7]/40">For PDFs, upload them in Knowledge and paste the requirements here; public URLs are imported and source-attributed automatically.</p>
           </div>
         ) : (
           <div className="flex justify-start">
