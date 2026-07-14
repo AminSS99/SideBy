@@ -21,6 +21,8 @@ const aiMismatch = {
   relation: "unrelated" as const,
   category: "general_research" as const,
   confidence: 0.8,
+  sameEntity: false,
+  entityResolutionConfidence: 0.8,
   reason: "Names are similar.",
   suggestedQuery: null,
 };
