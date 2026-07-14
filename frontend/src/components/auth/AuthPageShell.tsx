@@ -127,7 +127,7 @@ const AuthPageShell = ({
                 className="auth-logo flex items-center gap-4 group self-start"
               >
                 <img
-                  src="/sideby.ico"
+                  src="/icon.svg"
                   alt="SideBy"
                   className="h-12 w-12 object-contain rounded-xl shadow-lg transition-transform group-hover:scale-105"
                 />

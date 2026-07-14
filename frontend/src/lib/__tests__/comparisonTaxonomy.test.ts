@@ -31,6 +31,14 @@ describe("comparison taxonomy eligibility", () => {
     expect(analyzeComparisonQuery("React vs React").status).toBe("incomparable");
   });
 
+  it.each(["Supabassee", "Supabassseee"])("blocks %s as a Supabase misspelling", (typo) => {
+    const intent = analyzeComparisonQuery(`Supabase vs ${typo} for a SaaS`);
+
+    expect(intent.canStart).toBe(false);
+    expect(intent.status).toBe("incomparable");
+    expect(intent.message).toMatch(/same option/i);
+  });
+
   it("does not advertise political comparisons as supported", () => {
     expect(SUPPORTED_COMPARISON_CATEGORIES.map((category) => category.id))
       .not.toContain("politics_policy");

@@ -40,13 +40,13 @@ type EcosystemSession = {
 const PRODUCT_LOGOS: Record<string, string> = {
   orizonte: "https://snapsolve.ink/orizonte.png",
   rallia: "https://snapsolve.ink/rallia.png",
-  sideby: "/sideby.ico",
+  sideby: "/icon.svg",
 };
 
 const getProductLogo = (product: EcosystemProduct) => {
   if (product.icon_url && !product.icon_url.startsWith("/"))
     return product.icon_url;
-  return PRODUCT_LOGOS[product.slug] || "/sideby.ico";
+  return PRODUCT_LOGOS[product.slug] || "/icon.svg";
 };
 
 const OnboardingPage = () => {

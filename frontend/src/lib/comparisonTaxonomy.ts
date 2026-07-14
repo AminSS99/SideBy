@@ -629,8 +629,60 @@ const areSameComparableEntity = (entityA: string, entityB: string) => {
   if (!canonicalA || !canonicalB) return false;
   if (canonicalA === canonicalB) return true;
   if (sameEntityTokenSet(entityA, entityB)) return true;
-  return false;
+
+  // Catalog names are concrete options. When one side is a catalog name and
+  // the other is just a repeated-character or small-edit variant of it, the
+  // pair is almost certainly a typo rather than two alternatives to compare.
+  // Keep a narrow exception list for real, intentionally similar projects.
+  const pairKey = [canonicalA, canonicalB].sort().join(":");
+  if (DISTINCT_SIMILAR_ENTITY_PAIRS.has(pairKey)) return false;
+
+  const isKnownA = KNOWN_ENTITY_NAMES.has(canonicalA);
+  const isKnownB = KNOWN_ENTITY_NAMES.has(canonicalB);
+  if (isKnownA === isKnownB) return false;
+
+  const knownEntity = isKnownA ? canonicalA : canonicalB;
+  const candidate = isKnownA ? canonicalB : canonicalA;
+  const collapsedCandidate = candidate.replace(/(.)\1+/g, "$1");
+  if (collapsedCandidate === knownEntity) return true;
+
+  const longestLength = Math.max(knownEntity.length, candidate.length);
+  const permittedEdits = longestLength >= 7
+    ? Math.max(2, Math.floor(longestLength * 0.25))
+    : 1;
+  return longestLength >= 5
+    && levenshteinDistance(knownEntity, candidate) <= permittedEdits;
 };
+
+const levenshteinDistance = (left: string, right: string): number => {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    let diagonal = previous[0];
+    previous[0] = leftIndex;
+
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      const above = previous[rightIndex];
+      previous[rightIndex] = Math.min(
+        previous[rightIndex] + 1,
+        previous[rightIndex - 1] + 1,
+        diagonal + Number(left[leftIndex - 1] !== right[rightIndex - 1]),
+      );
+      diagonal = above;
+    }
+  }
+
+  return previous[right.length];
+};
+
+const KNOWN_ENTITY_NAMES = new Set(
+  Object.values(COMPARISON_CATEGORIES)
+    .flatMap((category) => category.entityHints)
+    .map(canonicalEntity),
+);
+
+// These are separate technical projects despite their deliberately similar names.
+const DISTINCT_SIMILAR_ENTITY_PAIRS = new Set(["astra:astro"]);
 
 const cleanEntity = (value: string) =>
   value

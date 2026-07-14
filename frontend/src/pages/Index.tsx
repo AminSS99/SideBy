@@ -340,7 +340,7 @@ const Index = () => {
               
               <div className="orch-card border border-orange-500/30 bg-[#1a110a] shadow-2xl p-8 rounded-sm text-center transform md:scale-110 z-20">
                 <div className="absolute top-0 inset-x-0 h-1 bg-orange-500" />
-                <img src="/sideby.ico" alt="SideBy Router" className="h-12 w-12 object-contain rounded-sm mx-auto mb-4" />
+                <img src="/icon.svg" alt="SideBy Router" className="h-12 w-12 object-contain rounded-sm mx-auto mb-4" />
                 <h3 className="font-serif text-xl text-white mb-2">SideBy Router</h3>
                 <p className="text-xs text-orange-400 uppercase tracking-widest font-bold mb-3">Orchestration</p>
                 <p className="text-sm text-white/60">Evaluates the query and intelligently splits tasks across providers.</p>
@@ -364,7 +364,7 @@ const Index = () => {
           <div className="grid gap-12 md:grid-cols-4 mb-16">
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-6">
-                <img src="/sideby.ico" alt="SideBy" className="h-7 w-7 object-contain rounded-sm" />
+                <img src="/icon.svg" alt="SideBy" className="h-7 w-7 object-contain rounded-sm" />
                 <span className="font-serif text-lg tracking-tight text-[#fdfbf7]">SideBy</span>
               </div>
               <p className="text-sm text-white/60 max-w-sm leading-relaxed mb-6">

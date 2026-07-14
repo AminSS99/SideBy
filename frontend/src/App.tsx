@@ -11,7 +11,6 @@ import ReverseProtectedRoute from "@/components/auth/ReverseProtectedRoute";
 import AppShell from "@/components/layout/AppShell";
 import GlobalErrorBoundary from "@/components/ErrorBoundary";
 import ScrollToTop from "@/components/ScrollToTop";
-import { SnapsolveFloatingWidget } from "@/components/layout/SnapsolveFloatingWidget";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
@@ -97,7 +96,6 @@ const App = () => {
                 <Toaster />
                 <Sonner />
                 <ScrollToTop />
-                <SnapsolveFloatingWidget />
                   <Suspense fallback={<LazyFallback />}>
                     <Routes>
                     {/* Public marketing pages */}

@@ -20,7 +20,7 @@ export const MarketingNav = () => {
           aria-label="SideBy home"
           className="pointer-events-auto mt-3 inline-flex h-11 items-center gap-2.5 rounded-full border border-white/[0.08] bg-black/90 px-2.5 text-[#fdfbf7] shadow-[0_18px_45px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-all duration-300 hover:border-orange-400/25 hover:bg-black md:px-3 md:pr-4"
         >
-          <img src="/sideby.ico" alt="" className="h-7 w-7 rounded-sm object-contain" />
+          <img src="/icon.svg" alt="" className="h-7 w-7 rounded-sm object-contain" />
           <span className="hidden font-serif text-base tracking-tight md:inline">SideBy</span>
         </Link>
 
