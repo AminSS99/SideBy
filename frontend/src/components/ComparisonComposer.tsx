@@ -194,7 +194,10 @@ export function ComparisonComposer({
                 onClick={() => handleSuggestionClick(queryIntent.suggestion!)}
                 className="mt-3 text-[10px] font-bold uppercase tracking-widest text-orange-400 hover:text-orange-300 underline decoration-orange-500/20 underline-offset-4 transition-colors"
               >
-                Suggested formulation: {queryIntent.suggestion}
+                {queryIntent.policyNote === "Duplicate entity"
+                  ? "Compare distinct variants: "
+                  : "Suggested formulation: "}
+                {queryIntent.suggestion}
               </button>
             )}
           </div>

@@ -40,6 +40,13 @@ describe("comparison taxonomy eligibility", () => {
     expect(intent.resolvedEntity).toBe("Supabase");
   });
 
+  it("keeps explicit variants of one product eligible for comparison", () => {
+    const intent = analyzeComparisonQuery("Supabase Cloud vs self-hosted Supabase for a SaaS");
+
+    expect(intent.canStart).toBe(true);
+    expect(intent.category).toBe("developer_tool");
+  });
+
   it("does not advertise political comparisons as supported", () => {
     expect(SUPPORTED_COMPARISON_CATEGORIES.map((category) => category.id))
       .not.toContain("politics_policy");

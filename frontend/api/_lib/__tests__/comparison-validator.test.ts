@@ -24,6 +24,7 @@ const aiMismatch = {
   sameEntity: false,
   entityResolutionConfidence: 0.8,
   canonicalEntity: null,
+  suggestedDistinctQuery: null,
   reason: "Names are similar.",
   suggestedQuery: null,
 };
