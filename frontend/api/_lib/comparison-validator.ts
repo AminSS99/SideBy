@@ -65,7 +65,7 @@ function normalizeQuery(query: string): string {
 
 function cacheKey(normalized: string): string {
   const hash = createHash("sha256").update(normalized).digest("hex").slice(0, 16);
-  return `validation:v3:${hash}`;
+  return `validation:v4:${hash}`;
 }
 
 type EntityEvidence = Pick<SearchResult, "title" | "url" | "content">;
