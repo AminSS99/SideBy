@@ -1610,6 +1610,7 @@ function ensureFactCoverage(
   const hasFact = (entity: string, dimension: string) =>
     existingFacts.has(`${entity.toLowerCase()}|${dimension.toLowerCase()}`);
 
+  const sourceMapByEntity = new Map<string, ExtractedSource>();
   const extractedLower = extracted.map((item) => ({
     ...item,
     entityNameLower: item.entityName.toLowerCase(),
@@ -1618,9 +1619,24 @@ function ensureFactCoverage(
   }));
 
   for (const entity of parsed.entities.slice(0, 2)) {
+    const entityNeedle = entity.name.toLowerCase();
+    let bestSource: ExtractedSource | null = null;
+    const sourceLower =
+      extractedLower.find((item) => item.entityNameLower === entityNeedle) ||
+      extractedLower.find((item) => item.titleLower.includes(entityNeedle)) ||
+      extractedLower.find((item) => item.markdownLower.includes(entityNeedle));
+    if (sourceLower) {
+      bestSource = extracted.find((s) => s.url === sourceLower.url) || null;
+    }
+    if (bestSource) {
+      sourceMapByEntity.set(entityNeedle, bestSource);
+    }
+  }
+
+  for (const entity of parsed.entities.slice(0, 2)) {
     for (const dimension of dimensions) {
       if (hasFact(entity.name, dimension.name)) continue;
-      const fallback = buildFallbackFact(entity.name, dimension.name, extracted, extractedLower);
+      const fallback = buildFallbackFact(entity.name, dimension.name, sourceMapByEntity);
       if (fallback) {
         completeFacts.push(fallback);
         existingFacts.add(`${entity.name.toLowerCase()}|${dimension.name.toLowerCase()}`);
@@ -1634,18 +1650,12 @@ function ensureFactCoverage(
 function buildFallbackFact(
   entityName: string,
   dimensionName: string,
-  extracted: ExtractedSource[],
-  extractedLower: Array<ExtractedSource & { entityNameLower: string; titleLower: string; markdownLower: string; }>
+  sourceMapByEntity: Map<string, ExtractedSource>
 ): ExtractedFact | null {
   const entityNeedle = entityName.toLowerCase();
   const dimensionNeedle = dimensionName.toLowerCase().split(/\s+/)[0] || "";
 
-  const sourceLower =
-    extractedLower.find((item) => item.entityNameLower === entityNeedle) ||
-    extractedLower.find((item) => item.titleLower.includes(entityNeedle)) ||
-    extractedLower.find((item) => item.markdownLower.includes(entityNeedle));
-
-  const source = sourceLower ? extracted.find((s) => s.url === sourceLower.url) : null;
+  const source = sourceMapByEntity.get(entityNeedle);
 
   if (!source) return null;
 
