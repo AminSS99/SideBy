@@ -11,6 +11,7 @@ import comparisonsId from "./_routes/comparisons/[id].js";
 import comparisonsIdActions from "./_routes/comparisons/[id]/actions.js";
 import comparisonsIdDiff from "./_routes/comparisons/[id]/diff.js";
 import comparisonsIdManage from "./_routes/comparisons/[id]/manage.js";
+import comparisonsIdNotes from "./_routes/comparisons/[id]/notes.js";
 import comparisonsIdVersions from "./_routes/comparisons/[id]/versions.js";
 import comparisonsIdVisibility from "./_routes/comparisons/[id]/visibility.js";
 import comparisonsValidate from "./_routes/comparisons/validate.js";
@@ -129,6 +130,7 @@ async function routeRequest(
       if (segment2 === "actions") return comparisonsIdActions(request, response);
       if (segment2 === "diff") return comparisonsIdDiff(request, response);
       if (segment2 === "manage") return comparisonsIdManage(request, response);
+      if (segment2 === "notes") return comparisonsIdNotes(request, response);
       if (segment2 === "versions") return comparisonsIdVersions(request, response);
       if (segment2 === "visibility") return comparisonsIdVisibility(request, response);
       return comparisonsId(request, response);

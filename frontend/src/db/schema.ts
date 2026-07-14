@@ -760,6 +760,29 @@ export const decisionMatrices = pgTable(
   ],
 );
 
+// ─── Collaboration ─────────────────────────────────────────────────────────
+
+export const comparisonNotes = pgTable(
+  "comparison_notes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    comparisonId: uuid("comparison_id")
+      .notNull()
+      .references(() => comparisons.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    kind: text("kind").default("comment").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("comparison_notes_comparison_idx").on(table.comparisonId),
+    index("comparison_notes_user_idx").on(table.userId),
+  ],
+);
+
 export const sourceFeedback = pgTable(
   "source_feedback",
   {

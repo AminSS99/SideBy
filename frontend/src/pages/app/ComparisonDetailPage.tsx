@@ -41,6 +41,7 @@ import {
   DecisionMatrixPanel,
   WatchlistPanel,
   StickyDecisionBar,
+  TeamNotesPanel,
 } from "@/components/Comparison/ComparisonEngine";
 
 type ComparisonJob = {
@@ -349,6 +350,7 @@ const ComparisonDetailPage = () => {
             <TableOfContents result={resultData} />
             <VerdictPanel result={resultData} />
             <WatchlistPanel result={resultData} comparisonId={job!.id} />
+            <TeamNotesPanel comparisonId={job!.id} />
             <EntityFactPanel result={resultData} facts={entityFacts} />
             <SourcesPanel sources={resultData.sources} />
             <RunTelemetryPanel result={resultData} />
@@ -370,6 +372,7 @@ const ComparisonDetailPage = () => {
               <RadarChartPanel result={resultData} />
               <ConsensusPanel result={resultData} />
               <WatchlistPanel result={resultData} comparisonId={job!.id} />
+              <TeamNotesPanel comparisonId={job!.id} />
             </div>
           )}
 

@@ -14,6 +14,7 @@ import { ScoreDetailDrawer } from "./ScoreDetailDrawer";
 
 type DecisionMatrixRecord = {
   id: string;
+  comparisonId: string | null;
   name: string;
   weights: Record<string, number>;
   result: { scoreA?: number; scoreB?: number } | null;
@@ -36,6 +37,7 @@ export const DecisionMatrixPanel = ({
   // Weights state: maps dimension subject -> slider value (1-5)
   const [weights, setWeights] = useState<Record<string, number>>({});
   const [savedMatrices, setSavedMatrices] = useState<DecisionMatrixRecord[]>([]);
+  const [defaultProfiles, setDefaultProfiles] = useState<DecisionMatrixRecord[]>([]);
   const [matrixName, setMatrixName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
@@ -67,11 +69,24 @@ export const DecisionMatrixPanel = ({
     }
   }, [comparisonId, session]);
 
+  const loadDefaultProfiles = useCallback(async () => {
+    if (!session) return;
+    try {
+      const res = await apiFetch(buildApiUrl("/api/decision-matrices"));
+      if (!res.ok) throw new Error("Could not load default profiles.");
+      const data = (await res.json()) as { matrices: DecisionMatrixRecord[] };
+      setDefaultProfiles(data.matrices.filter((matrix) => matrix.comparisonId === null));
+    } catch (error) {
+      console.error(error);
+    }
+  }, [session]);
+
   useEffect(() => {
     if (session) {
       void loadSavedMatrices();
+      void loadDefaultProfiles();
     }
-  }, [loadSavedMatrices, session]);
+  }, [loadDefaultProfiles, loadSavedMatrices, session]);
 
   // Calculate weighted scores in real-time
   const scores = useMemo(() => {
@@ -174,6 +189,26 @@ export const DecisionMatrixPanel = ({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSaveDefaultProfile = async () => {
+    if (!session || !matrixName.trim()) {
+      toast.error("Name this profile before saving it as your default.");
+      return;
+    }
+    try {
+      setIsSaving(true);
+      const res = await apiFetch(buildApiUrl("/api/decision-matrices"), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: matrixName.trim(), weights, result: { scoreA: scores.scoreA, scoreB: scores.scoreB, winner: scores.winner } }),
+      });
+      if (!res.ok) throw new Error("Failed to save default profile.");
+      toast.success("Default criteria profile saved.");
+      setMatrixName("");
+      void loadDefaultProfiles();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save default profile.");
+    } finally { setIsSaving(false); }
   };
 
   // Delete a saved template
@@ -365,6 +400,9 @@ export const DecisionMatrixPanel = ({
                 <Save className="h-3.5 w-3.5" />
                 {isSaving ? "Saving" : "Save"}
               </button>
+              <button type="button" onClick={() => void handleSaveDefaultProfile()} disabled={isSaving} className="h-9 rounded-sm border border-orange-500/40 px-3 text-[9px] font-bold uppercase tracking-widest text-orange-300 transition-colors hover:bg-orange-500/10 disabled:opacity-50">
+                Default
+              </button>
             </div>
           </form>
         </div>
@@ -372,6 +410,14 @@ export const DecisionMatrixPanel = ({
 
       {/* Saved Matrices List Footer */}
       <div className="p-6 bg-[#090908] border-t border-[#1f1f1f]">
+        {session && defaultProfiles.length > 0 && (
+          <div className="mb-6">
+            <h4 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-orange-300">Your default criteria profiles</h4>
+            <div className="flex flex-wrap gap-2">
+              {defaultProfiles.map((matrix) => <button key={matrix.id} type="button" onClick={() => handleLoadMatrix(matrix)} className="rounded-sm border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-orange-200 hover:bg-orange-500/15">Use {matrix.name}</button>)}
+            </div>
+          </div>
+        )}
         <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 flex items-center gap-2 mb-4">
           <FolderOpen className="h-3.5 w-3.5 text-cyan-400" /> Saved Matrices Templates
         </h4>

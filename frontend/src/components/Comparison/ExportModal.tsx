@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, FileText, Code, FileJson, X, CheckCircle2 } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Code, FileJson, X, CheckCircle2 } from "lucide-react";
 import type { ComparisonData } from "./types";
 
 interface ExportModalProps {
@@ -92,6 +92,29 @@ export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
     }, 600);
   };
 
+  const handleExportCsv = () => {
+    setDownloading("csv");
+    window.setTimeout(() => {
+      const escape = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""').replaceAll(/\r?\n/g, " ")}"`;
+      const rows = [["Category", "Criterion", result.entities.a.name, result.entities.b.name, "Sources"]];
+      result.categories.forEach((category) => {
+        const a = new Map<string, string>();
+        const b = new Map<string, string>();
+        const sources = new Map<string, string>();
+        category.facts.forEach((fact) => {
+          if (fact.entity === "a") a.set(fact.label, fact.value);
+          if (fact.entity === "b") b.set(fact.label, fact.value);
+          if (fact.source) sources.set(fact.label, fact.source);
+        });
+        new Set(category.facts.map((fact) => fact.label)).forEach((label) => rows.push([
+          category.name, label, a.get(label) || "N/A", b.get(label) || "N/A", sources.get(label) || "",
+        ]));
+      });
+      downloadFile(rows.map((row) => row.map(escape).join(",")).join("\n"), `${filenameSlug}.csv`, "text/csv;charset=utf-8");
+      setDownloading(null);
+    }, 300);
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -125,6 +148,13 @@ export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
             </div>
 
             <div className="space-y-3">
+              <ExportOption
+                icon={FileSpreadsheet}
+                title="CSV Decision Sheet"
+                description="Criteria, evidence, and option values for spreadsheets."
+                onClick={handleExportCsv}
+                isDownloading={downloading === "csv"}
+              />
               <ExportOption 
                 icon={FileText}
                 title="PDF Document"
