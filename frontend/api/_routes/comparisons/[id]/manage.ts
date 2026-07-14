@@ -1,6 +1,6 @@
 /**
  * POST /api/comparisons/:id/manage
- * Refresh or retry a comparison.
+ * Refresh, retry, or organize a comparison.
  */
 import { sendJson } from "../../../_lib/sideby.js";
 import { requireAuth } from "../../../_lib/auth.js";
@@ -37,7 +37,14 @@ export const config = {
 };
 
 const ManageBodySchema = z.object({
-  action: z.enum(["refresh", "retry"]).default("refresh"),
+  action: z.enum(["refresh", "retry", "organize"]).default("refresh"),
+  isFavorited: z.boolean().optional(),
+  folder: z.string().trim().max(80).nullable().optional(),
+  tags: z.array(z.string().trim().min(1).max(32)).max(8).optional(),
+}).superRefine((body, ctx) => {
+  if (body.action === "organize" && body.isFavorited === undefined && body.folder === undefined && body.tags === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Choose a favorite, folder, or tag to update." });
+  }
 });
 
 export default async function handler(
@@ -59,6 +66,45 @@ export default async function handler(
 
     const body = ManageBodySchema.parse(request.body || {});
     const action = body.action;
+
+    if (action === "organize") {
+      const db = createDbClient();
+      const canMutate = await canMutateComparison(db, auth.userId, id);
+      if (!canMutate) {
+        return sendJson(response, { error: "Comparison not found." }, 404);
+      }
+
+      const updates: {
+        isFavorited?: boolean;
+        folder?: string | null;
+        tags?: string[];
+        updatedAt: Date;
+      } = { updatedAt: new Date() };
+      if (body.isFavorited !== undefined) updates.isFavorited = body.isFavorited;
+      if (body.folder !== undefined) updates.folder = body.folder || null;
+      if (body.tags !== undefined) {
+        updates.tags = [...new Set(body.tags.map((tag) => tag.trim().toLowerCase()))];
+      }
+
+      const [comparison] = await db
+        .update(comparisons)
+        .set(updates)
+        .where(eq(comparisons.id, id))
+        .returning({
+          isFavorited: comparisons.isFavorited,
+          folder: comparisons.folder,
+          tags: comparisons.tags,
+          updatedAt: comparisons.updatedAt,
+        });
+
+      captureServerEvent(auth.userId, "comparison_organized", {
+        comparison_id: id,
+        is_favorited: comparison?.isFavorited,
+        has_folder: Boolean(comparison?.folder),
+        tag_count: comparison?.tags.length ?? 0,
+      });
+      return sendJson(response, { success: true, comparison });
+    }
 
     if (action === "retry") {
       // Retry failed comparison (with rate limit)

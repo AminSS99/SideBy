@@ -82,6 +82,9 @@ export type ComparisonHistoryItem = {
   slug: string;
   status: "running" | "completed" | "failed";
   visibility: "private" | "team" | "public";
+  isFavorited: boolean;
+  folder: string | null;
+  tags: string[];
   sourceCount: number;
   progress: number;
   updatedAt: string;
@@ -781,6 +784,9 @@ export const listComparisonHistory = async (
       slug: comparisons.slug,
       status: comparisons.status,
       visibility: comparisons.visibility,
+      isFavorited: comparisons.isFavorited,
+      folder: comparisons.folder,
+      tags: comparisons.tags,
       sourceCount: comparisons.sourceCount,
       progress: comparisons.progress,
       updatedAt: comparisons.updatedAt,
@@ -806,6 +812,11 @@ export const listComparisonHistory = async (
       slug: row.slug,
       status: row.status === "queued" || row.status === "running" ? "running" : row.status,
       visibility: row.visibility,
+      isFavorited: row.isFavorited,
+      folder: row.folder,
+      tags: Array.isArray(row.tags)
+        ? row.tags.filter((tag): tag is string => typeof tag === "string")
+        : [],
       sourceCount: row.sourceCount,
       progress: row.progress,
       updatedAt: row.updatedAt?.toISOString() || new Date().toISOString(),

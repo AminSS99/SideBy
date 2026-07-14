@@ -4,12 +4,15 @@ import {
   Clock3,
   ExternalLink,
   Globe2,
+  Folder,
   GitCompareArrows,
   LoaderCircle,
   LockKeyhole,
   Search,
   Share2,
   Sparkles,
+  Star,
+  Tag,
   XCircle,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -36,6 +39,9 @@ type ComparisonHistoryItem = {
   slug: string;
   status: ComparisonStatus;
   visibility: ComparisonVisibility;
+  isFavorited: boolean;
+  folder: string | null;
+  tags: string[];
   sourceCount: number;
   progress: number;
   updatedAt: string;
@@ -68,7 +74,7 @@ type ComparisonJob = {
 };
 
 
-type FilterKey = "all" | ComparisonStatus | ComparisonVisibility;
+type FilterKey = "all" | "favorites" | ComparisonStatus | ComparisonVisibility;
 
 const examples = SUPPORTED_COMPARISON_CATEGORIES
   .flatMap((category) => category.examples.slice(0, 1))
@@ -76,6 +82,7 @@ const examples = SUPPORTED_COMPARISON_CATEGORIES
 
 const filters: Array<{ key: FilterKey; label: string }> = [
   { key: "all", label: "All" },
+  { key: "favorites", label: "Favorites" },
   { key: "completed", label: "Completed" },
   { key: "running", label: "Running" },
   { key: "failed", label: "Failed" },
@@ -120,6 +127,7 @@ const ComparisonsPage = () => {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [isCreating, setIsCreating] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [organizingId, setOrganizingId] = useState<string | null>(null);
 
 
   const load = useCallback(async () => {
@@ -193,12 +201,17 @@ const ComparisonsPage = () => {
 
     return items.filter((item) => {
       const filterMatch =
-        filter === "all" || item.status === filter || item.visibility === filter;
+        filter === "all" ||
+        (filter === "favorites" && item.isFavorited) ||
+        item.status === filter ||
+        item.visibility === filter;
       const textMatch =
         !needle ||
         item.query.toLowerCase().includes(needle) ||
         item.entityA?.toLowerCase().includes(needle) ||
-        item.entityB?.toLowerCase().includes(needle);
+        item.entityB?.toLowerCase().includes(needle) ||
+        item.folder?.toLowerCase().includes(needle) ||
+        item.tags.some((tag) => tag.toLowerCase().includes(needle));
 
       return filterMatch && textMatch;
     });
@@ -207,6 +220,7 @@ const ComparisonsPage = () => {
   const counts = useMemo(
     () => ({
       all: items.length,
+      favorites: items.filter((item) => item.isFavorited).length,
       completed: items.filter((item) => item.status === "completed").length,
       running: items.filter((item) => item.status === "running").length,
       failed: items.filter((item) => item.status === "failed").length,
@@ -244,6 +258,41 @@ const ComparisonsPage = () => {
       });
     } finally {
       setPublishingId(null);
+    }
+  };
+
+  const organize = async (
+    item: ComparisonHistoryItem,
+    updates: Pick<ComparisonHistoryItem, "isFavorited" | "folder" | "tags">,
+  ) => {
+    try {
+      setOrganizingId(item.id);
+      const res = await apiFetch(buildApiUrl(`/api/comparisons/${item.id}/manage`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "organize", ...updates }),
+      });
+      if (!res.ok) throw new Error("Unable to save this organization.");
+      const data = (await res.json()) as {
+        comparison?: Pick<ComparisonHistoryItem, "isFavorited" | "folder" | "tags" | "updatedAt">;
+      };
+      if (!data.comparison) throw new Error("The saved organization was incomplete.");
+      setItems((current) => current.map((candidate) =>
+        candidate.id === item.id ? { ...candidate, ...data.comparison! } : candidate,
+      ));
+      captureEvent("comparison_organized_frontend", {
+        comparison_id: item.id,
+        is_favorited: data.comparison.isFavorited,
+        has_folder: Boolean(data.comparison.folder),
+        tag_count: data.comparison.tags.length,
+      });
+    } catch (organizeError) {
+      toast.error("Unable to save organization.", {
+        description: organizeError instanceof Error ? organizeError.message : "Please try again.",
+      });
+      throw organizeError;
+    } finally {
+      setOrganizingId(null);
     }
   };
 
@@ -328,7 +377,7 @@ const ComparisonsPage = () => {
       <div className="grid gap-4 md:grid-cols-3">
         <Metric label="Total" value={counts.all} />
         <Metric label="Completed" value={counts.completed} />
-        <Metric label="Public" value={counts.public} />
+        <Metric label="Favorites" value={counts.favorites} />
       </div>
 
       <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-6">
@@ -399,7 +448,9 @@ const ComparisonsPage = () => {
               key={item.id}
               item={item}
               isPublishing={publishingId === item.id}
+              isOrganizing={organizingId === item.id}
               onPublish={() => void publish(item)}
+              onOrganize={(updates) => organize(item, updates)}
             />
           ))}
         </div>
@@ -423,6 +474,9 @@ const jobToHistoryItem = (job: ComparisonJob): ComparisonHistoryItem => ({
   slug: job.result?.slug || slugFromQuery(job.query),
   status: job.status,
   visibility: "private",
+  isFavorited: false,
+  folder: null,
+  tags: [],
   sourceCount: job.result?.sourceCount || 0,
   progress: job.progress,
   updatedAt: new Date().toISOString(),
@@ -450,11 +504,15 @@ const slugFromQuery = (query: string) => {
 const ComparisonRow = ({
   item,
   isPublishing,
+  isOrganizing,
   onPublish,
+  onOrganize,
 }: {
   item: ComparisonHistoryItem;
   isPublishing: boolean;
+  isOrganizing: boolean;
   onPublish: () => void;
+  onOrganize: (updates: Pick<ComparisonHistoryItem, "isFavorited" | "folder" | "tags">) => Promise<void>;
 }) => {
   const StatusIcon = statusIcon[item.status];
   const VisibilityIcon = visibilityIcon[item.visibility];
@@ -462,6 +520,20 @@ const ComparisonRow = ({
   const categoryLabel = item.queryCategory
     ? item.queryCategory.replace(/_/g, " ")
     : null;
+  const [isEditingOrganization, setIsEditingOrganization] = useState(false);
+  const [folderDraft, setFolderDraft] = useState(item.folder || "");
+  const [tagsDraft, setTagsDraft] = useState(item.tags.join(", "));
+
+  const saveOrganization = async () => {
+    const tags = [...new Set(tagsDraft.split(",").map((tag) => tag.trim()).filter(Boolean))].slice(0, 8);
+    await onOrganize({
+      isFavorited: item.isFavorited,
+      folder: folderDraft.trim() || null,
+      tags,
+    });
+    setIsEditingOrganization(false);
+    toast.success("Organization saved.");
+  };
 
   return (
     <GlowCard containerClassName="comp-row" className="p-8">
@@ -481,6 +553,18 @@ const ComparisonRow = ({
                 {categoryLabel}
               </span>
             )}
+            {item.folder && (
+              <span className="inline-flex items-center gap-1.5 rounded-sm border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
+                <Folder className="h-3 w-3" />
+                {item.folder}
+              </span>
+            )}
+            {item.tags.map((tag) => (
+              <span key={tag} className="inline-flex items-center gap-1 rounded-sm border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
+                <Tag className="h-3 w-3" />
+                {tag}
+              </span>
+            ))}
           </div>
 
           <h2 className="mt-5 font-serif text-2xl text-[#fdfbf7] tracking-tight">
@@ -513,6 +597,28 @@ const ComparisonRow = ({
           >
             Review
           </Link>
+          <button
+            type="button"
+            aria-label={item.isFavorited ? "Remove from favorites" : "Add to favorites"}
+            aria-pressed={item.isFavorited}
+            onClick={() => void onOrganize({
+              isFavorited: !item.isFavorited,
+              folder: item.folder,
+              tags: item.tags,
+            })}
+            disabled={isOrganizing}
+            className={`inline-flex h-10 w-10 items-center justify-center rounded-sm border transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${item.isFavorited ? "border-orange-500 bg-orange-500 text-white" : "border-[#333] bg-[#0c0b0a] text-[#fdfbf7]/60 hover:border-orange-500 hover:text-orange-400"}`}
+          >
+            <Star className={`h-4 w-4 ${item.isFavorited ? "fill-current" : ""}`} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsEditingOrganization((open) => !open)}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] px-4 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/70 transition-colors hover:border-[#555]"
+          >
+            <Folder className="h-3.5 w-3.5" />
+            Organize
+          </button>
           {item.visibility === "public" ? (
             <Link
               to={`/compare/${item.slug}`}
@@ -538,6 +644,21 @@ const ComparisonRow = ({
           )}
         </div>
       </div>
+      {isEditingOrganization && (
+        <div className="mt-6 grid gap-3 border-t border-[#2a2a2a] pt-5 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] md:items-end">
+          <label className="grid gap-2 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
+            Folder
+            <input value={folderDraft} onChange={(event) => setFolderDraft(event.target.value)} maxLength={80} placeholder="e.g. Infrastructure" className="h-10 rounded-sm border border-[#333] bg-[#0c0b0a] px-3 text-sm font-normal normal-case tracking-normal text-[#fdfbf7] outline-none focus:border-orange-500" />
+          </label>
+          <label className="grid gap-2 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
+            Tags
+            <input value={tagsDraft} onChange={(event) => setTagsDraft(event.target.value)} placeholder="e.g. q3, migration (up to 8)" className="h-10 rounded-sm border border-[#333] bg-[#0c0b0a] px-3 text-sm font-normal normal-case tracking-normal text-[#fdfbf7] outline-none focus:border-orange-500" />
+          </label>
+          <button type="button" onClick={() => void saveOrganization()} disabled={isOrganizing} className="h-10 rounded-sm bg-orange-500 px-4 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-400 disabled:opacity-50">
+            {isOrganizing ? "Saving" : "Save"}
+          </button>
+        </div>
+      )}
     </GlowCard>
   );
 };

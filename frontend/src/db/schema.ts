@@ -196,6 +196,9 @@ export const comparisons = pgTable(
     policyNote: text("policy_note"),
     status: comparisonStatusEnum("status").default("queued").notNull(),
     visibility: visibilityEnum("visibility").default("private").notNull(),
+    isFavorited: boolean("is_favorited").default(false).notNull(),
+    folder: text("folder"),
+    tags: jsonb("tags").$type<string[]>().default([]).notNull(),
     clerkUserId: text("clerk_user_id"),
     clerkOrgId: text("clerk_org_id"),
     workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
@@ -223,6 +226,7 @@ export const comparisons = pgTable(
   },
   (table) => [
     index("comparisons_clerk_user_id_idx").on(table.clerkUserId),
+    index("comparisons_clerk_user_favorited_idx").on(table.clerkUserId, table.isFavorited),
     index("comparisons_clerk_org_id_idx").on(table.clerkOrgId),
     index("comparisons_workspace_idx").on(table.workspaceId),
     index("comparisons_project_idx").on(table.projectId),
