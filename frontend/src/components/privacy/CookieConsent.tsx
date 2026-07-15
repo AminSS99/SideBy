@@ -77,7 +77,7 @@ export default function CookieConsent() {
             <button type="button" onClick={() => save("rejected", "banner")} className="rounded-md border border-white/20 px-4 py-2 text-sm font-medium text-white hover:bg-white/10">
               Reject analytics
             </button>
-            <button type="button" onClick={() => save("accepted", "banner")} disabled={gpcEnabled} className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="button" onClick={() => save("accepted", "banner")} disabled={gpcEnabled} className="rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50">
               Accept analytics
             </button>
           </div>
@@ -114,7 +114,7 @@ export default function CookieConsent() {
             {gpcEnabled ? <p className="mt-3 text-sm text-amber-300">Global Privacy Control is enabled, so analytics cannot be turned on in this browser.</p> : null}
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" onClick={() => setShowSettings(false)} className="rounded-md border border-white/20 px-4 py-2 text-sm font-medium text-white hover:bg-white/10">Cancel</button>
-              <button type="button" onClick={() => save(analyticsEnabled ? "accepted" : "rejected", "settings")} className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-400">Save choices</button>
+              <button type="button" onClick={() => save(analyticsEnabled ? "accepted" : "rejected", "settings")} className="rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600">Save choices</button>
             </div>
           </section>
         </div>

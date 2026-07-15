@@ -19,9 +19,9 @@ test.describe("SideBy Accessibility (a11y) Tests", () => {
     // Focus should be tab-navigable to the main comparison input
     const input = page.locator("#hero-comparison-input");
     await page.keyboard.press("Tab");
-    // Depending on other links in the header, tab a few times to reach the input
+    // Header links and the cookie-consent controls can precede the main input.
     let inputIsFocused = false;
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       const activeElementId = await page.evaluate(() => document.activeElement?.id);
       if (activeElementId === "hero-comparison-input") {
         inputIsFocused = true;
