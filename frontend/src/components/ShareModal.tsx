@@ -17,7 +17,7 @@ interface ShareModalProps {
 
 const resolveShareUrl = (slug?: string | null) => {
   const safeSlug = slug?.replace(/^\/+/, "") || "comparison";
-  if (typeof window !== "undefined" && window.location.hostname !== "snapsolve.ink") {
+  if (typeof window !== "undefined" && window.location.hostname !== "sideby.ink") {
     return `${window.location.origin}/compare/${safeSlug}`;
   }
 

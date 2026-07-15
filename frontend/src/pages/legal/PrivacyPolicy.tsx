@@ -42,7 +42,7 @@ const PrivacyPolicy = () => {
 
       <h2>5. Contact Information</h2>
       <p>
-        To ask questions or comment about this privacy policy and our privacy practices, contact us at: <a href="mailto:privacy@snapsolve.ink">privacy@snapsolve.ink</a>.
+        To ask questions or comment about this privacy policy and our privacy practices, contact us at: <a href="mailto:privacy@sideby.ink">privacy@sideby.ink</a>.
       </p>
     </LegalPageShell>
   );

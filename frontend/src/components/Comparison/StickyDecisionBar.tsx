@@ -31,11 +31,11 @@ export function StickyDecisionBar({
   }, [result]);
 
   return (
-    <div className="fixed bottom-6 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 z-40 w-auto md:min-w-[700px] md:max-w-3xl bg-[#0a0a0a]/95 backdrop-blur-xl border border-[#2a2a2a] p-3.5 sm:px-5 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.6)] animate-in slide-in-from-bottom-5 duration-300">
+    <aside aria-label="Decision summary" className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] left-3 right-3 z-40 flex items-center justify-between gap-2 rounded-2xl border border-orange-300/15 bg-[#0b0908]/92 p-2.5 shadow-[0_20px_55px_rgba(0,0,0,.7)] backdrop-blur-2xl animate-in slide-in-from-bottom-5 duration-300 sm:bottom-6 sm:left-1/2 sm:right-auto sm:min-w-[700px] sm:max-w-3xl sm:-translate-x-1/2 sm:p-3.5 sm:px-5 md:z-[60]">
       {/* Metrics Section */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-left">
+      <div className="flex min-w-0 items-center gap-x-4 text-left">
         {/* Winner HUD */}
-        <div className="flex items-center gap-2 pr-4 border-r border-[#1f1f1f]">
+        <div className="flex min-w-0 items-center gap-2 sm:border-r sm:border-white/[0.08] sm:pr-4">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-400 shrink-0">
             <Trophy className="h-4 w-4" />
           </div>
@@ -43,14 +43,14 @@ export function StickyDecisionBar({
             <span className="text-[8px] font-bold uppercase tracking-widest text-orange-500/80 block">
               Best Overall
             </span>
-            <span className="text-xs font-serif font-bold text-white leading-none block mt-0.5">
+            <span className="block max-w-[130px] truncate font-serif text-sm font-bold leading-none text-white sm:max-w-[180px]">
               {result.verdict.bestOverall}
             </span>
           </div>
         </div>
 
         {/* Confidence metric */}
-        <div className="flex items-center gap-1.5">
+        <div className="hidden items-center gap-1.5 sm:flex">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
           <div>
             <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">
@@ -63,7 +63,7 @@ export function StickyDecisionBar({
         </div>
 
         {/* Sources count metric */}
-        <div className="flex items-center gap-1.5">
+        <div className="hidden items-center gap-1.5 sm:flex">
           <Globe className="h-3.5 w-3.5 text-cyan-400" />
           <div>
             <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">
@@ -76,7 +76,7 @@ export function StickyDecisionBar({
         </div>
 
         {/* Freshness metric */}
-        <div className="flex items-center gap-1.5">
+        <div className="hidden items-center gap-1.5 sm:flex">
           <Clock className="h-3.5 w-3.5 text-orange-400" />
           <div>
             <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">
@@ -90,24 +90,24 @@ export function StickyDecisionBar({
       </div>
 
       {/* Actions Section */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex shrink-0 items-center gap-1.5">
         <button
           onClick={onScrollToEvidence}
-          className="flex-1 sm:flex-initial h-9 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#fdfbf7] px-4 text-[10px] font-bold uppercase tracking-widest text-black hover:bg-[#e2e2e2] transition-colors"
+          className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-3 text-[9px] font-bold uppercase tracking-wider text-white transition hover:brightness-110 sm:flex-initial sm:px-4 sm:text-[10px]"
         >
-          Scroll to Evidence
+          <span className="sm:hidden">Evidence</span><span className="hidden sm:inline">Scroll to evidence</span>
           <ArrowDown className="h-3 w-3" />
         </button>
 
         <button
           onClick={onDismiss}
           aria-label="Dismiss decision bar"
-          className="p-2 border border-[#1f1f1f] bg-transparent hover:bg-white/5 rounded-xl text-[#fdfbf7]/40 hover:text-white transition-colors"
+          className="grid h-11 w-11 place-items-center rounded-xl border border-white/[0.08] bg-transparent text-white/40 transition-colors hover:bg-white/5 hover:text-white"
           title="Dismiss decision bar"
         >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
-    </div>
+    </aside>
   );
 }

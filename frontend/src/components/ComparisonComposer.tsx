@@ -1,5 +1,15 @@
 import React, { useState } from "react";
-import { Sparkles, Plus, ArrowRight, Loader2, ShieldAlert, X, Link2 } from "lucide-react";
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  CheckCircle2,
+  Link2,
+  Loader2,
+  Plus,
+  ShieldAlert,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useComparisonValidation } from "@/hooks/useComparisonValidation";
@@ -88,6 +98,12 @@ export function ComparisonComposer({
     setShowContextInput(suggestion.toLowerCase().includes(" for "));
   };
 
+  const swapEntities = () => {
+    const previousEntityA = entityA;
+    setEntityA(entityB);
+    setEntityB(previousEntityA);
+  };
+
   const canSubmit =
     serializedQuery.trim().length > 0 &&
     !isBlocked &&
@@ -96,90 +112,105 @@ export function ComparisonComposer({
     entityB.trim().length > 0;
 
   return (
-    <div className={cn("w-full max-w-2xl bg-[#0c0b0a] border border-[#2a2a2a] rounded-xl p-6 shadow-2xl relative overflow-hidden", className)}>
-      {/* Background glow card style */}
-      <div className="absolute top-0 right-0 w-48 h-48 bg-orange-500/[0.03] blur-[60px] rounded-full pointer-events-none" />
+    <div className={cn("relative w-full max-w-3xl overflow-hidden rounded-[1.75rem] border border-white/[0.12] bg-[#0d0b0a]/92 p-4 shadow-[0_30px_100px_rgba(0,0,0,.55),0_0_80px_rgba(249,115,22,.08)] backdrop-blur-2xl sm:p-6", className)}>
+      <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-orange-500/[0.12] blur-[90px]" />
+      <div className="pointer-events-none absolute -bottom-28 -left-20 h-64 w-64 rounded-full bg-fuchsia-500/[0.07] blur-[100px]" />
+      <div className="relative mb-5 flex items-center justify-between gap-4 px-1">
+        <div className="text-left">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-300">Build your comparison</p>
+          <p className="mt-1 text-xs text-white/45">Two options in. A defensible answer out.</p>
+        </div>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/15 bg-emerald-400/[0.07] px-2.5 py-1.5 text-[8px] font-bold uppercase tracking-widest text-emerald-300 sm:px-3 sm:text-[9px]">
+          <Sparkles className="h-3 w-3" /> Source backed
+        </span>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="relative space-y-4">
         {/* Entity Inputs Row */}
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <div className="w-full relative">
+        <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-2.5 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+          <div className="relative col-span-2 w-full sm:col-span-1">
+            <label htmlFor="hero-comparison-input" className="mb-2 block px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/45">
+              First option
+            </label>
             <Input
               id="hero-comparison-input"
+              aria-label="First option"
               type="text"
               value={entityA}
               onChange={(e) => setEntityA(e.target.value)}
-              placeholder="Product or framework A (e.g. Supabase)"
-              className="h-12 bg-black border-[#222] focus-visible:ring-orange-500/50 text-white placeholder:text-[#ffffff20] rounded-lg pl-3 font-medium transition-all"
+              placeholder="e.g. Supabase"
+              autoComplete="off"
+              className="h-14 rounded-xl border-white/[0.09] bg-black/50 px-4 text-base font-medium text-white shadow-inner placeholder:text-white/25 focus-visible:border-orange-400/40 focus-visible:ring-orange-500/25"
             />
           </div>
 
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 select-none">
-            vs
-          </span>
+          <button
+            type="button"
+            onClick={swapEntities}
+            aria-label="Swap comparison options"
+            disabled={!entityA.trim() && !entityB.trim()}
+            className="order-3 grid h-12 w-12 place-items-center self-end rounded-xl border border-white/[0.08] bg-white/[0.035] text-white/45 transition-colors hover:border-orange-300/25 hover:text-orange-300 disabled:cursor-not-allowed disabled:opacity-25 sm:order-none sm:mb-1 sm:h-10 sm:w-10 sm:rounded-full"
+          >
+            <ArrowLeftRight className="h-4 w-4 rotate-90 sm:rotate-0" />
+          </button>
 
-          <div className="w-full relative">
+          <div className="relative order-2 w-full sm:order-none">
+            <label htmlFor="hero-comparison-input-b" className="mb-2 block px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/45">
+              Compare against
+            </label>
             <Input
+              id="hero-comparison-input-b"
               type="text"
+              aria-label="Second option"
               value={entityB}
               onChange={(e) => setEntityB(e.target.value)}
-              placeholder="Product or framework B (e.g. Firebase)"
-              className="h-12 bg-black border-[#222] focus-visible:ring-orange-500/50 text-white placeholder:text-[#ffffff20] rounded-lg pl-3 font-medium transition-all"
+              placeholder="e.g. Firebase"
+              autoComplete="off"
+              className="h-14 rounded-xl border-white/[0.09] bg-black/50 px-4 text-base font-medium text-white shadow-inner placeholder:text-white/25 focus-visible:border-orange-400/40 focus-visible:ring-orange-500/25"
             />
           </div>
         </div>
 
         {/* Toggleable Context Field */}
         {showContextInput ? (
-          <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-            <div className="flex items-center gap-2"><Input type="text" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Context or Use Case (optional, e.g. for real-time SaaS)" className="h-11 bg-black border-[#222] focus-visible:ring-orange-500/50 text-white placeholder:text-[#ffffff20] rounded-lg font-medium transition-all" /><button type="button" onClick={() => { setContext(""); setShowContextInput(false); }} aria-label="Remove comparison context" className="p-2 bg-transparent text-[#fdfbf7]/40 hover:text-white transition-colors"><X className="h-4 w-4" /></button></div>
-            <div className="flex gap-2"><Input type="url" value={contextUrl} onChange={(event) => setContextUrl(event.target.value)} placeholder="Import requirements from a public URL" className="h-9 bg-black border-[#222] text-xs text-white placeholder:text-[#ffffff20]" /><button type="button" onClick={() => void importUrlContext()} disabled={!contextUrl.trim() || isImportingUrl} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-orange-500/30 px-3 text-[9px] font-bold uppercase tracking-widest text-orange-300 disabled:opacity-40"><Link2 className="h-3 w-3" />{isImportingUrl ? "Importing" : "Import URL"}</button></div>
-            <p className="text-[9px] text-[#fdfbf7]/40">For PDFs, upload them in Knowledge and paste the requirements here; public URLs are imported and source-attributed automatically.</p>
+          <div className="space-y-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3.5 animate-in fade-in slide-in-from-top-1 duration-200 sm:p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-orange-300">Decision context</p>
+                <p className="mt-1 text-[10px] text-white/35">Optional, but it sharpens scoring.</p>
+              </div>
+              <button type="button" onClick={() => { setContext(""); setShowContextInput(false); }} aria-label="Remove comparison context" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white/40 transition-colors hover:bg-white/5 hover:text-white"><X className="h-4 w-4" /></button>
+            </div>
+            <Input aria-label="Comparison context" type="text" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Use case, budget, or top priority" className="h-12 rounded-xl border-white/[0.09] bg-black/50 text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
+            <div>
+              <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.18em] text-white/35">Quick templates</p>
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 no-scrollbar sm:flex-wrap">
+                {COMPARISON_TEMPLATES.map((template) => {
+                  const isSelected = context.trim().toLowerCase() === template.context.toLowerCase();
+                  return (
+                    <button key={template.label} type="button" onClick={() => setContext(template.context)} className={cn("min-h-9 shrink-0 rounded-full border px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors", isSelected ? "border-orange-500/50 bg-orange-500/10 text-orange-300" : "border-white/[0.08] bg-black/30 text-white/50 hover:border-orange-500/30 hover:text-orange-300")}>{template.label}</button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Requirements URL" type="url" value={contextUrl} onChange={(event) => setContextUrl(event.target.value)} placeholder="Import requirements from a public URL" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-xs text-white placeholder:text-white/25" /><button type="button" onClick={() => void importUrlContext()} disabled={!contextUrl.trim() || isImportingUrl} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-orange-500/30 px-4 text-[9px] font-bold uppercase tracking-widest text-orange-300 disabled:opacity-40"><Link2 className="h-3 w-3" />{isImportingUrl ? "Importing" : "Import URL"}</button></div>
+            <p className="text-[9px] leading-4 text-[#fdfbf7]/35">Public URLs are imported and source-attributed automatically.</p>
           </div>
         ) : (
           <div className="flex justify-start">
             <button
               type="button"
               onClick={() => setShowContextInput(true)}
-              className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-orange-500/80 hover:text-orange-400 transition-colors py-1 focus:outline-none"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-1 text-[10px] font-bold uppercase tracking-widest text-orange-300/80 transition-colors hover:text-orange-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
             >
-              <Plus className="h-3 w-3" /> Add Context
+              <Plus className="h-3 w-3" /> Add decision context
             </button>
           </div>
         )}
 
-        <div className="border-t border-[#1f1f1f] pt-4">
-          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.2em] text-[#fdfbf7]/55">
-            Comparison template
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {COMPARISON_TEMPLATES.map((template) => {
-              const isSelected = context.trim().toLowerCase() === template.context.toLowerCase();
-              return (
-                <button
-                  key={template.label}
-                  type="button"
-                  onClick={() => {
-                    setContext(template.context);
-                    setShowContextInput(true);
-                  }}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors",
-                    isSelected
-                      ? "border-orange-500/50 bg-orange-500/10 text-orange-300"
-                      : "border-[#2a2a2a] bg-black/40 text-[#fdfbf7]/60 hover:border-orange-500/30 hover:text-orange-300",
-                  )}
-                >
-                  {template.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Validation / Preflight Feedback Banner */}
         {serializedQuery.trim().length > 0 && (
-          <div className={cn(
+          <div aria-live="polite" className={cn(
             "rounded-lg border p-4 text-left text-xs leading-relaxed transition-all",
             isBlocked
               ? "border-red-500/20 bg-red-500/5 text-red-200/80"
@@ -202,10 +233,10 @@ export function ComparisonComposer({
                     Comparison Blocked
                   </>
                 ) : isIncomplete ? (
-                  <>Complete the pair</>
+                  <>One more option</>
                 ) : (
                   <>
-                    Comparison Fit — {Math.round(queryIntent.confidence * 100)}%
+                    Brief ready — {Math.round(queryIntent.confidence * 100)}% fit
                   </>
                 )}
               </span>
@@ -236,7 +267,7 @@ export function ComparisonComposer({
               <button
                 type="button"
                 onClick={() => handleSuggestionClick(queryIntent.suggestion!)}
-                className="mt-3 text-[10px] font-bold uppercase tracking-widest text-orange-400 hover:text-orange-300 underline decoration-orange-500/20 underline-offset-4 transition-colors"
+                className="mt-3 text-left text-xs font-medium leading-5 text-orange-300 underline decoration-orange-500/20 underline-offset-4 transition-colors hover:text-orange-200"
               >
                 {queryIntent.policyNote === "Duplicate entity"
                   ? "Compare distinct variants: "
@@ -248,20 +279,20 @@ export function ComparisonComposer({
         )}
 
         {/* Submit Action Button */}
-        <div className="pt-2">
+        <div className="pt-1">
           <button
             type="submit"
             disabled={!canSubmit || isCreating}
-            className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-lg bg-[#fdfbf7] text-[#0c0b0a] hover:bg-[#e2e2e2] disabled:opacity-30 disabled:cursor-not-allowed font-bold uppercase tracking-widest text-xs transition-all active:scale-[0.99]"
+            className="group inline-flex h-14 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 bg-[length:200%_100%] text-xs font-bold uppercase tracking-widest text-white shadow-[0_16px_42px_rgba(244,63,94,.2)] transition-all duration-500 hover:bg-[position:100%_0] hover:shadow-[0_18px_50px_rgba(249,115,22,.3)] active:scale-[0.99] disabled:cursor-not-allowed disabled:grayscale disabled:opacity-30"
           >
             {isCreating ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Initiating Research...
+                Opening research room...
               </>
             ) : (
               <>
-                Compare Options
+                Research this decision
                 <ArrowRight className="h-4 w-4" />
               </>
             )}
@@ -270,17 +301,17 @@ export function ComparisonComposer({
       </form>
 
       {/* Suggested chips list */}
-      <div className="mt-6 border-t border-[#1f1f1f] pt-5">
+      <div className="relative mt-5 border-t border-white/[0.07] pt-4">
         <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#fdfbf7]/60 mb-3 text-left">
-          Suggested comparisons
+          Try a proven question
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 no-scrollbar sm:flex-wrap">
           {SUGGESTIONS.map((suggestion) => (
             <button
               key={suggestion}
               type="button"
               onClick={() => handleSuggestionClick(suggestion)}
-              className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/70 hover:text-orange-400 bg-black/40 hover:bg-orange-500/5 border border-[#1f1f1f] hover:border-orange-500/30 rounded-full px-3 py-1.5 transition-all"
+              className="min-h-9 shrink-0 rounded-full border border-white/[0.08] bg-black/30 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white/60 transition-all hover:border-orange-500/30 hover:bg-orange-500/5 hover:text-orange-300"
             >
               {suggestion}
             </button>

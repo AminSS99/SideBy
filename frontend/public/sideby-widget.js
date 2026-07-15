@@ -5,7 +5,7 @@
       : options.element;
     if (!target) return;
 
-    var baseUrl = options.baseUrl || "https://snapsolve.ink";
+    var baseUrl = options.baseUrl || "https://sideby.ink";
     var slug = options.slug;
     if (!slug) {
       target.textContent = "SideBy widget requires a comparison slug.";
@@ -59,7 +59,7 @@
             '</div>',
             '<div style="font-size:12px;color:' + subtext + ';line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(verdict.summary || "Source-backed comparison is ready.") + '</div>',
             '<div style="display:flex;justify-content:space-between;font-size:10px;color:' + secondary + ';margin-top:2px">',
-            '<a href="https://snapsolve.ink" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;font-weight:500">Made by SnapSolve Ink</a>',
+            '<a href="https://sideby.ink" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;font-weight:500">Made by SnapSolve Ink</a>',
             '<span>Powered by SideBy</span>',
             '</div>',
             '</div>'
@@ -83,7 +83,7 @@
             '<h3 style="margin:0;font-size:18px;font-weight:700;line-height:1.25">' + escapeHtml(query) + '</h3>',
             '<p style="margin:0;color:' + subtext + ';font-size:13.5px;line-height:1.5">' + escapeHtml(verdict.summary || "Source-backed comparison is ready.") + '</p>',
             '<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid ' + border + ';padding-top:12px;margin-top:4px">',
-            '<a href="https://snapsolve.ink" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:' + secondary + ';text-decoration:none;font-weight:500">Made by SnapSolve Ink</a>',
+            '<a href="https://sideby.ink" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:' + secondary + ';text-decoration:none;font-weight:500">Made by SnapSolve Ink</a>',
             '<a style="display:inline-block;color:' + accent + ';text-decoration:none;font-size:13px;font-weight:700" target="_blank" rel="noopener noreferrer" href="' + baseUrl.replace(/\/$/, "") + '/compare/' + encodeURIComponent(slug) + '">Read Full Comparison &rarr;</a>',
             '</div>',
             '</div>'

@@ -108,7 +108,7 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
   const { session, isLoading: authLoading } = useAuth();
   const { pathname } = useLocation();
   const sessionUserId = session?.userId ?? null;
-  const shouldLoadWorkspaces = pathname === "/onboarding" || pathname === "/app" || pathname.startsWith("/app/");
+  const shouldLoadWorkspaces = pathname.startsWith("/onboarding") || pathname === "/app" || pathname.startsWith("/app/");
   const cachedWorkspaces = useMemo(() => readCachedWorkspaces(), []);
   const [workspaces, setWorkspaces] = useState<WorkspaceRecord[]>(cachedWorkspaces ?? []);
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string | null>(readStoredWorkspaceId);

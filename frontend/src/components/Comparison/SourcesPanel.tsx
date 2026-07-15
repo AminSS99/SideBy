@@ -38,6 +38,7 @@ export const SourcesPanel = ({ sources }: { sources: ComparisonSource[] }) => {
 
   useGSAP(() => {
     if (!containerRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     gsap.from(".sp-item", {
       scrollTrigger: {
@@ -55,28 +56,28 @@ export const SourcesPanel = ({ sources }: { sources: ComparisonSource[] }) => {
   if (!sources || sources.length === 0) return null;
 
   return (
-    <div ref={containerRef} className={`${panelClass} p-8`}>
-      <div className="mb-6 flex items-center gap-3">
-        <BookOpen className="h-5 w-5 text-[#fdfbf7]/30" />
-        <h3 className="font-serif text-2xl text-[#fdfbf7] tracking-tight">Sources Reviewed</h3>
+    <div ref={containerRef} className={`${panelClass} p-5 sm:p-7`}>
+      <div className="mb-5 flex items-center gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-300/15 bg-emerald-400/[0.07] text-emerald-300"><BookOpen className="h-4 w-4" /></span>
+        <div><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-300">Evidence library</p><h3 className="mt-0.5 font-serif text-2xl tracking-tight text-[#fffaf1]">Sources reviewed</h3></div>
         <span className="ml-auto text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
           {sources.length} source{sources.length !== 1 ? "s" : ""}
         </span>
       </div>
 
       <ul className="space-y-3">
-        {sources.map((source, i) => {
+        {sources.map((source) => {
           const domain = getDomain(source.url);
           const rel = getReliabilityInfo(source.reliability);
           const RelIcon = rel.icon;
 
           return (
-            <li key={i} className="sp-item">
+            <li key={`${source.url}-${source.title}`} className="sp-item">
               <a
                 href={source.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex flex-col gap-2.5 rounded-sm border border-[#2a2a2a] bg-[#111] p-4 transition-all hover:border-orange-500/40 hover:bg-[#1a110a]"
+                className="group flex min-h-24 flex-col gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.025] p-4 transition-all hover:border-orange-500/25 hover:bg-orange-500/[0.035]"
               >
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-sm font-serif text-[#fdfbf7] line-clamp-2 group-hover:text-orange-400 transition-colors leading-snug">

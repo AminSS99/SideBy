@@ -49,6 +49,7 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
 
   useGSAP(() => {
     if (!containerRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     
     gsap.from(".matrix-row", {
       scrollTrigger: {
@@ -67,13 +68,13 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
 
   return (
     <div id="feature-matrix" ref={containerRef} className={cn(panelClass, "overflow-hidden mb-10 scroll-mt-28")}>
-      <div className="p-6 md:p-8 border-b border-[#2a2a2a] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#111]">
+      <div className="flex flex-col justify-between gap-4 border-b border-white/[0.08] bg-white/[0.025] p-5 md:flex-row md:items-center md:p-7">
         <div className="flex items-center gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7]/50">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-orange-300/15 bg-orange-400/[0.07] text-orange-300">
             <Table2 className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="font-serif text-2xl text-[#fdfbf7] tracking-tight">Feature Matrix</h3>
+            <h3 className="font-serif text-2xl tracking-tight text-[#fffaf1]">Feature Matrix</h3>
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mt-1">Detailed Head-to-Head</p>
           </div>
         </div>
@@ -82,10 +83,11 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#fdfbf7]/30" />
           <input
             type="text"
+            aria-label="Filter comparison criteria"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter criteria..."
-            className="h-9 w-full rounded-sm border border-[#333] bg-[#0c0b0a] pl-9 pr-3 text-xs text-[#fdfbf7] outline-none transition-colors placeholder:text-[#fdfbf7]/30 focus:border-orange-500"
+            className="h-11 w-full rounded-xl border border-white/10 bg-black/30 pl-9 pr-3 text-xs text-[#fdfbf7] outline-none transition-colors placeholder:text-white/25 focus:border-orange-400/40"
           />
         </div>
       </div>
@@ -114,8 +116,8 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
               No criteria matching "{filter}"
             </div>
           ) : (
-            matrixData.map((cat, i) => (
-              <React.Fragment key={i}>
+            matrixData.map((cat) => (
+              <React.Fragment key={cat.category}>
                 <div className="bg-[#1a1a1a] border-b border-[#2a2a2a] p-4 pl-6 flex items-center justify-between sticky top-[97px] z-20 shadow-sm">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/80 sticky left-6 z-30">{cat.category}</span>
                   {cat.winner !== 'tie' && (
@@ -126,13 +128,13 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
                   )}
                 </div>
                 
-                {cat.rows.map((row, j) => {
+                {cat.rows.map((row) => {
                   const isAWinner = cat.winner === 'a';
                   const isBWinner = cat.winner === 'b';
 
                   return (
                     <div
-                      key={j}
+                      key={`${cat.category}-${row.label}`}
                       onClick={() => {
                         setSelectedCategory(cat.category);
                         setIsDrawerOpen(true);
@@ -179,22 +181,22 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
             No criteria matching "{filter}"
           </div>
         ) : (
-          <div className="divide-y divide-[#2a2a2a]">
-            {matrixData.map((cat, i) => (
-              <div key={i} className="p-4">
+          <div className="divide-y divide-white/[0.07]">
+            {matrixData.map((cat) => (
+              <section key={cat.category} className="p-4 sm:p-5">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/80">{cat.category}</span>
                   {cat.winner !== 'tie' && (
-                    <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-orange-400 border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 rounded-sm">
+                    <span className="flex items-center gap-1 rounded-full border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-orange-300">
                       <Trophy className="h-2.5 w-2.5" />
                       {cat.winner === 'a' ? result.entities.a.name : result.entities.b.name}
                     </span>
                   )}
                 </div>
                 <div className="space-y-3">
-                  {cat.rows.map((row, j) => (
+                  {cat.rows.map((row) => (
                     <div
-                      key={j}
+                      key={`${cat.category}-${row.label}`}
                       onClick={() => {
                         setSelectedCategory(cat.category);
                         setIsDrawerOpen(true);
@@ -208,23 +210,23 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
                       }}
                       role="button"
                       tabIndex={0}
-                      className="matrix-row rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4 cursor-pointer hover:border-orange-500/35 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
+                      className="matrix-row cursor-pointer rounded-xl border border-white/[0.08] bg-black/20 p-4 transition-all hover:border-orange-500/25 hover:bg-orange-500/[0.035] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
                     >
                       <p className="text-xs font-bold text-[#fdfbf7]/70 mb-2">{row.label}</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: result.entities.a.hex }}>{result.entities.a.name}</p>
-                          <p className="text-xs text-[#fdfbf7]/60 leading-relaxed">{row.factA?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}</p>
+                      <div className="grid gap-2.5">
+                        <div className="rounded-lg border border-white/[0.06] bg-white/[0.025] p-3">
+                          <p className="mb-1 text-[9px] font-bold uppercase tracking-widest" style={{ color: result.entities.a.hex }}>{result.entities.a.name}</p>
+                          <p className="text-xs leading-5 text-[#fdfbf7]/65">{row.factA?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}</p>
                         </div>
-                        <div>
-                          <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: result.entities.b.hex }}>{result.entities.b.name}</p>
-                          <p className="text-xs text-[#fdfbf7]/60 leading-relaxed">{row.factB?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}</p>
+                        <div className="rounded-lg border border-white/[0.06] bg-white/[0.025] p-3">
+                          <p className="mb-1 text-[9px] font-bold uppercase tracking-widest" style={{ color: result.entities.b.hex }}>{result.entities.b.name}</p>
+                          <p className="text-xs leading-5 text-[#fdfbf7]/65">{row.factB?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}</p>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
             ))}
           </div>
         )}

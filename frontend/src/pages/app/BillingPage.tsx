@@ -252,7 +252,7 @@ const BillingPage = () => {
                 )}
                 {isSnapSolveManaged ? (
                   <a
-                    href="https://snapsolve.ink"
+                    href="https://sideby.ink"
                     className="w-full flex items-center justify-center gap-2 rounded-sm bg-orange-600 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
@@ -276,7 +276,7 @@ const BillingPage = () => {
                 </p>
                 {usage?.subscription?.billingProvider === "snapsolve" ? (
                   <a
-                    href="https://snapsolve.ink"
+                    href="https://sideby.ink"
                     className="flex items-center justify-center gap-2 rounded-sm bg-[#fdfbf7] px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
@@ -297,7 +297,7 @@ const BillingPage = () => {
                       Upgrade Team
                     </button>
                     <a
-                      href="mailto:hello@snapsolve.ink?subject=SideBy%20Team%20Plan"
+                      href="mailto:hello@sideby.ink?subject=SideBy%20Team%20Plan"
                       className="rounded-sm border border-[#333] px-4 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-orange-500/40 hover:text-orange-300"
                     >
                       Contact Sales
@@ -349,7 +349,7 @@ const BillingPage = () => {
       </div>
 
       <div className="mt-12 pt-6 border-t border-[#1f1f1f] text-center text-xs text-[#fdfbf7]/60">
-        <a href="https://snapsolve.ink" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
+        <a href="https://sideby.ink" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
           Made by SnapSolve Ink
         </a>
       </div>

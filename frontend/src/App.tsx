@@ -48,6 +48,8 @@ const SettingsPage = lazy(() => import("./pages/app/SettingsPage"));
 const WorkspacesPage = lazy(() => import("./pages/app/WorkspacesPage"));
 const TeamPage = lazy(() => import("./pages/app/TeamPage"));
 const OnboardingPage = lazy(() => import("./pages/app/OnboardingPage"));
+const OnboardingDiscoveryPage = lazy(() => import("./pages/app/OnboardingDiscoveryPage"));
+const EcosystemWorkspacePage = lazy(() => import("./pages/app/EcosystemWorkspacePage"));
 const DemoOne = lazy(() => import("./components/ui/demo"));
 
 /**
@@ -86,11 +88,11 @@ const LazyFallback = () => (
   </div>
 );
 
-const App = () => {
+const App = ({ clerkUnavailable = false }: { clerkUnavailable?: boolean }) => {
   return (
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
+        <AuthProvider clerkUnavailable={clerkUnavailable}>
           <WorkspaceProvider>
             <ProjectsProvider>
               <TooltipProvider>
@@ -159,6 +161,14 @@ const App = () => {
 
                     {/* Onboarding — for new users without workspaces */}
                     <Route
+                      path="/onboarding/discovery"
+                      element={
+                        <ProtectedRoute>
+                          <OnboardingDiscoveryPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
                       path="/onboarding"
                       element={
                         <ProtectedRoute>
@@ -187,6 +197,7 @@ const App = () => {
                       <Route path="quality" element={<Navigate to="/app/analytics" replace />} />
                       <Route path="billing" element={<BillingPage />} />
                       <Route path="team" element={<TeamPage />} />
+                      <Route path="ecosystem" element={<EcosystemWorkspacePage />} />
                       <Route path="workspaces" element={<WorkspacesPage />} />
                       <Route path="projects" element={<ProjectsPage />} />
                       <Route path="settings" element={<SettingsPage />} />

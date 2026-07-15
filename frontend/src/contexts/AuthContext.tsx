@@ -73,7 +73,13 @@ function writeCachedAuth(user: AppUser | null) {
   }
 }
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider = ({
+  children,
+  clerkUnavailable = false,
+}: {
+  children: React.ReactNode;
+  clerkUnavailable?: boolean;
+}) => {
   const isTestAuth =
     envConfig.canUseTestAuth &&
     typeof window !== "undefined" &&
@@ -83,7 +89,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return <TestAuthProvider>{children}</TestAuthProvider>;
   }
 
-  if (!envConfig.hasClerkConfig) {
+  if (!envConfig.hasClerkConfig || clerkUnavailable) {
     return <UnconfiguredAuthProvider>{children}</UnconfiguredAuthProvider>;
   }
 

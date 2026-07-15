@@ -69,6 +69,7 @@ const DashboardHome = () => {
 
   useGSAP(() => {
     if (!comparisonsLoading && !isLoading && !projectsLoading) {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       const tl = gsap.timeline();
       const listItems = gsap.utils.toArray(".dash-list-item");
       tl.from(".dash-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
@@ -137,22 +138,24 @@ const DashboardHome = () => {
   ];
 
   return (
-    <div ref={containerRef} className="space-y-8 max-w-6xl">
-      <div className="dash-header flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div ref={containerRef} className="max-w-6xl space-y-6 sm:space-y-8">
+      <div className="dash-header relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-gradient-to-br from-orange-500/[0.09] via-[#111]/80 to-fuchsia-500/[0.06] p-5 sm:p-8">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-orange-500/10 blur-[70px]" />
+        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-            Command Center
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-300">
+            Decision workspace
           </p>
-          <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
-            Welcome, {user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'Researcher'}
+          <h1 className="mt-3 max-w-2xl font-serif text-4xl tracking-tight text-[#fdfbf7] sm:text-5xl">
+            What are we deciding today, {user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'Researcher'}?
           </h1>
-          <p className="mt-3 text-sm text-[#fdfbf7]/60 leading-relaxed max-w-2xl">
-            This is your workspace overview. From here you can launch new comparisons, invite team members, or review past research.
+          <p className="mt-4 max-w-xl text-sm leading-6 text-[#fdfbf7]/50">
+            Start with two options. SideBy researches the evidence, scores the tradeoffs, and gives your team a cited recommendation.
           </p>
         </div>
         
         {/* Activity Summary */}
-        <div className="flex items-center gap-4 rounded-sm border border-[#2a2a2a] bg-[#111] p-4 shrink-0">
+        <div className="flex shrink-0 items-center gap-4 rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur-sm">
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">Total Runs</p>
             <div className="flex items-center gap-2">
@@ -168,45 +171,47 @@ const DashboardHome = () => {
             </div>
           </div>
         </div>
+        </div>
       </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Link to="/app/comparisons" className="dash-action group flex flex-col items-center justify-center gap-3 rounded-sm border border-orange-500/20 bg-orange-500/5 p-6 transition-all hover:border-orange-500/50 hover:bg-[#1a110a]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-orange-500/10 border border-orange-500/30 text-orange-400 group-hover:bg-orange-500/20 transition-colors">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-[1.35fr_1fr_1fr]">
+          <Link to="/app/comparisons" className="dash-action group col-span-2 flex items-center justify-between gap-4 overflow-hidden rounded-3xl border border-orange-400/20 bg-gradient-to-r from-orange-500/15 via-rose-500/10 to-fuchsia-500/10 p-5 transition-all hover:-translate-y-0.5 hover:border-orange-400/45 sm:p-6 lg:col-span-1">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-orange-400/25 bg-orange-400/15 text-orange-300 transition-colors group-hover:bg-orange-400/25">
               <Plus className="h-5 w-5" />
             </div>
-            <div className="text-center">
-              <h3 className="text-sm font-bold text-orange-400 group-hover:text-orange-300 transition-colors">New Comparison</h3>
-              <p className="text-[10px] text-[#fdfbf7]/40 mt-1 uppercase tracking-widest">Compare two options</p>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-bold text-orange-200 transition-colors">New comparison</h3>
+              <p className="mt-1 text-[10px] uppercase tracking-widest text-[#fdfbf7]/40">Research two options</p>
             </div>
+            <ArrowRight className="h-4 w-4 text-orange-300 transition-transform group-hover:translate-x-1" />
           </Link>
 
-          <Link to="/app/uploads" className="dash-action group flex flex-col items-center justify-center gap-3 rounded-sm border border-[#2a2a2a] bg-[#111] p-6 transition-all hover:border-blue-500/50 hover:bg-[#0a111a]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7] group-hover:bg-blue-500/10 group-hover:border-blue-500/30 group-hover:text-blue-400 transition-colors">
+          <Link to="/app/uploads" className="dash-action group flex min-h-36 flex-col items-start justify-between gap-3 rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 transition-all hover:-translate-y-0.5 hover:border-blue-400/35 hover:bg-blue-500/[0.06]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-[#fdfbf7] transition-colors group-hover:border-blue-400/30 group-hover:text-blue-300">
               <UploadCloud className="h-5 w-5" />
             </div>
-            <div className="text-center">
-              <h3 className="text-sm font-bold text-[#fdfbf7] group-hover:text-blue-400 transition-colors">Upload Sources</h3>
-              <p className="text-[10px] text-[#fdfbf7]/40 mt-1 uppercase tracking-widest">Add to knowledge base</p>
+            <div>
+              <h3 className="text-sm font-bold text-[#fdfbf7] transition-colors group-hover:text-blue-300">Upload sources</h3>
+              <p className="mt-1 text-[9px] uppercase tracking-widest text-[#fdfbf7]/35">Build your evidence base</p>
             </div>
           </Link>
 
-          <Link to="/app/team" className="dash-action group flex flex-col items-center justify-center gap-3 rounded-sm border border-[#2a2a2a] bg-[#111] p-6 transition-all hover:border-purple-500/50 hover:bg-[#130a1a]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7] group-hover:bg-purple-500/10 group-hover:border-purple-500/30 group-hover:text-purple-400 transition-colors">
+          <Link to="/app/team" className="dash-action group flex min-h-36 flex-col items-start justify-between gap-3 rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 transition-all hover:-translate-y-0.5 hover:border-fuchsia-400/35 hover:bg-fuchsia-500/[0.06]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-[#fdfbf7] transition-colors group-hover:border-fuchsia-400/30 group-hover:text-fuchsia-300">
               <UserPlus className="h-5 w-5" />
             </div>
-            <div className="text-center">
-              <h3 className="text-sm font-bold text-[#fdfbf7] group-hover:text-purple-400 transition-colors">Invite Team</h3>
-              <p className="text-[10px] text-[#fdfbf7]/40 mt-1 uppercase tracking-widest">Collaborate on research</p>
+            <div>
+              <h3 className="text-sm font-bold text-[#fdfbf7] transition-colors group-hover:text-fuchsia-300">Invite team</h3>
+              <p className="mt-1 text-[9px] uppercase tracking-widest text-[#fdfbf7]/35">Decide together</p>
             </div>
           </Link>
         </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {stats.map((stat) => (
-          <GlowCard key={stat.title} containerClassName="dash-card" className="p-6">
+          <GlowCard key={stat.title} containerClassName="dash-card" className="rounded-3xl p-4 sm:p-6">
             <stat.icon className={`h-5 w-5 ${stat.color}`} />
             <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
               {stat.title}
@@ -228,7 +233,7 @@ const DashboardHome = () => {
       </div>
 
       {/* Recent History */}
-      <div className="dash-card rounded-sm border border-[#2a2a2a] bg-[#111] p-6 sm:p-8">
+      <div className="dash-card rounded-[28px] border border-white/[0.08] bg-white/[0.03] p-5 sm:p-8">
         <div className="flex items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
           <div>
             <h2 className="font-serif text-2xl text-[#fdfbf7]">Recent Comparisons</h2>
@@ -255,7 +260,7 @@ const DashboardHome = () => {
             Loading research records...
           </div>
         ) : comparisons.length === 0 ? (
-            <div className="mt-8 rounded-sm border border-dashed border-[#333] bg-[#0c0b0a] p-8 sm:p-12 text-center">
+            <div className="mt-8 rounded-3xl border border-dashed border-white/10 bg-black/20 p-6 text-center sm:p-12">
               <div className="mb-8">
                 <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-sm border border-orange-500/20 bg-orange-500/10 text-orange-400">
                   <GitCompareArrows className="h-8 w-8" />

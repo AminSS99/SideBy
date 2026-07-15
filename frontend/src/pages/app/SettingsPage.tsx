@@ -149,7 +149,7 @@ const SettingsPage = () => {
       </div>
 
       <div className="mt-12 pt-6 border-t border-[#1f1f1f] text-center text-xs text-[#fdfbf7]/30">
-        <a href="https://snapsolve.ink" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
+        <a href="https://sideby.ink" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
           Made by SnapSolve Ink
         </a>
       </div>
@@ -195,7 +195,7 @@ const GeneralSettings = ({ workspace }: { workspace: WorkspaceRecord | null }) =
             <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">URL Slug</label>
             <div className="flex rounded-sm border border-[#333] bg-[#0c0b0a] overflow-hidden focus-within:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500/50 transition-all">
               <span className="flex items-center px-4 bg-[#111] border-r border-[#333] text-sm text-[#fdfbf7]/40">
-                snapsolve.ink/
+                sideby.ink/
               </span>
               <input 
                 value={slug}

@@ -44,7 +44,7 @@ const CookiesPolicy = () => {
       </p>
       
       <p>
-        If you have any questions about our use of cookies or other technologies, please email us at <a href="mailto:privacy@snapsolve.ink">privacy@snapsolve.ink</a>.
+        If you have any questions about our use of cookies or other technologies, please email us at <a href="mailto:privacy@sideby.ink">privacy@sideby.ink</a>.
       </p>
     </LegalPageShell>
   );

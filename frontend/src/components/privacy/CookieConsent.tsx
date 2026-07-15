@@ -4,6 +4,7 @@ import { allowsAnalytics, isGlobalPrivacyControlEnabled, readConsent, saveConsen
 import { disablePostHog, initPostHog } from "@/lib/posthog";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
+import { Cookie } from "lucide-react";
 
 export default function CookieConsent() {
   const { user } = useAuth();
@@ -59,10 +60,10 @@ export default function CookieConsent() {
       {showBanner ? (
         <section
           aria-label="Cookie preferences"
-          className="fixed bottom-4 left-4 right-4 z-[100] mx-auto max-w-2xl rounded-xl border border-white/15 bg-zinc-950 p-5 shadow-2xl shadow-black/50 sm:left-auto"
+          className="fixed bottom-3 left-3 right-3 z-[100] mx-auto max-w-2xl rounded-2xl border border-white/15 bg-[#0d0b0a]/95 p-4 shadow-[0_24px_80px_rgba(0,0,0,.7)] backdrop-blur-2xl sm:bottom-5 sm:left-auto sm:p-5"
         >
-          <h2 className="text-base font-semibold text-white">Your privacy choices</h2>
-          <p className="mt-2 text-sm leading-6 text-white/70">
+          <div className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-lg bg-orange-400/10 text-orange-300"><Cookie className="h-4 w-4" /></span><h2 className="text-sm font-semibold text-white sm:text-base">Your privacy choices</h2></div>
+          <p className="mt-2 text-xs leading-5 text-white/60 sm:text-sm sm:leading-6">
             SideBy uses essential cookies for sign-in and security. With your permission, we also use PostHog analytics to understand product usage. You can change this anytime.
           </p>
           {gpcEnabled ? (
@@ -70,26 +71,28 @@ export default function CookieConsent() {
               Your browser’s Global Privacy Control is on, so analytics remain disabled.
             </p>
           ) : null}
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <button type="button" onClick={() => setShowSettings(true)} className="rounded-md border border-white/20 px-4 py-2 text-sm font-medium text-white hover:bg-white/10">
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:flex sm:justify-end">
+            <button type="button" onClick={() => setShowSettings(true)} className="min-h-11 rounded-xl border border-white/15 px-3 text-xs font-medium text-white/75 hover:bg-white/10 sm:px-4 sm:text-sm">
               Manage settings
             </button>
-            <button type="button" onClick={() => save("rejected", "banner")} className="rounded-md border border-white/20 px-4 py-2 text-sm font-medium text-white hover:bg-white/10">
-              Reject analytics
+            <button type="button" onClick={() => save("rejected", "banner")} className="min-h-11 rounded-xl border border-white/15 px-3 text-xs font-medium text-white/75 hover:bg-white/10 sm:px-4 sm:text-sm">
+              Essential only
             </button>
-            <button type="button" onClick={() => save("accepted", "banner")} disabled={gpcEnabled} className="rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50">
-              Accept analytics
+            <button type="button" onClick={() => save("accepted", "banner")} disabled={gpcEnabled} className="col-span-2 min-h-11 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 text-xs font-semibold text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 sm:col-auto sm:text-sm">
+              Allow analytics
             </button>
           </div>
-          <Link to="/legal/cookies" className="mt-3 inline-block text-xs text-white/60 underline hover:text-white">
+          <Link to="/legal/cookies" className="mt-2 inline-block text-[10px] text-white/40 underline underline-offset-2 hover:text-white sm:mt-3 sm:text-xs">
             Cookie Policy
           </Link>
         </section>
       ) : null}
 
-      <button type="button" onClick={() => setShowSettings(true)} className="fixed bottom-3 left-3 z-[90] rounded-full border border-white/15 bg-zinc-950 px-3 py-2 text-xs font-medium text-white/80 shadow-lg hover:bg-zinc-900">
-        Cookie settings
-      </button>
+      {!showBanner ? (
+        <button type="button" onClick={() => setShowSettings(true)} className="absolute bottom-3 right-3 z-[45] grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-zinc-950/75 text-white/45 shadow-lg backdrop-blur-xl transition hover:border-white/20 hover:text-white lg:fixed lg:bottom-3 lg:left-3 lg:right-auto lg:h-auto lg:w-auto lg:grid-flow-col lg:gap-2 lg:px-3 lg:py-2 lg:text-xs">
+          <Cookie className="h-3.5 w-3.5" /><span className="sr-only lg:not-sr-only">Cookie settings</span>
+        </button>
+      ) : null}
 
       {showSettings ? (
         <div role="dialog" aria-modal="true" aria-labelledby="cookie-settings-title" className="fixed inset-0 z-[110] flex items-end justify-center bg-black/65 p-4 sm:items-center">

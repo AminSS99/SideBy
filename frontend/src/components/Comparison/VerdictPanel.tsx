@@ -16,6 +16,7 @@ export const VerdictPanel = ({ result }: VerdictPanelProps) => {
 
   useGSAP(() => {
     if (!containerRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     gsap.from(".vp-row", {
       scrollTrigger: {
@@ -98,18 +99,22 @@ export const VerdictPanel = ({ result }: VerdictPanelProps) => {
   ];
 
   return (
-    <div ref={containerRef} className={`${panelClass} p-8 relative overflow-hidden`}>
-      <h3 className="mb-6 font-serif text-2xl text-[#fdfbf7] tracking-tight">Decision Matrix</h3>
-      <div className="divide-y divide-[#2a2a2a] border-t border-[#2a2a2a]">
+    <div ref={containerRef} className={`${panelClass} relative overflow-hidden p-5 sm:p-7`}>
+      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-orange-500/[0.08] blur-3xl" />
+      <div className="relative mb-5 flex items-center justify-between gap-3">
+        <div><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-orange-300">Decision guide</p><h3 className="mt-1 font-serif text-2xl tracking-tight text-[#fffaf1]">Best fit by need</h3></div>
+        <span className="rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-[9px] font-semibold text-white/45">7 scenarios</span>
+      </div>
+      <div className="relative space-y-1">
         {rows.map((row) => (
           <div
             key={row.key}
-            className={`vp-row flex items-center justify-between py-4 px-2 -mx-2 rounded-sm transition-colors hover:bg-[#111] ${row.highlight ? 'vp-overall bg-[#1a110a] border-l-2 border-orange-500' : ''}`}
+            className={`vp-row flex min-h-12 flex-col items-start justify-between gap-1 rounded-xl px-3 py-3 transition-colors hover:bg-white/[0.035] sm:flex-row sm:items-center sm:gap-4 ${row.highlight ? 'vp-overall border border-orange-300/15 bg-gradient-to-r from-orange-500/[0.12] to-rose-500/[0.05]' : ''}`}
           >
             <span className={`text-[10px] font-bold uppercase tracking-widest ${row.highlight ? 'text-orange-500' : 'text-[#fdfbf7]/40'}`}>
               {row.label}
             </span>
-            <span className={`text-sm font-medium ${row.highlight ? 'text-orange-400 font-bold' : 'text-[#fdfbf7]/90'}`}>
+            <span className={`text-sm font-semibold leading-5 sm:max-w-[60%] sm:text-right ${row.highlight ? 'text-orange-300' : 'text-[#fdfbf7]/85'}`}>
               {row.value}
             </span>
           </div>

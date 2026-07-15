@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -20,6 +20,8 @@ import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { researchSteps } from "@/lib/comparisonUtils";
 import { captureEvent } from "@/lib/posthog";
+import { useAuth } from "@/contexts/AuthContext";
+import { completeFirstComparison, isFirstComparison as isStoredFirstComparison } from "@/lib/onboardingAttribution";
 import {
   type ComparisonActivityStep,
   type ComparisonData,
@@ -77,6 +79,9 @@ type ComparisonVersion = {
 
 const ComparisonDetailPage = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isChangingVisibility, setIsChangingVisibility] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -114,6 +119,15 @@ const ComparisonDetailPage = () => {
 
   const job = comparisonQuery.data;
   const result = viewedHistoricalResult || job?.result;
+  const isFirstFlow = searchParams.get("first") === "1" || isStoredFirstComparison(user?.id, id);
+  const showCompletionBridge = Boolean(isFirstFlow && job?.status === "completed" && result);
+
+  useEffect(() => {
+    if (!showCompletionBridge || !id) return;
+    completeFirstComparison(user?.id);
+    captureEvent("first_comparison_flow_completed", { comparison_id: id });
+    navigate(`/app/ecosystem?welcome=1&comparison=${encodeURIComponent(id)}`, { replace: true });
+  }, [id, navigate, showCompletionBridge, user?.id]);
   const versionsQuery = useQuery({
     queryKey: ["comparison-latest-change", id],
     queryFn: async () => {
@@ -279,6 +293,7 @@ const ComparisonDetailPage = () => {
 
   useGSAP(() => {
     if (!comparisonQuery.isLoading && result) {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       const tl = gsap.timeline();
       const actions = gsap.utils.toArray(".wb-actions");
       const grid = gsap.utils.toArray(".wb-grid");
@@ -294,9 +309,9 @@ const ComparisonDetailPage = () => {
 
   const renderWorkbenchGrid = (resultData: ComparisonData, activityData?: ComparisonActivityStep[]) => {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {/* Tab Selector on Mobile */}
-        <div className="lg:hidden sticky top-[73px] z-30 -mx-4 px-4 bg-[#050505] border-b border-white/5 py-3 overflow-x-auto no-scrollbar flex items-center gap-1.5">
+        <div role="tablist" aria-label="Comparison result sections" className="sticky top-[72px] z-30 -mx-4 flex items-center gap-1 overflow-x-auto border-y border-white/[0.07] bg-[#0b0a09]/90 px-4 py-2.5 shadow-[0_12px_30px_rgba(0,0,0,.25)] backdrop-blur-2xl no-scrollbar lg:hidden">
           {[
             { id: "overview", label: "Overview" },
             { id: "intelligence", label: "Intelligence Matrix" },
@@ -304,12 +319,16 @@ const ComparisonDetailPage = () => {
           ].map((tab) => (
             <button
               key={tab.id}
+              id={`comparison-tab-${tab.id}`}
               type="button"
+              role="tab"
+              aria-controls={`comparison-panel-${tab.id}`}
+              aria-selected={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id as "overview" | "intelligence" | "metadata")}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all whitespace-nowrap ${
+              className={`min-h-11 whitespace-nowrap rounded-xl px-4 text-[11px] font-semibold transition-all ${
                 activeTab === tab.id
-                  ? "bg-orange-500 text-white shadow-[0_0_15px_-3px_rgba(249,115,22,0.3)]"
-                  : "text-white/50 bg-[#111] hover:text-white border border-white/5"
+                  ? "border border-orange-300/20 bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-[0_10px_24px_rgba(249,115,22,.18)]"
+                  : "border border-transparent text-white/50 hover:bg-white/[0.05] hover:text-white"
               }`}
             >
               {tab.label}
@@ -360,9 +379,9 @@ const ComparisonDetailPage = () => {
         </div>
 
         {/* Mobile Tab-based Layout */}
-        <div className="lg:hidden space-y-8 pb-20">
+        <div className="space-y-6 pb-28 lg:hidden sm:space-y-8">
           {activeTab === "overview" && (
-            <div className="space-y-8 animate-fadeIn">
+            <div id="comparison-panel-overview" role="tabpanel" aria-labelledby="comparison-tab-overview" className="space-y-6 animate-fadeIn sm:space-y-8">
               <ComparisonHeader
                 result={resultData}
                 onRefresh={() => void refresh()}
@@ -377,7 +396,7 @@ const ComparisonDetailPage = () => {
           )}
 
           {activeTab === "intelligence" && (
-            <div className="space-y-8 animate-fadeIn">
+            <div id="comparison-panel-intelligence" role="tabpanel" aria-labelledby="comparison-tab-intelligence" className="space-y-6 animate-fadeIn sm:space-y-8">
               <DecisionIntelligencePanel
                 result={resultData}
                 activity={activityData}
@@ -399,7 +418,7 @@ const ComparisonDetailPage = () => {
           )}
 
           {activeTab === "metadata" && (
-            <div className="space-y-8 animate-fadeIn">
+            <div id="comparison-panel-metadata" role="tabpanel" aria-labelledby="comparison-tab-metadata" className="space-y-6 animate-fadeIn sm:space-y-8">
               <EntityFactPanel result={resultData} facts={entityFacts} />
               <SourcesPanel sources={resultData.sources} />
               <RunTelemetryPanel result={resultData} />
@@ -413,31 +432,31 @@ const ComparisonDetailPage = () => {
   };
 
   return (
-    <div ref={containerRef} className="space-y-8">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+    <div ref={containerRef} className="space-y-6 sm:space-y-8">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
         <div className="wb-header">
           <Link
             to="/app/comparisons"
-            className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-white/40 transition-colors hover:text-white"
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg text-[11px] font-semibold text-white/45 transition-colors hover:text-white"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Comparisons
           </Link>
-          <h1 className="mt-4 text-4xl font-black uppercase tracking-tight">
+          <h1 className="mt-2 font-serif text-3xl tracking-tight text-[#fffaf1] sm:text-4xl">
             Comparison workbench
           </h1>
-          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-white/55">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">
             Reopen private research, watch running jobs, refresh facts, publish links, and ask follow-up questions from one place.
           </p>
         </div>
 
         {result && job && (
-          <div className="wb-actions flex flex-wrap gap-2">
+          <div className="wb-actions grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             <button
               type="button"
               onClick={() => void toggleVisibility()}
               disabled={isChangingVisibility}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#333] bg-[#111] px-5 text-xs font-bold uppercase tracking-[0.25em] text-[#fdfbf7] transition-colors hover:border-orange-500/40 hover:text-orange-400 disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-orange-500/30 hover:text-orange-300 disabled:opacity-50"
             >
               {job.visibility === "public" ? (
                 <LockKeyhole className="h-4 w-4" />
@@ -454,14 +473,14 @@ const ComparisonDetailPage = () => {
               type="button"
               onClick={() => void refresh()}
               disabled={isRefreshing}
-              className="inline-flex h-12 items-center justify-center rounded-2xl bg-[#fdfbf7] px-5 text-xs font-bold uppercase tracking-[0.25em] text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 text-[10px] font-bold uppercase tracking-wider text-white transition hover:brightness-110 disabled:opacity-50"
             >
               {isRefreshing ? "Refreshing..." : "Refresh facts"}
             </button>
             <button
               type="button"
               onClick={() => setIsVersionsOpen(true)}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#333] bg-[#111] px-5 text-xs font-bold uppercase tracking-[0.25em] text-[#fdfbf7] transition-colors hover:border-orange-500/40 hover:text-orange-400"
+              className="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-orange-500/30 hover:text-orange-300 sm:col-auto"
             >
               <Clock className="h-4 w-4" />
               History

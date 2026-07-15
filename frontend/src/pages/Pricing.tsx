@@ -1,61 +1,66 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, ArrowRight } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  CircleDollarSign,
+  Clock3,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  Zap,
+} from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { GlowCard } from "@/components/GlowCard";
 import { MarketingNav } from "@/components/brand/MarketingNav";
+import { BrandFooter } from "@/components/brand/BrandFooter";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
-const tiers = [
+const TIERS = [
   {
+    id: "free",
     name: "Free",
     monthlyPrice: "$0",
     annualPrice: "$0",
-    description: "Perfect for testing the engine.",
-    features: [
-      "5 AI comparisons per day",
-      "Standard execution speed",
-      "Basic document research",
-      "Public comparison links",
-    ],
-    buttonText: "Start for free",
-    buttonVariant: "outline",
+    description: "For exploring SideBy and making everyday decisions with evidence.",
+    features: ["5 comparisons each day", "Source-backed verdicts", "Public comparison links", "Markdown and JSON exports"],
+    cta: "Start comparing",
+    href: "/auth/sign-up",
+    available: true,
+    icon: Zap,
   },
   {
+    id: "pro",
     name: "Pro",
     monthlyPrice: "$29",
     annualPrice: "$24",
-    period: "/mo",
-    description: "For professionals needing deeper research.",
-    features: [
-      "Unlimited AI comparisons",
-      "Highest execution speed",
-      "Advanced file uploads (PDF, CSV)",
-      "Private & team links",
-      "No SideBy watermarks",
-    ],
-    buttonText: "Upgrade to Pro",
-    buttonVariant: "primary",
-    popular: true,
+    description: "For researchers who need more runs, deeper context, and private work.",
+    features: ["Unlimited comparisons", "Private comparison links", "Advanced document uploads", "Faster research orchestration", "No SideBy watermark"],
+    cta: "Get beta access",
+    href: "/auth/sign-up",
+    available: false,
+    featured: true,
+    icon: Sparkles,
   },
   {
+    id: "team",
     name: "Team",
     monthlyPrice: "$99",
     annualPrice: "$79",
-    period: "/mo",
-    description: "Collaborative research for teams.",
-    features: [
-      "Unlimited AI comparisons",
-      "Shared team workspaces",
-      "Centralized knowledge base",
-      "Export to PDF / Markdown",
-      "Priority support",
-    ],
-    buttonText: "Get Team",
-    buttonVariant: "outline",
+    description: "For teams building a shared, reusable decision practice.",
+    features: ["Everything in Pro", "Shared team workspaces", "Central knowledge base", "Team notes and watchlists", "Priority support"],
+    cta: "Join the team beta",
+    href: "/contact?plan=team",
+    available: false,
+    icon: Users,
   },
-];
+] as const;
+
+const FAQS = [
+  { question: "Can I use SideBy without a card?", answer: "Yes. The Free plan needs no payment details and includes five comparison runs each day." },
+  { question: "Are Pro and Team available today?", answer: "They are in private beta. The prices shown are the planned launch prices; paid checkout is not enabled yet." },
+  { question: "What counts as a comparison?", answer: "A completed research job comparing two options counts as one run. Follow-up questions and exports have separate usage limits." },
+] as const;
 
 const Pricing = () => {
   usePageTitle("Pricing");
@@ -63,112 +68,90 @@ const Pricing = () => {
   const [isAnnual, setIsAnnual] = useState(true);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
-    tl.from(".pricing-header", { y: 30, opacity: 0, duration: 0.8, ease: "power3.out" })
-      .from(".pricing-toggle", { y: 20, opacity: 0, duration: 0.6, ease: "power3.out" }, "-=0.4")
-      .from(".pricing-card", { y: 40, opacity: 0, stagger: 0.15, duration: 0.8, ease: "power3.out" }, "-=0.4");
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.timeline()
+      .from(".pricing-header", { y: 24, duration: 0.7, ease: "power3.out" })
+      .from(".pricing-control", { y: 16, duration: 0.5, ease: "power2.out" }, "-=0.35")
+      .from(".pricing-card", { y: 28, stagger: 0.1, duration: 0.65, ease: "power3.out" }, "-=0.25");
   }, { scope: pageRef });
 
   return (
-    <div ref={pageRef} className="min-h-screen bg-[#030303] text-[#fdfbf7] selection:bg-orange-500/30 pb-24 relative overflow-hidden">
-      {/* Background Grid */}
-      <div className="pointer-events-none fixed inset-0 opacity-[0.03]">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
-      </div>
-      
+    <div ref={pageRef} className="relative min-h-screen overflow-hidden bg-[#070605] text-[#fdfbf7] selection:bg-orange-500/30">
+      <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,.35)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.35)_1px,transparent_1px)] [background-size:72px_72px] [mask-image:linear-gradient(to_bottom,black,transparent_75%)]" />
+      <div className="pointer-events-none absolute -left-40 top-32 h-[420px] w-[420px] rounded-full bg-orange-500/10 blur-[120px]" />
+      <div className="pointer-events-none absolute -right-48 top-[32rem] h-[480px] w-[480px] rounded-full bg-fuchsia-500/[0.08] blur-[140px]" />
       <MarketingNav />
 
-      <div className="pricing-header pt-40 text-center px-6 relative z-10">
-        <h1 className="font-serif text-5xl md:text-7xl tracking-tight text-[#fdfbf7] mb-6">
-          Simple, usage-based pricing
-        </h1>
-        <p className="text-lg text-white/50 max-w-2xl mx-auto">
-          Start for free, upgrade when you need deeper context limits, faster orchestration, and team collaboration features.
-        </p>
-      </div>
+      <main className="relative z-10 mx-auto max-w-7xl px-4 pb-20 pt-12 sm:px-6 sm:pb-28 sm:pt-20">
+        <header className="pricing-header mx-auto max-w-4xl text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-400/[0.08] px-3.5 py-2 text-[9px] font-bold uppercase tracking-[0.18em] text-orange-200">
+            <CircleDollarSign className="h-3.5 w-3.5" /> Simple from day one
+          </div>
+          <h1 className="mt-6 font-serif text-5xl leading-[0.94] tracking-[-0.04em] text-[#fffaf1] sm:text-7xl">
+            Start free. <span className="bg-gradient-to-r from-orange-300 via-rose-300 to-fuchsia-300 bg-clip-text italic text-transparent">Scale when it matters.</span>
+          </h1>
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-white/50 sm:text-lg">
+            Make five source-backed decisions every day for free. Paid plans are currently in private beta, with pricing shown transparently before launch.
+          </p>
+        </header>
 
-      {/* Toggle */}
-      <div className="pricing-toggle mt-12 flex justify-center relative z-10">
-        <div className="flex items-center gap-4 rounded-full border border-[#333] bg-[#111] p-1.5">
-          <button
-            onClick={() => setIsAnnual(false)}
-            className={`rounded-full px-6 py-2.5 text-xs font-bold uppercase tracking-widest transition-all ${
-              !isAnnual ? "bg-white text-black" : "text-white/50 hover:text-white"
-            }`}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setIsAnnual(true)}
-            className={`relative rounded-full px-6 py-2.5 text-xs font-bold uppercase tracking-widest transition-all ${
-              isAnnual ? "bg-orange-500 text-white" : "text-white/50 hover:text-white"
-            }`}
-          >
-            Annually
-            <span className="absolute -top-3 -right-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-[8px] text-orange-400">
-              Save 20%
-            </span>
-          </button>
+        <div className="pricing-control mx-auto mt-8 flex max-w-sm flex-col items-center gap-3 sm:mt-10">
+          <div className="grid w-full grid-cols-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1.5" aria-label="Billing preview">
+            <button type="button" aria-pressed={!isAnnual} onClick={() => setIsAnnual(false)} className={`min-h-11 rounded-xl text-[10px] font-bold uppercase tracking-[0.16em] transition-colors ${!isAnnual ? "bg-white text-black" : "text-white/45 hover:text-white"}`}>Monthly</button>
+            <button type="button" aria-pressed={isAnnual} onClick={() => setIsAnnual(true)} className={`min-h-11 rounded-xl text-[10px] font-bold uppercase tracking-[0.16em] transition-colors ${isAnnual ? "bg-gradient-to-r from-orange-500 to-rose-500 text-white" : "text-white/45 hover:text-white"}`}>Annual · save 20%</button>
+          </div>
+          <p className="flex items-center gap-1.5 text-[10px] text-white/30"><Clock3 className="h-3.5 w-3.5" /> Paid billing is a launch preview</p>
         </div>
-      </div>
 
-      <div className="mx-auto mt-16 max-w-7xl px-6 lg:px-8 relative z-10">
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          {tiers.map((tier) => {
+        <section className="mx-auto mt-10 grid max-w-6xl gap-4 lg:mt-14 lg:grid-cols-3 lg:items-stretch">
+          {TIERS.map((tier) => {
             const price = isAnnual ? tier.annualPrice : tier.monthlyPrice;
-            
             return (
-              <GlowCard 
-                key={tier.name}
-                glowColor={tier.popular ? "rgba(234, 88, 12, 0.3)" : "rgba(255, 255, 255, 0.05)"}
-                containerClassName={`pricing-card rounded-[2rem] ${
-                  tier.popular 
-                    ? "border-orange-500/50 bg-[#1a110a] shadow-[0_0_40px_rgba(234,88,12,0.1)] scale-105 z-10" 
-                    : "border-white/10 bg-[#111]/50 hover:border-white/20 hover:bg-[#111]"
-                }`}
-                className="flex flex-col p-8 md:p-10"
-              >
-                {tier.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-orange-600 to-orange-400 px-4 py-1 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg">
-                    Most Popular
-                  </div>
-                )}
-                
-                <div className="mb-8">
-                  <h3 className="text-xl font-bold text-white mb-2">{tier.name}</h3>
-                  <p className="text-sm text-white/50 min-h-[40px]">{tier.description}</p>
+              <article key={tier.id} className={`pricing-card relative flex flex-col overflow-hidden rounded-[28px] border p-5 sm:p-7 ${tier.featured ? "border-orange-300/25 bg-gradient-to-br from-orange-500/[0.13] via-rose-500/[0.06] to-fuchsia-500/[0.07] shadow-[0_28px_80px_-40px_rgba(244,63,94,.75)]" : "border-white/[0.09] bg-white/[0.035]"}`}>
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-300/60 to-transparent" />
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/25 text-orange-300"><tier.icon className="h-5 w-5" /></div>
+                  <span className={`rounded-full border px-3 py-1.5 text-[8px] font-bold uppercase tracking-[0.16em] ${tier.available ? "border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-300" : "border-orange-300/20 bg-orange-400/[0.08] text-orange-200"}`}>{tier.available ? "Available now" : "Private beta"}</span>
                 </div>
-
-                <div className="mb-8">
-                  <span className="font-serif text-5xl text-white transition-all duration-300">{price}</span>
-                  {tier.period && <span className="text-white/40">{tier.period}</span>}
+                <div className="mt-6">
+                  <h2 className="font-serif text-3xl text-white">{tier.name}</h2>
+                  <p className="mt-2 min-h-12 text-sm leading-6 text-white/45">{tier.description}</p>
                 </div>
-
-                <ul className="mb-8 flex-1 space-y-4">
+                <div className="mt-6 flex items-end gap-1.5">
+                  <span className="font-serif text-5xl tracking-tight text-white">{price}</span>
+                  {tier.id !== "free" && <span className="mb-1.5 text-sm text-white/35">/month</span>}
+                </div>
+                {tier.id !== "free" && isAnnual && <p className="mt-1 text-[10px] text-white/30">per month, billed annually at launch</p>}
+                <div className="my-6 h-px bg-white/[0.08]" />
+                <ul className="flex-1 space-y-3.5">
                   {tier.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-3 text-sm text-white/70">
-                      <Check className={`mt-0.5 h-4 w-4 shrink-0 ${tier.popular ? "text-orange-400" : "text-emerald-400"}`} />
-                      <span>{feature}</span>
-                    </li>
+                    <li key={feature} className="flex items-start gap-3 text-sm text-white/65"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" /><span>{feature}</span></li>
                   ))}
                 </ul>
-
-                <Link
-                  to="/auth/sign-up"
-                  className={`flex items-center justify-center gap-2 rounded-xl py-4 text-xs font-bold uppercase tracking-widest transition-all mt-auto ${
-                    tier.buttonVariant === "primary"
-                      ? "bg-white text-black hover:bg-[#e0e0e0]"
-                      : "border border-white/20 bg-transparent text-white hover:bg-white/5 hover:border-white/40"
-                  }`}
-                >
-                  {tier.buttonText}
-                  <ArrowRight className="h-4 w-4" />
+                <Link to={tier.href} className={`group mt-7 flex min-h-[52px] items-center justify-center gap-2 rounded-2xl px-5 text-[10px] font-bold uppercase tracking-[0.16em] transition-transform hover:-translate-y-0.5 ${tier.featured ? "bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 text-white" : tier.available ? "bg-white text-black" : "border border-white/10 bg-white/[0.04] text-white/70"}`}>
+                  {tier.cta} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
-              </GlowCard>
+              </article>
             );
           })}
-        </div>
-      </div>
+        </section>
+
+        <section className="mx-auto mt-8 grid max-w-6xl grid-cols-3 gap-2 sm:mt-10 sm:gap-4">
+          {[[ShieldCheck, "No card", "Start free"], [Zap, "5 daily", "Comparison runs"], [Users, "Private beta", "Paid plans"]].map(([Icon, value, label]) => {
+            const TrustIcon = Icon as typeof ShieldCheck;
+            return <div key={value as string} className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3 text-center sm:p-5"><TrustIcon className="mx-auto h-4 w-4 text-orange-300" /><p className="mt-2 text-xs font-semibold text-white sm:text-sm">{value as string}</p><p className="mt-1 text-[8px] uppercase tracking-wider text-white/30 sm:text-[9px]">{label as string}</p></div>;
+          })}
+        </section>
+
+        <section className="mx-auto mt-20 max-w-3xl sm:mt-28">
+          <div className="text-center"><p className="text-[9px] font-bold uppercase tracking-[0.2em] text-orange-300">Straight answers</p><h2 className="mt-3 font-serif text-4xl text-white sm:text-5xl">Before you choose.</h2></div>
+          <div className="mt-8 space-y-3">
+            {FAQS.map((faq) => <details key={faq.question} className="group rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5"><summary className="cursor-pointer list-none text-sm font-semibold text-white marker:hidden">{faq.question}<span className="float-right text-orange-300 transition-transform group-open:rotate-45">+</span></summary><p className="mt-3 pr-6 text-sm leading-6 text-white/45">{faq.answer}</p></details>)}
+          </div>
+        </section>
+      </main>
+
+      <footer className="relative z-10 border-t border-white/[0.08] bg-black/25"><div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-8 sm:flex-row sm:justify-between sm:px-6"><BrandFooter /><div className="flex gap-5 text-[9px] font-bold uppercase tracking-widest text-white/35"><Link to="/legal/privacy">Privacy</Link><Link to="/legal/terms">Terms</Link></div></div></footer>
     </div>
   );
 };

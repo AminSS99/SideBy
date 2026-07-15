@@ -125,6 +125,7 @@ export const DecisionMatrixPanel = ({
 
   // Animate the winner trophy when winner changes
   useGSAP(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (scores.winner !== "tie") {
       gsap.fromTo(
         ".winner-trophy",
@@ -234,20 +235,20 @@ export const DecisionMatrixPanel = ({
   return (
     <div id="decision-matrix" ref={containerRef} className={cn(panelClass, "overflow-hidden mb-10 scroll-mt-28")}>
       {/* Header */}
-      <div className="p-6 md:p-8 border-b border-[#2a2a2a] flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#111]">
+      <div className="flex flex-col justify-between gap-4 border-b border-white/[0.08] bg-white/[0.025] p-5 sm:flex-row sm:items-center md:p-7">
         <div className="flex items-center gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7]/50">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-orange-300/15 bg-orange-400/[0.07] text-orange-300">
             <Sliders className="h-5 w-5 text-orange-400" />
           </div>
           <div>
-            <h3 className="font-serif text-2xl text-[#fdfbf7] tracking-tight">Interactive Decision Matrix</h3>
+            <h3 className="font-serif text-2xl tracking-tight text-[#fffaf1]">Tune your decision</h3>
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mt-1">Weighted Decision Intelligence</p>
           </div>
         </div>
         
         <button 
           onClick={handleReset}
-          className="rounded-sm border border-[#333] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 hover:bg-[#1a1a1a] hover:text-[#fdfbf7] transition-all"
+          className="min-h-10 rounded-xl border border-white/10 px-4 text-[10px] font-bold uppercase tracking-wider text-white/55 transition-all hover:bg-white/[0.05] hover:text-white"
         >
           Reset to default
         </button>
@@ -257,7 +258,7 @@ export const DecisionMatrixPanel = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-[#2a2a2a]">
         
         {/* Sliders Configuration */}
-        <div className="lg:col-span-7 p-6 md:p-8 space-y-6 border-b lg:border-b-0 lg:border-r border-[#2a2a2a]">
+        <div className="space-y-5 border-b border-white/[0.08] p-4 sm:p-6 md:p-8 lg:col-span-7 lg:border-b-0 lg:border-r">
           <h4 className="text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/60 flex items-center gap-2">
             <Sliders className="h-3.5 w-3.5 text-orange-500" /> Configure Dimension Importance
           </h4>
@@ -268,7 +269,7 @@ export const DecisionMatrixPanel = ({
               return (
                 <div
                   key={dim.subject}
-                  className="rounded-sm border border-[#1f1f1f] bg-[#0c0b0a] p-4 space-y-2 hover:border-orange-500/35 hover:bg-[#1a110a] transition-all"
+                  className="space-y-3 rounded-xl border border-white/[0.07] bg-black/20 p-4 transition-all hover:border-orange-500/25 hover:bg-orange-500/[0.035]"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-[#fdfbf7]">{dim.subject}</span>
@@ -312,33 +313,33 @@ export const DecisionMatrixPanel = ({
         </div>
 
         {/* Dynamic Matrix Outputs */}
-        <div className="lg:col-span-5 p-6 md:p-8 bg-[#0c0b0a] flex flex-col justify-between">
+        <div className="flex flex-col justify-between bg-black/15 p-4 sm:p-6 md:p-8 lg:col-span-5">
           <div className="space-y-6">
             <h4 className="text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/60 flex items-center gap-2">
               <Activity className="h-3.5 w-3.5 text-cyan-400" /> Real-time Decision Matrix
             </h4>
 
             {/* Score Boards */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
               {/* Entity A */}
-              <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 text-center relative overflow-hidden group">
+              <div className="group relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 text-center sm:p-5">
                 <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: result.entities.a.hex }} />
                 <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1">
                   {result.entities.a.name}
                 </span>
-                <span className="text-4xl font-serif font-semibold text-[#fdfbf7] block mt-2">
+                <span className="mt-2 block font-serif text-3xl font-semibold text-[#fdfbf7] sm:text-4xl">
                   {scores.scoreA}
                 </span>
                 <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 block mt-1">Weighted Index</span>
               </div>
 
               {/* Entity B */}
-              <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 text-center relative overflow-hidden group">
+              <div className="group relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 text-center sm:p-5">
                 <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: result.entities.b.hex }} />
                 <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1">
                   {result.entities.b.name}
                 </span>
-                <span className="text-4xl font-serif font-semibold text-[#fdfbf7] block mt-2">
+                <span className="mt-2 block font-serif text-3xl font-semibold text-[#fdfbf7] sm:text-4xl">
                   {scores.scoreB}
                 </span>
                 <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 block mt-1">Weighted Index</span>
@@ -474,7 +475,7 @@ export const DecisionMatrixPanel = ({
 
       {/* Clickable Brand Footer Link */}
       <div className="mt-8 pt-4 border-t border-[#2a2a2a] text-center text-xs text-[#fdfbf7]/20 pb-4">
-        <a href="https://snapsolve.ink" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
+        <a href="https://sideby.ink" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
           Made by SnapSolve Ink
         </a>
       </div>

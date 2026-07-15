@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { apiFetch } from "../api";
+import { ApiError, apiFetch, shouldReportApiError } from "../api";
 
 describe("apiFetch Request Collapsing", () => {
   beforeEach(() => {
@@ -76,5 +76,29 @@ describe("apiFetch Request Collapsing", () => {
     // global.fetch should be called 3 times
     expect(fetchCallCount).toBe(3);
     expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("apiFetch Sentry filtering", () => {
+  it.each([400, 401, 403, 404, 409, 422, 429])(
+    "does not report expected HTTP %s responses",
+    (status) => {
+      expect(shouldReportApiError(new ApiError("Expected response", status))).toBe(false);
+    },
+  );
+
+  it.each([408, 500, 502, 503])("reports actionable HTTP %s responses", (status) => {
+    expect(shouldReportApiError(new ApiError("Service failure", status))).toBe(true);
+  });
+
+  it("does not report intentional request cancellation", () => {
+    const error = new Error("Request cancelled");
+    error.name = "AbortError";
+
+    expect(shouldReportApiError(error)).toBe(false);
+  });
+
+  it("reports unexpected network failures", () => {
+    expect(shouldReportApiError(new TypeError("Failed to fetch"))).toBe(true);
   });
 });

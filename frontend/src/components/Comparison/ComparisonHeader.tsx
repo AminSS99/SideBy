@@ -15,10 +15,11 @@ interface ComparisonHeaderProps {
 
 const SplitTextChars = ({ text, className }: { text: string; className?: string }) => {
   return (
-    <span className={className} style={{ display: "inline-block" }}>
+    <span className={className} aria-label={text}>
       {text.split("").map((char, i) => (
         <span
           key={i}
+          aria-hidden="true"
           className="char inline-block"
           style={{ whiteSpace: char === " " ? "pre" : "normal" }}
         >
@@ -45,22 +46,25 @@ export const ComparisonHeader = ({
   const shareSlug = result.slug || fallbackSlug(result.entities.a.name, result.entities.b.name);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
-    
-    tl.from(".ch-top-item", {
-      y: -20,
-      opacity: 0,
-      stagger: 0.1,
-      duration: 1,
-      ease: "expo.out",
-    });
+    const mm = gsap.matchMedia();
+
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      const tl = gsap.timeline();
+
+      tl.from(".ch-top-item", {
+        y: -14,
+        opacity: 0,
+        stagger: 0.08,
+        duration: 0.65,
+        ease: "power3.out",
+      });
 
     tl.from(".ch-entity-a .char", {
       y: 100,
       opacity: 0,
       rotationX: -90,
       stagger: 0.02,
-      duration: 1.2,
+      duration: 0.85,
       ease: "power4.out",
     }, "-=0.6");
     
@@ -68,7 +72,7 @@ export const ComparisonHeader = ({
       scale: 0,
       opacity: 0,
       rotation: -20,
-      duration: 1,
+      duration: 0.7,
       ease: "elastic.out(1.2, 0.5)",
     }, "-=0.8");
 
@@ -77,21 +81,21 @@ export const ComparisonHeader = ({
       opacity: 0,
       rotationX: 90,
       stagger: 0.02,
-      duration: 1.2,
+      duration: 0.85,
       ease: "power4.out",
     }, "-=0.9");
 
     tl.from(".ch-verdict-line", {
       scaleY: 0,
       transformOrigin: "top",
-      duration: 1,
+      duration: 0.7,
       ease: "expo.inOut",
     }, "-=0.5");
 
     tl.from(".ch-verdict-content", {
       opacity: 0,
       x: -30,
-      duration: 1,
+      duration: 0.7,
       ease: "power3.out",
     }, "-=0.5");
 
@@ -100,15 +104,17 @@ export const ComparisonHeader = ({
       opacity: 0,
       scale: 0.95,
       stagger: 0.2,
-      duration: 1.2,
+      duration: 0.8,
       ease: "expo.out",
-    }, "-=0.8");
+      }, "-=0.8");
+    });
 
+    return () => mm.revert();
   }, { scope: container });
 
   return (
     <div ref={container} className="relative break-inside-avoid">
-      <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
+      <div className="mb-6 flex flex-col justify-between gap-4 border-b border-white/[0.08] pb-5 sm:mb-10 sm:flex-row sm:flex-wrap sm:items-center sm:pb-6">
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           <span className="ch-top-item flex items-center gap-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
             <span className="relative flex h-2 w-2">
@@ -129,8 +135,10 @@ export const ComparisonHeader = ({
         </div>
         <div className="flex items-center gap-2 sm:gap-3 print-hidden">
           <button
+            type="button"
             onClick={() => setExportOpen(true)}
-            className="ch-top-item flex items-center gap-2 rounded-sm border border-[#2a2a2a] bg-[#111] px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#1a1a1a] hover:border-[#444]"
+            aria-label="Export comparison"
+            className="ch-top-item flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-all hover:border-orange-300/20 hover:text-orange-300"
             title="Export Report"
           >
             <Download className="h-3 w-3" />
@@ -142,12 +150,14 @@ export const ComparisonHeader = ({
               entityB={result.entities.b.name}
               slug={shareSlug}
               comparisonId={comparisonId}
-              className="rounded-sm border border-[#2a2a2a] bg-[#111] hover:bg-[#1a1a1a] hover:border-[#444] text-[#fdfbf7]"
+              className="min-h-11 rounded-xl border border-white/10 bg-white/[0.035] text-white/70 hover:border-orange-300/20 hover:bg-white/[0.06]"
             />
           </div>
           <button
+            type="button"
             onClick={onRefresh}
-            className="ch-top-item flex items-center gap-2 rounded-sm border border-[#2a2a2a] bg-[#111] px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#fdfbf7] transition-all hover:bg-[#1a1a1a] hover:border-[#444] hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+            aria-label="Refresh comparison facts"
+            className="ch-top-item flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-all hover:border-orange-300/20 hover:text-orange-300"
           >
             <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
@@ -157,44 +167,44 @@ export const ComparisonHeader = ({
         </div>
       </div>
 
-      <div className="mb-8 sm:mb-12 flex flex-col md:flex-row md:items-baseline md:justify-between overflow-hidden py-4 perspective-1000">
-        <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-[5rem] leading-none tracking-tight flex flex-col sm:flex-row sm:flex-wrap items-baseline gap-y-2 sm:gap-y-4">
+      <div className="mb-7 overflow-hidden py-2 perspective-1000 sm:mb-10 sm:py-4">
+        <h2 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-serif text-[clamp(2.35rem,12vw,5rem)] leading-[0.95] tracking-[-0.045em] text-[#fffaf1] sm:gap-x-5">
           <SplitTextChars 
             text={result.entities.a.name} 
-            className="ch-entity-a inline-block" 
+            className="ch-entity-a break-words"
           />
-          <span className="ch-vs mx-0 sm:mx-6 my-1 sm:my-0 font-serif italic font-light text-[#fdfbf7]/20 text-3xl sm:text-4xl lg:text-5xl inline-block">
+          <span className="ch-vs inline-block font-serif text-2xl font-light italic text-orange-300/45 sm:text-4xl">
             vs
           </span>
           <SplitTextChars 
             text={result.entities.b.name} 
-            className="ch-entity-b inline-block" 
+            className="ch-entity-b break-words"
           />
         </h2>
       </div>
 
-      <div className="mb-16 relative pl-8 py-2 break-inside-avoid">
-        <div className="ch-verdict-line absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-orange-500 to-orange-800" />
+      <div className="relative mb-10 overflow-hidden rounded-2xl border border-orange-300/15 bg-[radial-gradient(circle_at_10%_0%,rgba(249,115,22,.12),transparent_42%),rgba(255,255,255,.025)] p-5 break-inside-avoid sm:mb-14 sm:p-7">
+        <div className="ch-verdict-line absolute bottom-0 left-0 top-0 w-1 bg-gradient-to-b from-orange-400 via-rose-500 to-fuchsia-500" />
         
         <div className="ch-verdict-content">
-          <p className="mb-4 flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-orange-500">
-            <span className="h-px w-8 bg-orange-500/50"></span>
+          <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300">
+            <span className="h-px w-6 bg-orange-400/50"></span>
             Executive Verdict
           </p>
-          <p className="max-w-4xl text-xl leading-relaxed text-[#fdfbf7]/90 font-serif md:text-2xl">
+          <p className="max-w-4xl font-serif text-lg leading-7 text-[#fffaf1]/85 sm:text-xl sm:leading-8 md:text-2xl">
             {result.verdict.summary}
           </p>
         </div>
       </div>
 
       {result.taxonomy?.disclaimer && (
-        <div className="mb-10 flex gap-3 rounded-sm border border-amber-500/20 bg-amber-500/10 p-4 text-sm leading-relaxed text-amber-100/80">
+        <div className="mb-8 flex gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm leading-relaxed text-amber-100/80 sm:mb-10">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
           <p>{result.taxonomy.disclaimer}</p>
         </div>
       )}
 
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 mb-8 sm:mb-10 break-inside-avoid">
+      <div className="mb-8 grid grid-cols-1 gap-3 break-inside-avoid sm:mb-10 sm:gap-5 md:grid-cols-2">
         <div className="ch-card perspective-1000"><EntityCard entity={result.entities.a} side="a" /></div>
         <div className="ch-card perspective-1000"><EntityCard entity={result.entities.b} side="b" /></div>
       </div>

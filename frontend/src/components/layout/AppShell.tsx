@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   GitCompareArrows, Layers3, FolderKanban, Settings,
   LogOut, MessageSquare, Microscope, Database, Activity, CreditCard,
-  Search, Terminal, Users, Menu, X, ChevronDown, Clock3
+  Search, Terminal, Users, Menu, X, ChevronDown, Clock3, Orbit
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
@@ -16,6 +16,7 @@ import { CommandMenu } from "@/components/CommandMenu";
 import { BrandFooter } from "@/components/brand/BrandFooter";
 
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { readOnboardingAttribution } from "@/lib/onboardingAttribution";
 
 const primaryNavItems = [
   { to: "/app/comparisons", label: "Compare", icon: GitCompareArrows },
@@ -26,6 +27,7 @@ const primaryNavItems = [
 ];
 
 const advancedNavItems = [
+  { to: "/app/ecosystem", label: "Snap ecosystem", icon: Orbit },
   { to: "/app/chat", label: "AI Chat", icon: MessageSquare },
   { to: "/app/research", label: "Research", icon: Microscope },
   { to: "/app/prompts", label: "Prompts", icon: Terminal },
@@ -57,25 +59,25 @@ const AppShell = () => {
   }, [location.pathname]);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) return;
+
+    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
     
     tl.from(".shell-header", {
       y: -20,
       opacity: 0,
       duration: 0.8,
-      ease: "power3.out"
     })
     .from(".shell-sidebar", {
       x: -20,
       opacity: 0,
       duration: 0.8,
-      ease: "power3.out"
     }, "-=0.6")
     .from(".shell-main", {
       y: 20,
       opacity: 0,
       duration: 0.8,
-      ease: "power3.out"
     }, "-=0.6")
     .from(".shell-bottom-nav", {
       y: 40,
@@ -96,24 +98,28 @@ const AppShell = () => {
 
   // Redirect new users without workspaces to onboarding
   if (needsOnboarding) {
-    return <Navigate to="/onboarding" replace />;
+    return <Navigate to={readOnboardingAttribution(user?.id) ? "/onboarding" : "/onboarding/discovery"} replace />;
   }
 
   return (
-    <div ref={shellRef} className="min-h-screen bg-[#050505] text-white selection:bg-orange-500/30 relative flex flex-col">
+    <div ref={shellRef} className="relative flex min-h-screen flex-col overflow-x-hidden bg-[#070605] text-white selection:bg-orange-500/30">
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(249,115,22,.10),transparent_28%),radial-gradient(circle_at_90%_85%,rgba(217,70,239,.055),transparent_32%)]" />
       <CommandMenu open={commandOpen} setOpen={setCommandOpen} />
 
-      <div className="shell-header border-b border-white/10 bg-black/60 sticky top-0 z-50">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+      <div className="shell-header sticky top-0 z-50 border-b border-white/[0.08] bg-[#070605]/80 backdrop-blur-2xl">
+        <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-4">
             <button 
-              className="lg:hidden p-2 -ml-2 text-white/70 hover:text-white transition-colors"
+              type="button"
+              aria-label="Open navigation"
+              aria-expanded={mobileMenuOpen}
+              className="-ml-2 grid h-11 w-11 place-items-center rounded-xl text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white lg:hidden"
               onClick={() => setMobileMenuOpen(true)}
             >
               <Menu className="h-6 w-6" />
             </button>
             <Link to="/" className="flex items-center gap-4 group">
-              <img src="/icon.svg" alt="SideBy" className="h-9 w-9 object-contain rounded-sm group-hover:opacity-80 transition-all" />
+              <span className="grid h-10 w-10 place-items-center rounded-xl border border-orange-300/15 bg-orange-400/[0.07]"><img src="/icon.svg" alt="SideBy" className="h-8 w-8 object-contain transition-transform duration-300 group-hover:scale-105" /></span>
               <div className="hidden sm:block">
                 <span className="font-serif text-lg tracking-tight text-white group-hover:text-orange-50 transition-colors">
                   {brand.productName}
@@ -128,7 +134,8 @@ const AppShell = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setCommandOpen(true)}
-              className="flex items-center gap-2 rounded-sm border border-white/10 bg-white/[0.02] px-3 py-1.5 text-xs text-white/50 hover:bg-white/[0.08] hover:border-white/20 hover:text-white transition-all sm:mr-4"
+              aria-label="Open command search"
+              className="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-xs text-white/50 transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white sm:mr-4"
             >
               <Search className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Search...</span>
@@ -159,9 +166,9 @@ const AppShell = () => {
         </div>
       </div>
 
-      <div className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 gap-4 px-4 py-5 sm:px-6 sm:py-8 lg:grid-cols-[220px_1fr] lg:gap-8 items-start pb-24 lg:pb-8">
+      <div className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 items-start gap-4 px-3 py-4 pb-28 sm:px-6 sm:py-8 lg:grid-cols-[232px_1fr] lg:gap-7 lg:pb-8">
         {/* Desktop Sidebar */}
-        <aside className="shell-sidebar hidden lg:flex flex-col rounded-sm border border-white/10 bg-[#0a0a0a] p-4 sticky top-28 h-[calc(100vh-8rem)]">
+        <aside className="shell-sidebar sticky top-24 hidden h-[calc(100vh-7rem)] flex-col rounded-2xl border border-white/[0.09] bg-white/[0.025] p-3 shadow-[0_24px_80px_rgba(0,0,0,.35)] backdrop-blur-xl lg:flex">
           <nav className="flex flex-col space-y-1 overflow-y-auto no-scrollbar flex-1">
             {primaryNavItems.map((item) => (
               <NavLink
@@ -170,9 +177,9 @@ const AppShell = () => {
                 end={item.end}
                 className={({ isActive }) =>
                   [
-                    "relative flex shrink-0 items-center gap-3 rounded-sm px-4 py-2.5 text-xs uppercase tracking-widest font-bold transition-all group overflow-hidden",
+                    "group relative flex min-h-11 shrink-0 items-center gap-3 overflow-hidden rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all",
                     isActive
-                      ? "text-orange-400"
+                      ? "text-orange-300"
                       : "text-white/50 hover:text-white",
                   ].join(" ")
                 }
@@ -180,7 +187,7 @@ const AppShell = () => {
                 {({ isActive }) => (
                   <>
                     {isActive && (
-                      <div className="absolute inset-0 bg-orange-500/10 border border-orange-500/20 rounded-sm z-0" />
+                      <div className="absolute inset-0 z-0 rounded-xl border border-orange-400/15 bg-gradient-to-r from-orange-400/[0.12] to-rose-400/[0.06]" />
                     )}
                     <div className="absolute inset-0 bg-white/[0.05] translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out z-0" />
                     <item.icon className="relative z-10 h-4 w-4 shrink-0" />
@@ -256,14 +263,14 @@ const AppShell = () => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setMobileMenuOpen(false)}
-                className="fixed inset-0 z-[60] bg-black/80 lg:hidden"
+                className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm lg:hidden"
               />
               <motion.aside 
                 initial={{ x: "-100%" }}
                 animate={{ x: 0 }}
                 exit={{ x: "-100%" }}
                 transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                className="fixed inset-y-0 left-0 z-[70] w-[280px] bg-[#0c0b0a] border-r border-[#2a2a2a] shadow-2xl flex flex-col lg:hidden"
+                className="fixed inset-y-0 left-0 z-[70] flex w-[min(88vw,330px)] flex-col border-r border-white/10 bg-[#0d0b0a]/98 shadow-2xl backdrop-blur-2xl lg:hidden"
               >
                 <div className="p-4 flex items-center justify-between border-b border-[#2a2a2a]">
                   <div className="flex items-center gap-3">
@@ -271,6 +278,8 @@ const AppShell = () => {
                     <span className="font-serif text-base tracking-tight text-white">{brand.productName}</span>
                   </div>
                   <button 
+                    type="button"
+                    aria-label="Close navigation"
                     onClick={() => setMobileMenuOpen(false)}
                     className="p-2 text-white/50 hover:text-white transition-colors"
                   >
@@ -355,7 +364,7 @@ const AppShell = () => {
           )}
         </AnimatePresence>
 
-        <main className="shell-main min-w-0 w-full rounded-sm border border-white/10 bg-[#0a0a0a] p-4 sm:p-8 md:p-10 shadow-2xl flex-1 flex flex-col pb-24 lg:pb-10">
+        <main className="shell-main flex min-w-0 w-full flex-1 flex-col rounded-2xl border border-white/[0.09] bg-[#0b0a09]/80 p-4 pb-24 shadow-[0_30px_100px_rgba(0,0,0,.35)] backdrop-blur-xl sm:p-8 md:p-10 lg:pb-10">
           {workspaceError && (
             <div className="mb-6 rounded-sm border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-100">
               {workspaceError}
@@ -371,12 +380,12 @@ const AppShell = () => {
       </div>
 
       {/* Floating PWA Mobile Bottom Navigation */}
-      <div className="shell-bottom-nav lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[400px] h-16 bg-black/85 border border-white/10 rounded-2xl flex items-center justify-around px-2 shadow-[0_8px_32px_rgba(0,0,0,0.65)] z-50">
+      <nav aria-label="App navigation" className="shell-bottom-nav fixed bottom-[max(.75rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex h-[68px] w-[calc(100%-1.5rem)] max-w-[430px] -translate-x-1/2 items-center justify-around rounded-2xl border border-white/[0.12] bg-[#0a0908]/90 px-1.5 shadow-[0_18px_55px_rgba(0,0,0,.7)] backdrop-blur-2xl lg:hidden">
         <NavLink
           to="/app/comparisons"
           className={({ isActive }) =>
-            `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
-              isActive ? "text-orange-400" : "text-white/40 hover:text-white"
+            `flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 text-[9px] font-bold transition-all ${
+              isActive ? "text-orange-300" : "text-white/45 hover:text-white"
             }`
           }
         >
@@ -388,8 +397,8 @@ const AppShell = () => {
           to="/app"
           end
           className={({ isActive }) =>
-            `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
-              isActive ? "text-orange-400" : "text-white/40 hover:text-white"
+            `flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 text-[9px] font-bold transition-all ${
+              isActive ? "text-orange-300" : "text-white/45 hover:text-white"
             }`
           }
         >
@@ -400,8 +409,8 @@ const AppShell = () => {
         <NavLink
           to="/app/uploads"
           className={({ isActive }) =>
-            `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
-              isActive ? "text-orange-400" : "text-white/40 hover:text-white"
+            `flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 text-[9px] font-bold transition-all ${
+              isActive ? "text-orange-300" : "text-white/45 hover:text-white"
             }`
           }
         >
@@ -412,8 +421,8 @@ const AppShell = () => {
         <NavLink
           to="/app/team"
           className={({ isActive }) =>
-            `flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${
-              isActive ? "text-orange-400" : "text-white/40 hover:text-white"
+            `flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 text-[9px] font-bold transition-all ${
+              isActive ? "text-orange-300" : "text-white/45 hover:text-white"
             }`
           }
         >
@@ -423,12 +432,13 @@ const AppShell = () => {
 
         <button
           onClick={() => setMobileMenuOpen(true)}
-          className="flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-white/40 hover:text-white transition-all"
+          aria-label="More navigation"
+          className="flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 text-[9px] font-bold text-white/45 transition-all hover:text-white"
         >
           <Menu className="h-5 w-5" />
           <span>More</span>
         </button>
-      </div>
+      </nav>
     </div>
   );
 };

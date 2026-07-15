@@ -197,7 +197,7 @@ export const ResearchLoader = ({
   }, [progress, activeStep, prefersReducedMotion]);
 
   return (
-    <div ref={containerRef} className={cn(panelClass, "relative overflow-hidden min-h-[600px] shadow-2xl flex flex-col")}>
+    <div ref={containerRef} role="status" aria-live="polite" aria-label={`Researching ${query}, ${progress}% complete`} className={cn(panelClass, "relative flex min-h-[560px] flex-col overflow-hidden rounded-[28px] shadow-2xl")}>
       {/* Ambient moving glow inside the loader */}
       <div 
         ref={glowRef}
@@ -221,59 +221,59 @@ export const ResearchLoader = ({
         className="absolute left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-orange-500/50 to-transparent pointer-events-none z-20 shadow-[0_0_15px_#ea580c]"
       />
 
-      <div className="relative z-10 flex-none p-8 lg:p-14">
-        <div className="mb-14 flex flex-col gap-6 border-b border-[#2a2a2a] pb-10 sm:flex-row sm:items-end sm:justify-between">
+      <div className="relative z-10 flex-none p-4 sm:p-8 lg:p-12">
+        <div className="mb-7 flex items-end justify-between gap-4 border-b border-white/[0.08] pb-6 sm:mb-10 sm:pb-8">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500 mb-4 flex items-center gap-3">
+            <p className="mb-3 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-orange-300 sm:mb-4 sm:text-[10px]">
               <span className="relative flex h-2 w-2">
                 <span className={cn("absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75", !prefersReducedMotion && "animate-ping")} />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
               </span>
-              Orchestration Active
+              Research in progress
             </p>
-            <h2 className="font-serif text-3xl text-[#fdfbf7] lg:text-5xl tracking-tight max-w-2xl leading-tight">
+            <h2 className="max-w-2xl font-serif text-2xl leading-tight tracking-tight text-[#fdfbf7] sm:text-3xl lg:text-5xl">
               {query}
             </h2>
           </div>
           <div className="flex items-end gap-1">
-            <span className="font-serif text-6xl lg:text-7xl font-light text-orange-500 tabular-nums leading-none tracking-tighter">
+            <span className="font-serif text-4xl font-light leading-none tracking-tighter text-orange-400 tabular-nums sm:text-6xl lg:text-7xl">
               {progress}
             </span>
             <span className="mb-2 text-lg text-orange-500/40">%</span>
           </div>
         </div>
 
-        <div className="mb-12">
-          <div className="h-0.5 w-full bg-[#1a1a1a] overflow-hidden rounded-full">
+        <div className="mb-7 sm:mb-10">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
             <div
               ref={barRef}
-              className="h-full bg-gradient-to-r from-orange-600 to-orange-400 rounded-full"
+              className="h-full rounded-full bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 shadow-[0_0_18px_rgba(244,63,94,.35)]"
               style={{ width: "0%" }}
             />
           </div>
         </div>
 
         {/* Live counters ticker */}
-        <div className="mb-10 grid grid-cols-3 gap-4 max-w-xl mx-auto w-full">
-          <div className="rounded-sm border border-[#1f1f1f] bg-black/40 p-3 text-center">
+        <div className="mx-auto mb-8 grid w-full max-w-xl grid-cols-3 gap-2 sm:mb-10 sm:gap-4">
+          <div className="rounded-2xl border border-white/[0.07] bg-black/30 p-3 text-center">
             <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1">
-              Sources Mapped
+              Sources
             </span>
             <span className="text-xl font-mono font-bold text-white">
               <NumberTicker value={sourcesFound} reducedMotion={prefersReducedMotion} />
             </span>
           </div>
-          <div className="rounded-sm border border-[#1f1f1f] bg-black/40 p-3 text-center">
+          <div className="rounded-2xl border border-white/[0.07] bg-black/30 p-3 text-center">
             <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1">
-              Facts Extracted
+              Facts
             </span>
             <span className="text-xl font-mono font-bold text-white">
               <NumberTicker value={factsExtracted} reducedMotion={prefersReducedMotion} />
             </span>
           </div>
-          <div className="rounded-sm border border-[#1f1f1f] bg-black/40 p-3 text-center">
+          <div className="rounded-2xl border border-white/[0.07] bg-black/30 p-3 text-center">
             <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1">
-              Dimensions Scored
+              Scores
             </span>
             <span className="text-xl font-mono font-bold text-white">
               <NumberTicker value={dimensionsScored} reducedMotion={prefersReducedMotion} />
@@ -281,7 +281,7 @@ export const ResearchLoader = ({
           </div>
         </div>
 
-        <div className="grid gap-4 font-sans text-sm max-w-xl mx-auto w-full">
+        <div className="mx-auto grid w-full max-w-xl gap-2 font-sans text-sm sm:gap-3">
           {steps.map((step, index) => {
             const visible = index <= activeStep;
             const isActive = index === activeStep;
@@ -289,13 +289,13 @@ export const ResearchLoader = ({
               <div
                 key={step.label}
                 className={cn(
-                  `step-${index} flex items-center gap-5 px-4 py-3 transition-colors rounded-sm`,
-                  isActive && "bg-[#1a110a] border border-orange-500/20 shadow-[inset_4px_0_0_0_#ea580c]",
+                  `step-${index} flex items-center gap-3 rounded-xl px-3 py-3 transition-colors sm:gap-5 sm:px-4`,
+                  isActive && "border border-orange-500/20 bg-gradient-to-r from-orange-500/10 to-rose-500/[0.04] shadow-[inset_3px_0_0_0_#f97316]",
                   !isActive && visible && "border border-transparent opacity-60",
                   !visible && "opacity-20 border border-transparent"
                 )}
               >
-                <span className="w-6 text-[#fdfbf7]/30 tabular-nums text-xs font-serif italic text-right">
+                <span className="w-5 text-right font-serif text-[10px] italic text-[#fdfbf7]/30 tabular-nums sm:w-6 sm:text-xs">
                   0{index + 1}
                 </span>
                 {index < activeStep ? (
@@ -321,9 +321,7 @@ export const ResearchLoader = ({
                   )}
                 </div>
                 {isActive && (
-                  <span className={cn("text-orange-500 text-lg", !prefersReducedMotion && "animate-pulse")}>
-                    ▍
-                  </span>
+                  <span className={cn("h-2 w-2 rounded-full bg-orange-400", !prefersReducedMotion && "animate-pulse")} />
                 )}
               </div>
             );
@@ -332,11 +330,11 @@ export const ResearchLoader = ({
       </div>
       
       {/* Terminal View */}
-      <div className="relative z-10 mt-auto flex-none border-t border-[#2a2a2a] bg-[#0c0b0a]/80 backdrop-blur-sm p-6 h-48 flex flex-col">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="relative z-10 mt-auto flex h-40 flex-none flex-col border-t border-white/[0.08] bg-black/25 p-4 backdrop-blur-sm sm:h-48 sm:p-6">
+        <div className="mb-4 flex items-center gap-2">
           <Terminal className="h-4 w-4 text-[#fdfbf7]/30" />
           <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
-            {liveLogs.length > 0 ? "Live Run Feed" : "Extraction Log"}
+            {liveLogs.length > 0 ? "Live research feed" : "Research activity"}
           </span>
         </div>
         

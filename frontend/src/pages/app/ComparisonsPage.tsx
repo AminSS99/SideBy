@@ -14,6 +14,7 @@ import {
   Star,
   Tag,
   XCircle,
+  ArrowRight,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -23,7 +24,9 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useProjects } from "@/contexts/ProjectsContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { captureEvent } from "@/lib/posthog";
+import { markFirstComparisonStarted } from "@/lib/onboardingAttribution";
 import { EmptyState } from "@/components/EmptyState";
 import { GlowCard } from "@/components/GlowCard";
 import { ComparisonComposer } from "@/components/ComparisonComposer";
@@ -118,6 +121,7 @@ const visibilityIcon = {
 const ComparisonsPage = () => {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
   const { activeWorkspace } = useWorkspace();
   const { activeProject } = useProjects();
   const [items, setItems] = useState<ComparisonHistoryItem[]>([]);
@@ -157,14 +161,15 @@ const ComparisonsPage = () => {
 
   // Handle ?q= query param from landing page quick-start
   const [searchParams] = useSearchParams();
+  const isFirstComparisonFlow = searchParams.get("first") === "1";
   useEffect(() => {
     const q = searchParams.get("q");
     if (q) {
       setComposerQuery(q);
       // Clear the param so refresh doesn't re-trigger
-      navigate("/app/comparisons", { replace: true });
+      navigate(isFirstComparisonFlow ? "/app/comparisons?first=1" : "/app/comparisons", { replace: true });
     }
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, isFirstComparisonFlow]);
 
   const hasRunningRef = useRef(false);
 
@@ -187,6 +192,7 @@ const ComparisonsPage = () => {
   useGSAP(() => {
     if (!isLoading && !animatedRef.current) {
       animatedRef.current = true;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       gsap.from(".comp-row", {
         y: 20,
         opacity: 0,
@@ -196,6 +202,18 @@ const ComparisonsPage = () => {
       });
     }
   }, [isLoading]);
+
+  useGSAP(() => {
+    if (!isFirstComparisonFlow || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.from(".first-flow-step", {
+      y: 18,
+      scale: 0.98,
+      duration: 0.6,
+      stagger: 0.08,
+      ease: "back.out(1.25)",
+      clearProps: "transform",
+    });
+  }, { scope: containerRef, dependencies: [isFirstComparisonFlow] });
 
   const filteredItems = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -326,7 +344,8 @@ const ComparisonsPage = () => {
       toast.success("Research started.", {
         description: "Opening the live comparison workbench.",
       });
-      navigate(`/app/comparisons/${job.id}`);
+      if (isFirstComparisonFlow && user?.id) markFirstComparisonStarted(user.id, job.id);
+      navigate(`/app/comparisons/${job.id}${isFirstComparisonFlow ? "?first=1" : ""}`);
     } catch (creationError) {
       captureEvent("comparison_created_failed", {
         query: clean,
@@ -369,30 +388,54 @@ const ComparisonsPage = () => {
   };
 
   return (
-    <div ref={containerRef} className="space-y-8">
+    <div ref={containerRef} className="space-y-6 sm:space-y-8">
+      {isFirstComparisonFlow && (
+        <section className="first-flow-step relative overflow-hidden rounded-[28px] border border-orange-300/20 bg-[radial-gradient(circle_at_90%_0%,rgba(217,70,239,.14),transparent_36%),linear-gradient(135deg,rgba(249,115,22,.12),rgba(255,255,255,.025))] p-5 sm:p-7">
+          <div className="relative z-10 grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div>
+              <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-orange-200"><Sparkles className="h-3.5 w-3.5" /> Your first decision</div>
+              <h2 className="mt-3 max-w-2xl font-serif text-3xl leading-tight text-white sm:text-4xl">Start with two real options. Add the context that could change the winner.</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/50">SideBy will research both sides, surface the evidence, and carry the completed decision into your Snap workspace.</p>
+            </div>
+            <button type="button" onClick={() => document.getElementById("comparison-builder")?.scrollIntoView({ behavior: "smooth", block: "center" })} className="group inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/15 bg-white px-5 text-xs font-bold text-black transition hover:bg-orange-100">
+              Build comparison <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </button>
+          </div>
+          <div className="relative z-10 mt-6 grid grid-cols-3 gap-2">
+            {["Discover", "Create", "Compare"].map((label, index) => (
+              <div key={label} className={`first-flow-step rounded-xl border px-2 py-3 text-center text-[9px] font-bold uppercase tracking-[0.14em] ${index < 2 ? "border-emerald-300/15 bg-emerald-400/[0.055] text-emerald-200" : "border-orange-300/25 bg-orange-400/10 text-orange-100"}`}>
+                {index < 2 ? <CheckCircle2 className="mx-auto mb-1.5 h-3.5 w-3.5" /> : <GitCompareArrows className="mx-auto mb-1.5 h-3.5 w-3.5" />}{label}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300">
             Comparisons
           </p>
-          <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
-            Saved research runs
+          <h1 className="mt-2 font-serif text-3xl tracking-tight text-[#fffaf1] sm:text-4xl">
+            Your decision library
           </h1>
-          <p className="mt-4 max-w-3xl text-sm text-[#fdfbf7]/60 leading-relaxed">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#fdfbf7]/55">
             Review every authenticated comparison job, publish completed reports, and reopen public pages without digging through browser history.
           </p>
         </div>
 
-        <ComparisonComposer
-          key={composerQuery}
-          initialQuery={composerQuery}
-          onStart={startComparison}
-          isCreating={isCreating}
-          className="w-full xl:max-w-xl shrink-0"
-        />
+        <div id="comparison-builder" className="w-full scroll-mt-24 xl:max-w-xl xl:shrink-0">
+          <ComparisonComposer
+            key={composerQuery}
+            initialQuery={composerQuery}
+            onStart={startComparison}
+            isCreating={isCreating}
+            className="w-full"
+          />
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <Metric label="Total" value={counts.all} />
         <Metric label="Completed" value={counts.completed} />
         <Metric label="Favorites" value={counts.favorites} />
@@ -400,7 +443,7 @@ const ComparisonsPage = () => {
 
       <MultiOptionBracketComposer onStart={startMultiOptionBracket} isCreating={isCreating} />
 
-      <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-6">
+      <div className="rounded-2xl border border-white/[0.09] bg-white/[0.025] p-4 sm:p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#fdfbf7]/30" />
@@ -410,11 +453,11 @@ const ComparisonsPage = () => {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by query or entity"
-              className="h-12 w-full rounded-sm border border-[#333] bg-[#0c0b0a] pl-11 pr-4 text-sm text-[#fdfbf7] outline-none transition-colors placeholder:text-[#fdfbf7]/30 focus:border-orange-500"
+              className="h-12 w-full rounded-xl border border-white/10 bg-black/30 pl-11 pr-4 text-sm text-[#fdfbf7] outline-none transition-colors placeholder:text-white/25 focus:border-orange-400/40"
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 no-scrollbar xl:mx-0 xl:px-0 xl:pb-0">
             {filters.map((item) => {
               const active = filter === item.key;
               return (
@@ -423,10 +466,10 @@ const ComparisonsPage = () => {
                   type="button"
                   onClick={() => setFilter(item.key)}
                   className={[
-                    "rounded-sm border px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors",
+                    "min-h-10 shrink-0 rounded-full border px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors",
                     active
-                      ? "border-orange-500 bg-orange-500 text-white"
-                      : "border-[#333] bg-[#0c0b0a] text-[#fdfbf7]/40 hover:border-[#555] hover:text-[#fdfbf7]",
+                      ? "border-orange-300/20 bg-gradient-to-r from-orange-500 to-rose-500 text-white"
+                      : "border-white/[0.08] bg-black/20 text-white/45 hover:border-white/15 hover:text-white",
                   ].join(" ")}
                 >
                   {item.label}
@@ -480,11 +523,11 @@ const ComparisonsPage = () => {
 };
 
 const Metric = ({ label, value }: { label: string; value: number }) => (
-  <GlowCard containerClassName="comp-row" className="p-6">
-    <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
+  <GlowCard containerClassName="comp-row !rounded-2xl !border-white/[0.08] !bg-white/[0.025]" className="p-3.5 sm:p-6">
+    <p className="text-[8px] font-bold uppercase tracking-wider text-[#fdfbf7]/40 sm:text-[10px]">
       {label}
     </p>
-    <p className="mt-3 font-serif text-4xl text-[#fdfbf7]">{value}</p>
+    <p className="mt-2 font-serif text-2xl text-[#fdfbf7] sm:mt-3 sm:text-4xl">{value}</p>
   </GlowCard>
 );
 
@@ -556,7 +599,7 @@ const ComparisonRow = ({
   };
 
   return (
-    <GlowCard containerClassName="comp-row" className="p-8">
+    <GlowCard containerClassName="comp-row !rounded-2xl !border-white/[0.08] !bg-white/[0.025]" className="p-5 sm:p-7">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
@@ -587,10 +630,10 @@ const ComparisonRow = ({
             ))}
           </div>
 
-          <h2 className="mt-5 font-serif text-2xl text-[#fdfbf7] tracking-tight">
+          <h2 className="mt-4 break-words font-serif text-2xl tracking-tight text-[#fffaf1]">
             {title}
           </h2>
-          <p className="mt-2 text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/30">{item.query}</p>
+          <p className="mt-2 break-words text-[10px] font-bold uppercase leading-5 tracking-wider text-[#fdfbf7]/30">{item.query}</p>
 
           {item.summary && (
             <p className="mt-4 line-clamp-2 max-w-4xl text-sm leading-relaxed text-[#fdfbf7]/70 border-l-2 border-orange-500 pl-4">
@@ -598,7 +641,7 @@ const ComparisonRow = ({
             </p>
           )}
 
-          <div className="mt-6 flex flex-wrap items-center gap-4 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
+          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[9px] font-bold uppercase tracking-wider text-[#fdfbf7]/40">
             <span className="flex items-center gap-2">
               <Clock3 className="h-3 w-3" />
               {formatTimestamp(item.updatedAt)}
@@ -610,10 +653,10 @@ const ComparisonRow = ({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 lg:justify-end shrink-0">
+        <div className="grid grid-cols-[1fr_auto] gap-2 sm:flex sm:flex-wrap sm:items-center lg:shrink-0 lg:justify-end">
           <Link
             to={`/app/comparisons/${item.id}`}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-sm bg-[#fdfbf7] px-5 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-5 text-[10px] font-bold uppercase tracking-wider text-white transition hover:brightness-110"
           >
             Review
           </Link>
@@ -627,14 +670,14 @@ const ComparisonRow = ({
               tags: item.tags,
             })}
             disabled={isOrganizing}
-            className={`inline-flex h-10 w-10 items-center justify-center rounded-sm border transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${item.isFavorited ? "border-orange-500 bg-orange-500 text-white" : "border-[#333] bg-[#0c0b0a] text-[#fdfbf7]/60 hover:border-orange-500 hover:text-orange-400"}`}
+            className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${item.isFavorited ? "border-orange-500 bg-orange-500 text-white" : "border-white/10 bg-black/20 text-white/60 hover:border-orange-500 hover:text-orange-400"}`}
           >
             <Star className={`h-4 w-4 ${item.isFavorited ? "fill-current" : ""}`} />
           </button>
           <button
             type="button"
             onClick={() => setIsEditingOrganization((open) => !open)}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] px-4 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/70 transition-colors hover:border-[#555]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/20 px-4 text-[10px] font-bold uppercase tracking-wider text-white/65 transition-colors hover:border-white/20"
           >
             <Folder className="h-3.5 w-3.5" />
             Organize
@@ -642,7 +685,7 @@ const ComparisonRow = ({
           {item.visibility === "public" ? (
             <Link
               to={`/compare/${item.slug}`}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] px-5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7] transition-colors hover:border-[#555]"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/20 px-5 text-[10px] font-bold uppercase tracking-wider text-white transition-colors hover:border-white/20"
             >
               Open Link
               <ExternalLink className="h-3.5 w-3.5" />
@@ -652,7 +695,7 @@ const ComparisonRow = ({
               type="button"
               onClick={onPublish}
               disabled={item.status !== "completed" || isPublishing}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-sm border border-orange-500/30 bg-orange-500/10 px-5 text-[10px] font-bold uppercase tracking-widest text-orange-400 transition-colors hover:bg-orange-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-orange-500/25 bg-orange-500/[0.08] px-5 text-[10px] font-bold uppercase tracking-wider text-orange-300 transition-colors hover:bg-orange-500/15 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isPublishing ? (
                 <LoaderCircle className="h-3.5 w-3.5 animate-spin" />

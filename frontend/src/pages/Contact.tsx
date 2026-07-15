@@ -1,141 +1,165 @@
-import React, { useRef, useState } from "react";
-import { Mail, MessageSquare, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { ArrowRight, Check, LifeBuoy, Mail, MessagesSquare, Sparkles } from "lucide-react";
 import { BrandFooter } from "@/components/brand/BrandFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
+type ContactIntent = "product" | "beta" | "support";
+type FormState = { name: string; email: string; message: string };
+type FormErrors = Partial<Record<keyof FormState, string>>;
+
+const intents: { id: ContactIntent; label: string; description: string }[] = [
+  { id: "product", label: "Product question", description: "How SideBy works or whether it fits your decision workflow." },
+  { id: "beta", label: "Beta & teams", description: "Private beta access, team use, and plan questions." },
+  { id: "support", label: "Support", description: "Help with an account, comparison run, export, or usage limit." },
+];
+
 const Contact = () => {
   usePageTitle("Contact");
+  const [searchParams] = useSearchParams();
   const pageRef = useRef<HTMLDivElement>(null);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [intent, setIntent] = useState<ContactIntent>(searchParams.get("plan") === "team" ? "beta" : "product");
+  const [form, setForm] = useState<FormState>({ name: "", email: "", message: "" });
+  const [errors, setErrors] = useState<FormErrors>({});
 
-  useGSAP(() => {
-    const tl = gsap.timeline();
-    tl.from(".contact-header", { y: 30, opacity: 0, duration: 0.8, ease: "power3.out" })
-      .from(".contact-card", { y: 40, opacity: 0, stagger: 0.15, duration: 0.8, ease: "power3.out" }, "-=0.4")
-      .from(".contact-form", { x: 30, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6");
-  }, { scope: pageRef });
+  useGSAP(
+    () => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      gsap.from(".contact-reveal", { y: 30, duration: 0.75, stagger: 0.1, ease: "power3.out", clearProps: "transform" });
+    },
+    { scope: pageRef },
+  );
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitted(true);
+  const updateField = (field: keyof FormState, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }));
+    if (errors[field]) setErrors((current) => ({ ...current, [field]: undefined }));
   };
 
-  return (
-    <div ref={pageRef} className="min-h-screen bg-[#030303] text-[#fdfbf7] selection:bg-orange-500/30 flex flex-col">
-      {/* Background Effects */}
-      <div className="pointer-events-none fixed inset-0 opacity-[0.03]">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
-      </div>
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
-        <div className="absolute top-0 right-0 h-[400px] w-[400px] rounded-full bg-orange-600/[0.04] blur-[60px] -translate-y-1/2 translate-x-1/3" />
-      </div>
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const nextErrors: FormErrors = {};
+    if (form.name.trim().length < 2) nextErrors.name = "Please enter your name.";
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) nextErrors.email = "Enter a valid email address.";
+    if (form.message.trim().length < 12) nextErrors.message = "Tell us a little more so we can route your note.";
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
 
+    const selectedIntent = intents.find((item) => item.id === intent)?.label ?? "Product question";
+    const recipient = intent === "beta" ? "sales@sideby.ink" : "support@sideby.ink";
+    const subject = encodeURIComponent(`[SideBy ${selectedIntent}] ${form.name.trim()}`);
+    const body = encodeURIComponent(`${form.message.trim()}\n\nFrom: ${form.name.trim()} <${form.email.trim()}>`);
+    window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
+  };
+
+  const fieldClass = (hasError: boolean) => `min-h-12 w-full rounded-xl border bg-black/25 px-4 text-[16px] text-white outline-none transition placeholder:text-white/25 focus:ring-4 ${hasError ? "border-rose-400/70 focus:border-rose-300 focus:ring-rose-500/10" : "border-white/10 focus:border-orange-300/50 focus:ring-orange-500/10"}`;
+
+  return (
+    <div ref={pageRef} className="min-h-screen overflow-hidden bg-[#060504] text-[#fdfbf7] selection:bg-orange-500/30">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_80%_0%,rgba(249,115,22,0.16),transparent_33%),radial-gradient(circle_at_0%_55%,rgba(139,92,246,0.09),transparent_35%),linear-gradient(rgba(255,255,255,0.022)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.022)_1px,transparent_1px)] bg-[size:auto,auto,52px_52px,52px_52px]" />
       <MarketingNav />
 
-      <main className="flex-1 relative z-10 mx-auto w-full max-w-7xl px-6 lg:px-8 pt-24 pb-32">
-        <div className="contact-header mb-20 max-w-2xl">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500 mb-4">
-            Get in touch
-          </p>
-          <h1 className="font-serif text-5xl md:text-7xl tracking-tight text-[#fdfbf7] leading-[1.1] mb-6">
-            Contact our team.
+      <main className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-24 pt-10 sm:px-6 sm:pt-16 lg:px-8">
+        <section className="contact-reveal mb-9 max-w-4xl sm:mb-12">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-400/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-200">
+            <MessagesSquare className="h-3.5 w-3.5" /> Talk to a human
+          </div>
+          <h1 className="font-serif text-[2.75rem] leading-[0.96] tracking-[-0.045em] text-white sm:text-6xl lg:text-7xl">
+            Tell us where your <span className="bg-gradient-to-r from-orange-200 via-amber-100 to-rose-200 bg-clip-text text-transparent">decision got stuck.</span>
           </h1>
-          <p className="text-lg text-white/50 leading-relaxed">
-            Whether you need enterprise orchestration limits, team onboarding, or have technical questions about our extraction engine, we're here to help.
+          <p className="mt-6 max-w-2xl text-base leading-7 text-white/58 sm:text-lg">
+            Product fit, beta access, or a comparison that needs attention—we’ll route your note to the right SideBy inbox.
           </p>
-        </div>
+        </section>
 
-        <div className="grid lg:grid-cols-[1fr_1.5fr] gap-12 items-start">
-          <div className="space-y-6">
-            <div className="contact-card rounded-sm border border-[#2a2a2a] bg-[#111] p-8 transition-colors hover:border-[#444]">
-              <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-orange-500/10 border border-orange-500/20 text-orange-400 mb-6">
-                <MessageSquare className="h-5 w-5" />
-              </div>
-              <h3 className="font-serif text-2xl text-white mb-2">Sales & Enterprise</h3>
-              <p className="text-sm text-white/50 mb-6 leading-relaxed">
-                Need custom API limits, SLA guarantees, or private model routing? Let's build a plan for your team.
-              </p>
-              <a href="mailto:sales@snapsolve.ink" className="text-sm font-bold uppercase tracking-widest text-orange-400 hover:text-orange-300 transition-colors inline-flex items-center gap-2">
-                sales@snapsolve.ink <ArrowRight className="h-3.5 w-3.5" />
-              </a>
+        <div className="grid gap-6 lg:grid-cols-[0.8fr_1.35fr] lg:items-start">
+          <aside className="contact-reveal space-y-4 lg:sticky lg:top-24">
+            <a href="mailto:support@sideby.ink" className="group flex min-h-[108px] items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-orange-300/25 hover:bg-white/[0.055] focus:outline-none focus:ring-2 focus:ring-orange-300">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-orange-300/20 bg-orange-400/10 text-orange-200"><LifeBuoy className="h-5 w-5" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-white">Product & support</span>
+                <span className="mt-1 block break-all text-sm text-white/48">support@sideby.ink</span>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-orange-200">Open email <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></span>
+              </span>
+            </a>
+            <a href="mailto:sales@sideby.ink" className="group flex min-h-[108px] items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-violet-300/25 hover:bg-white/[0.055] focus:outline-none focus:ring-2 focus:ring-violet-300">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-violet-300/20 bg-violet-400/10 text-violet-200"><Sparkles className="h-5 w-5" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-white">Beta & teams</span>
+                <span className="mt-1 block break-all text-sm text-white/48">sales@sideby.ink</span>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-200">Open email <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></span>
+              </span>
+            </a>
+            <div className="rounded-2xl border border-emerald-300/15 bg-emerald-400/[0.055] p-5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100"><Check className="h-4 w-4" /> What helps us help you</div>
+              <p className="mt-2 text-sm leading-6 text-white/48">Include the comparison title, what you expected, and what happened. Please leave passwords and API keys out.</p>
             </div>
+          </aside>
 
-            <div className="contact-card rounded-sm border border-[#2a2a2a] bg-[#111] p-8 transition-colors hover:border-[#444]">
-              <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-[#1a1a1a] border border-[#333] text-white/60 mb-6">
-                <Mail className="h-5 w-5" />
-              </div>
-              <h3 className="font-serif text-2xl text-white mb-2">General Support</h3>
-              <p className="text-sm text-white/50 mb-6 leading-relaxed">
-                Having trouble with a comparison run or billing? Our support team typically responds within 24 hours.
-              </p>
-              <a href="mailto:support@snapsolve.ink" className="text-sm font-bold uppercase tracking-widest text-white/70 hover:text-white transition-colors inline-flex items-center gap-2">
-                support@snapsolve.ink <ArrowRight className="h-3.5 w-3.5" />
-              </a>
+          <section className="contact-reveal overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-2xl shadow-orange-950/20">
+            <div className="border-b border-white/10 px-5 py-6 sm:px-8">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-200/70">Start a conversation</p>
+              <h2 className="mt-2 font-serif text-3xl text-white">What can we help with?</h2>
             </div>
-          </div>
-
-          <div className="contact-form rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-8 md:p-12 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/5 blur-[80px] rounded-full pointer-events-none" />
-            
-            {isSubmitted ? (
-              <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center relative z-10">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 mb-6">
-                  <CheckCircle2 className="h-8 w-8" />
+            <form onSubmit={handleSubmit} noValidate className="space-y-6 p-5 sm:p-8">
+              <fieldset>
+                <legend className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">Choose a route</legend>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {intents.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setIntent(item.id)}
+                      aria-pressed={intent === item.id}
+                      className={`min-h-[82px] rounded-xl border p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-orange-300 ${intent === item.id ? "border-orange-300/40 bg-orange-400/12" : "border-white/10 bg-black/15 hover:border-white/20"}`}
+                    >
+                      <span className={`block text-sm font-semibold ${intent === item.id ? "text-orange-100" : "text-white"}`}>{item.label}</span>
+                      <span className="mt-1 block text-[11px] leading-4 text-white/40">{item.description}</span>
+                    </button>
+                  ))}
                 </div>
-                <h3 className="font-serif text-3xl text-white mb-4">Message received</h3>
-                <p className="text-white/50 max-w-sm leading-relaxed mb-8">
-                  Thanks for reaching out to SnapSolve Ink. We've received your message and will get back to you shortly.
-                </p>
-                <button 
-                  onClick={() => setIsSubmitted(false)}
-                  className="text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors"
-                >
-                  Send another message
-                </button>
+              </fieldset>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="contact-name" className="mb-2 block text-xs font-semibold text-white/55">Your name</label>
+                  <input id="contact-name" value={form.name} onChange={(event) => updateField("name", event.target.value)} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? "contact-name-error" : undefined} autoComplete="name" placeholder="Ada Lovelace" className={fieldClass(Boolean(errors.name))} />
+                  {errors.name && <p id="contact-name-error" className="mt-2 text-xs text-rose-300">{errors.name}</p>}
+                </div>
+                <div>
+                  <label htmlFor="contact-email" className="mb-2 block text-xs font-semibold text-white/55">Email</label>
+                  <input id="contact-email" type="email" value={form.email} onChange={(event) => updateField("email", event.target.value)} aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "contact-email-error" : undefined} autoComplete="email" inputMode="email" placeholder="ada@company.com" className={fieldClass(Boolean(errors.email))} />
+                  {errors.email && <p id="contact-email-error" className="mt-2 text-xs text-rose-300">{errors.email}</p>}
+                </div>
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
-                <h3 className="font-serif text-2xl text-white mb-8 border-b border-[#2a2a2a] pb-6">Send a message</h3>
-                
-                <div className="grid sm:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-white/50">First Name</label>
-                    <input required type="text" className="w-full rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-orange-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-white/50">Last Name</label>
-                    <input required type="text" className="w-full rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-orange-500" />
-                  </div>
-                </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/50">Work Email</label>
-                  <input required type="email" className="w-full rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-orange-500" />
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label htmlFor="contact-message" className="text-xs font-semibold text-white/55">Your message</label>
+                  <span className="text-[11px] text-white/30">No secrets or API keys</span>
                 </div>
+                <textarea id="contact-message" value={form.message} onChange={(event) => updateField("message", event.target.value)} aria-invalid={Boolean(errors.message)} aria-describedby={errors.message ? "contact-message-error" : "contact-message-hint"} rows={6} placeholder="I’m comparing… and I need help with…" className={`${fieldClass(Boolean(errors.message))} resize-y py-3`} />
+                {errors.message ? <p id="contact-message-error" className="mt-2 text-xs text-rose-300">{errors.message}</p> : <p id="contact-message-hint" className="mt-2 text-xs leading-5 text-white/32">Submitting opens your default email app with the note pre-filled, so nothing disappears into a fake form.</p>}
+              </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/50">How can we help?</label>
-                  <textarea required rows={5} className="w-full resize-none rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-orange-500"></textarea>
-                </div>
-
-                <button type="submit" className="w-full rounded-sm bg-white px-8 py-4 text-xs font-bold uppercase tracking-widest text-black transition-colors hover:bg-gray-200 mt-4">
-                  Send Message
-                </button>
-              </form>
-            )}
-          </div>
+              <button type="submit" className="group flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-orange-200 via-amber-100 to-orange-200 px-6 text-sm font-bold text-[#1a0e07] shadow-lg shadow-orange-900/20 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:ring-offset-2 focus:ring-offset-[#15110e]">
+                Continue in email <Mail className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </button>
+              <p className="text-center text-[11px] leading-5 text-white/30">Prefer to browse first? <Link to="/docs" className="text-white/55 underline decoration-white/20 underline-offset-4 hover:text-white">Visit the SideBy field guide.</Link></p>
+            </form>
+          </section>
         </div>
       </main>
 
-      <footer className="border-t border-[#2a2a2a] bg-[#080808] py-8 relative z-20">
-        <div className="mx-auto flex max-w-7xl flex-col md:flex-row items-center justify-between px-6 gap-4">
+      <footer className="relative z-10 border-t border-white/10 bg-black/20 py-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 md:flex-row">
           <BrandFooter />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/20">
-            &copy; {new Date().getFullYear()} SnapSolve Ink
-          </p>
+          <div className="flex gap-6">
+            <Link to="/legal/privacy" className="text-[10px] font-bold uppercase tracking-widest text-white/40 transition hover:text-white">Privacy</Link>
+            <Link to="/legal/terms" className="text-[10px] font-bold uppercase tracking-widest text-white/40 transition hover:text-white">Terms</Link>
+          </div>
         </div>
       </footer>
     </div>

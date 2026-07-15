@@ -448,7 +448,7 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
         <div className="mt-auto pt-6 border-t border-white/5 text-center text-[10px] text-white/30">
           Made by{" "}
           <a
-            href="https://snapsolve.ink"
+            href="https://sideby.ink"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-white transition-colors underline"

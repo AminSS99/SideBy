@@ -61,10 +61,73 @@ export class ApiError extends Error {
 
   constructor(message: string, status: number, code?: string) {
     super(message);
+    this.name = "ApiError";
     this.status = status;
     this.code = code;
   }
 }
+
+export const shouldReportApiError = (error: unknown): boolean => {
+  if (error instanceof ApiError) {
+    // Authentication, validation, missing resources, and rate limits are
+    // expected product states. Sentry should focus on failures we own.
+    return error.status >= 500 || error.status === 408;
+  }
+
+  if (error instanceof Error && error.name === "AbortError") {
+    return false;
+  }
+
+  return true;
+};
+
+const getRequestUrl = (input: RequestInfo | URL) =>
+  typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+const getSafeEndpoint = (input: RequestInfo | URL) => {
+  const rawUrl = getRequestUrl(input);
+
+  try {
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://sideby.invalid";
+    return new URL(rawUrl, baseUrl).pathname;
+  } catch {
+    return "unknown";
+  }
+};
+
+const reportApiFailure = (
+  error: Error,
+  input: RequestInfo | URL,
+  method: string,
+  attempt: number,
+) => {
+  if (typeof window === "undefined" || !shouldReportApiError(error)) return;
+
+  const endpoint = getSafeEndpoint(input);
+  const status = error instanceof ApiError ? error.status : "network";
+
+  void import("@sentry/react")
+    .then((Sentry) => {
+      Sentry.captureException(error, {
+        tags: {
+          api_endpoint: endpoint,
+          api_method: method,
+          api_status: String(status),
+        },
+        extra: {
+          endpoint,
+          method,
+          status,
+          code: error instanceof ApiError ? error.code : undefined,
+          attempts: attempt,
+        },
+        fingerprint: ["api-request-failure", method, endpoint, String(status)],
+      });
+    })
+    .catch(() => {
+      // Observability must never interrupt the product flow.
+    });
+};
 
 const isRetryableError = (error: unknown): boolean => {
   if (error instanceof ApiError) {
@@ -156,22 +219,6 @@ const executeFetch = async (
 
         const error = new ApiError(message, response.status, code);
 
-        // Track API errors in Sentry if available
-        if (typeof window !== "undefined" && "__SENTRY__" in window) {
-          import("@sentry/react").then((Sentry) => {
-            Sentry.captureException(error, {
-              extra: {
-                url: typeof input === "string" ? input : input.toString(),
-                method: init.method || "GET",
-                status: response.status,
-                attempt: attempt + 1,
-              },
-            });
-          }).catch(() => {
-            // Sentry not available, ignore
-          });
-        }
-
         throw error;
       }
 
@@ -181,6 +228,7 @@ const executeFetch = async (
 
       // Don't retry if it's not a retryable error
       if (!isRetryableError(error)) {
+        reportApiFailure(lastError, input, method, attempt + 1);
         throw error;
       }
 
@@ -190,6 +238,10 @@ const executeFetch = async (
         await sleep(delay);
       }
     }
+  }
+
+  if (lastError) {
+    reportApiFailure(lastError, input, method, maxRetries + 1);
   }
 
   throw lastError;

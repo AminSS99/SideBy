@@ -36,8 +36,7 @@
     --input: 30 5% 15%;
     --ring: 25 95% 45%;
     
-    /* Sharper corners for editorial look */
-    --radius: 0.125rem;
+    --radius: 0.875rem;
   }
 
   .dark {
@@ -70,6 +69,8 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    min-width: 320px;
+    overflow-x: hidden;
   }
   
   /* Make all serif fonts look highly elegant */
@@ -199,6 +200,30 @@
 html {
   scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
+  color-scheme: dark;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(251, 146, 60, 0.9);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @keyframes fadeIn {
