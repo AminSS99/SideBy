@@ -7,8 +7,16 @@ const POSTHOG_HOST =
   import.meta.env.NEXT_PUBLIC_POSTHOG_HOST ||
   "https://us.i.posthog.com";
 
+let initialized = false;
+let pendingIdentity: { userId: string; traits?: Record<string, unknown> } | null = null;
+
 export function initPostHog() {
   if (!POSTHOG_KEY) {
+    return;
+  }
+
+  if (initialized) {
+    posthog.opt_in_capturing();
     return;
   }
 
@@ -23,22 +31,35 @@ export function initPostHog() {
     capture_pageview: true,
     autocapture: false, // Manual event tracking for sensitive data safety
   });
+  initialized = true;
+  posthog.opt_in_capturing();
+  if (pendingIdentity) {
+    posthog.identify(pendingIdentity.userId, pendingIdentity.traits ?? {});
+  }
+}
+
+export function disablePostHog() {
+  if (!POSTHOG_KEY || !initialized) return;
+  posthog.reset();
+  posthog.opt_out_capturing();
 }
 
 export function captureEvent(
   event: string,
   properties?: Record<string, unknown>,
 ) {
-  if (!POSTHOG_KEY) return;
+  if (!POSTHOG_KEY || !initialized) return;
   posthog.capture(event, properties ?? {});
 }
 
 export function identifyUser(userId: string, traits?: Record<string, unknown>) {
-  if (!POSTHOG_KEY) return;
+  pendingIdentity = { userId, traits };
+  if (!POSTHOG_KEY || !initialized) return;
   posthog.identify(userId, traits ?? {});
 }
 
 export function resetPostHog() {
-  if (!POSTHOG_KEY) return;
+  pendingIdentity = null;
+  if (!POSTHOG_KEY || !initialized) return;
   posthog.reset();
 }

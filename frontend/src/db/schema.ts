@@ -928,6 +928,27 @@ export const auditLogs = pgTable(
   ],
 );
 
+// ─── Privacy Consent Records ───────────────────────────────────────────────
+
+export const consentRecords = pgTable(
+  "consent_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    analytics: boolean("analytics").notNull(),
+    policyVersion: text("policy_version").notNull(),
+    source: text("source").notNull(), // banner, settings
+    globalPrivacyControl: boolean("global_privacy_control").notNull().default(false),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("consent_records_user_idx").on(table.clerkUserId),
+    index("consent_records_created_at_idx").on(table.createdAt),
+  ],
+);
+
 // ─── Webhook Subscriptions ──────────────────────────────────────────────────
 
 export const webhookSubscriptions = pgTable(
