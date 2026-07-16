@@ -51,8 +51,12 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
   const results: number[][] = [];
   const chunkSize = 100;
 
+  const chunks: string[][] = [];
   for (let i = 0; i < texts.length; i += chunkSize) {
-    const chunk = texts.slice(i, i + chunkSize);
+    chunks.push(texts.slice(i, i + chunkSize));
+  }
+
+  const chunkPromises = chunks.map(async (chunk) => {
     const response = await fetch(EMBEDDING_URL, {
       method: "POST",
       headers: {
@@ -75,7 +79,12 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
     };
 
     const embeddings = data.data ?? [];
-    results.push(...embeddings.map((d) => d.embedding));
+    return embeddings.map((d) => d.embedding);
+  });
+
+  const chunkResults = await Promise.all(chunkPromises);
+  for (const chunkEmbeddings of chunkResults) {
+    results.push(...chunkEmbeddings);
   }
 
   return results;
