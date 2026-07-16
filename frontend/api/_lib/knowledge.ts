@@ -172,22 +172,26 @@ export async function persistKnowledgeChunks(
 
   await db.delete(knowledgeChunks).where(eq(knowledgeChunks.documentId, params.documentId));
 
-  const insertBatchSize = 50;
-  for (let start = 0; start < params.chunks.length; start += insertBatchSize) {
-    const batch = params.chunks.slice(start, start + insertBatchSize);
-    await db.insert(knowledgeChunks).values(
-      batch.map((chunk, index) => ({
-        documentId: params.documentId,
-        workspaceId: params.workspaceId,
-        projectId: params.projectId ?? null,
-        chunkIndex: chunk.chunkIndex,
-        text: chunk.text,
-        tokenEstimate: chunk.tokenEstimate,
-        embedding: embeddings[start + index],
-        metadata: chunk.metadata,
-      })),
-    );
+  const valuesToInsert = params.chunks.map((chunk, index) => ({
+    documentId: params.documentId,
+    workspaceId: params.workspaceId,
+    projectId: params.projectId ?? null,
+    chunkIndex: chunk.chunkIndex,
+    text: chunk.text,
+    tokenEstimate: chunk.tokenEstimate,
+    embedding: embeddings[index],
+    metadata: chunk.metadata,
+  }));
+
+  const insertBatchSize = 500;
+  const insertPromises: Promise<unknown>[] = [];
+
+  for (let start = 0; start < valuesToInsert.length; start += insertBatchSize) {
+    const batch = valuesToInsert.slice(start, start + insertBatchSize);
+    insertPromises.push(db.insert(knowledgeChunks).values(batch));
   }
+
+  await Promise.all(insertPromises);
 
   const [document] = await db
     .update(knowledgeDocuments)
