@@ -6,6 +6,7 @@ import com.comparison.app.service.CompareRequestOptions;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.HashMap;
 import java.util.List;
@@ -38,22 +39,19 @@ public class ComparisonController {
     public ResponseEntity<Map<String, Object>> compare(
             @RequestParam String itemA,
             @RequestParam String itemB,
-            @RequestHeader(value = "X-Forwarded-For", required = false) String forwardedFor,
-            @RequestHeader(value = "X-Real-IP", required = false) String realIp) {
+            HttpServletRequest request) {
 
         return compareInternal(
                 itemA,
                 itemB,
                 CompareRequestOptions.defaults(),
-                forwardedFor,
-                realIp);
+                request);
     }
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> compareAdvanced(
             @RequestBody CompareRequestPayload payload,
-            @RequestHeader(value = "X-Forwarded-For", required = false) String forwardedFor,
-            @RequestHeader(value = "X-Real-IP", required = false) String realIp) {
+            HttpServletRequest request) {
 
         CompareRequestOptions options = new CompareRequestOptions(
                 payload.category(),
@@ -64,7 +62,7 @@ public class ComparisonController {
                 safeList(payload.redFlags()),
                 payload.depth());
 
-        return compareInternal(payload.itemA(), payload.itemB(), options, forwardedFor, realIp);
+        return compareInternal(payload.itemA(), payload.itemB(), options, request);
     }
 
     /**
@@ -73,12 +71,11 @@ public class ComparisonController {
     @GetMapping("/search")
     public ResponseEntity<Map<String, Object>> searchSingle(
             @RequestParam String query,
-            @RequestHeader(value = "X-Forwarded-For", required = false) String forwardedFor,
-            @RequestHeader(value = "X-Real-IP", required = false) String realIp) {
+            HttpServletRequest request) {
 
         Map<String, Object> response = new HashMap<>();
 
-        String clientIp = getClientIp(forwardedFor, realIp);
+        String clientIp = request.getRemoteAddr();
         if (!checkRateLimit(clientIp)) {
             response.put("error", "Too many requests. Please wait a moment.");
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(response);
@@ -126,11 +123,10 @@ public class ComparisonController {
             String itemA,
             String itemB,
             CompareRequestOptions options,
-            String forwardedFor,
-            String realIp) {
+            HttpServletRequest request) {
 
         Map<String, Object> response = new HashMap<>();
-        String clientIp = getClientIp(forwardedFor, realIp);
+        String clientIp = request.getRemoteAddr();
 
         if (!checkRateLimit(clientIp)) {
             response.put("error", "Too many requests. Please wait a moment.");
@@ -176,19 +172,6 @@ public class ComparisonController {
 
     private List<String> safeList(List<String> values) {
         return values == null ? List.of() : values;
-    }
-
-    /**
-     * Get client IP address
-     */
-    private String getClientIp(String forwardedFor, String realIp) {
-        if (forwardedFor != null && !forwardedFor.isEmpty()) {
-            return forwardedFor.split(",")[0].trim();
-        }
-        if (realIp != null && !realIp.isEmpty()) {
-            return realIp;
-        }
-        return "unknown";
     }
 
     /**
