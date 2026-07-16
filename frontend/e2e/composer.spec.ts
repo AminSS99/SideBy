@@ -29,22 +29,22 @@ test.describe("SideBy Comparison Composer E2E", () => {
     await page.goto("/");
 
     // Enter entities A and B
-    const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
-    const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
+    const inputA = page.getByPlaceholder("e.g. Supabase");
+    const inputB = page.getByPlaceholder("e.g. Firebase");
     await inputA.fill("React");
     await inputB.fill("Vue");
 
     // Toggle and fill context
-    const addContextBtn = page.getByRole("button", { name: /Add Context/i });
+    const addContextBtn = page.getByRole("button", { name: /Add decision context/i });
     await expect(addContextBtn).toBeVisible();
     await addContextBtn.click();
 
-    const contextInput = page.getByPlaceholder("Context or Use Case (optional, e.g. for real-time SaaS)");
+    const contextInput = page.getByPlaceholder("Use case, budget, or top priority");
     await expect(contextInput).toBeVisible();
     await contextInput.fill("SaaS apps");
 
     // Verify validation preflight badge
-    await expect(page.getByText(/Comparison Fit —/)).toBeVisible();
+    await expect(page.getByText(/Brief ready —/)).toBeVisible();
     await expect(page.getByText("Developer Tools")).toBeVisible();
   });
 
@@ -65,12 +65,12 @@ test.describe("SideBy Comparison Composer E2E", () => {
     await suggestionChip.click();
 
     // Verify inputs populated automatically
-    const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
-    const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
+    const inputA = page.getByPlaceholder("e.g. Supabase");
+    const inputB = page.getByPlaceholder("e.g. Firebase");
     await expect(inputA).toHaveValue("React");
     await expect(inputB).toHaveValue("Vue");
 
-    const contextInput = page.getByPlaceholder("Context or Use Case (optional, e.g. for real-time SaaS)");
+    const contextInput = page.getByPlaceholder("Use case, budget, or top priority");
     await expect(contextInput).toHaveValue("SaaS products");
   });
 
@@ -85,8 +85,8 @@ test.describe("SideBy Comparison Composer E2E", () => {
 
     await page.goto("/");
 
-    const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
-    const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
+    const inputA = page.getByPlaceholder("e.g. Supabase");
+    const inputB = page.getByPlaceholder("e.g. Firebase");
     await inputA.fill("Donald Trump");
     await inputB.fill("Joe Biden");
 
@@ -94,19 +94,18 @@ test.describe("SideBy Comparison Composer E2E", () => {
     await expect(page.getByText("Comparison Blocked")).toBeVisible();
     await expect(page.getByText(/SideBy avoids person-vs-person/)).toBeVisible();
 
-    const compareBtn = page.getByRole("button", { name: /Compare Options/i });
+    const compareBtn = page.getByRole("button", { name: /Research this decision/i });
     await expect(compareBtn).toBeDisabled();
   });
 
   test("should guide incomplete pairs without treating them as blocked", async ({ page }) => {
     await page.goto("/");
 
-    const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
+    const inputA = page.getByPlaceholder("e.g. Supabase");
     await inputA.fill("React");
 
-    await expect(page.getByText("Complete the pair")).toBeVisible();
-    await expect(page.getByText("Enter both options to check whether they are a meaningful comparison.")).toBeVisible();
-    await expect(page.getByText("Comparison Blocked")).not.toBeVisible();
+    await expect(page.getByText("One more option")).toBeVisible();
+        await expect(page.getByText("Comparison Blocked")).not.toBeVisible();
   });
 
   test("should redirect anonymous users to sign-in after submitting a valid query", async ({ page }) => {
@@ -120,12 +119,12 @@ test.describe("SideBy Comparison Composer E2E", () => {
 
     await page.goto("/");
 
-    const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
-    const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
+    const inputA = page.getByPlaceholder("e.g. Supabase");
+    const inputB = page.getByPlaceholder("e.g. Firebase");
     await inputA.fill("React");
     await inputB.fill("Vue");
 
-    const compareBtn = page.getByRole("button", { name: /Compare Options/i });
+    const compareBtn = page.getByRole("button", { name: /Research this decision/i });
     await expect(compareBtn).toBeEnabled();
     await compareBtn.click();
 
@@ -219,6 +218,6 @@ test.describe("SideBy Accessibility Prefers Reduced Motion E2E", () => {
     const heading = page.locator("h1").first();
     await expect(heading).toBeVisible();
     // Verify landing page does not crash and displays content correctly
-    await expect(page.getByPlaceholder("Product or framework A (e.g. Supabase)")).toBeVisible();
+    await expect(page.getByPlaceholder("e.g. Supabase")).toBeVisible();
   });
 });
