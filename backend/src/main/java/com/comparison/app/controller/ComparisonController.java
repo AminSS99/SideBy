@@ -6,6 +6,7 @@ import com.comparison.app.service.CompareRequestOptions;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.HtmlUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -113,13 +114,13 @@ public class ComparisonController {
         if (input == null)
             return "";
 
-        return input
-                .trim()
-                .substring(0, Math.min(input.length(), MAX_INPUT_LENGTH))
-                .replaceAll("[<>]", "") // Remove angle brackets
-                .replaceAll("(?i)javascript:", "") // Remove javascript protocol
-                .replaceAll("(?i)on\\w+=", "") // Remove event handlers
-                .replaceAll("[\\x00-\\x1F]", ""); // Remove control characters
+        String trimmed = input.trim();
+        String truncated = trimmed.substring(0, Math.min(trimmed.length(), MAX_INPUT_LENGTH));
+
+        // Remove control characters (except common whitespace) and escape HTML entities
+        String cleanString = truncated.replaceAll("[\\x00-\\x1F]", "");
+
+        return HtmlUtils.htmlEscape(cleanString);
     }
 
     private ResponseEntity<Map<String, Object>> compareInternal(
