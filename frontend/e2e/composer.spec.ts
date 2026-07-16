@@ -29,8 +29,8 @@ test.describe("SideBy Comparison Composer E2E", () => {
     await page.goto("/");
 
     // Enter entities A and B
-    const inputA = page.getByPlaceholder("e.g. Supabase");
-    const inputB = page.getByPlaceholder("e.g. Firebase");
+    const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
+    const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
     await inputA.fill("React");
     await inputB.fill("Vue");
 
@@ -65,8 +65,8 @@ test.describe("SideBy Comparison Composer E2E", () => {
     await suggestionChip.click();
 
     // Verify inputs populated automatically
-    const inputA = page.getByPlaceholder("e.g. Supabase");
-    const inputB = page.getByPlaceholder("e.g. Firebase");
+    const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
+    const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
     await expect(inputA).toHaveValue("React");
     await expect(inputB).toHaveValue("Vue");
 
@@ -85,8 +85,8 @@ test.describe("SideBy Comparison Composer E2E", () => {
 
     await page.goto("/");
 
-    const inputA = page.getByPlaceholder("e.g. Supabase");
-    const inputB = page.getByPlaceholder("e.g. Firebase");
+    const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
+    const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
     await inputA.fill("Donald Trump");
     await inputB.fill("Joe Biden");
 
@@ -101,7 +101,7 @@ test.describe("SideBy Comparison Composer E2E", () => {
   test("should guide incomplete pairs without treating them as blocked", async ({ page }) => {
     await page.goto("/");
 
-    const inputA = page.getByPlaceholder("e.g. Supabase");
+    const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
     await inputA.fill("React");
 
     await expect(page.getByText("Complete the pair")).toBeVisible();
@@ -120,8 +120,8 @@ test.describe("SideBy Comparison Composer E2E", () => {
 
     await page.goto("/");
 
-    const inputA = page.getByPlaceholder("e.g. Supabase");
-    const inputB = page.getByPlaceholder("e.g. Firebase");
+    const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
+    const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
     await inputA.fill("React");
     await inputB.fill("Vue");
 
@@ -219,6 +219,6 @@ test.describe("SideBy Accessibility Prefers Reduced Motion E2E", () => {
     const heading = page.locator("h1").first();
     await expect(heading).toBeVisible();
     // Verify landing page does not crash and displays content correctly
-    await expect(page.getByPlaceholder("e.g. Supabase")).toBeVisible();
+    await expect(page.getByPlaceholder("Product or framework A (e.g. Supabase)")).toBeVisible();
   });
 });
