@@ -38,8 +38,8 @@ async function setupComparison(page: import("@playwright/test").Page) {
 }
 
 async function startComparison(page: import("@playwright/test").Page, query: string) {
-  const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
-  const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
+  const inputA = page.getByPlaceholder("e.g. Supabase");
+  const inputB = page.getByPlaceholder("e.g. Firebase");
   await expect(inputA).toBeVisible();
 
   const parts = query.split(/\s+vs\.?\s+/i);
