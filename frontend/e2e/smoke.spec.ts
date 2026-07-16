@@ -73,11 +73,11 @@ test("valid comparison leads an anonymous user to sign-in", async ({ page }) => 
   });
 
   await page.goto("/");
-  const inputA = page.getByPlaceholder("Product or framework A");
-  const inputB = page.getByPlaceholder("Product or framework B");
+  const inputA = page.getByPlaceholder("e.g. Supabase");
+  const inputB = page.getByPlaceholder("e.g. Firebase");
   await inputA.fill("Astra");
   await inputB.fill("Astro");
-  const compare = page.getByRole("button", { name: /^Compare/ });
+  const compare = page.getByRole("button", { name: /Research this decision/i });
   await expect(compare).toBeEnabled();
   await compare.click();
 
@@ -112,11 +112,11 @@ test("blocked comparison stays on the landing page", async ({ page }) => {
   });
 
   await page.goto("/");
-  const inputA = page.getByPlaceholder("Product or framework A");
-  const inputB = page.getByPlaceholder("Product or framework B");
+  const inputA = page.getByPlaceholder("e.g. Supabase");
+  const inputB = page.getByPlaceholder("e.g. Firebase");
   await inputA.fill("Donald Trump");
   await inputB.fill("Joe Biden");
   await expect(page.getByText("SideBy avoids person-vs-person rankings.")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Compare/ })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /Research this decision/i })).toBeDisabled();
   await expect(page).toHaveURL(/\/$/);
 });
