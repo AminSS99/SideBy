@@ -11,6 +11,7 @@ import ReverseProtectedRoute from "@/components/auth/ReverseProtectedRoute";
 import AppShell from "@/components/layout/AppShell";
 import GlobalErrorBoundary from "@/components/ErrorBoundary";
 import ScrollToTop from "@/components/ScrollToTop";
+import { RouteMetaUpdater } from "@/components/RouteMetaUpdater";
 import CookieConsent from "@/components/privacy/CookieConsent";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, Navigate } from "react-router-dom";
@@ -99,6 +100,7 @@ const App = ({ clerkUnavailable = false }: { clerkUnavailable?: boolean }) => {
                 <Toaster />
                 <Sonner />
                 <ScrollToTop />
+                <RouteMetaUpdater />
                 <CookieConsent />
                   <Suspense fallback={<LazyFallback />}>
                     <Routes>

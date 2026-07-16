@@ -83,7 +83,7 @@ const Compare = () => {
     const metaDescription = setMetaTag("description", desc);
     const ogTitle = setMetaTag("og:title", `${result.entities.a.name} vs ${result.entities.b.name} Scorecard`, true);
     const ogDesc = setMetaTag("og:description", desc, true);
-    const ogUrl = setMetaTag("og:url", window.location.href, true);
+    // og:url is now handled globally by RouteMetaUpdater
     const twitterTitle = setMetaTag("twitter:title", `${result.entities.a.name} vs ${result.entities.b.name} Scorecard`);
     const twitterDesc = setMetaTag("twitter:description", desc);
 
@@ -119,7 +119,7 @@ const Compare = () => {
       metaDescription.remove();
       ogTitle.remove();
       ogDesc.remove();
-      ogUrl.remove();
+      // ogUrl.remove();
       twitterTitle.remove();
       twitterDesc.remove();
       jsonLdScript.remove();

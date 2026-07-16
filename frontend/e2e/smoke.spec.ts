@@ -73,8 +73,8 @@ test("valid comparison leads an anonymous user to sign-in", async ({ page }) => 
   });
 
   await page.goto("/");
-  const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
-  const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
+  const inputA = page.getByPlaceholder("Product or framework A");
+  const inputB = page.getByPlaceholder("Product or framework B");
   await inputA.fill("Astra");
   await inputB.fill("Astro");
   const compare = page.getByRole("button", { name: /^Compare/ });
@@ -112,8 +112,8 @@ test("blocked comparison stays on the landing page", async ({ page }) => {
   });
 
   await page.goto("/");
-  const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
-  const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
+  const inputA = page.getByPlaceholder("Product or framework A");
+  const inputB = page.getByPlaceholder("Product or framework B");
   await inputA.fill("Donald Trump");
   await inputB.fill("Joe Biden");
   await expect(page.getByText("SideBy avoids person-vs-person rankings.")).toBeVisible();
