@@ -38,8 +38,8 @@ async function setupComparison(page: import("@playwright/test").Page) {
 }
 
 async function startComparison(page: import("@playwright/test").Page, query: string) {
-  const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
-  const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
+  const inputA = page.getByPlaceholder("e.g. Supabase");
+  const inputB = page.getByPlaceholder("e.g. Firebase");
   await expect(inputA).toBeVisible();
 
   const parts = query.split(/\s+vs\.?\s+/i);
@@ -50,16 +50,16 @@ async function startComparison(page: import("@playwright/test").Page, query: str
   await inputA.fill(a);
   await inputB.fill(b);
   if (c) {
-    const addContextBtn = page.getByRole("button", { name: /Add Context/i });
+    const addContextBtn = page.getByRole("button", { name: /Add decision context/i });
     if (await addContextBtn.isVisible()) {
       await addContextBtn.click();
     }
-    const contextInput = page.getByPlaceholder("Context or Use Case (optional, e.g. for real-time SaaS)");
+    const contextInput = page.getByPlaceholder("Use case, budget, or top priority");
     await contextInput.fill(c);
   }
 
-  await expect(page.getByText(/Comparison Fit —/)).toBeVisible();
-  await page.getByRole("button", { name: "Compare Options" }).click();
+  await expect(page.getByText(/Brief ready —/)).toBeVisible();
+  await page.getByRole("button", { name: /Research this decision/i }).click();
 }
 
 test.describe("SideBy Authenticated Comparison Flow", () => {
@@ -106,7 +106,7 @@ test.describe("SideBy Authenticated Comparison Flow", () => {
     ).toBeVisible();
     await expect(page.getByText(/open-source portability and Postgres fidelity/i).first()).toBeVisible();
 
-    await expect(page.getByRole("heading", { name: "Decision Matrix", exact: true })).toBeVisible();
+    await expect(page.getByText("Real-time Decision Matrix")).toBeVisible();
     await expect(page.getByText("Best Overall").first()).toBeVisible();
 
     await expect(page.getByRole("heading", { name: /sources reviewed/i })).toBeVisible();
