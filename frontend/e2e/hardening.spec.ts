@@ -35,8 +35,8 @@ test.describe("SideBy Production Hardening E2E Tests", () => {
     });
 
     await page.goto("/");
-    const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
-    const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
+    const inputA = page.getByPlaceholder("e.g. Supabase");
+    const inputB = page.getByPlaceholder("e.g. Firebase");
     await expect(inputA).toBeVisible();
     await inputA.fill("Supabase");
     await inputB.fill("Firebase");
@@ -66,8 +66,8 @@ test.describe("SideBy Production Hardening E2E Tests", () => {
     await expect(page).toHaveURL(/\/app\/comparisons/);
 
     // Verify the query from the quickstart is focused and pre-filled in the comparison box
-    const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
-    const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
+    const inputA = page.getByPlaceholder("e.g. Supabase");
+    const inputB = page.getByPlaceholder("e.g. Firebase");
     await expect(inputA).toBeVisible();
     await expect(inputA).toHaveValue("Supabase");
     await expect(inputB).toHaveValue("Firebase");
@@ -99,8 +99,8 @@ test.describe("SideBy Production Hardening E2E Tests", () => {
     });
 
     await page.goto("/");
-    const inputA = page.getByPlaceholder("Product or framework A (e.g. Supabase)");
-    const inputB = page.getByPlaceholder("Product or framework B (e.g. Firebase)");
+    const inputA = page.getByPlaceholder("e.g. Supabase");
+    const inputB = page.getByPlaceholder("e.g. Firebase");
     await inputA.fill("Donald Trump");
     await inputB.fill("Joe Biden");
 
