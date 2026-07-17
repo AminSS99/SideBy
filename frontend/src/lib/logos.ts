@@ -234,14 +234,11 @@ const knownDomains: Record<string, string> = {
   digitalocean: "digitalocean.com",
 };
 
-const knownLogosEntries = Object.entries(knownLogos);
-const knownDomainsEntries = Object.entries(knownDomains);
-
 export const getEntityLogo = (entityName: string): string | null => {
   const key = entityName.toLowerCase().trim();
   if (knownLogos[key]) return knownLogos[key];
 
-  const match = knownLogosEntries.find(([k]) =>
+  const match = Object.entries(knownLogos).find(([k]) =>
     key.includes(k) || k.includes(key),
   );
   if (match) return match[1];
@@ -254,7 +251,7 @@ export const getEntityFavicon = (entityName: string): string | null => {
   const domain = knownDomains[key];
   if (domain) return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
-  const match = knownDomainsEntries.find(([k]) =>
+  const match = Object.entries(knownDomains).find(([k]) =>
     key.includes(k) || k.includes(key),
   );
   if (match) return `https://www.google.com/s2/favicons?domain=${match[1]}&sz=64`;
