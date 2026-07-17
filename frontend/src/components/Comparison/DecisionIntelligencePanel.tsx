@@ -151,16 +151,24 @@ const sourceQualityWeight = (source: ComparisonSource) => {
 const sourceQualitySummary = (sources: ComparisonSource[]) => {
   if (sources.length === 0) return { score: 0, official: 0, recent: 0 };
 
-  const score = sources.reduce((total, source) => {
+  let totalScore = 0, officialCount = 0, recentCount = 0;
+
+  for (const source of sources) {
+    const isOfficial = isOfficialSource(source);
+    const isRecent = isRecentSource(source);
+
+    if (isOfficial) officialCount++;
+    if (isRecent) recentCount++;
+
     const evidenceConfidence = source.confidence ?? 0.75;
-    const freshnessWeight = isRecentSource(source) ? 1 : 0.85;
-    return total + sourceQualityWeight(source) * evidenceConfidence * freshnessWeight;
-  }, 0) / sources.length;
+    const freshnessWeight = isRecent ? 1 : 0.85;
+    totalScore += sourceQualityWeight(source) * evidenceConfidence * freshnessWeight;
+  }
 
   return {
-    score: Math.round(score * 100),
-    official: Math.round((sources.filter(isOfficialSource).length / sources.length) * 100),
-    recent: Math.round((sources.filter(isRecentSource).length / sources.length) * 100),
+    score: Math.round((totalScore / sources.length) * 100),
+    official: Math.round((officialCount / sources.length) * 100),
+    recent: Math.round((recentCount / sources.length) * 100),
   };
 };
 
@@ -338,9 +346,15 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
   }, [metrics]);
 
   const weighted = useMemo(() => {
-    const totalWeight = metrics.reduce((sum, metric) => sum + (weights[metric.subject] ?? 1), 0) || 1;
-    const a = metrics.reduce((sum, metric) => sum + metric.a * (weights[metric.subject] ?? 1), 0) / totalWeight;
-    const b = metrics.reduce((sum, metric) => sum + metric.b * (weights[metric.subject] ?? 1), 0) / totalWeight;
+    let totalWeight = 0, aScore = 0, bScore = 0;
+    for (const metric of metrics) {
+      const w = weights[metric.subject] ?? 1;
+      totalWeight += w;
+      aScore += metric.a * w;
+      bScore += metric.b * w;
+    }
+    const a = totalWeight ? aScore / totalWeight : 0;
+    const b = totalWeight ? bScore / totalWeight : 0;
     return { a, b, winner: Math.abs(a - b) < 1 ? "tie" : a > b ? "a" : "b" };
   }, [metrics, weights]);
 
@@ -509,18 +523,21 @@ const ConfidenceHeatmapPanel = ({ result }: { result: ComparisonData }) => {
 
       <div className="space-y-3">
         {result.categories.map((category) => {
-          const aFacts = category.facts.filter((fact) => fact.entity === "a");
-          const bFacts = category.facts.filter((fact) => fact.entity === "b");
-          const aConfidence = averageConfidence(aFacts);
-          const bConfidence = averageConfidence(bFacts);
+          let aSum = 0, aCount = 0, bSum = 0, bCount = 0;
+          for (const fact of category.facts) {
+            if (fact.entity === "a") { aSum += fact.confidence; aCount++; }
+            else if (fact.entity === "b") { bSum += fact.confidence; bCount++; }
+          }
+          const aConfidence = aCount ? aSum / aCount : 0;
+          const bConfidence = bCount ? bSum / bCount : 0;
 
           return (
             <div key={category.name} className="grid grid-cols-[1fr_0.8fr_0.8fr] gap-2 text-xs">
               <div className="flex min-h-14 items-center rounded-sm border border-[#2a2a2a] bg-[#111] px-3 font-serif text-[#fdfbf7]/80">
                 {category.name}
               </div>
-              <HeatCell label={result.entities.a.name} confidence={aConfidence} count={aFacts.length} />
-              <HeatCell label={result.entities.b.name} confidence={bConfidence} count={bFacts.length} />
+              <HeatCell label={result.entities.a.name} confidence={aConfidence} count={aCount} />
+              <HeatCell label={result.entities.b.name} confidence={bConfidence} count={bCount} />
             </div>
           );
         })}
