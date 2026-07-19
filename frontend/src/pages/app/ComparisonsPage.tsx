@@ -237,15 +237,33 @@ const ComparisonsPage = () => {
   }, [filter, items, query]);
 
   const counts = useMemo(
-    () => ({
-      all: items.length,
-      favorites: items.filter((item) => item.isFavorited).length,
-      completed: items.filter((item) => item.status === "completed").length,
-      running: items.filter((item) => item.status === "running").length,
-      failed: items.filter((item) => item.status === "failed").length,
-      public: items.filter((item) => item.visibility === "public").length,
-      private: items.filter((item) => item.visibility === "private").length,
-    }),
+    () => {
+      let favorites = 0;
+      let completed = 0;
+      let running = 0;
+      let failed = 0;
+      let publicCount = 0;
+      let privateCount = 0;
+
+      for (const item of items) {
+        if (item.isFavorited) favorites++;
+        if (item.status === "completed") completed++;
+        if (item.status === "running") running++;
+        if (item.status === "failed") failed++;
+        if (item.visibility === "public") publicCount++;
+        if (item.visibility === "private") privateCount++;
+      }
+
+      return {
+        all: items.length,
+        favorites,
+        completed,
+        running,
+        failed,
+        public: publicCount,
+        private: privateCount,
+      };
+    },
     [items],
   );
 
