@@ -236,18 +236,35 @@ const ComparisonsPage = () => {
     });
   }, [filter, items, query]);
 
-  const counts = useMemo(
-    () => ({
+  const counts = useMemo(() => {
+    let favorites = 0,
+      completed = 0,
+      running = 0,
+      failed = 0,
+      publicCount = 0,
+      privateCount = 0;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.isFavorited) favorites++;
+      if (item.status === "completed") completed++;
+      else if (item.status === "running") running++;
+      else if (item.status === "failed") failed++;
+
+      if (item.visibility === "public") publicCount++;
+      else if (item.visibility === "private") privateCount++;
+    }
+
+    return {
       all: items.length,
-      favorites: items.filter((item) => item.isFavorited).length,
-      completed: items.filter((item) => item.status === "completed").length,
-      running: items.filter((item) => item.status === "running").length,
-      failed: items.filter((item) => item.status === "failed").length,
-      public: items.filter((item) => item.visibility === "public").length,
-      private: items.filter((item) => item.visibility === "private").length,
-    }),
-    [items],
-  );
+      favorites,
+      completed,
+      running,
+      failed,
+      public: publicCount,
+      private: privateCount,
+    };
+  }, [items]);
 
   const publish = async (item: ComparisonHistoryItem) => {
     try {

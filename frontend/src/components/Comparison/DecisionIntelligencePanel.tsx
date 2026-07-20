@@ -151,16 +151,28 @@ const sourceQualityWeight = (source: ComparisonSource) => {
 const sourceQualitySummary = (sources: ComparisonSource[]) => {
   if (sources.length === 0) return { score: 0, official: 0, recent: 0 };
 
-  const score = sources.reduce((total, source) => {
+  let totalScore = 0;
+  let officialCount = 0;
+  let recentCount = 0;
+
+  for (let i = 0; i < sources.length; i++) {
+    const source = sources[i];
     const evidenceConfidence = source.confidence ?? 0.75;
-    const freshnessWeight = isRecentSource(source) ? 1 : 0.85;
-    return total + sourceQualityWeight(source) * evidenceConfidence * freshnessWeight;
-  }, 0) / sources.length;
+    const isRecent = isRecentSource(source);
+
+    if (isRecent) recentCount++;
+    if (isOfficialSource(source)) officialCount++;
+
+    const freshnessWeight = isRecent ? 1 : 0.85;
+    totalScore += sourceQualityWeight(source) * evidenceConfidence * freshnessWeight;
+  }
+
+  const score = totalScore / sources.length;
 
   return {
     score: Math.round(score * 100),
-    official: Math.round((sources.filter(isOfficialSource).length / sources.length) * 100),
-    recent: Math.round((sources.filter(isRecentSource).length / sources.length) * 100),
+    official: Math.round((officialCount / sources.length) * 100),
+    recent: Math.round((recentCount / sources.length) * 100),
   };
 };
 
