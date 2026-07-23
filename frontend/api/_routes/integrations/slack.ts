@@ -65,10 +65,7 @@ export default async function handler(
     rawBody = request.body;
   } else if (request.body && typeof request.body === "object") {
     // Reconstruct urlencoded string if Vercel already parsed it
-    const searchParams = new URLSearchParams();
-    for (const [k, v] of Object.entries(request.body)) {
-      searchParams.append(k, String(v));
-    }
+    const searchParams = new URLSearchParams(request.body as Record<string, string>);
     rawBody = searchParams.toString();
   }
 
