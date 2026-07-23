@@ -13,8 +13,7 @@ const isProductionRuntime = () =>
 
 const isTestAuthEnabled = () => {
   if (isProductionRuntime()) return false;
-  const host = process.env.VERCEL_URL || process.env.HOST || "";
-  return host === "localhost" || host.startsWith("localhost:");
+  return process.env.VITE_ENABLE_TEST_AUTH === "true" || process.env.ENABLE_TEST_AUTH === "true";
 };
 
 export interface AuthContext {
