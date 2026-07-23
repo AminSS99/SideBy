@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getFreeLimits } from '../subscription.js';
+import { getFreeLimits, getPlanLimits, type BillingPlan } from '../subscription.js';
 
 describe('subscription', () => {
   describe('getFreeLimits', () => {
@@ -59,6 +59,28 @@ describe('subscription', () => {
 
        expect(limits.comparisonsPerDay).toBe(10.5);
        expect(limits.followUpsPerDay).toBeNaN();
+    });
+  });
+
+  describe('getPlanLimits', () => {
+    it('returns free limits for free plan', () => {
+      const limits = getPlanLimits('free');
+      expect(limits).toEqual(getFreeLimits());
+    });
+
+    it('returns unlimited limits for paid plans', () => {
+      const paidPlans: BillingPlan[] = ['pro', 'team', 'business'];
+
+      for (const plan of paidPlans) {
+        const limits = getPlanLimits(plan);
+        expect(limits).toEqual({
+          comparisonsPerDay: Number.MAX_SAFE_INTEGER,
+          followUpsPerDay: Number.MAX_SAFE_INTEGER,
+          refreshesPerDay: Number.MAX_SAFE_INTEGER,
+          exportsPerDay: Number.MAX_SAFE_INTEGER,
+          watchlistsPerDay: Number.MAX_SAFE_INTEGER,
+        });
+      }
     });
   });
 });
