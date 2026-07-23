@@ -93,11 +93,6 @@ const allFacts = (result: ComparisonData): FactWithCategory[] =>
     })),
   );
 
-const averageConfidence = (facts: ComparisonFact[]) => {
-  if (facts.length === 0) return 0;
-  return facts.reduce((sum, fact) => sum + fact.confidence, 0) / facts.length;
-};
-
 const categoryScore = (category: Category, entity: EntityKey) => {
   if (category.winner === "tie") return 68;
   if (category.winner === entity) return 82;
@@ -151,16 +146,26 @@ const sourceQualityWeight = (source: ComparisonSource) => {
 const sourceQualitySummary = (sources: ComparisonSource[]) => {
   if (sources.length === 0) return { score: 0, official: 0, recent: 0 };
 
-  const score = sources.reduce((total, source) => {
+  let totalScore = 0;
+  let officialCount = 0;
+  let recentCount = 0;
+
+  for (const source of sources) {
     const evidenceConfidence = source.confidence ?? 0.75;
-    const freshnessWeight = isRecentSource(source) ? 1 : 0.85;
-    return total + sourceQualityWeight(source) * evidenceConfidence * freshnessWeight;
-  }, 0) / sources.length;
+    const isRecent = isRecentSource(source);
+    const freshnessWeight = isRecent ? 1 : 0.85;
+
+    totalScore += sourceQualityWeight(source) * evidenceConfidence * freshnessWeight;
+    if (isOfficialSource(source)) officialCount++;
+    if (isRecent) recentCount++;
+  }
+
+  const score = totalScore / sources.length;
 
   return {
     score: Math.round(score * 100),
-    official: Math.round((sources.filter(isOfficialSource).length / sources.length) * 100),
-    recent: Math.round((sources.filter(isRecentSource).length / sources.length) * 100),
+    official: Math.round((officialCount / sources.length) * 100),
+    recent: Math.round((recentCount / sources.length) * 100),
   };
 };
 
@@ -509,18 +514,31 @@ const ConfidenceHeatmapPanel = ({ result }: { result: ComparisonData }) => {
 
       <div className="space-y-3">
         {result.categories.map((category) => {
-          const aFacts = category.facts.filter((fact) => fact.entity === "a");
-          const bFacts = category.facts.filter((fact) => fact.entity === "b");
-          const aConfidence = averageConfidence(aFacts);
-          const bConfidence = averageConfidence(bFacts);
+          let aCount = 0;
+          let aSum = 0;
+          let bCount = 0;
+          let bSum = 0;
+
+          for (const fact of category.facts) {
+            if (fact.entity === "a") {
+              aCount++;
+              aSum += fact.confidence;
+            } else if (fact.entity === "b") {
+              bCount++;
+              bSum += fact.confidence;
+            }
+          }
+
+          const aConfidence = aCount > 0 ? aSum / aCount : 0;
+          const bConfidence = bCount > 0 ? bSum / bCount : 0;
 
           return (
             <div key={category.name} className="grid grid-cols-[1fr_0.8fr_0.8fr] gap-2 text-xs">
               <div className="flex min-h-14 items-center rounded-sm border border-[#2a2a2a] bg-[#111] px-3 font-serif text-[#fdfbf7]/80">
                 {category.name}
               </div>
-              <HeatCell label={result.entities.a.name} confidence={aConfidence} count={aFacts.length} />
-              <HeatCell label={result.entities.b.name} confidence={bConfidence} count={bFacts.length} />
+              <HeatCell label={result.entities.a.name} confidence={aConfidence} count={aCount} />
+              <HeatCell label={result.entities.b.name} confidence={bConfidence} count={bCount} />
             </div>
           );
         })}
