@@ -1,4 +1,4 @@
-const CACHE_NAME = "sideby-cache-v3";
+const CACHE_NAME = "sideby-cache-v5";
 const ASSETS = [
   "/manifest.json",
   "/favicon.ico",

@@ -8,6 +8,7 @@ const navItems = [
   { label: "Features", to: "/features" },
   { label: "Pricing", to: "/pricing" },
   { label: "Docs", to: "/docs" },
+  { label: "About", to: "/about" },
 ];
 
 export const MarketingNav = () => {

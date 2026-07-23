@@ -13,9 +13,11 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "pnpm run generate:sitemap && pnpm run lint:seo && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
+    "lint:seo": "tsx scripts/validate-seo.ts",
+    "generate:sitemap": "tsx scripts/generate-sitemap.ts",
     "test": "vitest run",
     "typecheck:api": "tsc --noEmit -p api/tsconfig.json",
     "preview": "vite preview",
