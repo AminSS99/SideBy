@@ -72,8 +72,8 @@ describe('api-key-auth', () => {
 
       try {
         hashApiKey('my-secret-key');
-      } catch (err: any) {
-        expect(err.statusCode).toBe(503);
+      } catch (err: unknown) {
+        expect((err as { statusCode?: number }).statusCode).toBe(503);
       }
     });
   });
