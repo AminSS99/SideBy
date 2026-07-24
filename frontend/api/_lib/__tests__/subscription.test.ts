@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getFreeLimits } from '../subscription.js';
+import { getFreeLimits, normalizePlan } from '../subscription.js';
 
 describe('subscription', () => {
   describe('getFreeLimits', () => {
@@ -59,6 +59,47 @@ describe('subscription', () => {
 
        expect(limits.comparisonsPerDay).toBe(10.5);
        expect(limits.followUpsPerDay).toBeNaN();
+    });
+  });
+
+  describe('normalizePlan', () => {
+    const originalEnv = process.env;
+
+    beforeEach(() => {
+      vi.resetModules();
+      process.env = { ...originalEnv };
+    });
+
+    afterEach(() => {
+      process.env = originalEnv;
+    });
+
+    it('should return "free" when productId is null, undefined, or empty', () => {
+      expect(normalizePlan(null)).toBe('free');
+      expect(normalizePlan(undefined)).toBe('free');
+      expect(normalizePlan('')).toBe('free');
+    });
+
+    it('should return "pro" when productId matches DODO_PRO_PRODUCT_ID', () => {
+      process.env.DODO_PRO_PRODUCT_ID = 'test-pro-id';
+      expect(normalizePlan('test-pro-id')).toBe('pro');
+    });
+
+    it('should return "team" when productId matches DODO_TEAM_PRODUCT_ID', () => {
+      process.env.DODO_TEAM_PRODUCT_ID = 'test-team-id';
+      expect(normalizePlan('test-team-id')).toBe('team');
+    });
+
+    it('should return "business" when productId matches DODO_ENTERPRISE_PRODUCT_ID', () => {
+      process.env.DODO_ENTERPRISE_PRODUCT_ID = 'test-enterprise-id';
+      expect(normalizePlan('test-enterprise-id')).toBe('business');
+    });
+
+    it('should return "free" when productId does not match any known product ID', () => {
+      process.env.DODO_PRO_PRODUCT_ID = 'test-pro-id';
+      process.env.DODO_TEAM_PRODUCT_ID = 'test-team-id';
+      process.env.DODO_ENTERPRISE_PRODUCT_ID = 'test-enterprise-id';
+      expect(normalizePlan('unknown-id')).toBe('free');
     });
   });
 });
