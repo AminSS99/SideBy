@@ -383,14 +383,23 @@ const ComparisonsPage = () => {
     setIsCreating(true);
     try {
       const pairs = options.flatMap((left, index) => options.slice(index + 1).map((right) => `${left} vs ${right}${context.trim() ? ` for ${context.trim()}` : ""}`));
-      const runs: BracketRun[] = [];
-      for (const query of pairs) {
+      const runPromises = pairs.map(async (query) => {
         const res = await apiFetch(buildApiUrl("/api/comparisons"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, workspaceId: activeWorkspace?.id, projectId: activeProject?.id }) });
         const data = await res.json() as ComparisonJob & { error?: string };
         if (!res.ok) throw new Error(data.error || `Unable to start ${query}.`);
-        setItems((current) => [jobToHistoryItem(data), ...current.filter((item) => item.id !== data.id)]);
-        runs.push({ id: data.id, query, status: data.status });
-      }
+        return data;
+      });
+
+      const results = await Promise.all(runPromises);
+
+      setItems((current) => {
+        const newItems = results.map(jobToHistoryItem);
+        const resultIds = new Set(results.map(r => r.id));
+        return [...newItems, ...current.filter((item) => !resultIds.has(item.id))];
+      });
+
+      const runs: BracketRun[] = results.map((data, idx) => ({ id: data.id, query: pairs[idx], status: data.status }));
+
       captureEvent("comparison_bracket_created", { option_count: options.length, pair_count: pairs.length });
       return runs;
     } finally { setIsCreating(false); }

@@ -163,9 +163,7 @@ const UploadsPage = () => {
   }, [activeProject, activeWorkspace]);
 
   const handleFiles = useCallback(async (newFiles: FileList | File[]) => {
-    for (const file of Array.from(newFiles)) {
-      await uploadFile(file);
-    }
+    await Promise.all(Array.from(newFiles).map((file) => uploadFile(file)));
   }, [uploadFile]);
 
   const onDragOver = useCallback((e: React.DragEvent) => {
