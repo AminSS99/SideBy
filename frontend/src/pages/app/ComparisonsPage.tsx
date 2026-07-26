@@ -215,6 +215,25 @@ const ComparisonsPage = () => {
     });
   }, { scope: containerRef, dependencies: [isFirstComparisonFlow] });
 
+  const searchCache = useMemo(() => {
+    const cache = new Map<string, string>();
+    for (const item of items) {
+      cache.set(
+        item.id,
+        [
+          item.query,
+          item.entityA || "",
+          item.entityB || "",
+          item.folder || "",
+          ...item.tags,
+        ]
+          .join(" ")
+          .toLowerCase()
+      );
+    }
+    return cache;
+  }, [items]);
+
   const filteredItems = useMemo(() => {
     const needle = query.trim().toLowerCase();
 
@@ -224,17 +243,14 @@ const ComparisonsPage = () => {
         (filter === "favorites" && item.isFavorited) ||
         item.status === filter ||
         item.visibility === filter;
-      const textMatch =
-        !needle ||
-        item.query.toLowerCase().includes(needle) ||
-        item.entityA?.toLowerCase().includes(needle) ||
-        item.entityB?.toLowerCase().includes(needle) ||
-        item.folder?.toLowerCase().includes(needle) ||
-        item.tags.some((tag) => tag.toLowerCase().includes(needle));
 
-      return filterMatch && textMatch;
+      if (!filterMatch) return false;
+      if (!needle) return true;
+
+      const searchableText = searchCache.get(item.id) || "";
+      return searchableText.includes(needle);
     });
-  }, [filter, items, query]);
+  }, [filter, items, query, searchCache]);
 
   const counts = useMemo(() => {
     let favorites = 0, completed = 0, running = 0, failed = 0, pub = 0, priv = 0;
