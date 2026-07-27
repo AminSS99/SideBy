@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Send, Bot, User, LoaderCircle, Sparkles, Database, FolderKanban, Check, ToggleRight, ToggleLeft, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import gsap from "gsap";
@@ -44,6 +44,19 @@ const ChatPage = () => {
   const [isLoadingFiles, setIsLoadingFiles] = useState(true);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { activeContextCount, availableChunksCount } = useMemo(() => {
+    let activeContextCount = 0;
+    let availableChunksCount = 0;
+    for (const file of activeFiles) {
+      if (file.active) {
+        activeContextCount++;
+        availableChunksCount += file.chunkCount;
+      }
+    }
+    return { activeContextCount, availableChunksCount };
+  }, [activeFiles]);
+
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -138,9 +151,10 @@ const ChatPage = () => {
         role: m.role,
         content: m.content,
       }));
-      const selectedDocumentIds = activeFiles
-        .filter((file) => file.active)
-        .map((file) => file.id);
+      const selectedDocumentIds = activeFiles.reduce((acc, file) => {
+        if (file.active) acc.push(file.id);
+        return acc;
+      }, [] as string[]);
 
       const res = await apiFetch(buildApiUrl("/api/chat"), {
         method: "POST",
@@ -264,7 +278,7 @@ const ChatPage = () => {
             className="lg:hidden flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-xl hover:bg-orange-500/20 transition-all shadow-[0_0_15px_-3px_rgba(249,115,22,0.15)] active:scale-[0.98]"
           >
             <Database className="h-4 w-4" />
-            <span>Context ({activeFiles.filter((f) => f.active).length})</span>
+            <span>Context ({activeContextCount})</span>
           </button>
         </div>
         <p className="mt-3 text-sm text-[#fdfbf7]/55 leading-relaxed max-w-3xl">
@@ -441,9 +455,9 @@ const ChatPage = () => {
 
             <div className="mt-4 pt-4 border-t border-[#2a2a2a]">
               <p className="text-[9px] text-[#fdfbf7]/40 leading-relaxed">
-                Active context: <strong className="text-[#fdfbf7]/70">{activeFiles.filter((file) => file.active).length} documents</strong>
+                Active context: <strong className="text-[#fdfbf7]/70">{activeContextCount} documents</strong>
                 <br />
-                Available chunks: <strong className="text-[#fdfbf7]/70">{activeFiles.reduce((sum, file) => sum + (file.active ? file.chunkCount : 0), 0)}</strong>
+                Available chunks: <strong className="text-[#fdfbf7]/70">{availableChunksCount}</strong>
               </p>
             </div>
           </div>
@@ -560,9 +574,9 @@ const ChatPage = () => {
 
                   <div className="mt-4 pt-3 border-t border-[#2a2a2a]">
                     <p className="text-[9px] text-[#fdfbf7]/40 leading-relaxed">
-                      Active context: <strong className="text-[#fdfbf7]/70">{activeFiles.filter((file) => file.active).length} docs</strong>
+                      Active context: <strong className="text-[#fdfbf7]/70">{activeContextCount} docs</strong>
                       <br />
-                      Chunks: <strong className="text-[#fdfbf7]/70">{activeFiles.reduce((sum, file) => sum + (file.active ? file.chunkCount : 0), 0)}</strong>
+                      Chunks: <strong className="text-[#fdfbf7]/70">{availableChunksCount}</strong>
                     </p>
                   </div>
                 </div>

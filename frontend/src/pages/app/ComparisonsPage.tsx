@@ -215,26 +215,34 @@ const ComparisonsPage = () => {
     });
   }, { scope: containerRef, dependencies: [isFirstComparisonFlow] });
 
+
+  const searchableItems = useMemo(() => {
+    return items.map((item) => ({
+      ...item,
+      searchString: [
+        item.query,
+        item.entityA,
+        item.entityB,
+        item.folder,
+        ...item.tags,
+      ].filter(Boolean).join(" ").toLowerCase(),
+    }));
+  }, [items]);
+
   const filteredItems = useMemo(() => {
     const needle = query.trim().toLowerCase();
 
-    return items.filter((item) => {
+    return searchableItems.filter((item) => {
       const filterMatch =
         filter === "all" ||
         (filter === "favorites" && item.isFavorited) ||
         item.status === filter ||
         item.visibility === filter;
-      const textMatch =
-        !needle ||
-        item.query.toLowerCase().includes(needle) ||
-        item.entityA?.toLowerCase().includes(needle) ||
-        item.entityB?.toLowerCase().includes(needle) ||
-        item.folder?.toLowerCase().includes(needle) ||
-        item.tags.some((tag) => tag.toLowerCase().includes(needle));
+      const textMatch = !needle || item.searchString.includes(needle);
 
       return filterMatch && textMatch;
     });
-  }, [filter, items, query]);
+  }, [filter, searchableItems, query]);
 
   const counts = useMemo(() => {
     let favorites = 0, completed = 0, running = 0, failed = 0, pub = 0, priv = 0;
@@ -343,7 +351,13 @@ const ComparisonsPage = () => {
 
       const job = (await res.json()) as ComparisonJob;
       const historyItem = jobToHistoryItem(job);
-      setItems((current) => [historyItem, ...current.filter((item) => item.id !== job.id)]);
+      setItems((current) => {
+        const next = [historyItem];
+        for (const item of current) {
+          if (item.id !== job.id) next.push(item);
+        }
+        return next;
+      });
       setComposerQuery("");
       captureEvent("comparison_created_frontend", {
         query: clean,
@@ -388,7 +402,13 @@ const ComparisonsPage = () => {
         const res = await apiFetch(buildApiUrl("/api/comparisons"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, workspaceId: activeWorkspace?.id, projectId: activeProject?.id }) });
         const data = await res.json() as ComparisonJob & { error?: string };
         if (!res.ok) throw new Error(data.error || `Unable to start ${query}.`);
-        setItems((current) => [jobToHistoryItem(data), ...current.filter((item) => item.id !== data.id)]);
+        setItems((current) => {
+          const next = [jobToHistoryItem(data)];
+          for (const item of current) {
+            if (item.id !== data.id) next.push(item);
+          }
+          return next;
+        });
         runs.push({ id: data.id, query, status: data.status });
       }
       captureEvent("comparison_bracket_created", { option_count: options.length, pair_count: pairs.length });

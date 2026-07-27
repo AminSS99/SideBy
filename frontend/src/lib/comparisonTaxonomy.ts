@@ -716,7 +716,11 @@ const includesWordAny = (haystack: string, needles: string[]) => {
   return needles.some((needle) => padded.includes(` ${normalize(needle)} `));
 };
 
-const wordCount = (value: string) => cleanEntity(value).split(/\s+/).filter(Boolean).length;
+const wordCount = (value: string) => {
+  const clean = cleanEntity(value);
+  if (!clean) return 0;
+  return clean.split(/\s+/).filter(Boolean).length;
+};
 
 const looksLikeNamedPersonPair = (entityA: string, entityB: string, rawQuery: string) => {
   const rawParts = rawQuery.split(/\s+vs\.?\s+/i);
