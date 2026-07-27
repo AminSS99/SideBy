@@ -131,9 +131,9 @@ const applyMigration = async (filename: string, content: string) => {
     return;
   }
 
-  for (const statement of statements) {
-    await sql.query(statement);
-  }
+  // Batch statements into a single string to prevent sequential O(N) network round-trips
+  // while preserving the required sequential execution order of migrations
+  await sql.query(statements.join(';\n'));
 
   await sql.query(
     `
