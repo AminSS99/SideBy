@@ -49,11 +49,7 @@ const shouldBlockClerkTestKey =
 const clerkPublishableKey =
   shouldBlockClerkTestKey || isMalformedClerkKey ? "" : rawClerkPublishableKey;
 const hasClerkConfig = clerkPublishableKey.length > 0;
-const canUseTestAuth =
-  !isProductionBuild ||
-  (typeof window !== "undefined" &&
-    (window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1"));
+const canUseTestAuth = normalizeEnv(import.meta.env.VITE_ENABLE_TEST_AUTH) === "true";
 
 export const envConfig = {
   apiBaseUrl,
