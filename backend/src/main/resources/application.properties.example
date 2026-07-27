@@ -17,3 +17,7 @@ deepseek.api.key=${DEEPSEEK_API_KEY:}
 # Current scrape API docs: https://docs.firecrawl.dev/api-reference/endpoint/scrape
 firecrawl.api.key=${FIRECRAWL_API_KEY:}
 firecrawl.api.url=${FIRECRAWL_API_URL:https://api.firecrawl.dev/v2/scrape}
+
+# CORS Configuration
+# Comma-separated list of allowed origins. Set to http://localhost:5173,http://localhost:5174 for local dev.
+cors.allowed-origins=${CORS_ALLOWED_ORIGINS:https://snapsolve.ink}
