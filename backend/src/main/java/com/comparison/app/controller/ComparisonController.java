@@ -6,6 +6,7 @@ import com.comparison.app.service.CompareRequestOptions;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.HashMap;
 import java.util.List;
@@ -38,22 +39,19 @@ public class ComparisonController {
     public ResponseEntity<Map<String, Object>> compare(
             @RequestParam String itemA,
             @RequestParam String itemB,
-            @RequestHeader(value = "X-Forwarded-For", required = false) String forwardedFor,
-            @RequestHeader(value = "X-Real-IP", required = false) String realIp) {
+            HttpServletRequest request) {
 
         return compareInternal(
                 itemA,
                 itemB,
                 CompareRequestOptions.defaults(),
-                forwardedFor,
-                realIp);
+                request);
     }
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> compareAdvanced(
             @RequestBody CompareRequestPayload payload,
-            @RequestHeader(value = "X-Forwarded-For", required = false) String forwardedFor,
-            @RequestHeader(value = "X-Real-IP", required = false) String realIp) {
+            HttpServletRequest request) {
 
         CompareRequestOptions options = new CompareRequestOptions(
                 payload.category(),
@@ -64,7 +62,7 @@ public class ComparisonController {
                 safeList(payload.redFlags()),
                 payload.depth());
 
-        return compareInternal(payload.itemA(), payload.itemB(), options, forwardedFor, realIp);
+        return compareInternal(payload.itemA(), payload.itemB(), options, request);
     }
 
     /**
@@ -73,12 +71,11 @@ public class ComparisonController {
     @GetMapping("/search")
     public ResponseEntity<Map<String, Object>> searchSingle(
             @RequestParam String query,
-            @RequestHeader(value = "X-Forwarded-For", required = false) String forwardedFor,
-            @RequestHeader(value = "X-Real-IP", required = false) String realIp) {
+            HttpServletRequest request) {
 
         Map<String, Object> response = new HashMap<>();
 
-        String clientIp = getClientIp(forwardedFor, realIp);
+        String clientIp = getClientIp(request);
         if (!checkRateLimit(clientIp)) {
             response.put("error", "Too many requests. Please wait a moment.");
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(response);
@@ -126,11 +123,10 @@ public class ComparisonController {
             String itemA,
             String itemB,
             CompareRequestOptions options,
-            String forwardedFor,
-            String realIp) {
+            HttpServletRequest request) {
 
         Map<String, Object> response = new HashMap<>();
-        String clientIp = getClientIp(forwardedFor, realIp);
+        String clientIp = getClientIp(request);
 
         if (!checkRateLimit(clientIp)) {
             response.put("error", "Too many requests. Please wait a moment.");
@@ -179,16 +175,39 @@ public class ComparisonController {
     }
 
     /**
-     * Get client IP address
+     * Check if an IP address belongs to a trusted proxy
      */
-    private String getClientIp(String forwardedFor, String realIp) {
-        if (forwardedFor != null && !forwardedFor.isEmpty()) {
-            return forwardedFor.split(",")[0].trim();
+    private boolean isTrustedProxy(String ip) {
+        if (ip == null) return false;
+        return ip.equals("127.0.0.1") ||
+               ip.equals("0:0:0:0:0:0:0:1") ||
+               ip.equals("::1") ||
+               ip.startsWith("10.") ||
+               ip.startsWith("192.168.") ||
+               (ip.startsWith("172.") && ip.length() >= 6 &&
+                Integer.parseInt(ip.substring(4, ip.indexOf('.', 4))) >= 16 &&
+                Integer.parseInt(ip.substring(4, ip.indexOf('.', 4))) <= 31);
+    }
+
+    /**
+     * Get client IP address securely
+     */
+    private String getClientIp(HttpServletRequest request) {
+        String remoteAddr = request.getRemoteAddr();
+
+        if (isTrustedProxy(remoteAddr)) {
+            String forwardedFor = request.getHeader("X-Forwarded-For");
+            if (forwardedFor != null && !forwardedFor.isEmpty()) {
+                return forwardedFor.split(",")[0].trim();
+            }
+
+            String realIp = request.getHeader("X-Real-IP");
+            if (realIp != null && !realIp.isEmpty()) {
+                return realIp;
+            }
         }
-        if (realIp != null && !realIp.isEmpty()) {
-            return realIp;
-        }
-        return "unknown";
+
+        return remoteAddr != null ? remoteAddr : "unknown";
     }
 
     /**
