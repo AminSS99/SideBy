@@ -31,7 +31,7 @@ test("API health check returns JSON", async ({ request }) => {
 });
 
 test("SEO and favicon assets are served", async ({ request }) => {
-  const [sitemap, robots, svgIcon, icoIcon] = await Promise.all([
+  const [sitemap, robots, sidebyIcon, icoIcon] = await Promise.all([
     request.get(`${SMOKE_ORIGIN}/sitemap.xml`),
     request.get(`${SMOKE_ORIGIN}/robots.txt`),
     request.get(`${SMOKE_ORIGIN}/sideby.ico`),
@@ -42,8 +42,8 @@ test("SEO and favicon assets are served", async ({ request }) => {
   expect(await sitemap.text()).toContain("<urlset");
   expect(robots.status()).toBe(200);
   expect(await robots.text()).toContain("Sitemap: https://sideby.ink/sitemap.xml");
-  expect(svgIcon.status()).toBe(200);
-  expect(svgIcon.headers()["content-type"]).toContain("image/svg+xml");
+  expect(sidebyIcon.status()).toBe(200);
+  expect(sidebyIcon.headers()["content-type"]).toContain("icon");
   expect(icoIcon.status()).toBe(200);
   expect(icoIcon.headers()["content-type"]).toContain("icon");
 });
