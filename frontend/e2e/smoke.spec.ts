@@ -9,6 +9,48 @@ test("homepage loads and shows hero", async ({ page }) => {
   await expect(page.locator("text=Compare").first()).toBeVisible();
 });
 
+test("interactive controls keep a stable cursor across nested content", async ({ page }) => {
+  await page.goto("/");
+
+  const failures = await page.evaluate(() => {
+    const selector = [
+      "a[href]",
+      "button",
+      '[role="button"]',
+      "summary",
+      "select",
+      'input[type="checkbox"]',
+      'input[type="radio"]',
+      'input[type="range"]',
+    ].join(",");
+
+    return [...document.querySelectorAll<HTMLElement>(selector)]
+      .filter((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+      })
+      .flatMap((element) => {
+        const disabled = element.matches(':disabled,[aria-disabled="true"]');
+        const expected = disabled ? "not-allowed" : "pointer";
+        const cursors = [
+          getComputedStyle(element).cursor,
+          ...[...element.querySelectorAll<HTMLElement>("*")].map((child) => getComputedStyle(child).cursor),
+        ];
+
+        return cursors.every((cursor) => cursor === expected)
+          ? []
+          : [{
+              label: element.getAttribute("aria-label") || element.textContent?.trim().slice(0, 60) || element.tagName,
+              expected,
+              cursors: [...new Set(cursors)],
+            }];
+      });
+  });
+
+  expect(failures).toEqual([]);
+});
+
 test("marketing pages are reachable", async ({ page }) => {
   const res = await page.goto("/pricing");
   expect(res?.status()).toBe(200);

@@ -66,7 +66,7 @@ const Features = () => {
             SideBy combines search, extraction, scoring, and source tracking so your team can make a decision—and defend it later.
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link to="/" className="group inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 px-6 text-[10px] font-bold uppercase tracking-[0.16em] text-white transition-transform hover:-translate-y-0.5">Try a comparison <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></Link>
+            <Link to="/" className="group inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 px-6 text-[10px] font-bold uppercase tracking-[0.16em] text-white transition hover:brightness-110">Try a comparison <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></Link>
             <Link to="/pricing" className="inline-flex min-h-[52px] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-6 text-[10px] font-bold uppercase tracking-[0.16em] text-white/65 transition-colors hover:bg-white/[0.07] hover:text-white">See pricing</Link>
           </div>
         </header>
@@ -102,7 +102,7 @@ const Features = () => {
           <GitCompareArrows className="mx-auto h-7 w-7 text-orange-300" />
           <h2 className="mx-auto mt-5 max-w-3xl font-serif text-4xl leading-tight text-white sm:text-6xl">Bring the options. Keep the evidence.</h2>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-white/50 sm:text-base">Your first five daily comparisons are free, with no payment details required.</p>
-          <Link to="/auth/sign-up" className="group mt-7 inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl bg-white px-6 text-[10px] font-bold uppercase tracking-[0.16em] text-black transition-transform hover:-translate-y-0.5">Start free <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></Link>
+          <Link to="/auth/sign-up" className="group mt-7 inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl bg-white px-6 text-[10px] font-bold uppercase tracking-[0.16em] text-black transition hover:brightness-105">Start free <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></Link>
         </section>
 
         <section className="mx-auto mt-12 grid max-w-4xl grid-cols-3 gap-2 sm:gap-4">

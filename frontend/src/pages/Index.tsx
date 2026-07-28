@@ -145,7 +145,7 @@ const Index = () => {
                   key={comparison.label}
                   type="button"
                   onClick={() => beginComparison(comparison.label)}
-                  className="group relative min-h-[150px] w-[82vw] max-w-[330px] shrink-0 snap-center overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.035] p-5 text-left transition duration-300 hover:-translate-y-1 hover:border-orange-300/25 hover:bg-orange-400/[0.06] sm:w-auto sm:max-w-none"
+                  className="group relative min-h-[150px] w-[82vw] max-w-[330px] shrink-0 snap-center overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.035] p-5 text-left transition duration-300 hover:border-orange-300/25 hover:bg-orange-400/[0.06] hover:shadow-[0_18px_45px_rgba(0,0,0,.22)] sm:w-auto sm:max-w-none"
                 >
                   <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-300/40 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
                   <div className="flex items-center justify-between">
@@ -204,7 +204,7 @@ const Index = () => {
           <CheckCircle2 className="mx-auto h-7 w-7 text-orange-300" />
           <h2 className="mx-auto mt-5 max-w-3xl font-serif text-4xl leading-none tracking-tight text-white sm:text-6xl">Your next decision deserves better than twenty open tabs.</h2>
           <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-white/55">Bring the options. SideBy will organize the evidence and show you exactly why one fits better.</p>
-          <Link to="/app/comparisons" className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-[#130d09] transition hover:-translate-y-0.5 hover:shadow-xl">Start comparing <ArrowRight className="h-4 w-4" /></Link>
+          <Link to="/app/comparisons" className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-[#130d09] transition hover:brightness-105 hover:shadow-xl">Start comparing <ArrowRight className="h-4 w-4" /></Link>
         </section>
       </main>
 

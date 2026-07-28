@@ -228,7 +228,7 @@ const OnboardingPage = () => {
                     <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-300">SnapSolve workspace found</p>
                     <h3 className="mt-2 font-serif text-2xl text-[#fdfbf7]">{ecosystemSession.workspace.name}</h3>
                   </div>
-                  <button type="button" onClick={() => void handleUseEcosystemWorkspace()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#fdfbf7] px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-transform hover:-translate-y-0.5">
+                  <button type="button" onClick={() => void handleUseEcosystemWorkspace()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#fdfbf7] px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition hover:brightness-105">
                     Use in SideBy <ExternalLink className="h-4 w-4" />
                   </button>
                 </div>
@@ -253,7 +253,7 @@ const OnboardingPage = () => {
                     <div key={item} className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-2 py-3 text-center text-[9px] font-bold uppercase tracking-[0.16em] text-white/45">{item}</div>
                   ))}
                 </div>
-                <button type="button" onClick={() => setStep("create")} className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white shadow-[0_16px_35px_-18px_rgba(244,63,94,0.9)] transition-transform hover:-translate-y-0.5">
+                <button type="button" onClick={() => setStep("create")} className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white shadow-[0_16px_35px_-18px_rgba(244,63,94,0.9)] transition hover:brightness-110">
                   Continue to workspace <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </button>
                 <p className="mt-3 text-center text-[10px] text-white/30">Free beta access · no card required</p>
@@ -280,7 +280,7 @@ const OnboardingPage = () => {
                   </div>
                   <div className="grid grid-cols-[0.8fr_1.2fr] gap-3 pt-2">
                     <button type="button" onClick={() => setStep("welcome")} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white">Back</button>
-                    <button type="button" onClick={() => void handleCreate()} className="group flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-white transition-transform hover:-translate-y-0.5">
+                    <button type="button" onClick={() => void handleCreate()} className="group flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-white transition hover:brightness-110">
                       Create workspace <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </button>
                   </div>

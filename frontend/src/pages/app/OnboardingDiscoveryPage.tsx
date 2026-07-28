@@ -190,7 +190,7 @@ const OnboardingDiscoveryPage = () => {
 
             {error && <p role="alert" className="mt-4 rounded-xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</p>}
 
-            <button type="button" onClick={continueSetup} className="group mt-6 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white shadow-[0_16px_35px_-18px_rgba(244,63,94,.9)] transition-transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-orange-300">
+            <button type="button" onClick={continueSetup} className="group mt-6 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white shadow-[0_16px_35px_-18px_rgba(244,63,94,.9)] transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-orange-300">
               Continue setup <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </button>
           </section>

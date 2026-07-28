@@ -211,6 +211,47 @@ select {
   touch-action: manipulation;
 }
 
+/*
+ * Keep pointer feedback stable across nested icons, spans, and animated layers.
+ * Interactive hitboxes must not depend on browser-specific cursor defaults.
+ */
+:where(
+  a[href],
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="range"]:not(:disabled)
+) {
+  cursor: pointer;
+}
+
+:where(
+  a[href],
+  button,
+  [role="button"],
+  summary,
+  select,
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"]
+) * {
+  cursor: inherit;
+}
+
+:where(
+  button:disabled,
+  [aria-disabled="true"],
+  select:disabled,
+  input[type="checkbox"]:disabled,
+  input[type="radio"]:disabled,
+  input[type="range"]:disabled
+) {
+  cursor: not-allowed;
+}
+
 :focus-visible {
   outline: 2px solid rgba(251, 146, 60, 0.9);
   outline-offset: 3px;

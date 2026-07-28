@@ -261,9 +261,9 @@ const EcosystemWorkspacePage = () => {
 
             return canOpen ? (
               isExternal ? (
-                <a key={product.slug} href={product.launch_url ?? undefined} target="_blank" rel="noopener noreferrer" onClick={() => openProduct(product)} className="ecosystem-product group relative min-h-[280px] overflow-hidden rounded-[24px] border border-white/[0.09] bg-white/[0.025] p-5 transition hover:-translate-y-1 hover:border-orange-300/25 focus:outline-none focus:ring-2 focus:ring-orange-300 sm:p-6">{content}</a>
+                <a key={product.slug} href={product.launch_url ?? undefined} target="_blank" rel="noopener noreferrer" onClick={() => openProduct(product)} className="ecosystem-product group relative min-h-[280px] overflow-hidden rounded-[24px] border border-white/[0.09] bg-white/[0.025] p-5 transition hover:border-orange-300/25 hover:bg-white/[0.04] focus:outline-none focus:ring-2 focus:ring-orange-300 sm:p-6">{content}</a>
               ) : (
-                <Link key={product.slug} to={product.launch_url ?? "/app"} onClick={() => openProduct(product)} className="ecosystem-product group relative min-h-[280px] overflow-hidden rounded-[24px] border border-white/[0.09] bg-white/[0.025] p-5 transition hover:-translate-y-1 hover:border-orange-300/25 focus:outline-none focus:ring-2 focus:ring-orange-300 sm:p-6">{content}</Link>
+                <Link key={product.slug} to={product.launch_url ?? "/app"} onClick={() => openProduct(product)} className="ecosystem-product group relative min-h-[280px] overflow-hidden rounded-[24px] border border-white/[0.09] bg-white/[0.025] p-5 transition hover:border-orange-300/25 hover:bg-white/[0.04] focus:outline-none focus:ring-2 focus:ring-orange-300 sm:p-6">{content}</Link>
               )
             ) : (
               <article key={product.slug} className="ecosystem-product relative min-h-[280px] overflow-hidden rounded-[24px] border border-white/[0.07] bg-white/[0.018] p-5 sm:p-6">{content}</article>

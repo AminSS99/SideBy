@@ -128,7 +128,7 @@ const Pricing = () => {
                     <li key={feature} className="flex items-start gap-3 text-sm text-white/65"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" /><span>{feature}</span></li>
                   ))}
                 </ul>
-                <Link to={tier.href} className={`group mt-7 flex min-h-[52px] items-center justify-center gap-2 rounded-2xl px-5 text-[10px] font-bold uppercase tracking-[0.16em] transition-transform hover:-translate-y-0.5 ${tier.featured ? "bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 text-white" : tier.available ? "bg-white text-black" : "border border-white/10 bg-white/[0.04] text-white/70"}`}>
+                <Link to={tier.href} className={`group mt-7 flex min-h-[52px] items-center justify-center gap-2 rounded-2xl px-5 text-[10px] font-bold uppercase tracking-[0.16em] transition hover:brightness-110 ${tier.featured ? "bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 text-white" : tier.available ? "bg-white text-black" : "border border-white/10 bg-white/[0.04] text-white/70"}`}>
                   {tier.cta} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </article>
