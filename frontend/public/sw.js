@@ -1,6 +1,8 @@
-const CACHE_NAME = "sideby-cache-v5";
+const CACHE_NAME = "sideby-cache-v6";
 const ASSETS = [
+  "/index.html",
   "/manifest.json",
+  "/sideby.ico",
   "/favicon.ico",
   "/favicon-48x48.png",
   "/apple-touch-icon.png",
@@ -64,26 +66,42 @@ self.addEventListener("fetch", (e) => {
   // Handle SPA routing with network-first HTML so hashed asset URLs never go stale.
   if (e.request.mode === "navigate") {
     e.respondWith(
-      fetch(e.request, { cache: "no-store" }).catch(() => fetch("/index.html", { cache: "no-store" }))
+      fetch(e.request, { cache: "no-store" }).catch(async () => {
+        const cachedShell = await caches.match("/index.html");
+        return cachedShell || new Response(
+          "<!doctype html><title>SideBy is offline</title><p>Reconnect and refresh to continue.</p>",
+          {
+            status: 503,
+            statusText: "Offline",
+            headers: { "Content-Type": "text/html; charset=utf-8" },
+          },
+        );
+      })
     );
     return;
   }
 
   // Stale-While-Revalidate Strategy for other static assets
+  const fetchPromise = fetch(e.request).then(async (networkResponse) => {
+    if (networkResponse.status === 200 && networkResponse.type === "basic") {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(e.request, networkResponse.clone());
+    }
+    return networkResponse;
+  }).catch(() => null);
+
+  e.waitUntil(fetchPromise);
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      const fetchPromise = fetch(e.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === "basic") {
-          const cacheCopy = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(e.request, cacheCopy);
-          });
-        }
-        return networkResponse;
-      }).catch(() => {
-        // Suppress fetch errors when offline
+    caches.match(e.request).then(async (cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      const networkResponse = await fetchPromise;
+      return networkResponse || new Response("", {
+        status: 503,
+        statusText: "Offline",
       });
-      return cachedResponse || fetchPromise;
     })
   );
 });

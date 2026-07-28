@@ -11,6 +11,12 @@ export interface ConsentRecord {
 }
 
 const CONSENT_STORAGE_KEY = "sideby.cookie-consent";
+export const COOKIE_SETTINGS_EVENT = "sideby:open-cookie-settings";
+
+export function openCookieSettings(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(COOKIE_SETTINGS_EVENT));
+}
 
 function hasGlobalPrivacyControl(): boolean {
   return typeof navigator !== "undefined" &&

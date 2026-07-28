@@ -1,6 +1,7 @@
 import React from "react";
 import LegalPageShell from "./LegalPageShell";
 import { brand } from "@/config/brand";
+import { openCookieSettings } from "@/lib/consent";
 
 const CookiesPolicy = () => {
   return (
@@ -37,6 +38,13 @@ const CookiesPolicy = () => {
       <p>
         You can accept or reject optional analytics through our “Cookie settings” control at any time. Rejecting analytics does not affect essential authentication or security cookies. You can also manage cookies through your browser settings. Where supported, we treat a browser Global Privacy Control signal as an opt-out of optional analytics.
       </p>
+      <button
+        type="button"
+        onClick={openCookieSettings}
+        className="not-prose mt-4 rounded-md border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+      >
+        Manage cookie preferences
+      </button>
 
       <h2>5. Updates to this policy</h2>
       <p>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { allowsAnalytics, isGlobalPrivacyControlEnabled, readConsent, saveConsent, type AnalyticsConsent, type ConsentRecord } from "@/lib/consent";
+import { allowsAnalytics, COOKIE_SETTINGS_EVENT, isGlobalPrivacyControlEnabled, readConsent, saveConsent, type AnalyticsConsent, type ConsentRecord } from "@/lib/consent";
 import { disablePostHog, initPostHog } from "@/lib/posthog";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
@@ -16,6 +16,12 @@ export default function CookieConsent() {
   useEffect(() => {
     setAnalyticsEnabled(allowsAnalytics(consent));
   }, [consent]);
+
+  useEffect(() => {
+    const openSettings = () => setShowSettings(true);
+    window.addEventListener(COOKIE_SETTINGS_EVENT, openSettings);
+    return () => window.removeEventListener(COOKIE_SETTINGS_EVENT, openSettings);
+  }, []);
 
   useEffect(() => {
     if (allowsAnalytics(consent)) {
@@ -86,12 +92,6 @@ export default function CookieConsent() {
             Cookie Policy
           </Link>
         </section>
-      ) : null}
-
-      {!showBanner ? (
-        <button type="button" aria-label="Cookie settings" onClick={() => setShowSettings(true)} className="fixed bottom-24 left-1/2 right-auto z-[45] grid h-9 w-9 -translate-x-1/2 place-items-center rounded-full border border-white/10 bg-zinc-950/85 text-white/55 shadow-lg backdrop-blur-xl transition hover:border-white/20 hover:text-white lg:h-auto lg:w-auto lg:grid-flow-col lg:gap-2 lg:px-4 lg:py-2.5 lg:text-xs">
-          <Cookie className="h-3.5 w-3.5" /><span className="sr-only lg:not-sr-only">Cookie settings</span>
-        </button>
       ) : null}
 
       {showSettings ? (
