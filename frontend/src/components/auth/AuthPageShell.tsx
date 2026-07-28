@@ -117,7 +117,7 @@ const AuthPageShell = ({
       <div className="relative z-10 mx-auto w-full max-w-6xl">
         <div className="mb-7 flex items-center justify-between lg:hidden">
           <Link to="/" className="auth-logo flex items-center gap-3">
-            <img src="/sideby.ico" alt="SideBy" className="h-9 w-9 rounded-xl object-contain" />
+            <img src="/sideby.ico?v=20260728-real" alt="SideBy" className="h-9 w-9 rounded-xl object-contain" />
             <span className="font-serif text-xl text-[#fdfbf7]">{brand.productName}</span>
           </Link>
           <Link to="/" aria-label="Back to home" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/50">
@@ -139,7 +139,7 @@ const AuthPageShell = ({
                 className="auth-logo flex items-center gap-4 group self-start"
               >
                 <img
-                  src="/sideby.ico"
+                  src="/sideby.ico?v=20260728-real"
                   alt="SideBy"
                   className="h-11 w-11 rounded-xl object-contain shadow-lg transition-transform group-hover:scale-105"
                 />

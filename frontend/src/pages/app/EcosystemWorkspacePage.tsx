@@ -48,7 +48,7 @@ const fallbackProducts: ProductView[] = [
     slug: "sideby",
     name: "SideBy",
     tagline: "Source-backed comparisons and decision intelligence.",
-    icon_url: "/sideby.ico",
+    icon_url: "/sideby.ico?v=20260728-real",
     launch_url: "/app/comparisons",
     status: "active",
     enabled: true,
@@ -200,7 +200,7 @@ const EcosystemWorkspacePage = () => {
         <div className="ecosystem-orbit relative mx-auto mt-10 aspect-square w-full max-w-[320px] lg:mt-0" aria-hidden="true">
           <div className="absolute inset-[12%] rounded-full border border-white/10" />
           <div className="absolute inset-[28%] rounded-full border border-orange-300/20 bg-black/30 shadow-[0_0_70px_rgba(249,115,22,.12)]" />
-          <div className="absolute inset-[38%] flex items-center justify-center rounded-3xl border border-orange-300/25 bg-orange-400/10"><img src="/sideby.ico" alt="" className="h-14 w-14 rounded-2xl object-contain" /></div>
+          <div className="absolute inset-[38%] flex items-center justify-center rounded-3xl border border-orange-300/25 bg-orange-400/10"><img src="/sideby.ico?v=20260728-real" alt="" className="h-14 w-14 rounded-2xl object-contain" /></div>
           <span className="absolute left-[4%] top-[42%] flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-300/20 bg-sky-400/10 text-sky-200"><Radar className="h-5 w-5" /></span>
           <span className="absolute right-[5%] top-[22%] flex h-12 w-12 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-400/10 text-violet-200"><Orbit className="h-5 w-5" /></span>
           <span className="absolute bottom-[7%] right-[27%] flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-300/20 bg-emerald-400/10 text-emerald-200"><Sparkles className="h-5 w-5" /></span>

@@ -46,13 +46,13 @@ for (const entry of urls) {
   }
 }
 
-if (!indexHtml.includes('rel="icon" type="image/x-icon" href="/sideby.ico?v=20260728"')) {
+if (!indexHtml.includes('rel="icon" type="image/x-icon" href="/sideby.ico?v=20260728-real"')) {
   fail("index.html does not reference the versioned SideBy logo as the primary icon");
 }
-if (!manifest.icons?.some((icon) => icon.src === "/icon-192.png")) {
+if (!manifest.icons?.some((icon) => icon.src === "/icon-192.png?v=20260728-real")) {
   fail("manifest.json is missing the 192px icon");
 }
-if (!manifest.icons?.some((icon) => icon.src === "/icon-512.png")) {
+if (!manifest.icons?.some((icon) => icon.src === "/icon-512.png?v=20260728-real")) {
   fail("manifest.json is missing the 512px icon");
 }
 

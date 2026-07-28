@@ -1,8 +1,8 @@
-const CACHE_NAME = "sideby-cache-v6";
+const CACHE_NAME = "sideby-cache-v7";
 const ASSETS = [
   "/index.html",
   "/manifest.json",
-  "/sideby.ico",
+  "/sideby.ico?v=20260728-real",
   "/favicon.ico",
   "/favicon-48x48.png",
   "/apple-touch-icon.png",

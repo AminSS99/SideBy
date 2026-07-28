@@ -211,7 +211,7 @@ const Index = () => {
       <footer id="site-footer" className="relative z-10 border-t border-white/[0.08] bg-black/25">
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-5 px-4 py-8 text-center sm:px-6">
           <div className="flex w-full flex-col items-center justify-between gap-4 sm:flex-row">
-            <div className="flex items-center justify-center gap-2.5 sm:justify-start"><img src="/sideby.ico" alt="" className="h-8 w-8 rounded-lg object-contain" /><span className="font-serif text-lg">SideBy</span></div>
+            <div className="flex items-center justify-center gap-2.5 sm:justify-start"><img src="/sideby.ico?v=20260728-real" alt="" className="h-8 w-8 rounded-lg object-contain" /><span className="font-serif text-lg">SideBy</span></div>
             <nav aria-label="Footer navigation" className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-white/45">
               <Link to="/features">Features</Link>
               <Link to="/pricing">Pricing</Link>

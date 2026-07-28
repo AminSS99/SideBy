@@ -121,7 +121,7 @@ const OnboardingDiscoveryPage = () => {
       <div className="relative z-10 mx-auto w-full max-w-5xl">
         <header className="mb-8 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
-            <img src="/sideby.ico" alt="SideBy" className="h-9 w-9 rounded-xl object-contain" />
+            <img src="/sideby.ico?v=20260728-real" alt="SideBy" className="h-9 w-9 rounded-xl object-contain" />
             <div>
               <p className="font-serif text-lg leading-none text-[#fdfbf7]">{brand.productName}</p>
               <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.22em] text-white/35">Workspace setup</p>

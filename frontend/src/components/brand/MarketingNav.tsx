@@ -27,7 +27,9 @@ export const MarketingNav = () => {
         >
           <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-xl border border-orange-300/20 bg-gradient-to-br from-orange-400/15 to-fuchsia-500/10">
             <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,.22),transparent_45%)]" />
-            <img src="/sideby.ico" alt="" className="relative h-7 w-7 object-contain transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110" />
+            <span className="relative h-7 w-7 overflow-hidden rounded-md transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110">
+              <img src="/sideby.ico?v=20260728-real" alt="" className="absolute left-1/2 top-[-10px] h-[68px] w-[68px] max-w-none -translate-x-1/2 object-contain" />
+            </span>
           </span>
           <span className="font-serif text-lg tracking-tight">SideBy</span>
         </Link>
