@@ -2,6 +2,7 @@ export const brand = {
   productName: "SideBy",
   productShortName: "SideBy",
   companyName: "SnapSolve Ink",
+  companyUrl: "https://snapsolve.ink",
   url: "https://sideby.ink",
   domain: "sideby.ink",
   aiEngineName: "SideBy Research Engine",

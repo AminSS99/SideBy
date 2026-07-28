@@ -41,7 +41,7 @@ type EcosystemSession = {
 const PRODUCT_LOGOS: Record<string, string> = {
   orizonte: "https://sideby.ink/orizonte.png",
   rallia: "https://sideby.ink/rallia.png",
-  sideby: "/icon.svg",
+  sideby: "/sideby.ico",
 };
 
 const SETUP_BENEFITS = [
@@ -55,7 +55,7 @@ const slugify = (value: string) =>
 
 const getProductLogo = (product: EcosystemProduct) => {
   if (product.icon_url && !product.icon_url.startsWith("/")) return product.icon_url;
-  return PRODUCT_LOGOS[product.slug] || "/icon.svg";
+  return PRODUCT_LOGOS[product.slug] || "/sideby.ico";
 };
 
 const OnboardingPage = () => {
@@ -159,7 +159,7 @@ const OnboardingPage = () => {
       <div className="relative z-10 mx-auto w-full max-w-5xl">
         <header className="ob-hero mb-8 flex items-center justify-between">
           <Link to="/" className="group flex items-center gap-3">
-            <img src="/icon.svg" alt="SideBy" className="h-9 w-9 rounded-xl object-contain shadow-lg" />
+            <img src="/sideby.ico" alt="SideBy" className="h-9 w-9 rounded-xl object-contain shadow-lg" />
             <div>
               <p className="font-serif text-lg leading-none text-[#fdfbf7]">{brand.productName}</p>
               <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.22em] text-white/35">Workspace setup</p>

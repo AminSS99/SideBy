@@ -60,7 +60,7 @@ export default function CookieConsent() {
       {showBanner ? (
         <section
           aria-label="Cookie preferences"
-          className="fixed bottom-3 left-3 right-3 z-[100] mx-auto max-w-2xl rounded-2xl border border-white/15 bg-[#0d0b0a]/95 p-4 shadow-[0_24px_80px_rgba(0,0,0,.7)] backdrop-blur-2xl sm:bottom-5 sm:left-auto sm:p-5"
+          className="fixed bottom-3 left-3 right-3 z-[100] mx-auto max-w-2xl rounded-2xl border border-white/15 bg-[#0d0b0a]/95 p-4 shadow-[0_24px_80px_rgba(0,0,0,.7)] backdrop-blur-2xl sm:bottom-5 sm:p-5"
         >
           <div className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-lg bg-orange-400/10 text-orange-300"><Cookie className="h-4 w-4" /></span><h2 className="text-sm font-semibold text-white sm:text-base">Your privacy choices</h2></div>
           <p className="mt-2 text-xs leading-5 text-white/60 sm:text-sm sm:leading-6">
@@ -89,13 +89,13 @@ export default function CookieConsent() {
       ) : null}
 
       {!showBanner ? (
-        <button type="button" onClick={() => setShowSettings(true)} className="absolute bottom-3 right-3 z-[45] grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-zinc-950/75 text-white/45 shadow-lg backdrop-blur-xl transition hover:border-white/20 hover:text-white lg:fixed lg:bottom-3 lg:left-3 lg:right-auto lg:h-auto lg:w-auto lg:grid-flow-col lg:gap-2 lg:px-3 lg:py-2 lg:text-xs">
+        <button type="button" aria-label="Cookie settings" onClick={() => setShowSettings(true)} className="fixed bottom-24 left-1/2 right-auto z-[45] grid h-9 w-9 -translate-x-1/2 place-items-center rounded-full border border-white/10 bg-zinc-950/85 text-white/55 shadow-lg backdrop-blur-xl transition hover:border-white/20 hover:text-white lg:h-auto lg:w-auto lg:grid-flow-col lg:gap-2 lg:px-4 lg:py-2.5 lg:text-xs">
           <Cookie className="h-3.5 w-3.5" /><span className="sr-only lg:not-sr-only">Cookie settings</span>
         </button>
       ) : null}
 
       {showSettings ? (
-        <div role="dialog" aria-modal="true" aria-labelledby="cookie-settings-title" className="fixed inset-0 z-[110] flex items-end justify-center bg-black/65 p-4 sm:items-center">
+        <div role="dialog" aria-modal="true" aria-labelledby="cookie-settings-title" className="fixed inset-0 z-[110] flex items-center justify-center bg-black/65 p-4">
           <section className="w-full max-w-lg rounded-xl border border-white/15 bg-zinc-950 p-6 shadow-2xl">
             <h2 id="cookie-settings-title" className="text-lg font-semibold text-white">Cookie settings</h2>
             <div className="mt-5 rounded-lg border border-white/10 p-4">

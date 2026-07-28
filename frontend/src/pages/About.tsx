@@ -149,12 +149,12 @@ const About = () => {
       </main>
 
       <footer className="relative z-10 border-t border-white/10 bg-black/20 py-8">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 md:flex-row">
-          <BrandFooter />
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-6 text-center">
           <div className="flex gap-6">
             <Link to="/legal/privacy" className="text-[10px] font-bold uppercase tracking-widest text-white/40 transition hover:text-white">Privacy</Link>
             <Link to="/legal/security" className="text-[10px] font-bold uppercase tracking-widest text-white/40 transition hover:text-white">Security</Link>
           </div>
+          <BrandFooter />
         </div>
       </footer>
     </div>

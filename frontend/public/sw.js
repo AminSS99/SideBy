@@ -7,6 +7,7 @@ const ASSETS = [
   "/icon-192.png",
   "/icon-512.png",
   "/icon.svg",
+  "/snapsolve.png",
 ];
 
 // Install Event

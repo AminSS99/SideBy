@@ -38,12 +38,12 @@ export const LegalPageShell = ({ title, lastUpdated, children }: LegalPageShellP
       </main>
 
       <footer className="border-t border-[#2a2a2a] bg-[#080808] py-8">
-        <div className="mx-auto flex max-w-4xl flex-col md:flex-row items-center justify-between px-6 gap-4">
-          <BrandFooter />
+        <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-6 text-center">
           <div className="flex gap-6 text-[10px] font-bold uppercase tracking-widest text-white/40">
             <Link to="/legal/privacy" className="hover:text-white transition-colors">Privacy</Link>
             <Link to="/legal/terms" className="hover:text-white transition-colors">Terms</Link>
           </div>
+          <BrandFooter />
         </div>
       </footer>
     </div>

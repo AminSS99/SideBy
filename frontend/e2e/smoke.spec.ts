@@ -34,7 +34,7 @@ test("SEO and favicon assets are served", async ({ request }) => {
   const [sitemap, robots, svgIcon, icoIcon] = await Promise.all([
     request.get(`${SMOKE_ORIGIN}/sitemap.xml`),
     request.get(`${SMOKE_ORIGIN}/robots.txt`),
-    request.get(`${SMOKE_ORIGIN}/icon.svg`),
+    request.get(`${SMOKE_ORIGIN}/sideby.ico`),
     request.get(`${SMOKE_ORIGIN}/favicon.ico`),
   ]);
 
