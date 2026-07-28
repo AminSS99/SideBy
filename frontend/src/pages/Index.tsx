@@ -14,7 +14,7 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
-import { BrandFooter } from "@/components/brand/BrandFooter";
+import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { AmbientOrbs } from "@/components/AmbientOrbs";
 import { SUPPORTED_COMPARISON_CATEGORIES } from "@/lib/comparisonTaxonomy";
@@ -208,24 +208,7 @@ const Index = () => {
         </section>
       </main>
 
-      <footer id="site-footer" className="relative z-10 border-t border-white/[0.08] bg-black/25">
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-5 px-4 py-8 text-center sm:px-6">
-          <div className="flex w-full flex-col items-center justify-between gap-4 sm:flex-row">
-            <div className="flex items-center justify-center gap-2.5 sm:justify-start"><img src="/sideby.ico?v=20260728-real" alt="" className="h-8 w-8 rounded-lg object-contain" /><span className="font-serif text-lg">SideBy</span></div>
-            <nav aria-label="Footer navigation" className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-white/45">
-              <Link to="/features">Features</Link>
-              <Link to="/pricing">Pricing</Link>
-              <Link to="/docs">Docs</Link>
-              <Link to="/about">About</Link>
-              <Link to="/blog">Blog</Link>
-              <Link to="/contact">Contact</Link>
-              <Link to="/legal/privacy">Privacy</Link>
-              <Link to="/legal/terms">Terms</Link>
-            </nav>
-          </div>
-          <BrandFooter className="justify-center" />
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 };

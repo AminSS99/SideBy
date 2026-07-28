@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ArrowRight, CheckCircle2, FileSearch, Layers3, Scale, SearchCheck, Sparkles } from "lucide-react";
-import { BrandFooter } from "@/components/brand/BrandFooter";
+import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -148,15 +148,7 @@ const About = () => {
         </section>
       </main>
 
-      <footer className="relative z-10 border-t border-white/10 bg-black/20 py-8">
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-6 text-center">
-          <div className="flex gap-6">
-            <Link to="/legal/privacy" className="text-[10px] font-bold uppercase tracking-widest text-white/40 transition hover:text-white">Privacy</Link>
-            <Link to="/legal/security" className="text-[10px] font-bold uppercase tracking-widest text-white/40 transition hover:text-white">Security</Link>
-          </div>
-          <BrandFooter />
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 };

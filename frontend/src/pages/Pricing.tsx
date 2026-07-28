@@ -13,7 +13,7 @@ import {
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { MarketingNav } from "@/components/brand/MarketingNav";
-import { BrandFooter } from "@/components/brand/BrandFooter";
+import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 const TIERS = [
@@ -151,7 +151,7 @@ const Pricing = () => {
         </section>
       </main>
 
-      <footer className="relative z-10 border-t border-white/[0.08] bg-black/25"><div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-8 sm:px-6"><div className="flex gap-5 text-[9px] font-bold uppercase tracking-widest text-white/35"><Link to="/legal/privacy">Privacy</Link><Link to="/legal/terms">Terms</Link></div><BrandFooter /></div></footer>
+      <MarketingFooter />
     </div>
   );
 };

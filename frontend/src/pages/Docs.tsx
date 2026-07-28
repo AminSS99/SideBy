@@ -14,7 +14,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { BrandFooter } from "@/components/brand/BrandFooter";
+import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -301,15 +301,7 @@ const Docs = () => {
         </div>
       </main>
 
-      <footer className="relative z-10 border-t border-white/10 bg-black/20 py-8">
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-6 text-center">
-          <div className="flex gap-6">
-            <Link to="/legal/privacy" className="text-[10px] font-bold uppercase tracking-widest text-white/40 transition hover:text-white">Privacy</Link>
-            <Link to="/legal/terms" className="text-[10px] font-bold uppercase tracking-widest text-white/40 transition hover:text-white">Terms</Link>
-          </div>
-          <BrandFooter />
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 };

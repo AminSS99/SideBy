@@ -1,8 +1,7 @@
 import React, { useRef } from "react";
-import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { BrandFooter } from "@/components/brand/BrandFooter";
+import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 
 interface LegalPageShellProps {
@@ -37,15 +36,7 @@ export const LegalPageShell = ({ title, lastUpdated, children }: LegalPageShellP
         </div>
       </main>
 
-      <footer className="border-t border-[#2a2a2a] bg-[#080808] py-8">
-        <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-6 text-center">
-          <div className="flex gap-6 text-[10px] font-bold uppercase tracking-widest text-white/40">
-            <Link to="/legal/privacy" className="hover:text-white transition-colors">Privacy</Link>
-            <Link to="/legal/terms" className="hover:text-white transition-colors">Terms</Link>
-          </div>
-          <BrandFooter />
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 };
