@@ -46,8 +46,8 @@ for (const entry of urls) {
   }
 }
 
-if (!indexHtml.includes('rel="icon" href="/favicon.ico"')) {
-  fail("index.html does not reference /favicon.ico as the primary icon");
+if (!indexHtml.includes('rel="icon" type="image/x-icon" href="/sideby.ico?v=20260728"')) {
+  fail("index.html does not reference the versioned SideBy logo as the primary icon");
 }
 if (!manifest.icons?.some((icon) => icon.src === "/icon-192.png")) {
   fail("manifest.json is missing the 192px icon");
@@ -56,17 +56,17 @@ if (!manifest.icons?.some((icon) => icon.src === "/icon-512.png")) {
   fail("manifest.json is missing the 512px icon");
 }
 
-const favicon = await stat(path.join(projectRoot, "public", "favicon.ico"));
-if (favicon.size < 100) fail("favicon.ico is empty or invalid");
+const favicon = await stat(path.join(projectRoot, "public", "sideby.ico"));
+if (favicon.size < 100) fail("sideby.ico is empty or invalid");
 
 const faviconHeaders = vercel.headers?.find(
-  (rule) => rule.source === "/favicon.ico",
+  (rule) => rule.source === "/sideby.ico",
 )?.headers;
 const faviconMime = faviconHeaders?.find(
   (header) => header.key?.toLowerCase() === "content-type",
 )?.value;
 if (faviconMime !== "image/x-icon") {
-  fail(`favicon.ico MIME type is ${faviconMime ?? "not configured"}`);
+  fail(`sideby.ico MIME type is ${faviconMime ?? "not configured"}`);
 }
 
 const sitemapHeaders = vercel.headers?.find(

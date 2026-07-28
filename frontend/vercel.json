@@ -54,6 +54,19 @@
       ]
     },
     {
+      "source": "/sideby.ico",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "image/x-icon"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
       "source": "/favicon-48x48.png",
       "headers": [
         {
