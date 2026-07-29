@@ -113,23 +113,9 @@ test.describe("SideBy Production Hardening E2E Tests", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  // Test 5: Subscriptions checkout redirect
-  test("5. Checkout triggers /api/billing/checkout and redirects to checkout URL", async ({ page }) => {
-    let checkoutRequestPayload: { plan?: string } | null = null;
-
+  // Test 5: Shared SnapSolve pricing handoff
+  test("5. Free workspace opens the shared SnapSolve plans", async ({ page }) => {
     await seedTestAuth(page);
-
-    // Intercept checkout redirect
-    await page.route("**/api/billing/checkout", async (route) => {
-      checkoutRequestPayload = route.request().postDataJSON();
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          checkoutUrl: "https://test.dodopayments.com/mock-checkout-url",
-        }),
-      });
-    });
 
     await page.route("**/api/workspaces", (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(WORKSPACE_JSON) }),
@@ -138,70 +124,38 @@ test.describe("SideBy Production Hardening E2E Tests", () => {
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(usageJson("free")) }),
     );
 
-    // Prevent actual page unload to mock external checkout host
-    await page.route("https://test.dodopayments.com/mock-checkout-url", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "text/html",
-        body: "<html>Mock Checkout Page</html>",
-      });
-    });
-
     await page.goto("/app/billing");
     await expect(page).toHaveURL(/\/app\/billing/);
 
-    const upgradeProBtn = page.getByRole("button", { name: "Upgrade to Pro" });
-    await expect(upgradeProBtn).toBeVisible();
-
-    const checkoutRedirectPromise = page.waitForRequest("https://test.dodopayments.com/mock-checkout-url");
-    await upgradeProBtn.click();
-    await checkoutRedirectPromise;
-
-    expect(checkoutRequestPayload).toEqual({ plan: "pro" });
+    const sharedPlansLink = page.getByRole("link", { name: "Open SnapSolve Plans" });
+    await expect(sharedPlansLink).toBeVisible();
+    await expect(sharedPlansLink).toHaveAttribute("href", "https://snapsolve.ink/cockpit/#/subscription");
   });
 
-  // Test 6: Subscriptions customer portal redirect
-  test("6. Customer Portal triggers /api/billing/portal and redirects to portal URL", async ({ page }) => {
-    let portalCalled = false;
-
+  // Test 6: Paid shared subscription management
+  test("6. SnapSolve-managed plan opens the central subscription cockpit", async ({ page }) => {
     await seedTestAuth(page);
-
-    await page.route("**/api/billing/portal", async (route) => {
-      portalCalled = true;
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          url: "https://test.dodopayments.com/mock-portal-url",
-        }),
-      });
-    });
 
     await page.route("**/api/workspaces", (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(WORKSPACE_JSON) }),
     );
-    await page.route("**/api/usage", (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(usageJson("pro")) }),
-    );
-
-    await page.route("https://test.dodopayments.com/mock-portal-url", async (route) => {
+    await page.route("**/api/usage", async (route) => {
+      const paidUsage = usageJson("pro");
+      paidUsage.subscription.billingProvider = "snapsolve";
+      paidUsage.subscription.source = "snapsolve_entitlement";
       await route.fulfill({
         status: 200,
-        contentType: "text/html",
-        body: "<html>Mock Portal Page</html>",
+        contentType: "application/json",
+        body: JSON.stringify(paidUsage),
       });
     });
 
     await page.goto("/app/billing");
     await expect(page).toHaveURL(/\/app\/billing/);
 
-    const portalBtn = page.getByRole("button", { name: "Customer Portal" });
-    await expect(portalBtn).toBeVisible();
-
-    const portalRedirectPromise = page.waitForRequest("https://test.dodopayments.com/mock-portal-url");
-    await portalBtn.click();
-    await portalRedirectPromise;
-
-    expect(portalCalled).toBe(true);
+    await expect(page.getByText("Pulse Plan")).toBeVisible();
+    const manageLink = page.getByRole("link", { name: "Manage in SnapSolve" });
+    await expect(manageLink).toBeVisible();
+    await expect(manageLink).toHaveAttribute("href", "https://snapsolve.ink/cockpit/#/subscription");
   });
 });

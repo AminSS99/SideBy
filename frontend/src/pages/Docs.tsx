@@ -101,7 +101,7 @@ const articles: DocArticle[] = [
     title: "Understand usage limits",
     summary: "Know what happens when a research action reaches the current plan allowance.",
     steps: [
-      "The free plan currently includes 5 comparisons per day.",
+      "The shared SnapSolve Flow tier currently includes 5 SideBy comparisons per day.",
       "Follow-ups, refreshes, and exports have separate daily allowances.",
       "When a limit is reached, SideBy pauses that action and tells you when to retry.",
     ],

@@ -40,8 +40,6 @@ export function checkEnvironment(): EnvCheck {
   }
 
   const optional: Array<[string, boolean]> = [
-    ["DODO_PAYMENTS_API_KEY", present(serverEnv.dodoApiKey)],
-    ["DODO_PAYMENTS_WEBHOOK_SECRET", present(serverEnv.dodoWebhookSecret)],
     ["SENTRY_DSN", present(serverEnv.sentryDsn)],
     ["POSTHOG_KEY or VITE_POSTHOG_KEY", present(serverEnv.posthogKey)],
     ["BLOB_READ_WRITE_TOKEN", present(serverEnv.blobReadWriteToken)],
@@ -57,15 +55,6 @@ export function checkEnvironment(): EnvCheck {
     const message = "SNAPSOLVE_CORE_URL and SNAPSOLVE_SIDEBY_SECRET must be configured together.";
     warnings.push(message);
     if (production) missingRequired.push(message);
-  }
-
-  const hasAnyDodoProduct = Boolean(
-    process.env.DODO_PRO_PRODUCT_ID ||
-      process.env.DODO_TEAM_PRODUCT_ID ||
-      process.env.DODO_ENTERPRISE_PRODUCT_ID,
-  );
-  if (present(serverEnv.dodoApiKey) && !hasAnyDodoProduct) {
-    warnings.push("DODO_PAYMENTS_API_KEY is set but no DODO_*_PRODUCT_ID values are configured.");
   }
 
   if (production && getRuntimeStoreKind() === "postgres") {

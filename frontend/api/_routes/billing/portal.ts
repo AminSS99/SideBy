@@ -1,15 +1,13 @@
-import { eq } from "drizzle-orm";
 import { requireAuth } from "../../_lib/auth.js";
-import { dodoRequest } from "../../_lib/dodo.js";
 import { sendJson } from "../../_lib/sideby.js";
-import { createDbClient } from "../../../src/db/index.js";
-import { organizations, users } from "../../../src/db/schema.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
   runtime: "nodejs",
   maxDuration: 20,
 };
+
+const SNAP_SOLVE_BILLING_URL = "https://snapsolve.ink/cockpit/#/subscription";
 
 export default async function handler(
   request: VercelRequest,
@@ -20,40 +18,11 @@ export default async function handler(
   }
 
   try {
-    const auth = await requireAuth(request);
-    const db = createDbClient();
-
-    const [user] = await db
-      .select({ providerCustomerId: users.providerCustomerId })
-      .from(users)
-      .where(eq(users.id, auth.userId))
-      .limit(1);
-
-    const [org] = auth.orgId
-      ? await db
-          .select({ providerCustomerId: organizations.providerCustomerId })
-          .from(organizations)
-          .where(eq(organizations.id, auth.orgId))
-          .limit(1)
-      : [];
-
-    const customerId = org?.providerCustomerId || user?.providerCustomerId;
-    if (!customerId) {
-      return sendJson(response, { error: "No billing customer is linked to this account." }, 404);
-    }
-
-    const appUrl = (process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5173")
-      .replace(/\/+$/, "");
-
-    const portal = await dodoRequest<{ link: string }>(
-      `/customers/${customerId}/customer-portal/session?return_url=${encodeURIComponent(appUrl + "/app/billing")}`,
-      {
-        method: "POST",
-      },
-    );
+    await requireAuth(request);
 
     return sendJson(response, {
-      url: portal.link,
+      url: SNAP_SOLVE_BILLING_URL,
+      billingProvider: "snapsolve",
     });
   } catch (error) {
     const status =

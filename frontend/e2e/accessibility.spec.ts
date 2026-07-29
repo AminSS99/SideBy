@@ -1,9 +1,10 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { seedTestAuth, WORKSPACE_JSON, usageJson } from "./fixtures";
+import { seedEssentialConsent, seedTestAuth, WORKSPACE_JSON, usageJson } from "./fixtures";
 
 test.describe("SideBy Accessibility (a11y) Tests", () => {
   test("1. Landing page is accessible and supports keyboard navigation", async ({ page }) => {
+    await seedEssentialConsent(page);
     await page.goto("/");
     await page.waitForSelector("h1");
     // Wait for GSAP transitions to finish to settle opacity for color-contrast verification
@@ -55,7 +56,7 @@ test.describe("SideBy Accessibility (a11y) Tests", () => {
     );
 
     await page.goto("/app/billing");
-    await page.waitForSelector("button:has-text('Upgrade to Pro')");
+    await page.waitForSelector("a:has-text('Open SnapSolve Plans')");
     // Settle transitions
     await page.waitForTimeout(1500);
 

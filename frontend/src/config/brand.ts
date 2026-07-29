@@ -3,6 +3,8 @@ export const brand = {
   productShortName: "SideBy",
   companyName: "SnapSolve Ink",
   companyUrl: "https://snapsolve.ink",
+  billingUrl: "https://snapsolve.ink/cockpit/#/subscription",
+  refundPolicyUrl: "https://snapsolve.ink/refund",
   url: "https://sideby.ink",
   domain: "sideby.ink",
   aiEngineName: "SideBy Research Engine",

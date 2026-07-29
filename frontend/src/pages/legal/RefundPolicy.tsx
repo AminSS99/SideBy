@@ -4,50 +4,37 @@ import { brand } from "@/config/brand";
 
 const RefundPolicy = () => {
   return (
-    <LegalPageShell title="Refund Policy" lastUpdated="June 9, 2026">
+    <LegalPageShell title="Refund Policy" lastUpdated="July 29, 2026">
       <p>
-        Thank you for choosing {brand.productName}, operated by {brand.companyName} ("we," "us," or "our"). We strive to provide the highest quality AI-powered comparison and research experience. 
+        {brand.productName} is part of the {brand.companyName} product ecosystem. Paid access is purchased and managed as a shared SnapSolve subscription rather than as a separate SideBy plan.
       </p>
 
-      <h2>1. Standard Refund Terms</h2>
+      <h2>1. Shared Subscription Terms</h2>
       <p>
-        We offer a <strong>14-day refund window</strong> from the date of purchase or renewal for our monthly and annual subscriptions (Pro and Team plans). If you are unsatisfied with {brand.productName} for any reason within the first 14 days of your subscription period, you are eligible for a full refund of your most recent billing charge.
+        Flow, Pulse, Core, and Orbit are SnapSolve ecosystem tiers. The price, renewal terms, availability, cancellation rules, and refund terms shown in SnapSolve Cockpit at checkout govern the purchase across all included products.
       </p>
 
-      <h2>2. Refund Eligibility Guidelines</h2>
-      <p>To qualify for a refund under this policy, you must meet the following criteria:</p>
+      <h2>2. Cancellations and Refund Review</h2>
+      <p>
+        You may cancel future renewal from the shared billing area in SnapSolve Cockpit. Cancellation normally preserves access through the current paid period. Refund requests are reviewed under the current SnapSolve refund policy and any checkout terms that applied to the transaction.
+      </p>
+
+      <h2>3. Payment Processing</h2>
+      <p>
+        Dodo Payments is the merchant platform used for eligible SnapSolve subscription transactions. Any approved refund is returned through the original payment method, subject to the payment provider and financial institution processing time.
+      </p>
+
+      <h2>4. Current Governing Policy</h2>
+      <p>
+        Read the current <a href={brand.refundPolicyUrl}>SnapSolve Refund Policy</a> before purchasing or requesting a refund. It is the authoritative policy for shared ecosystem subscriptions.
+      </p>
+
+      <h2>5. How to Request Review</h2>
+      <p>Contact <a href="mailto:aminsoborr@gmail.com">aminsoborr@gmail.com</a> and include:</p>
       <ul>
-        <li>Your request must be submitted within 14 calendar days of your initial purchase or renewal transaction.</li>
-        <li>For Team accounts, the refund request must be made by the account owner or designated team administrator.</li>
-        <li>You must not have exceeded 20% of your plan's comparison limits for the current billing cycle prior to requesting the refund. This abuse prevention limit ensures the policy remains fair to all users.</li>
-      </ul>
-
-      <h2>3. Processing of Refunds</h2>
-      <p>
-        Once approved, your refund will be processed through our merchant platform (Dodo Payments) back to your original payment method. Please note the following timelines:
-      </p>
-      <ul>
-        <li>Refund approvals are typically resolved within 2-3 business days.</li>
-        <li>Depending on your financial institution, the credited funds may take 5 to 10 business days to appear on your bank statement.</li>
-      </ul>
-
-      <h2>4. Upgrades, Downgrades, and Cancellations</h2>
-      <p>
-        You can cancel your subscription at any time via the <strong>Billing</strong> section of your workspace settings. 
-      </p>
-      <ul>
-        <li><strong>Cancellations:</strong> Upon cancellation, your account will remain on the paid tier until the end of your current billing period, after which you will be downgraded to the Free tier.</li>
-        <li><strong>Mid-cycle changes:</strong> Plan upgrades or downgrades are pro-rated automatically. Refunds are not issued for mid-cycle plan downgrades, but your bill will be credited for the next billing cycle.</li>
-      </ul>
-
-      <h2>5. How to Request a Refund</h2>
-      <p>
-        To request a refund, please contact our support team at <a href={`mailto:billing@${brand.domain}`}>billing@${brand.domain}</a>. Please include:
-      </p>
-      <ul>
-        <li>Your Clerk account email.</li>
+        <li>The email used for your SnapSolve account.</li>
         <li>The transaction receipt or invoice number.</li>
-        <li>A brief explanation of why you are requesting a refund (your feedback helps us improve the product!).</li>
+        <li>A short explanation of the billing issue or refund request.</li>
       </ul>
     </LegalPageShell>
   );

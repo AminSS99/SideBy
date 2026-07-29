@@ -2,6 +2,13 @@ import type { Page, Route } from "@playwright/test";
 
 export const TEST_WORKSPACE_ID = "ws_123";
 export const TEST_USER_ID = "user_test_mock";
+const TEST_CONSENT = JSON.stringify({
+  version: 1,
+  policyVersion: "2026-07-14",
+  analytics: "rejected",
+  source: "banner",
+  updatedAt: "2026-07-14T00:00:00.000Z",
+});
 
 export const WORKSPACE_JSON = {
   workspaces: [
@@ -283,12 +290,20 @@ export async function mockAppApi(page: Page) {
   );
 }
 
+/** Keep unrelated consent UI from covering controls in focused E2E flows. */
+export async function seedEssentialConsent(page: Page) {
+  await page.addInitScript((consent) => {
+    localStorage.setItem("sideby.cookie-consent", consent);
+  }, TEST_CONSENT);
+}
+
 /**
  * Enable the dev-only test-auth bypass by seeding localStorage before any
  * navigation. The AuthContext reads these keys to synthesize a mock user.
  */
 export async function seedTestAuth(page: Page, workspaceId = TEST_WORKSPACE_ID) {
   await mockAppApi(page);
+  await seedEssentialConsent(page);
   await page.goto("/");
   await page.evaluate(
     ({ workspaceId }) => {

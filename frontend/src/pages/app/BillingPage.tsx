@@ -4,6 +4,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
+import { brand } from "@/config/brand";
 import { toast } from "sonner";
 
 type UsageStatus = {
@@ -37,6 +38,17 @@ type UsageStatus = {
     } | null;
   };
   message: string;
+};
+
+const SNAP_SOLVE_PLAN_NAMES: Record<string, string> = {
+  free: "Flow",
+  pro: "Pulse",
+  team: "Core",
+  business: "Orbit",
+  flow: "Flow",
+  pulse: "Pulse",
+  core: "Core",
+  orbit: "Orbit",
 };
 
 const BillingPage = () => {
@@ -78,30 +90,6 @@ const BillingPage = () => {
     { key: "export", label: "Exports", icon: Download, color: "text-emerald-400" },
   ];
 
-  const requestUpgrade = async (plan: "pro" | "team") => {
-    try {
-      const response = await apiFetch(buildApiUrl("/api/billing/checkout"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plan,
-        }),
-      });
-      const data = (await response.json()) as { checkoutUrl?: string | null };
-      if (!data.checkoutUrl) {
-        toast.error("Checkout is not available yet.", {
-          description: "Check your Dodo Payments product configuration.",
-        });
-        return;
-      }
-      window.location.href = data.checkoutUrl;
-    } catch (err) {
-      toast.error("Checkout failed", {
-        description: err instanceof Error ? err.message : "Try again shortly.",
-      });
-    }
-  };
-
   const manageSubscription = async () => {
     try {
       setPortalLoading(true);
@@ -126,9 +114,7 @@ const BillingPage = () => {
     }
   };
 
-  const currentPlanName = usage?.plan 
-    ? usage.plan.charAt(0).toUpperCase() + usage.plan.slice(1) + " Plan" 
-    : "Free Plan";
+  const currentPlanName = `${SNAP_SOLVE_PLAN_NAMES[usage?.plan ?? "free"] ?? "Flow"} Plan`;
   const isSnapSolveManaged =
     usage?.subscription?.billingProvider === "snapsolve" ||
     usage?.subscription?.source.startsWith("snapsolve_");
@@ -144,7 +130,7 @@ const BillingPage = () => {
           Billing & Plans
         </h1>
         <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[#fdfbf7]/60">
-          Monitor your usage parameters and subscription states in real-time. Complete comparisons limitlessly on a paid plan.
+          SideBy uses the same Flow, Pulse, Core, or Orbit subscription as the rest of your SnapSolve workspace.
         </p>
       </div>
 
@@ -159,9 +145,9 @@ const BillingPage = () => {
               <div>
                 <h2 className="font-serif text-2xl text-[#fdfbf7]">{currentPlanName}</h2>
                 <p className="text-xs text-[#fdfbf7]/50">
-                  {usage?.plan && usage.plan !== "free" 
-                    ? "Your high-volume developer workspace limits are active." 
-                    : "Everyone starts here. No credit card required."}
+                  {usage?.plan && usage.plan !== "free"
+                    ? "Your shared SnapSolve workspace entitlement is active."
+                    : "Flow is the shared free SnapSolve tier. No card required."}
                 </p>
               </div>
             </div>
@@ -252,7 +238,7 @@ const BillingPage = () => {
                 )}
                 {isSnapSolveManaged ? (
                   <a
-                    href="https://sideby.ink"
+                    href={brand.billingUrl}
                     className="w-full flex items-center justify-center gap-2 rounded-sm bg-orange-600 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
@@ -272,38 +258,15 @@ const BillingPage = () => {
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-[#fdfbf7]/60 leading-relaxed">
-                  Pro and Team plans with higher limits, priority processing, and advanced features are available for checkout.
+                  SideBy does not have a separate subscription. Review Flow, Pulse, Core, and Orbit once in SnapSolve Cockpit.
                 </p>
-                {usage?.subscription?.billingProvider === "snapsolve" ? (
-                  <a
-                    href="https://sideby.ink"
-                    className="flex items-center justify-center gap-2 rounded-sm bg-[#fdfbf7] px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Open SnapSolve Plans
-                  </a>
-                ) : (
-                  <div className="grid gap-2">
-                    <button
-                      onClick={() => void requestUpgrade("pro")}
-                      className="rounded-sm bg-[#fdfbf7] px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]"
-                    >
-                      Upgrade to Pro
-                    </button>
-                    <button
-                      onClick={() => void requestUpgrade("team")}
-                      className="rounded-sm border border-[#333] px-4 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-emerald-500/40 hover:text-emerald-300"
-                    >
-                      Upgrade Team
-                    </button>
-                    <a
-                      href="mailto:hello@sideby.ink?subject=SideBy%20Team%20Plan"
-                      className="rounded-sm border border-[#333] px-4 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-orange-500/40 hover:text-orange-300"
-                    >
-                      Contact Sales
-                    </a>
-                  </div>
-                )}
+                <a
+                  href={brand.billingUrl}
+                  className="flex items-center justify-center gap-2 rounded-sm bg-[#fdfbf7] px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Open SnapSolve Plans
+                </a>
               </div>
             )}
           </div>
@@ -311,7 +274,7 @@ const BillingPage = () => {
           {/* Plan Inclusion List */}
           <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-8">
             <h3 className="mb-6 font-serif text-xl text-[#fdfbf7]">
-              {usage?.plan && usage.plan !== "free" ? "Your Plan Inclusions" : "Free Plan Includes"}
+              {usage?.plan && usage.plan !== "free" ? "Your Plan Inclusions" : "Flow Includes"}
             </h3>
             <ul className="space-y-4">
               {usage?.plan && usage.plan !== "free" ? (
@@ -349,7 +312,7 @@ const BillingPage = () => {
       </div>
 
       <div className="mt-12 pt-6 border-t border-[#1f1f1f] text-center text-xs text-[#fdfbf7]/60">
-        <a href="https://sideby.ink" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
+        <a href={brand.companyUrl} target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
           Made by SnapSolve Ink
         </a>
       </div>

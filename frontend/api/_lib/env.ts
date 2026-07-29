@@ -108,7 +108,7 @@ export function assertRedisConfigured(): void {
 }
 
 export function assertBillingConfigured(): void {
-  if (!serverEnv.dodoApiKey) {
-    throw new Error("Dodo Payments not configured. Set DODO_PAYMENTS_API_KEY.");
+  if (!serverEnv.snapsolveCoreUrl || !serverEnv.snapsolveSidebySecret) {
+    throw new Error("Shared SnapSolve billing is not configured. Set SNAPSOLVE_CORE_URL and SNAPSOLVE_SIDEBY_SECRET.");
   }
 }

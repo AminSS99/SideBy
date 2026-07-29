@@ -57,6 +57,22 @@ test("marketing pages are reachable", async ({ page }) => {
   await expect(page).toHaveTitle(/Pricing/);
 });
 
+test("pricing uses the shared SnapSolve ecosystem plans", async ({ page }) => {
+  await page.goto("/pricing");
+
+  for (const plan of ["Flow", "Pulse", "Core", "Orbit"]) {
+    await expect(page.getByRole("heading", { name: plan, exact: true })).toBeVisible();
+  }
+
+  await expect(page.getByText("One SnapSolve subscription")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Start Pulse" })).toHaveAttribute(
+    "href",
+    "https://snapsolve.ink/cockpit/#/subscription",
+  );
+  await expect(page.getByText("$29")).toHaveCount(0);
+  await expect(page.getByText("$99")).toHaveCount(0);
+});
+
 test("auth redirects to sign-in", async ({ page }) => {
   await page.goto("/app");
   await expect(page).toHaveURL(/\/auth\/sign-in/);

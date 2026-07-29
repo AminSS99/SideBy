@@ -3,11 +3,7 @@ import { requireAuth } from "../../_lib/auth.js";
 import { getClientIp } from "../../_lib/route-guard.js";
 import { checkRateLimit } from "../../_lib/rate-limit.js";
 import { assertRedisAvailable } from "../../_lib/redis.js";
-import { dodoRequest, getDodoProductId } from "../../_lib/dodo.js";
 import { sendJson } from "../../_lib/sideby.js";
-import { createDbClient } from "../../../src/db/index.js";
-import { users } from "../../../src/db/schema.js";
-import { eq } from "drizzle-orm";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
@@ -21,14 +17,10 @@ export const config = {
 };
 
 const CheckoutBodySchema = z.object({
-  plan: z.enum(["pro", "team", "enterprise"]),
-  quantity: z.number().int().min(1).max(500).default(1),
+  plan: z.enum(["pulse", "core", "orbit"]).optional(),
 });
 
-type DodoCheckoutResponse = {
-  session_id: string;
-  checkout_url: string;
-};
+const SNAP_SOLVE_BILLING_URL = "https://snapsolve.ink/cockpit/#/subscription";
 
 export default async function handler(
   request: VercelRequest,
@@ -49,38 +41,11 @@ export default async function handler(
     }
 
     const body = CheckoutBodySchema.parse(request.body || {});
-    const productId = getDodoProductId(body.plan);
-    const appUrl = (process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5173")
-      .replace(/\/+$/, "");
-
-    // Fetch user from DB to prefill checkout details
-    const db = createDbClient();
-    const [user] = await db
-      .select({ email: users.email, name: users.name })
-      .from(users)
-      .where(eq(users.id, auth.userId))
-      .limit(1);
-
-    const session = await dodoRequest<DodoCheckoutResponse>("/checkouts", {
-      method: "POST",
-      body: JSON.stringify({
-        product_cart: [{ product_id: productId, quantity: body.quantity }],
-        customer: {
-          email: user?.email || undefined,
-          name: user?.name || undefined,
-        },
-        metadata: {
-          user_id: auth.userId,
-          org_id: auth.orgId || "",
-          plan: body.plan,
-        },
-        return_url: `${appUrl}/app/billing?checkout=complete`,
-      }),
-    });
 
     return sendJson(response, {
-      transactionId: session.session_id,
-      checkoutUrl: session.checkout_url,
+      checkoutUrl: SNAP_SOLVE_BILLING_URL,
+      billingProvider: "snapsolve",
+      requestedPlan: body.plan ?? null,
     });
   } catch (error) {
     const status =

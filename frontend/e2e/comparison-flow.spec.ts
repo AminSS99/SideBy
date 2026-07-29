@@ -6,12 +6,20 @@ import {
   createJobResponse,
   createPartialJobResponse,
   comparisonJobCompletedResponse,
+  validateReadyResponse,
 } from "./fixtures";
 
 const COMPARISON_ID = "cmp_e2e_001";
 
 async function setupComparison(page: import("@playwright/test").Page) {
   await seedTestAuth(page);
+  await page.route("**/api/comparisons/validate", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(validateReadyResponse()),
+    }),
+  );
   await page.route("**/api/workspaces", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(WORKSPACE_JSON) }),
   );
@@ -58,14 +66,22 @@ async function startComparison(page: import("@playwright/test").Page, query: str
     await contextInput.fill(c);
   }
 
-  await expect(page.getByText(/Brief ready —/)).toBeVisible();
-  await page.getByRole("button", { name: /Research this decision/i }).click();
+  const researchButton = page.getByRole("button", { name: /Research this decision/i });
+  await expect(researchButton).toBeEnabled();
+  await researchButton.click();
 }
 
 test.describe("SideBy Authenticated Comparison Flow", () => {
   test("creates a comparison and renders the completed result workbench", async ({ page }) => {
     let createCalls = 0;
     await seedTestAuth(page);
+    await page.route("**/api/comparisons/validate", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(validateReadyResponse()),
+      }),
+    );
     await page.route("**/api/workspaces", (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(WORKSPACE_JSON) }),
     );
@@ -129,6 +145,13 @@ test.describe("SideBy Authenticated Comparison Flow", () => {
 
   test("partial create response still opens the comparison workbench", async ({ page }) => {
     await seedTestAuth(page);
+    await page.route("**/api/comparisons/validate", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(validateReadyResponse()),
+      }),
+    );
     await page.route("**/api/workspaces", (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(WORKSPACE_JSON) }),
     );

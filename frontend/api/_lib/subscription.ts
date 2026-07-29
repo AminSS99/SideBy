@@ -90,14 +90,10 @@ export function normalizePlan(productId?: string | null): BillingPlan {
 }
 
 export function isBillingConfigured() {
-  const dodoReady = Boolean(
-    process.env.DODO_PAYMENTS_API_KEY &&
-      (process.env.DODO_PRO_PRODUCT_ID || process.env.DODO_TEAM_PRODUCT_ID || process.env.DODO_ENTERPRISE_PRODUCT_ID),
-  );
   const snapsolveReady = Boolean(process.env.SNAPSOLVE_CORE_URL && process.env.SNAPSOLVE_SIDEBY_SECRET);
   return {
-    billingConfigured: dodoReady || snapsolveReady,
-    billingProvider: dodoReady ? "dodo" as const : snapsolveReady ? "snapsolve" as const : "none" as const,
+    billingConfigured: snapsolveReady,
+    billingProvider: snapsolveReady ? "snapsolve" as const : "none" as const,
   };
 }
 

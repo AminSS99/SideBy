@@ -24,7 +24,6 @@ import v1ComparisonsIdFollowups from "./_routes/v1/comparisons/[id]/followups.js
 
 // Webhook routes
 import webhooksClerk from "./_routes/webhooks/clerk.js";
-import webhooksDodo from "./_routes/webhooks/dodo.js";
 import webhooksSubscriptions from "./_routes/webhooks/subscriptions.js";
 import webhooksSubscriptionsId from "./_routes/webhooks/subscriptions/[id].js";
 
@@ -185,7 +184,6 @@ async function routeRequest(
   // Webhooks
   if (segment0 === "webhooks") {
     if (segment1 === "clerk") return webhooksClerk(request, response);
-    if (segment1 === "dodo") return webhooksDodo(request, response);
     if (segment1 === "subscriptions") {
       if (segment2) {
         request.query.id = segment2;

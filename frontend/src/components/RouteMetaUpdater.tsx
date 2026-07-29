@@ -19,9 +19,9 @@ const publicPages: Record<string, PageMetadata> = {
       "Explore SideBy's source-backed research, evidence extraction, adaptive scoring, refreshes, and comparison sharing.",
   },
   "/pricing": {
-    title: "Pricing | SideBy",
+    title: "SnapSolve Ecosystem Pricing | SideBy",
     description:
-      "Compare SideBy plans for individuals, researchers, and teams.",
+      "See the shared Flow, Pulse, Core, and Orbit plans that cover SideBy and the SnapSolve product ecosystem.",
   },
   "/docs": {
     title: "Documentation | SideBy",
@@ -57,7 +57,7 @@ const publicPages: Record<string, PageMetadata> = {
   },
   "/legal/refund": {
     title: "Refund Policy | SideBy",
-    description: "Read the SideBy subscription refund policy.",
+    description: "Read how shared SnapSolve subscriptions, cancellations, and refund requests apply to SideBy.",
   },
   "/legal/security": {
     title: "Security | SideBy",
