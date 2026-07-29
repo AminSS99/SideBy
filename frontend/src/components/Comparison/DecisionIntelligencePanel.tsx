@@ -331,13 +331,20 @@ const ExecutiveBriefPanel = ({ result }: { result: ComparisonData }) => {
 
 const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
   const metrics = useMemo(() => buildMetrics(result), [result]);
-  const [weights, setWeights] = useState<Record<string, number>>(() =>
-    Object.fromEntries(metrics.map((metric) => [metric.subject, 1])),
-  );
+  const [weights, setWeights] = useState<Record<string, number>>(() => {
+    const init: Record<string, number> = {};
+    for (const metric of metrics) {
+      init[metric.subject] = 1;
+    }
+    return init;
+  });
 
   useEffect(() => {
     setWeights((current) => {
-      const next = Object.fromEntries(metrics.map((metric) => [metric.subject, current[metric.subject] ?? 1]));
+      const next: Record<string, number> = {};
+      for (const metric of metrics) {
+        next[metric.subject] = current[metric.subject] ?? 1;
+      }
       return next;
     });
   }, [metrics]);
@@ -350,22 +357,21 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
   }, [metrics, weights]);
 
   const applyPreset = (preset: "startup" | "enterprise" | "developer" | "balanced") => {
-    const next = Object.fromEntries(
-      metrics.map((metric) => {
-        const subject = metric.subject.toLowerCase();
-        let value = 1;
-        if (preset === "startup") {
-          value = subject.includes("pricing") || subject.includes("value") ? 1.8 : 0.9;
-        }
-        if (preset === "enterprise") {
-          value = subject.includes("security") || subject.includes("reliability") || subject.includes("scale") ? 1.8 : 0.9;
-        }
-        if (preset === "developer") {
-          value = subject.includes("developer") || subject.includes("ecosystem") || subject.includes("learning") ? 1.8 : 0.9;
-        }
-        return [metric.subject, value];
-      }),
-    );
+    const next: Record<string, number> = {};
+    for (const metric of metrics) {
+      const subject = metric.subject.toLowerCase();
+      let value = 1;
+      if (preset === "startup") {
+        value = subject.includes("pricing") || subject.includes("value") ? 1.8 : 0.9;
+      }
+      if (preset === "enterprise") {
+        value = subject.includes("security") || subject.includes("reliability") || subject.includes("scale") ? 1.8 : 0.9;
+      }
+      if (preset === "developer") {
+        value = subject.includes("developer") || subject.includes("ecosystem") || subject.includes("learning") ? 1.8 : 0.9;
+      }
+      next[metric.subject] = value;
+    }
     setWeights(next);
   };
 

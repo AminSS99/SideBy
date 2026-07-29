@@ -30,9 +30,10 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
       });
 
       const labels = Array.from(new Set(cat.facts.map(f => f.label)));
+      const catNameLower = cat.name.toLowerCase();
       
       const rows = labels
-        .filter(label => label.toLowerCase().includes(term) || cat.name.toLowerCase().includes(term))
+        .filter(label => label.toLowerCase().includes(term) || catNameLower.includes(term))
         .map(label => {
           const factA = factsA.get(label);
           const factB = factsB.get(label);
