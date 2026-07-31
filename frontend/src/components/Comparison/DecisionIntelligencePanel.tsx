@@ -343,9 +343,20 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
   }, [metrics]);
 
   const weighted = useMemo(() => {
-    const totalWeight = metrics.reduce((sum, metric) => sum + (weights[metric.subject] ?? 1), 0) || 1;
-    const a = metrics.reduce((sum, metric) => sum + metric.a * (weights[metric.subject] ?? 1), 0) / totalWeight;
-    const b = metrics.reduce((sum, metric) => sum + metric.b * (weights[metric.subject] ?? 1), 0) / totalWeight;
+    let totalWeight = 0;
+    let sumA = 0;
+    let sumB = 0;
+
+    for (const metric of metrics) {
+      const w = weights[metric.subject] ?? 1;
+      totalWeight += w;
+      sumA += metric.a * w;
+      sumB += metric.b * w;
+    }
+
+    totalWeight = totalWeight || 1;
+    const a = sumA / totalWeight;
+    const b = sumB / totalWeight;
     return { a, b, winner: Math.abs(a - b) < 1 ? "tie" : a > b ? "a" : "b" };
   }, [metrics, weights]);
 

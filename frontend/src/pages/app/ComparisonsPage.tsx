@@ -217,32 +217,35 @@ const ComparisonsPage = () => {
 
 
   const searchableItems = useMemo(() => {
-    return items.map((item) => ({
-      ...item,
-      searchString: [
-        item.query,
-        item.entityA,
-        item.entityB,
-        item.folder,
-        ...item.tags,
-      ].filter(Boolean).join(" ").toLowerCase(),
-    }));
+    const map = new Map<string, string>();
+    for (const item of items) {
+      let s = item.query;
+      if (item.entityA) s += " " + item.entityA;
+      if (item.entityB) s += " " + item.entityB;
+      if (item.folder) s += " " + item.folder;
+      for (const t of item.tags) s += " " + t;
+      map.set(item.id, s.toLowerCase());
+    }
+    return map;
   }, [items]);
 
   const filteredItems = useMemo(() => {
     const needle = query.trim().toLowerCase();
 
-    return searchableItems.filter((item) => {
+    return items.filter((item) => {
       const filterMatch =
         filter === "all" ||
         (filter === "favorites" && item.isFavorited) ||
         item.status === filter ||
         item.visibility === filter;
-      const textMatch = !needle || item.searchString.includes(needle);
 
-      return filterMatch && textMatch;
+      if (!filterMatch) return false;
+      if (!needle) return true;
+
+      const searchString = searchableItems.get(item.id);
+      return searchString ? searchString.includes(needle) : false;
     });
-  }, [filter, searchableItems, query]);
+  }, [items, searchableItems, query, filter]);
 
   const counts = useMemo(() => {
     let favorites = 0, completed = 0, running = 0, failed = 0, pub = 0, priv = 0;
