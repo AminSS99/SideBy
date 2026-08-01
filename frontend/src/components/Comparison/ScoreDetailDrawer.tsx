@@ -25,9 +25,11 @@ export function ScoreDetailDrawer({
   const details = useMemo(() => {
     if (!result || !dimensionSubject) return null;
 
+    const lowerDimensionSubject = dimensionSubject.toLowerCase();
+
     // Find matching category in result categories
     const category = result.categories.find(
-      (c) => c.name.toLowerCase() === dimensionSubject.toLowerCase()
+      (c) => c.name.toLowerCase() === lowerDimensionSubject
     );
 
     if (!category) return null;
@@ -36,13 +38,14 @@ export function ScoreDetailDrawer({
     const factsB = category.facts.filter((f) => f.entity === "b");
 
     // Filter contradictions mentioning this category
+    const lowerCategoryName = category.name.toLowerCase();
     const categoryContradictions = result.contradictions?.filter((c) =>
-      c.toLowerCase().includes(category.name.toLowerCase())
+      c.toLowerCase().includes(lowerCategoryName)
     ) || [];
 
     // Find the dimension scores if available
     const dimensionScoreObj = result.dimensions?.find(
-      (d) => d.subject.toLowerCase() === dimensionSubject.toLowerCase()
+      (d) => d.subject.toLowerCase() === lowerDimensionSubject
     );
 
     return {
