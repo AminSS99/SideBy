@@ -397,22 +397,52 @@ const ComparisonsPage = () => {
     setIsCreating(true);
     try {
       const pairs = options.flatMap((left, index) => options.slice(index + 1).map((right) => `${left} vs ${right}${context.trim() ? ` for ${context.trim()}` : ""}`));
-      const runs: BracketRun[] = [];
-      for (const query of pairs) {
+
+      const fetchPromises = pairs.map(async (query) => {
         const res = await apiFetch(buildApiUrl("/api/comparisons"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, workspaceId: activeWorkspace?.id, projectId: activeProject?.id }) });
         const data = await res.json() as ComparisonJob & { error?: string };
         if (!res.ok) throw new Error(data.error || `Unable to start ${query}.`);
+        return { data, query };
+      });
+
+      const results = await Promise.allSettled(fetchPromises);
+      const successfulRuns: BracketRun[] = [];
+      const newItems: ComparisonHistoryItem[] = [];
+      const failedQueries: string[] = [];
+
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          const { data, query } = result.value;
+          successfulRuns.push({ id: data.id, query, status: data.status });
+          newItems.push(jobToHistoryItem(data));
+        } else {
+          failedQueries.push(result.reason?.message || "Unknown error");
+        }
+      }
+
+      if (newItems.length > 0) {
         setItems((current) => {
-          const next = [jobToHistoryItem(data)];
+          const next = [...newItems];
+          const newItemIds = new Set(newItems.map(item => item.id));
           for (const item of current) {
-            if (item.id !== data.id) next.push(item);
+            if (!newItemIds.has(item.id)) next.push(item);
           }
           return next;
         });
-        runs.push({ id: data.id, query, status: data.status });
       }
-      captureEvent("comparison_bracket_created", { option_count: options.length, pair_count: pairs.length });
-      return runs;
+
+      if (failedQueries.length > 0) {
+        toast.error(`Failed to start ${failedQueries.length} comparisons.`, {
+          description: failedQueries[0],
+        });
+      }
+
+      if (successfulRuns.length === 0 && pairs.length > 0) {
+         throw new Error("Unable to start any bracket comparisons.");
+      }
+
+      captureEvent("comparison_bracket_created", { option_count: options.length, pair_count: pairs.length, successful_runs: successfulRuns.length });
+      return successfulRuns;
     } finally { setIsCreating(false); }
   };
 
