@@ -216,55 +216,58 @@ const ComparisonsPage = () => {
   }, { scope: containerRef, dependencies: [isFirstComparisonFlow] });
 
 
-  const searchableItems = useMemo(() => {
-    return items.map((item) => ({
-      ...item,
-      searchString: [
-        item.query,
-        item.entityA,
-        item.entityB,
-        item.folder,
-        ...item.tags,
-      ].filter(Boolean).join(" ").toLowerCase(),
-    }));
-  }, [items]);
-
-  const filteredItems = useMemo(() => {
+  const { filteredItems, counts } = useMemo(() => {
     const needle = query.trim().toLowerCase();
+    const nextFiltered: ComparisonHistoryItem[] = [];
+    const newCounts = {
+      all: items.length,
+      favorites: 0,
+      completed: 0,
+      running: 0,
+      failed: 0,
+      public: 0,
+      private: 0,
+    };
 
-    return searchableItems.filter((item) => {
+    for (const item of items) {
+      // O(1) space counts accumulation
+      if (item.isFavorited) newCounts.favorites++;
+      if (item.status === "completed") newCounts.completed++;
+      else if (item.status === "running") newCounts.running++;
+      else if (item.status === "failed") newCounts.failed++;
+
+      if (item.visibility === "public") newCounts.public++;
+      else if (item.visibility === "private") newCounts.private++;
+
+      // Filter evaluation
       const filterMatch =
         filter === "all" ||
         (filter === "favorites" && item.isFavorited) ||
         item.status === filter ||
         item.visibility === filter;
-      const textMatch = !needle || item.searchString.includes(needle);
 
-      return filterMatch && textMatch;
-    });
-  }, [filter, searchableItems, query]);
+      if (filterMatch) {
+        // Lazy search text evaluation
+        let textMatch = true;
+        if (needle) {
+          const searchString = [
+            item.query,
+            item.entityA,
+            item.entityB,
+            item.folder,
+            ...item.tags,
+          ].filter(Boolean).join(" ").toLowerCase();
+          textMatch = searchString.includes(needle);
+        }
 
-  const counts = useMemo(() => {
-    let favorites = 0, completed = 0, running = 0, failed = 0, pub = 0, priv = 0;
-    for (const item of items) {
-      if (item.isFavorited) favorites++;
-      if (item.status === "completed") completed++;
-      else if (item.status === "running") running++;
-      else if (item.status === "failed") failed++;
-
-      if (item.visibility === "public") pub++;
-      else if (item.visibility === "private") priv++;
+        if (textMatch) {
+          nextFiltered.push(item);
+        }
+      }
     }
-    return {
-      all: items.length,
-      favorites,
-      completed,
-      running,
-      failed,
-      public: pub,
-      private: priv,
-    };
-  }, [items]);
+
+    return { filteredItems: nextFiltered, counts: newCounts };
+  }, [items, filter, query]);
 
   const publish = async (item: ComparisonHistoryItem) => {
     try {
