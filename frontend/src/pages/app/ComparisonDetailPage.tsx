@@ -155,13 +155,22 @@ const ComparisonDetailPage = () => {
 
   const entityFacts = useMemo(() => {
     if (!result) return { a: [] as { category: string }[], b: [] as { category: string }[] };
-    const facts = result.categories.flatMap((category) =>
-      category.facts.map((fact) => ({ ...fact, category: category.name })),
-    );
-    return {
-      a: facts.filter((fact) => fact.entity === "a"),
-      b: facts.filter((fact) => fact.entity === "b"),
-    };
+
+    const a = [];
+    const b = [];
+
+    for (const category of result.categories) {
+      for (const fact of category.facts) {
+        const enhancedFact = { ...fact, category: category.name };
+        if (fact.entity === "a") {
+          a.push(enhancedFact);
+        } else if (fact.entity === "b") {
+          b.push(enhancedFact);
+        }
+      }
+    }
+
+    return { a, b };
   }, [result]);
 
   const refresh = async () => {
