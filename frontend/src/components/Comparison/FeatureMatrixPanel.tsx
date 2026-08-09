@@ -23,22 +23,29 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
       // Pre-compute maps for O(1) lookups instead of O(N) array finds
       const factsA = new Map();
       const factsB = new Map();
+      const labels: string[] = [];
 
       cat.facts.forEach(f => {
-        if (f.entity === 'a' && !factsA.has(f.label)) factsA.set(f.label, f);
-        if (f.entity === 'b' && !factsB.has(f.label)) factsB.set(f.label, f);
+        if (f.entity === 'a' && !factsA.has(f.label)) {
+          if (!factsB.has(f.label)) labels.push(f.label);
+          factsA.set(f.label, f);
+        }
+        if (f.entity === 'b' && !factsB.has(f.label)) {
+          if (!factsA.has(f.label)) labels.push(f.label);
+          factsB.set(f.label, f);
+        }
       });
 
-      const labels = Array.from(new Set(cat.facts.map(f => f.label)));
       const catNameLower = cat.name.toLowerCase();
       
-      const rows = labels
-        .filter(label => label.toLowerCase().includes(term) || catNameLower.includes(term))
-        .map(label => {
+      const rows = [];
+      for (const label of labels) {
+        if (label.toLowerCase().includes(term) || catNameLower.includes(term)) {
           const factA = factsA.get(label);
           const factB = factsB.get(label);
-          return { label, factA, factB };
-        });
+          rows.push({ label, factA, factB });
+        }
+      }
 
       return {
         category: cat.name,

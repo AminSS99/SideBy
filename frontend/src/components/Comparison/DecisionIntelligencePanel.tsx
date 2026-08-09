@@ -465,8 +465,17 @@ const ScoreBar = ({ label, score, color }: { label: string; score: number; color
 
 const ChangeTimelinePanel = ({ result }: { result: ComparisonData }) => {
   const facts = useMemo(() => allFacts(result), [result]);
-  const changedFacts = facts.filter((fact) => fact.changed);
-  const monitorFacts = facts.filter((fact) => fact.freshness === "Monitor").slice(0, 4);
+
+  const { changedFacts, monitorFacts } = useMemo(() => {
+    const changed = [];
+    const monitor = [];
+    for (const fact of facts) {
+      if (fact.changed) changed.push(fact);
+      if (fact.freshness === "Monitor" && monitor.length < 4) monitor.push(fact);
+    }
+    return { changedFacts: changed, monitorFacts: monitor };
+  }, [facts]);
+
   const timeline = changedFacts.length > 0 ? changedFacts : monitorFacts;
 
   return (
