@@ -19,33 +19,43 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
   const matrixData = useMemo(() => {
     const term = filter.toLowerCase();
     
-    return result.categories.map(cat => {
-      // Pre-compute maps for O(1) lookups instead of O(N) array finds
+    const nextMatrixData = [];
+
+    for (const cat of result.categories) {
       const factsA = new Map();
       const factsB = new Map();
+      const labelSet = new Set<string>();
 
-      cat.facts.forEach(f => {
+      for (const f of cat.facts) {
         if (f.entity === 'a' && !factsA.has(f.label)) factsA.set(f.label, f);
         if (f.entity === 'b' && !factsB.has(f.label)) factsB.set(f.label, f);
-      });
+        labelSet.add(f.label);
+      }
 
-      const labels = Array.from(new Set(cat.facts.map(f => f.label)));
       const catNameLower = cat.name.toLowerCase();
-      
-      const rows = labels
-        .filter(label => label.toLowerCase().includes(term) || catNameLower.includes(term))
-        .map(label => {
-          const factA = factsA.get(label);
-          const factB = factsB.get(label);
-          return { label, factA, factB };
-        });
+      const catMatches = catNameLower.includes(term);
+      const rows = [];
 
-      return {
-        category: cat.name,
-        winner: cat.winner,
-        rows
-      };
-    }).filter(cat => cat.rows.length > 0);
+      for (const label of labelSet) {
+        if (catMatches || label.toLowerCase().includes(term)) {
+          rows.push({
+            label,
+            factA: factsA.get(label),
+            factB: factsB.get(label),
+          });
+        }
+      }
+
+      if (rows.length > 0) {
+        nextMatrixData.push({
+          category: cat.name,
+          winner: cat.winner,
+          rows,
+        });
+      }
+    }
+
+    return nextMatrixData;
   }, [result.categories, filter]);
 
   useGSAP(() => {
