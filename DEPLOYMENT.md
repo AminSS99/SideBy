@@ -125,7 +125,8 @@ npx tsx scripts/smoke-test.ts
 Or manually test these flows:
 
 ### Public Endpoints
-- [ ] `GET /api/health` returns 200 with DB and Redis checks
+- [ ] `GET /api/health` returns 200 without querying external dependencies
+- [ ] `GET /api/health/db` with `Authorization: Bearer $HEALTHCHECK_SECRET` returns 200 (poll only every 15–30 minutes)
 - [ ] `GET /compare/react-vs-vue-2024` shows public comparison (after seeding)
 
 ### Authentication
@@ -187,7 +188,7 @@ vercel rollback
 ### Rate limits not working
 - Verify `REDIS_URL` is an HTTP URL (not `redis://`)
 - Verify `REDIS_TOKEN` is the Upstash REST API token
-- Check health endpoint (`/api/health`) for Redis status
+- Check Upstash connectivity and Vercel logs for Redis errors
 - If Redis is not configured, logs will show: "Redis not configured. Rate limits are DISABLED."
 
 ### Comparisons stuck at "running"
