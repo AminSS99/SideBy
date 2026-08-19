@@ -28,6 +28,7 @@ const betterStack = betterStackSourceToken && betterStackIngestingHost
       timeout: 1500,
     })
   : null;
+const pendingBetterStackLogs = new Set<Promise<unknown>>();
 
 function sanitize(value: unknown): unknown {
   if (typeof value === "string") {
@@ -84,7 +85,13 @@ function log(level: LogLevel, message: string, context?: LogContext, error?: Err
     };
   }
 
-  void betterStack?.[level](message, payload);
+  const pendingLog = betterStack?.[level](message, payload);
+  if (pendingLog) {
+    pendingBetterStackLogs.add(pendingLog);
+    void pendingLog
+      .catch(() => undefined)
+      .finally(() => pendingBetterStackLogs.delete(pendingLog));
+  }
 
   // In production, log as JSON for ingest pipelines
   if (process.env.VERCEL === "1") {
@@ -104,7 +111,7 @@ function log(level: LogLevel, message: string, context?: LogContext, error?: Err
 }
 
 export async function flushBetterStackLogs() {
-  await betterStack?.flush();
+  await Promise.allSettled([...pendingBetterStackLogs]);
 }
 
 export const logger = {
