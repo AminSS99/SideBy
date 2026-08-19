@@ -33,8 +33,8 @@ async function test(name: string, fn: () => Promise<void>) {
   }
 }
 
-async function get(path: string) {
-  const res = await fetch(`${BASE_URL}${path}`);
+async function get(path: string, headers?: Record<string, string>) {
+  const res = await fetch(`${BASE_URL}${path}`, { headers });
   return res;
 }
 
@@ -57,15 +57,23 @@ async function runTests() {
   await test("GET /api/health returns 200", async () => {
     const res = await get("/api/health");
     if (!res.ok) throw new Error(`Status ${res.status}`);
-    const data = (await res.json()) as { status: string; checks: Record<string, string> };
-    if (data.status !== "healthy") throw new Error(`Status: ${data.status}`);
+    const data = (await res.json()) as { status: string };
+    if (data.status !== "ok") throw new Error(`Status: ${data.status}`);
   });
 
-  await test("Health check includes database", async () => {
-    const res = await get("/api/health");
-    const data = (await res.json()) as { checks: Record<string, string> };
-    if (data.checks.database !== "ok") throw new Error("Database check failed");
-  });
+  const healthcheckSecret = process.env.HEALTHCHECK_SECRET;
+  if (healthcheckSecret) {
+    await test("GET /api/health/db returns 200", async () => {
+      const res = await get("/api/health/db", {
+        Authorization: `Bearer ${healthcheckSecret}`,
+      });
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const data = (await res.json()) as { status: string };
+      if (data.status !== "ok") throw new Error(`Status: ${data.status}`);
+    });
+  } else {
+    console.log(`  ${colors.yellow}–${colors.reset} Database health skipped (HEALTHCHECK_SECRET not set)`);
+  }
 
   // ─── Public Comparison Pages ────────────────────────────────────────────
   console.log("\nPublic Comparisons");

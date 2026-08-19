@@ -3,6 +3,8 @@
  * Safe to use in Vercel Functions. Never logs secrets or raw prompts.
  */
 
+import { Logtail } from "@logtail/node";
+
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 interface LogContext {
@@ -15,6 +17,17 @@ interface LogContext {
 }
 
 const isDev = process.env.NODE_ENV !== "production";
+const betterStackSourceToken = process.env.BETTER_STACK_SOURCE_TOKEN?.trim();
+const betterStackIngestingHost = process.env.BETTER_STACK_INGESTING_HOST?.trim();
+const betterStack = betterStackSourceToken && betterStackIngestingHost
+  ? new Logtail(betterStackSourceToken, {
+      endpoint: `https://${betterStackIngestingHost.replace(/^https?:\/\//, "")}`,
+      batchSize: 1,
+      ignoreExceptions: true,
+      retryCount: 1,
+      timeout: 1500,
+    })
+  : null;
 
 function sanitize(value: unknown): unknown {
   if (typeof value === "string") {
@@ -71,6 +84,8 @@ function log(level: LogLevel, message: string, context?: LogContext, error?: Err
     };
   }
 
+  void betterStack?.[level](message, payload);
+
   // In production, log as JSON for ingest pipelines
   if (process.env.VERCEL === "1") {
     console.log(JSON.stringify(payload));
@@ -86,6 +101,10 @@ function log(level: LogLevel, message: string, context?: LogContext, error?: Err
   } else {
     console.log(`[${level.toUpperCase()}] ${message}${ctx}`);
   }
+}
+
+export async function flushBetterStackLogs() {
+  await betterStack?.flush();
 }
 
 export const logger = {

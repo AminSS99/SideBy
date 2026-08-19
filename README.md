@@ -310,7 +310,8 @@ SideBy/
 |--------|----------|-------------|
 | `POST` | `/api/webhooks/clerk` | Clerk webhook sync |
 | `GET` | `/api/usage` | Daily usage status |
-| `GET` | `/api/health` | Health check |
+| `GET` | `/api/health` | Shallow service health (no dependency I/O) |
+| `GET` | `/api/health/db` | Bearer-protected Neon health check |
 
 All authenticated routes use `requireAuth()` middleware. Rate limits are enforced via `withRateLimit()`.
 

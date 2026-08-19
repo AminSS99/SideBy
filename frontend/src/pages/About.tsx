@@ -1,8 +1,19 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ArrowRight, CheckCircle2, FileSearch, Layers3, Scale, SearchCheck, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  FileSearch,
+  GitCompareArrows,
+  Layers3,
+  Link2,
+  Scale,
+  SearchCheck,
+  Sparkles,
+  Unlink2,
+} from "lucide-react";
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -37,6 +48,118 @@ const researchSteps = [
   ["03", "Compare", "Score each option against the same decision frame."],
   ["04", "Explain", "Build a verdict with assumptions, confidence, and citations."],
 ] as const;
+
+const oldResearchLoop = [
+  ["01", "Open another tab", "A new context to keep in your head."],
+  ["02", "Find a conflicting claim", "No shared frame for resolving it."],
+  ["03", "Forget where it came from", "Evidence separates from the answer."],
+  ["04", "Repeat until the deadline", "More tabs, not more confidence."],
+] as const;
+
+const sideByTrail = [
+  ["01", "Question", "The decision brief stays visible."],
+  ["02", "Evidence", "Every claim keeps its source."],
+  ["03", "Scores", "Options share one decision frame."],
+  ["04", "Verdict", "The conclusion stays challengeable."],
+] as const;
+
+const ResearchLoopDemo = () => {
+  const [mode, setMode] = useState<"old" | "sideby">("old");
+  const isSideBy = mode === "sideby";
+  const steps = isSideBy ? sideByTrail : oldResearchLoop;
+
+  return (
+    <div className="flex h-full flex-col" aria-label="Compare traditional research with SideBy">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch xl:flex-row xl:items-center">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/35">See the difference</p>
+          <p className="mt-1 text-sm text-white/55">Same decision. A different research trail.</p>
+        </div>
+        <div className="grid shrink-0 grid-cols-2 rounded-full border border-white/10 bg-black/30 p-1" role="group" aria-label="Research approach">
+          <button
+            type="button"
+            aria-pressed={!isSideBy}
+            onClick={() => setMode("old")}
+            className={`rounded-full px-3 py-2 text-xs font-semibold transition duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 ${
+              !isSideBy ? "bg-white/10 text-white shadow-sm" : "text-white/38 hover:text-white/65"
+            }`}
+          >
+            Old loop
+          </button>
+          <button
+            type="button"
+            aria-pressed={isSideBy}
+            onClick={() => setMode("sideby")}
+            className={`rounded-full px-3 py-2 text-xs font-semibold transition duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${
+              isSideBy ? "bg-emerald-300 text-emerald-950 shadow-[0_0_24px_rgba(110,231,183,0.16)]" : "text-white/38 hover:text-white/65"
+            }`}
+          >
+            With SideBy
+          </button>
+        </div>
+      </div>
+
+      <div key={mode} className="relative mt-6 flex-1 animate-in fade-in slide-in-from-bottom-2 duration-500 motion-reduce:animate-none">
+        {isSideBy && (
+          <div className="absolute bottom-7 left-[1.42rem] top-7 w-px overflow-hidden bg-emerald-300/15" aria-hidden="true">
+            <div className="h-full w-full origin-top animate-[about-trail_900ms_cubic-bezier(0.22,1,0.36,1)_both] bg-gradient-to-b from-emerald-200 via-emerald-400 to-cyan-300 motion-reduce:animate-none" />
+          </div>
+        )}
+        <div className="space-y-3">
+          {steps.map(([number, title, description], index) => (
+            <div
+              key={title}
+              style={{ animationDelay: `${index * 90}ms` }}
+              className={`group relative flex min-h-[4.55rem] items-center gap-3 rounded-xl border p-3.5 animate-in fade-in slide-in-from-bottom-2 duration-500 motion-reduce:animate-none ${
+                isSideBy
+                  ? "border-emerald-300/15 bg-emerald-400/[0.055] hover:border-emerald-300/30 hover:bg-emerald-400/[0.085]"
+                  : `${index % 2 === 0 ? "sm:-translate-x-1" : "sm:translate-x-1"} border-white/8 bg-white/[0.025] hover:border-orange-200/15 hover:bg-white/[0.04]`
+              } transition-colors duration-300`}
+            >
+              <span
+                className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-mono text-[10px] transition ${
+                  isSideBy ? "border-emerald-300/30 bg-[#0d211a] text-emerald-200" : "border-white/8 bg-[#0a0908] text-white/25"
+                }`}
+              >
+                {number}
+              </span>
+              <div className="min-w-0">
+                <p className={`text-sm font-semibold ${isSideBy ? "text-emerald-50" : "text-white/58 line-through decoration-white/20"}`}>{title}</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-white/32">{description}</p>
+              </div>
+              {isSideBy ? (
+                <Link2 className="ml-auto h-4 w-4 shrink-0 text-emerald-300/45 transition group-hover:text-emerald-300" aria-hidden="true" />
+              ) : (
+                <Unlink2 className="ml-auto h-4 w-4 shrink-0 text-orange-200/18 transition group-hover:text-orange-200/38" aria-hidden="true" />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setMode(isSideBy ? "old" : "sideby")}
+        className={`group mt-4 flex w-full items-start gap-3 rounded-xl border p-4 text-left transition duration-300 focus:outline-none focus-visible:ring-2 ${
+          isSideBy
+            ? "border-emerald-300/25 bg-emerald-400/[0.08] hover:bg-emerald-400/[0.12] focus-visible:ring-emerald-300"
+            : "border-orange-200/15 bg-orange-300/[0.045] hover:border-orange-200/25 hover:bg-orange-300/[0.07] focus-visible:ring-orange-300"
+        }`}
+      >
+        {isSideBy ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" /> : <GitCompareArrows className="mt-0.5 h-5 w-5 shrink-0 text-orange-200/70" />}
+        <span className="min-w-0 flex-1">
+          <span className={`block text-sm font-semibold ${isSideBy ? "text-emerald-100" : "text-orange-100"}`}>
+            {isSideBy ? "One connected decision trail" : "Now connect the trail"}
+          </span>
+          <span className="mt-1 block text-xs leading-5 text-white/42">
+            {isSideBy ? "Question, evidence, scores, and conclusion stay together." : "See how SideBy turns tab chaos into an inspectable answer."}
+          </span>
+        </span>
+        <ArrowRight className={`mt-1 h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1 ${isSideBy ? "rotate-180 text-emerald-200/60" : "text-orange-200/60"}`} aria-hidden="true" />
+      </button>
+    </div>
+  );
+};
 
 const About = () => {
   usePageTitle("About");
@@ -84,22 +207,7 @@ const About = () => {
           </div>
 
           <div className="border-t border-white/10 bg-black/20 p-5 sm:p-8 lg:border-l lg:border-t-0 lg:p-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/35">The old research loop</p>
-            <div className="mt-5 space-y-3">
-              {["Open another tab", "Find a conflicting claim", "Forget where it came from", "Repeat until the deadline"].map((item, index) => (
-                <div key={item} className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.025] p-3.5 text-sm text-white/48">
-                  <span className="font-mono text-[11px] text-white/25">0{index + 1}</span>
-                  <span className="line-through decoration-white/20">{item}</span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex items-start gap-3 rounded-xl border border-emerald-300/20 bg-emerald-400/[0.07] p-4">
-              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
-              <div>
-                <p className="text-sm font-semibold text-emerald-100">One decision trail</p>
-                <p className="mt-1 text-xs leading-5 text-white/45">The question, evidence, and conclusion stay connected.</p>
-              </div>
-            </div>
+            <ResearchLoopDemo />
           </div>
         </section>
 

@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { initServerSentry, Sentry } from "./_lib/sentry.js";
+import { flushBetterStackLogs, logger } from "./_lib/log.js";
 
 // Initialize Sentry at module level
 initServerSentry();
@@ -42,6 +43,7 @@ import csrfHandler from "./_routes/csrf.js";
 import decisionMatricesHandler from "./_routes/decision-matrices.js";
 import ecosystemSessionHandler from "./_routes/ecosystem-session.js";
 import healthHandler from "./_routes/health.js";
+import healthDbHandler from "./_routes/health/db.js";
 import integrationsSlack from "./_routes/integrations/slack.js";
 import jobsDrain from "./_routes/jobs/drain.js";
 import openapiHandler from "./_routes/openapi.js";
@@ -80,7 +82,7 @@ export default async function handler(
   try {
     await routeRequest(request, response);
   } catch (error) {
-    console.error("Unhandled API error:", error);
+    logger.error("Unhandled API error", error instanceof Error ? error : undefined);
     Sentry.captureException(error);
     // Ensure all Sentry events are sent before lambdas exit
     await Sentry.flush(2000);
@@ -89,6 +91,8 @@ export default async function handler(
       error: "Internal Server Error",
       message: error instanceof Error ? error.message : String(error),
     });
+  } finally {
+    await flushBetterStackLogs();
   }
 }
 
@@ -238,6 +242,9 @@ async function routeRequest(
   }
 
   // Multi-segment single routes
+  if (segment0 === "health" && segment1 === "db" && segment2 === undefined) {
+    return healthDbHandler(request, response);
+  }
   if (segment0 === "integrations" && segment1 === "slack") {
     return integrationsSlack(request, response);
   }
