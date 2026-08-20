@@ -16,9 +16,7 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const matrixData = useMemo(() => {
-    const term = filter.toLowerCase();
-    
+  const cachedCategories = useMemo(() => {
     return result.categories.map(cat => {
       // Pre-compute maps for O(1) lookups instead of O(N) array finds
       const factsA = new Map();
@@ -30,23 +28,40 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
       });
 
       const labels = Array.from(new Set(cat.facts.map(f => f.label)));
+      const lowerLabels = new Map(labels.map(l => [l, l.toLowerCase()]));
       const catNameLower = cat.name.toLowerCase();
       
-      const rows = labels
-        .filter(label => label.toLowerCase().includes(term) || catNameLower.includes(term))
-        .map(label => {
-          const factA = factsA.get(label);
-          const factB = factsB.get(label);
-          return { label, factA, factB };
-        });
-
       return {
         category: cat.name,
+        categoryLower: catNameLower,
+        winner: cat.winner,
+        factsA,
+        factsB,
+        labels,
+        lowerLabels
+      };
+    });
+  }, [result.categories]);
+
+  const matrixData = useMemo(() => {
+    const term = filter.toLowerCase();
+
+    return cachedCategories.map(cat => {
+      const rows = cat.labels
+        .filter(label => cat.lowerLabels.get(label)!.includes(term) || cat.categoryLower.includes(term))
+        .map(label => ({
+          label,
+          factA: cat.factsA.get(label),
+          factB: cat.factsB.get(label)
+        }));
+
+      return {
+        category: cat.category,
         winner: cat.winner,
         rows
       };
     }).filter(cat => cat.rows.length > 0);
-  }, [result.categories, filter]);
+  }, [cachedCategories, filter]);
 
   useGSAP(() => {
     if (!containerRef.current) return;
