@@ -85,13 +85,15 @@ const safeHostname = (url?: string | null) => {
   }
 };
 
-const allFacts = (result: ComparisonData): FactWithCategory[] =>
-  result.categories.flatMap((category) =>
-    category.facts.map((fact) => ({
-      ...fact,
-      category: category.name,
-    })),
-  );
+const allFacts = (result: ComparisonData): FactWithCategory[] => {
+  const all: FactWithCategory[] = [];
+  for (const category of result.categories) {
+    for (const fact of category.facts) {
+      all.push({ ...fact, category: category.name });
+    }
+  }
+  return all;
+};
 
 const categoryScore = (category: Category, entity: EntityKey) => {
   if (category.winner === "tie") return 68;
@@ -350,9 +352,21 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
   }, [metrics]);
 
   const weighted = useMemo(() => {
-    const totalWeight = metrics.reduce((sum, metric) => sum + (weights[metric.subject] ?? 1), 0) || 1;
-    const a = metrics.reduce((sum, metric) => sum + metric.a * (weights[metric.subject] ?? 1), 0) / totalWeight;
-    const b = metrics.reduce((sum, metric) => sum + metric.b * (weights[metric.subject] ?? 1), 0) / totalWeight;
+    let sumWeight = 0;
+    let sumA = 0;
+    let sumB = 0;
+
+    for (const metric of metrics) {
+      const weight = weights[metric.subject] ?? 1;
+      sumWeight += weight;
+      sumA += metric.a * weight;
+      sumB += metric.b * weight;
+    }
+
+    const totalWeight = sumWeight || 1;
+    const a = sumA / totalWeight;
+    const b = sumB / totalWeight;
+
     return { a, b, winner: Math.abs(a - b) < 1 ? "tie" : a > b ? "a" : "b" };
   }, [metrics, weights]);
 

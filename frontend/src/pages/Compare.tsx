@@ -50,8 +50,22 @@ const Compare = () => {
   const result = jobData?.result;
   const entityFacts = useMemo(() => {
     if (!result) return { a: [] as { category: string }[], b: [] as { category: string }[] };
-    const facts = result.categories.flatMap((c) => c.facts.map((f) => ({ ...f, category: c.name })));
-    return { a: facts.filter((f) => f.entity === "a"), b: facts.filter((f) => f.entity === "b") };
+
+    const a = [];
+    const b = [];
+
+    for (const c of result.categories) {
+      for (const f of c.facts) {
+        const enhancedFact = { ...f, category: c.name };
+        if (f.entity === "a") {
+          a.push(enhancedFact);
+        } else if (f.entity === "b") {
+          b.push(enhancedFact);
+        }
+      }
+    }
+
+    return { a, b };
   }, [result]);
 
   const handleRefresh = () => {
