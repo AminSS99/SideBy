@@ -32,8 +32,12 @@ export function ScoreDetailDrawer({
 
     if (!category) return null;
 
-    const factsA = category.facts.filter((f) => f.entity === "a");
-    const factsB = category.facts.filter((f) => f.entity === "b");
+    const factsA = [];
+    const factsB = [];
+    category.facts.forEach((f) => {
+      if (f.entity === "a") factsA.push(f);
+      else if (f.entity === "b") factsB.push(f);
+    });
 
     // Filter contradictions mentioning this category
     const categoryContradictions = result.contradictions?.filter((c) =>

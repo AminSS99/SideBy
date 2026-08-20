@@ -106,20 +106,31 @@ export const CategorySection = ({ category, entities, index }: CategorySectionPr
       )}
 
       <div className="grid gap-6 md:grid-cols-2 relative z-10">
-        {(["a", "b"] as const).map((key) => {
-          const entity = entities[key];
-          const entityFacts = category.facts?.filter((f) => f.entity === key) || [];
+        {(() => {
+          const factsA = [];
+          const factsB = [];
+          if (category.facts) {
+            category.facts.forEach(f => {
+              if (f.entity === 'a') factsA.push(f);
+              else if (f.entity === 'b') factsB.push(f);
+            });
+          }
 
-          if (entityFacts.length === 0) return null;
+          return (["a", "b"] as const).map((key) => {
+            const entity = entities[key];
+            const entityFacts = key === 'a' ? factsA : factsB;
 
-          return (
-            <div key={key} className="space-y-6">
-              {entityFacts.map((fact, i) => (
-                <FactCard key={i} fact={fact} entity={entity} index={i} />
-              ))}
-            </div>
-          );
-        })}
+            if (entityFacts.length === 0) return null;
+
+            return (
+              <div key={key} className="space-y-6">
+                {entityFacts.map((fact, i) => (
+                  <FactCard key={i} fact={fact} entity={entity} index={i} />
+                ))}
+              </div>
+            );
+          });
+        })()}
       </div>
     </div>
   );
