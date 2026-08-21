@@ -136,19 +136,25 @@ const Docs = () => {
   const [category, setCategory] = useState<DocArticle["category"] | "All">("All");
   const [openArticle, setOpenArticle] = useState<string>("first-comparison");
 
+  const processedArticles = useMemo(() => {
+    return articles.map((article) => ({
+      ...article,
+      searchString: [article.title, article.summary, article.category, ...article.steps]
+        .join(" ")
+        .toLowerCase(),
+    }));
+  }, []);
+
   const filteredArticles = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return articles.filter((article) => {
+    return processedArticles.filter((article) => {
       const categoryMatches = category === "All" || article.category === category;
       const queryMatches =
         normalizedQuery.length === 0 ||
-        [article.title, article.summary, article.category, ...article.steps]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedQuery);
+        article.searchString.includes(normalizedQuery);
       return categoryMatches && queryMatches;
     });
-  }, [category, query]);
+  }, [category, query, processedArticles]);
 
   useGSAP(
     () => {
