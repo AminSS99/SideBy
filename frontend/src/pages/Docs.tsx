@@ -1,28 +1,4 @@
-  const searchCache = useMemo(() => {
-    const cache = new Map<string, string>();
-    for (const article of articles) {
-      cache.set(
-        article.id,
-        [article.title, article.summary, article.category, ...article.steps]
-          .join(" ")
-          .toLowerCase()
-      );
-    }
-    return cache;
-  }, [articles]);
-
-  const filteredArticles = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return articles.filter((article) => {
-      const categoryMatches = category === "All" || article.category === category;
-      let queryMatches = true;
-      if (normalizedQuery.length > 0) {
-        const searchString = searchCache.get(article.id) || "";
-        queryMatches = searchString.includes(normalizedQuery);
-      }
-      return categoryMatches && queryMatches;
-    });
-  }, [category, query, searchCache]);import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";

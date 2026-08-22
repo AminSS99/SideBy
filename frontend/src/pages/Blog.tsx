@@ -124,7 +124,7 @@ const Blog = () => {
       );
     }
     return cache;
-  }, [fieldNotes]);
+  }, []);
 
   const visibleNotes = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
