@@ -98,10 +98,27 @@ const PromptsPage = () => {
     });
   }, [activeWorkspace?.id]);
 
-  const filteredPrompts = prompts.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.description.toLowerCase().includes(search.toLowerCase())
-  );
+  const searchCache = useMemo(() => {
+    const cache = new Map<string, { name: string; description: string }>();
+    for (const p of prompts) {
+      cache.set(p.id, {
+        name: p.name.toLowerCase(),
+        description: p.description.toLowerCase(),
+      });
+    }
+    return cache;
+  }, [prompts]);
+
+  const filteredPrompts = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return prompts;
+
+    return prompts.filter((p) => {
+      const cached = searchCache.get(p.id);
+      if (!cached) return false;
+      return cached.name.includes(needle) || cached.description.includes(needle);
+    });
+  }, [prompts, search, searchCache]);
 
   const copyToClipboard = async (text: string) => {
     const ok = await copyText(text);

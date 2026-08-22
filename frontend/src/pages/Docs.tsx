@@ -1,4 +1,28 @@
-import { useMemo, useRef, useState } from "react";
+  const searchCache = useMemo(() => {
+    const cache = new Map<string, string>();
+    for (const article of articles) {
+      cache.set(
+        article.id,
+        [article.title, article.summary, article.category, ...article.steps]
+          .join(" ")
+          .toLowerCase()
+      );
+    }
+    return cache;
+  }, [articles]);
+
+  const filteredArticles = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return articles.filter((article) => {
+      const categoryMatches = category === "All" || article.category === category;
+      let queryMatches = true;
+      if (normalizedQuery.length > 0) {
+        const searchString = searchCache.get(article.id) || "";
+        queryMatches = searchString.includes(normalizedQuery);
+      }
+      return categoryMatches && queryMatches;
+    });
+  }, [category, query, searchCache]);import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -136,19 +160,31 @@ const Docs = () => {
   const [category, setCategory] = useState<DocArticle["category"] | "All">("All");
   const [openArticle, setOpenArticle] = useState<string>("first-comparison");
 
+  const searchCache = useMemo(() => {
+    const cache = new Map<string, string>();
+    for (const article of articles) {
+      cache.set(
+        article.id,
+        [article.title, article.summary, article.category, ...article.steps]
+          .join(" ")
+          .toLowerCase()
+      );
+    }
+    return cache;
+  }, []);
+
   const filteredArticles = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return articles.filter((article) => {
       const categoryMatches = category === "All" || article.category === category;
-      const queryMatches =
-        normalizedQuery.length === 0 ||
-        [article.title, article.summary, article.category, ...article.steps]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedQuery);
+      let queryMatches = true;
+      if (normalizedQuery.length > 0) {
+        const searchString = searchCache.get(article.id) || "";
+        queryMatches = searchString.includes(normalizedQuery);
+      }
       return categoryMatches && queryMatches;
     });
-  }, [category, query]);
+  }, [category, query, searchCache]);
 
   useGSAP(
     () => {
