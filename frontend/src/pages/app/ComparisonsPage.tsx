@@ -216,6 +216,21 @@ const ComparisonsPage = () => {
   }, { scope: containerRef, dependencies: [isFirstComparisonFlow] });
 
 
+  const searchStringsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of items) {
+      const searchString = [
+        item.query,
+        item.entityA,
+        item.entityB,
+        item.folder,
+        ...item.tags,
+      ].filter(Boolean).join(" ").toLowerCase();
+      map.set(item.id, searchString);
+    }
+    return map;
+  }, [items]);
+
   const { filteredItems, counts } = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const nextFiltered: ComparisonHistoryItem[] = [];
@@ -250,13 +265,7 @@ const ComparisonsPage = () => {
         // Lazy search text evaluation
         let textMatch = true;
         if (needle) {
-          const searchString = [
-            item.query,
-            item.entityA,
-            item.entityB,
-            item.folder,
-            ...item.tags,
-          ].filter(Boolean).join(" ").toLowerCase();
+          const searchString = searchStringsMap.get(item.id) || "";
           textMatch = searchString.includes(needle);
         }
 
@@ -267,7 +276,7 @@ const ComparisonsPage = () => {
     }
 
     return { filteredItems: nextFiltered, counts: newCounts };
-  }, [items, filter, query]);
+  }, [items, filter, query, searchStringsMap]);
 
   const publish = async (item: ComparisonHistoryItem) => {
     try {

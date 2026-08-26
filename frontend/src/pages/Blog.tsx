@@ -113,14 +113,25 @@ const Blog = () => {
   const [query, setQuery] = useState("");
   const [activePost, setActivePost] = useState<string>("decision-brief");
 
+  const searchStringsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const note of fieldNotes) {
+      const searchString = [note.title, note.excerpt, note.category, ...note.takeaways]
+        .join(" ")
+        .toLowerCase();
+      map.set(note.id, searchString);
+    }
+    return map;
+  }, []);
+
   const visibleNotes = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return fieldNotes.filter((note) => {
       const categoryMatches = category === "All" || note.category === category;
-      const queryMatches = !normalizedQuery || [note.title, note.excerpt, note.category, ...note.takeaways].join(" ").toLowerCase().includes(normalizedQuery);
+      const queryMatches = !normalizedQuery || (searchStringsMap.get(note.id) || "").includes(normalizedQuery);
       return categoryMatches && queryMatches;
     });
-  }, [category, query]);
+  }, [category, query, searchStringsMap]);
 
   useGSAP(
     () => {

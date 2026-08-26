@@ -98,10 +98,20 @@ const PromptsPage = () => {
     });
   }, [activeWorkspace?.id]);
 
-  const filteredPrompts = prompts.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.description.toLowerCase().includes(search.toLowerCase())
-  );
+  const searchStringsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of prompts) {
+      map.set(p.id, `${p.name.toLowerCase()} ${p.description.toLowerCase()}`);
+    }
+    return map;
+  }, [prompts]);
+
+  const filteredPrompts = useMemo(() => {
+    const normalizedSearch = search.toLowerCase();
+    return prompts.filter(p =>
+      (searchStringsMap.get(p.id) || "").includes(normalizedSearch)
+    );
+  }, [prompts, search, searchStringsMap]);
 
   const copyToClipboard = async (text: string) => {
     const ok = await copyText(text);
