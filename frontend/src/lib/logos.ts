@@ -237,29 +237,45 @@ const knownDomains: Record<string, string> = {
 const knownLogosEntries = Object.entries(knownLogos);
 const knownDomainsEntries = Object.entries(knownDomains);
 
+const logoCache = new Map<string, string | null>();
+const faviconCache = new Map<string, string | null>();
+
 export const getEntityLogo = (entityName: string): string | null => {
   const key = entityName.toLowerCase().trim();
-  if (knownLogos[key]) return knownLogos[key];
+  if (logoCache.has(key)) return logoCache.get(key) ?? null;
+
+  if (knownLogos[key]) {
+    logoCache.set(key, knownLogos[key]);
+    return knownLogos[key];
+  }
 
   const match = knownLogosEntries.find(([k]) =>
     key.includes(k) || k.includes(key),
   );
-  if (match) return match[1];
 
-  return null;
+  const result = match ? match[1] : null;
+  logoCache.set(key, result);
+  return result;
 };
 
 export const getEntityFavicon = (entityName: string): string | null => {
   const key = entityName.toLowerCase().trim();
+  if (faviconCache.has(key)) return faviconCache.get(key) ?? null;
+
   const domain = knownDomains[key];
-  if (domain) return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+  if (domain) {
+    const result = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+    faviconCache.set(key, result);
+    return result;
+  }
 
   const match = knownDomainsEntries.find(([k]) =>
     key.includes(k) || k.includes(key),
   );
-  if (match) return `https://www.google.com/s2/favicons?domain=${match[1]}&sz=64`;
 
-  return null;
+  const result = match ? `https://www.google.com/s2/favicons?domain=${match[1]}&sz=64` : null;
+  faviconCache.set(key, result);
+  return result;
 };
 
 export const resolveLogo = (entityName: string): { url: string; source: "simple-icons" | "favicon" | "none" } | null => {

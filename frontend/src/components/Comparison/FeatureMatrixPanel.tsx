@@ -16,14 +16,13 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const matrixData = useMemo(() => {
-    const term = filter.toLowerCase();
-    
+  const baseData = useMemo(() => {
     return result.categories.map(cat => {
       // Pre-compute maps for O(1) lookups instead of O(N) array finds
       const factsA = new Map();
       const factsB = new Map();
       const labels: string[] = [];
+      const labelLowerMap = new Map<string, string>();
 
       cat.facts.forEach(f => {
         if (f.entity === 'a' && !factsA.has(f.label)) {
@@ -35,25 +34,43 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
           factsB.set(f.label, f);
         }
       });
-
-      const catNameLower = cat.name.toLowerCase();
       
-      const rows = [];
       for (const label of labels) {
-        if (label.toLowerCase().includes(term) || catNameLower.includes(term)) {
-          const factA = factsA.get(label);
-          const factB = factsB.get(label);
+        labelLowerMap.set(label, label.toLowerCase());
+      }
+
+      return {
+        category: cat.name,
+        catNameLower: cat.name.toLowerCase(),
+        winner: cat.winner,
+        factsA,
+        factsB,
+        labels,
+        labelLowerMap
+      };
+    });
+  }, [result.categories]);
+
+  const matrixData = useMemo(() => {
+    const term = filter.toLowerCase();
+
+    return baseData.map(cat => {
+      const rows = [];
+      for (const label of cat.labels) {
+        if (cat.labelLowerMap.get(label)!.includes(term) || cat.catNameLower.includes(term)) {
+          const factA = cat.factsA.get(label);
+          const factB = cat.factsB.get(label);
           rows.push({ label, factA, factB });
         }
       }
 
       return {
-        category: cat.name,
+        category: cat.category,
         winner: cat.winner,
         rows
       };
     }).filter(cat => cat.rows.length > 0);
-  }, [result.categories, filter]);
+  }, [baseData, filter]);
 
   useGSAP(() => {
     if (!containerRef.current) return;
