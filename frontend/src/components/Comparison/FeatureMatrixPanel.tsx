@@ -16,44 +16,59 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const matrixData = useMemo(() => {
-    const term = filter.toLowerCase();
-    
-    return result.categories.map(cat => {
-      // Pre-compute maps for O(1) lookups instead of O(N) array finds
+  const precomputedCategories = useMemo(() => {
+    return result.categories.map((cat) => {
       const factsA = new Map();
       const factsB = new Map();
-      const labels: string[] = [];
+      const labels: Array<{ label: string; labelLower: string }> = [];
 
-      cat.facts.forEach(f => {
-        if (f.entity === 'a' && !factsA.has(f.label)) {
-          if (!factsB.has(f.label)) labels.push(f.label);
+      cat.facts.forEach((f) => {
+        if (f.entity === "a" && !factsA.has(f.label)) {
+          if (!factsB.has(f.label)) labels.push({ label: f.label, labelLower: f.label.toLowerCase() });
           factsA.set(f.label, f);
         }
-        if (f.entity === 'b' && !factsB.has(f.label)) {
-          if (!factsA.has(f.label)) labels.push(f.label);
+        if (f.entity === "b" && !factsB.has(f.label)) {
+          if (!factsA.has(f.label)) labels.push({ label: f.label, labelLower: f.label.toLowerCase() });
           factsB.set(f.label, f);
         }
       });
 
-      const catNameLower = cat.name.toLowerCase();
-      
-      const rows = [];
-      for (const label of labels) {
-        if (label.toLowerCase().includes(term) || catNameLower.includes(term)) {
-          const factA = factsA.get(label);
-          const factB = factsB.get(label);
-          rows.push({ label, factA, factB });
-        }
-      }
-
       return {
-        category: cat.name,
-        winner: cat.winner,
-        rows
+        original: cat,
+        catNameLower: cat.name.toLowerCase(),
+        factsA,
+        factsB,
+        labels,
       };
-    }).filter(cat => cat.rows.length > 0);
-  }, [result.categories, filter]);
+    });
+  }, [result.categories]);
+
+  const matrixData = useMemo(() => {
+    const term = filter.toLowerCase();
+
+    return precomputedCategories
+      .map((catData) => {
+        const rows = [];
+        const matchesCategory = catData.catNameLower.includes(term);
+
+        for (const item of catData.labels) {
+          if (matchesCategory || item.labelLower.includes(term)) {
+            rows.push({
+              label: item.label,
+              factA: catData.factsA.get(item.label),
+              factB: catData.factsB.get(item.label),
+            });
+          }
+        }
+
+        return {
+          category: catData.original.name,
+          winner: catData.original.winner,
+          rows,
+        };
+      })
+      .filter((cat) => cat.rows.length > 0);
+  }, [precomputedCategories, filter]);
 
   useGSAP(() => {
     if (!containerRef.current) return;
