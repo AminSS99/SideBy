@@ -98,10 +98,13 @@ const PromptsPage = () => {
     });
   }, [activeWorkspace?.id]);
 
-  const filteredPrompts = prompts.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.description.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredPrompts = useMemo(() => {
+    const term = search.toLowerCase();
+    return prompts.filter(p =>
+      p.name.toLowerCase().includes(term) ||
+      p.description.toLowerCase().includes(term)
+    );
+  }, [prompts, search]);
 
   const copyToClipboard = async (text: string) => {
     const ok = await copyText(text);
