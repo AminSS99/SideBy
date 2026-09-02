@@ -85,13 +85,19 @@ const safeHostname = (url?: string | null) => {
   }
 };
 
+const allFactsCache = new WeakMap<ComparisonData, FactWithCategory[]>();
+
 const allFacts = (result: ComparisonData): FactWithCategory[] => {
+  if (allFactsCache.has(result)) return allFactsCache.get(result)!;
+
   const all: FactWithCategory[] = [];
   for (const category of result.categories) {
     for (const fact of category.facts) {
       all.push({ ...fact, category: category.name });
     }
   }
+
+  allFactsCache.set(result, all);
   return all;
 };
 
@@ -101,20 +107,29 @@ const categoryScore = (category: Category, entity: EntityKey) => {
   return 54;
 };
 
+const metricsCache = new WeakMap<ComparisonData, DecisionMetric[]>();
+
 const buildMetrics = (result: ComparisonData): DecisionMetric[] => {
+  if (metricsCache.has(result)) return metricsCache.get(result)!;
+
+  let metrics: DecisionMetric[];
+
   if (result.dimensions?.length) {
-    return result.dimensions.map((dimension) => ({
+    metrics = result.dimensions.map((dimension) => ({
       subject: dimension.subject,
       a: dimension.a,
       b: dimension.b,
     }));
+  } else {
+    metrics = result.categories.map((category) => ({
+      subject: category.name,
+      a: categoryScore(category, "a"),
+      b: categoryScore(category, "b"),
+    }));
   }
 
-  return result.categories.map((category) => ({
-    subject: category.name,
-    a: categoryScore(category, "a"),
-    b: categoryScore(category, "b"),
-  }));
+  metricsCache.set(result, metrics);
+  return metrics;
 };
 
 const sourceReliability = (source: ComparisonSource) =>
