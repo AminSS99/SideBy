@@ -98,10 +98,17 @@ const PromptsPage = () => {
     });
   }, [activeWorkspace?.id]);
 
-  const filteredPrompts = prompts.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.description.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredPrompts = useMemo(() => {
+    const term = search.toLowerCase();
+    if (!term) return prompts;
+
+    return prompts.filter((p) => {
+      // In a real app, these could be pre-computed at the model level when prompts load
+      const nameMatch = p.name.toLowerCase().includes(term);
+      const descMatch = p.description.toLowerCase().includes(term);
+      return nameMatch || descMatch;
+    });
+  }, [prompts, search]);
 
   const copyToClipboard = async (text: string) => {
     const ok = await copyText(text);
