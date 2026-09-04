@@ -85,13 +85,21 @@ const safeHostname = (url?: string | null) => {
   }
 };
 
+const factsCache = new WeakMap<ComparisonData, FactWithCategory[]>();
+
 const allFacts = (result: ComparisonData): FactWithCategory[] => {
+  if (factsCache.has(result)) {
+    return factsCache.get(result)!;
+  }
+
   const all: FactWithCategory[] = [];
   for (const category of result.categories) {
     for (const fact of category.facts) {
       all.push({ ...fact, category: category.name });
     }
   }
+
+  factsCache.set(result, all);
   return all;
 };
 
