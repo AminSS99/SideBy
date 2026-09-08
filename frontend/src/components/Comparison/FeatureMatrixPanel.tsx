@@ -76,7 +76,7 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
       }
 
       return acc;
-    }, [] as Array<{ category: string; winner: "a" | "b" | "tie" | null; rows: Array<{ label: string; factA: any; factB: any }> }>);
+    }, [] as Array<{ category: string; winner: "a" | "b" | "tie" | null; rows: Array<{ label: string; factA: unknown; factB: unknown }> }>);
   }, [processedCategories, filter]);
 
   useGSAP(() => {
