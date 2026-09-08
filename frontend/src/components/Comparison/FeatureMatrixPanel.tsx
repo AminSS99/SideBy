@@ -56,7 +56,7 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
   const matrixData = useMemo(() => {
     const term = filter.toLowerCase();
 
-    return processedCategories.map(cat => {
+    return processedCategories.reduce((acc, cat) => {
       const rows = [];
       for (const label of cat.labels) {
         const lowerLabel = cat.lowerLabels.get(label) || "";
@@ -67,12 +67,16 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
         }
       }
 
-      return {
-        category: cat.category,
-        winner: cat.winner,
-        rows
-      };
-    }).filter(cat => cat.rows.length > 0);
+      if (rows.length > 0) {
+        acc.push({
+          category: cat.category,
+          winner: cat.winner,
+          rows
+        });
+      }
+
+      return acc;
+    }, [] as Array<{ category: string; winner: "a" | "b" | "tie" | null; rows: Array<{ label: string; factA: any; factB: any }> }>);
   }, [processedCategories, filter]);
 
   useGSAP(() => {
