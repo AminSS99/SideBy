@@ -98,17 +98,21 @@ const PromptsPage = () => {
     });
   }, [activeWorkspace?.id]);
 
-  const filteredPrompts = useMemo(() => {
-    const term = search.toLowerCase();
-    if (!term) return prompts;
+  const processedPrompts = useMemo(() => {
+    return prompts.map((p) => ({
+      ...p,
+      searchString: `${p.name} ${p.description}`.toLowerCase()
+    }));
+  }, [prompts]);
 
-    return prompts.filter((p) => {
-      // In a real app, these could be pre-computed at the model level when prompts load
-      const nameMatch = p.name.toLowerCase().includes(term);
-      const descMatch = p.description.toLowerCase().includes(term);
-      return nameMatch || descMatch;
+  const filteredPrompts = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return processedPrompts;
+
+    return processedPrompts.filter((p) => {
+      return p.searchString.includes(term);
     });
-  }, [prompts, search]);
+  }, [processedPrompts, search]);
 
   const copyToClipboard = async (text: string) => {
     const ok = await copyText(text);

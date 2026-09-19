@@ -16,54 +16,63 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Pre-compute lowercased labels and categories once when categories change
+  // Pre-compute matrix rows with their search strings once when categories change
   const processedCategories = useMemo(() => {
     return result.categories.map(cat => {
       const factsA = new Map();
       const factsB = new Map();
       const labels: string[] = [];
-      const lowerLabels = new Map<string, string>();
+      const catNameLower = cat.name.toLowerCase();
 
       cat.facts.forEach(f => {
         if (f.entity === 'a' && !factsA.has(f.label)) {
           if (!factsB.has(f.label)) {
             labels.push(f.label);
-            lowerLabels.set(f.label, f.label.toLowerCase());
           }
           factsA.set(f.label, f);
         }
         if (f.entity === 'b' && !factsB.has(f.label)) {
           if (!factsA.has(f.label)) {
             labels.push(f.label);
-            lowerLabels.set(f.label, f.label.toLowerCase());
           }
           factsB.set(f.label, f);
         }
       });
 
+      const allRows = labels.map(label => {
+        const lowerLabel = label.toLowerCase();
+        return {
+          label,
+          searchString: `${catNameLower} ${lowerLabel}`,
+          factA: factsA.get(label),
+          factB: factsB.get(label),
+        };
+      });
+
       return {
         category: cat.name,
-        catNameLower: cat.name.toLowerCase(),
         winner: cat.winner,
-        labels,
-        lowerLabels,
-        factsA,
-        factsB
+        allRows,
       };
     });
   }, [result.categories]);
 
   const matrixData = useMemo(() => {
-    const term = filter.toLowerCase();
+    const term = filter.trim().toLowerCase();
+
+    if (!term) {
+      return processedCategories.map(cat => ({
+        category: cat.category,
+        winner: cat.winner,
+        rows: cat.allRows,
+      })).filter(cat => cat.rows.length > 0);
+    }
 
     return processedCategories.map(cat => {
       const rows = [];
-      for (const label of cat.labels) {
-        const lowerLabel = cat.lowerLabels.get(label) || "";
-        if (lowerLabel.includes(term) || cat.catNameLower.includes(term)) {
-          const factA = cat.factsA.get(label);
-          const factB = cat.factsB.get(label);
-          rows.push({ label, factA, factB });
+      for (const row of cat.allRows) {
+        if (row.searchString.includes(term)) {
+          rows.push(row);
         }
       }
 
