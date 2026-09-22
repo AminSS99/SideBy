@@ -17,6 +17,7 @@ interface PromptTemplate {
   content: string;
   variables: string[];
   lastEdited: string;
+  searchString?: string;
 }
 
 const initialPrompts: PromptTemplate[] = [
@@ -27,6 +28,7 @@ const initialPrompts: PromptTemplate[] = [
     content: "Act as a CTO. Summarize the following technical comparison focusing only on cost, time-to-market, and security implications: {{comparison_data}}",
     variables: ["comparison_data"],
     lastEdited: new Date().toISOString(),
+    searchString: "executive summary condenses detailed technical comparisons into business-focused executive summaries.",
   },
   {
     id: "2",
@@ -35,6 +37,7 @@ const initialPrompts: PromptTemplate[] = [
     content: "You are a principal systems engineer. Rewrite this content to be highly technical. Remove all marketing language. Focus on architecture, latency, and system constraints: {{input}}",
     variables: ["input"],
     lastEdited: new Date(Date.now() - 86400000).toISOString(),
+    searchString: "tone: highly technical forces the ai to use precise engineering terminology and ignore marketing fluff.",
   }
 ];
 
@@ -87,6 +90,7 @@ const PromptsPage = () => {
           ? prompt.variablesSchema.variables as string[]
           : extractVariables(prompt.systemPrompt),
         lastEdited: prompt.updatedAt,
+        searchString: `${prompt.name} ${prompt.description}`.toLowerCase(),
       })));
     };
 
@@ -99,14 +103,11 @@ const PromptsPage = () => {
   }, [activeWorkspace?.id]);
 
   const filteredPrompts = useMemo(() => {
-    const term = search.toLowerCase();
+    const term = search.trim().toLowerCase();
     if (!term) return prompts;
 
     return prompts.filter((p) => {
-      // In a real app, these could be pre-computed at the model level when prompts load
-      const nameMatch = p.name.toLowerCase().includes(term);
-      const descMatch = p.description.toLowerCase().includes(term);
-      return nameMatch || descMatch;
+      return p.searchString ? p.searchString.includes(term) : `${p.name} ${p.description}`.toLowerCase().includes(term);
     });
   }, [prompts, search]);
 
@@ -161,10 +162,17 @@ const PromptsPage = () => {
 
     setPrompts(prev => {
       const exists = prev.some(p => p.id === savedPrompt.id);
+      const updatedPrompt = {
+        ...savedPrompt,
+        id: data.prompt.id,
+        lastEdited: data.prompt.updatedAt,
+        searchString: `${savedPrompt.name} ${savedPrompt.description}`.toLowerCase()
+      };
+
       if (exists) {
-        return prev.map(p => p.id === savedPrompt.id ? { ...savedPrompt, id: data.prompt.id, lastEdited: data.prompt.updatedAt } : p);
+        return prev.map(p => p.id === savedPrompt.id ? updatedPrompt : p);
       } else {
-        return [{ ...savedPrompt, id: data.prompt.id, lastEdited: data.prompt.updatedAt }, ...prev];
+        return [updatedPrompt, ...prev];
       }
     });
     setIsModalOpen(false);
