@@ -214,7 +214,7 @@ const EcosystemWorkspacePage = () => {
         </div>
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5">
           <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/35">Connected products</p>
-          <p className="mt-2 font-serif text-xl text-white">{products.filter((product) => product.enabled).length} enabled</p>
+          <p className="mt-2 font-serif text-xl text-white">{products.reduce((acc, product) => acc + (product.enabled ? 1 : 0), 0)} enabled</p>
         </div>
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5">
           <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/35">Privacy</p>
