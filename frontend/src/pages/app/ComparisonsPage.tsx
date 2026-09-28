@@ -274,7 +274,7 @@ const ComparisonsPage = () => {
     }
 
     return { filteredItems: nextFiltered, counts: newCounts };
-  }, [items, filter, query, searchMap]);
+  }, [items, filter, query]);
 
   const publish = async (item: ComparisonHistoryItem) => {
     try {

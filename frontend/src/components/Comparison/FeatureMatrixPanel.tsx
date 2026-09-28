@@ -7,6 +7,7 @@ import type { ComparisonData } from './types';
 import { panelClass } from './constants';
 import { cn } from '@/lib/utils';
 import { ScoreDetailDrawer } from "./ScoreDetailDrawer";
+import type { ComparisonFact } from './types';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -16,8 +17,8 @@ type ProcessedCategory = {
   allRows: Array<{
     label: string;
     searchString: string;
-    factA: any;
-    factB: any;
+    factA: ComparisonFact | undefined;
+    factB: ComparisonFact | undefined;
   }>;
 };
 
@@ -29,8 +30,8 @@ const getProcessedCategories = (categories: ComparisonData["categories"]): Proce
   }
 
   const processed = categories.map(cat => {
-    const factsA = new Map();
-    const factsB = new Map();
+    const factsA = new Map<string, ComparisonFact>();
+    const factsB = new Map<string, ComparisonFact>();
     const labels: string[] = [];
     const catNameLower = cat.name.toLowerCase();
 
