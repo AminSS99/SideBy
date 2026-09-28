@@ -146,7 +146,7 @@ const isRetryableError = (error: unknown): boolean => {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const inFlightGets = new Map<string, Promise<Response>>();
+const inFlightGets = new Map<string, { promise: Promise<Response>; clones: number }>();
 
 export const apiFetch = async (
   input: RequestInfo | URL,
@@ -158,16 +158,21 @@ export const apiFetch = async (
   if (method === "GET") {
     const cacheKey = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
-    if (inFlightGets.has(cacheKey)) {
-      return inFlightGets.get(cacheKey)!.then(res => res.clone());
+    const inFlight = inFlightGets.get(cacheKey);
+    if (inFlight) {
+      inFlight.clones++;
+      return inFlight.promise.then(res => res.clone());
     }
 
+    const inFlightState = { clones: 0, promise: null as unknown as Promise<Response> };
     const promise = executeFetch(input, init, retryOptions).finally(() => {
       inFlightGets.delete(cacheKey);
     });
 
-    inFlightGets.set(cacheKey, promise);
-    return promise.then(res => res.clone());
+    inFlightState.promise = promise;
+    inFlightGets.set(cacheKey, inFlightState);
+
+    return promise.then(res => (inFlightState.clones > 0 ? res.clone() : res));
   }
 
   return executeFetch(input, init, retryOptions);

@@ -33,7 +33,6 @@ import { ComparisonComposer } from "@/components/ComparisonComposer";
 import { MultiOptionBracketComposer, type BracketRun } from "@/components/MultiOptionBracketComposer";
 import { SUPPORTED_COMPARISON_CATEGORIES } from "@/lib/comparisonTaxonomy";
 
-
 type ComparisonStatus = "running" | "completed" | "failed";
 type ComparisonVisibility = "private" | "team" | "public";
 
@@ -56,6 +55,8 @@ type ComparisonHistoryItem = {
   taxonomyStatus?: string | null;
   safetyLevel?: string | null;
 };
+
+const searchMapCache = new WeakMap<ComparisonHistoryItem, string>();
 
 type ComparisonJob = {
   id: string;
@@ -215,25 +216,6 @@ const ComparisonsPage = () => {
     });
   }, { scope: containerRef, dependencies: [isFirstComparisonFlow] });
 
-
-  const searchMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const item of items) {
-      const searchString = [
-        item.query,
-        item.entityA,
-        item.entityB,
-        item.folder,
-        ...item.tags,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      map.set(item.id, searchString);
-    }
-    return map;
-  }, [items]);
-
   const { filteredItems, counts } = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const nextFiltered: ComparisonHistoryItem[] = [];
@@ -268,7 +250,20 @@ const ComparisonsPage = () => {
         // Lazy search text evaluation
         let textMatch = true;
         if (needle) {
-          const searchString = searchMap.get(item.id) ?? "";
+          let searchString = searchMapCache.get(item);
+          if (searchString === undefined) {
+             searchString = [
+              item.query,
+              item.entityA,
+              item.entityB,
+              item.folder,
+              ...item.tags,
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase();
+            searchMapCache.set(item, searchString);
+          }
           textMatch = searchString.includes(needle);
         }
 

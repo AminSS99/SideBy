@@ -10,52 +10,73 @@ import { ScoreDetailDrawer } from "./ScoreDetailDrawer";
 
 gsap.registerPlugin(ScrollTrigger);
 
+type ProcessedCategory = {
+  category: string;
+  winner: "a" | "b" | "tie" | null;
+  allRows: Array<{
+    label: string;
+    searchString: string;
+    factA: any;
+    factB: any;
+  }>;
+};
+
+const processedCategoriesCache = new WeakMap<ComparisonData["categories"], ProcessedCategory[]>();
+
+const getProcessedCategories = (categories: ComparisonData["categories"]): ProcessedCategory[] => {
+  if (processedCategoriesCache.has(categories)) {
+    return processedCategoriesCache.get(categories)!;
+  }
+
+  const processed = categories.map(cat => {
+    const factsA = new Map();
+    const factsB = new Map();
+    const labels: string[] = [];
+    const catNameLower = cat.name.toLowerCase();
+
+    cat.facts.forEach(f => {
+      if (f.entity === 'a' && !factsA.has(f.label)) {
+        if (!factsB.has(f.label)) {
+          labels.push(f.label);
+        }
+        factsA.set(f.label, f);
+      }
+      if (f.entity === 'b' && !factsB.has(f.label)) {
+        if (!factsA.has(f.label)) {
+          labels.push(f.label);
+        }
+        factsB.set(f.label, f);
+      }
+    });
+
+    const allRows = labels.map(label => {
+      const lowerLabel = label.toLowerCase();
+      return {
+        label,
+        searchString: `${catNameLower} ${lowerLabel}`,
+        factA: factsA.get(label),
+        factB: factsB.get(label),
+      };
+    });
+
+    return {
+      category: cat.name,
+      winner: cat.winner,
+      allRows,
+    };
+  });
+
+  processedCategoriesCache.set(categories, processed);
+  return processed;
+};
+
 export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Pre-compute matrix rows with their search strings once when categories change
-  const processedCategories = useMemo(() => {
-    return result.categories.map(cat => {
-      const factsA = new Map();
-      const factsB = new Map();
-      const labels: string[] = [];
-      const catNameLower = cat.name.toLowerCase();
-
-      cat.facts.forEach(f => {
-        if (f.entity === 'a' && !factsA.has(f.label)) {
-          if (!factsB.has(f.label)) {
-            labels.push(f.label);
-          }
-          factsA.set(f.label, f);
-        }
-        if (f.entity === 'b' && !factsB.has(f.label)) {
-          if (!factsA.has(f.label)) {
-            labels.push(f.label);
-          }
-          factsB.set(f.label, f);
-        }
-      });
-
-      const allRows = labels.map(label => {
-        const lowerLabel = label.toLowerCase();
-        return {
-          label,
-          searchString: `${catNameLower} ${lowerLabel}`,
-          factA: factsA.get(label),
-          factB: factsB.get(label),
-        };
-      });
-
-      return {
-        category: cat.name,
-        winner: cat.winner,
-        allRows,
-      };
-    });
-  }, [result.categories]);
+  const processedCategories = getProcessedCategories(result.categories);
 
   const matrixData = useMemo(() => {
     const term = filter.trim().toLowerCase();
