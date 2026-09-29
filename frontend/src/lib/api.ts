@@ -164,7 +164,7 @@ export const apiFetch = async (
       return flight.promise.then(res => flight.awaiters > 1 ? res.clone() : res);
     }
 
-    const flight = { promise: null as any, awaiters: 1 };
+    const flight = { promise: null as unknown as Promise<Response>, awaiters: 1 };
 
     flight.promise = executeFetch(input, init, retryOptions).finally(() => {
       inFlightGets.delete(cacheKey);
