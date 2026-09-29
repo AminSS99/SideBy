@@ -234,9 +234,7 @@ const ComparisonsPage = () => {
     return map;
   }, [items]);
 
-  const { filteredItems, counts } = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    const nextFiltered: ComparisonHistoryItem[] = [];
+  const counts = useMemo(() => {
     const newCounts = {
       all: items.length,
       favorites: 0,
@@ -248,7 +246,6 @@ const ComparisonsPage = () => {
     };
 
     for (const item of items) {
-      // O(1) space counts accumulation
       if (item.isFavorited) newCounts.favorites++;
       if (item.status === "completed") newCounts.completed++;
       else if (item.status === "running") newCounts.running++;
@@ -256,7 +253,16 @@ const ComparisonsPage = () => {
 
       if (item.visibility === "public") newCounts.public++;
       else if (item.visibility === "private") newCounts.private++;
+    }
 
+    return newCounts;
+  }, [items]);
+
+  const filteredItems = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const nextFiltered: ComparisonHistoryItem[] = [];
+
+    for (const item of items) {
       // Filter evaluation
       const filterMatch =
         filter === "all" ||
@@ -278,7 +284,7 @@ const ComparisonsPage = () => {
       }
     }
 
-    return { filteredItems: nextFiltered, counts: newCounts };
+    return nextFiltered;
   }, [items, filter, query, searchMap]);
 
   const publish = async (item: ComparisonHistoryItem) => {
