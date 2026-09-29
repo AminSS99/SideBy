@@ -109,20 +109,30 @@ const categoryScore = (category: Category, entity: EntityKey) => {
   return 54;
 };
 
+const metricsCache = new WeakMap<ComparisonData, DecisionMetric[]>();
+
 const buildMetrics = (result: ComparisonData): DecisionMetric[] => {
+  if (metricsCache.has(result)) {
+    return metricsCache.get(result)!;
+  }
+
+  let metrics: DecisionMetric[];
   if (result.dimensions?.length) {
-    return result.dimensions.map((dimension) => ({
+    metrics = result.dimensions.map((dimension) => ({
       subject: dimension.subject,
       a: dimension.a,
       b: dimension.b,
     }));
+  } else {
+    metrics = result.categories.map((category) => ({
+      subject: category.name,
+      a: categoryScore(category, "a"),
+      b: categoryScore(category, "b"),
+    }));
   }
 
-  return result.categories.map((category) => ({
-    subject: category.name,
-    a: categoryScore(category, "a"),
-    b: categoryScore(category, "b"),
-  }));
+  metricsCache.set(result, metrics);
+  return metrics;
 };
 
 const sourceReliability = (source: ComparisonSource) =>
@@ -340,7 +350,7 @@ const ExecutiveBriefPanel = ({ result }: { result: ComparisonData }) => {
 };
 
 const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
-  const metrics = useMemo(() => buildMetrics(result), [result]);
+  const metrics = buildMetrics(result);
   const [weights, setWeights] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {};
     for (const metric of metrics) {
