@@ -61,7 +61,11 @@ export const ResearchLoader = ({
   const scanLineRef = useRef<HTMLDivElement>(null);
   const terminalEndRef = useRef<HTMLDivElement>(null);
   
-  const [activeLogs, setActiveLogs] = useState<string[]>([]);
+  const activeLogs = useMemo(() => {
+    const targetLogCount = Math.max(1, Math.floor((progress / 100) * TERMINAL_LOGS.length));
+    return TERMINAL_LOGS.slice(0, targetLogCount);
+  }, [progress]);
+
   const liveLogs = useMemo(() => {
     return activity.map((step) => {
       const timestamp = step.startedAt || step.completedAt || new Date().toISOString();
@@ -74,16 +78,6 @@ export const ResearchLoader = ({
       };
     });
   }, [activity]);
-
-  // Simulate terminal logs trickling in based on progress
-  useEffect(() => {
-    const targetLogCount = Math.max(1, Math.floor((progress / 100) * TERMINAL_LOGS.length));
-    
-    if (activeLogs.length < targetLogCount) {
-      const newLogs = TERMINAL_LOGS.slice(0, targetLogCount);
-      setActiveLogs(newLogs);
-    }
-  }, [progress, activeLogs.length]);
 
   // Auto-scroll terminal
   useEffect(() => {
