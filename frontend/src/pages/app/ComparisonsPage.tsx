@@ -54,9 +54,8 @@ type ComparisonHistoryItem = {
   queryCategory?: string | null;
   taxonomyStatus?: string | null;
   safetyLevel?: string | null;
+  searchString?: string;
 };
-
-const searchMapCache = new WeakMap<ComparisonHistoryItem, string>();
 
 type ComparisonJob = {
   id: string;
@@ -147,7 +146,13 @@ const ComparisonsPage = () => {
       }
 
       const data = (await res.json()) as { comparisons: ComparisonHistoryItem[] };
-      setItems(data.comparisons);
+      setItems(data.comparisons.map(item => ({
+        ...item,
+        searchString: [item.query, item.entityA, item.entityB, item.folder, ...item.tags]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase(),
+      })));
     } catch (loadError) {
       setItems([]);
       setError(loadError instanceof Error ? loadError.message : "Unable to load saved comparisons.");
@@ -250,21 +255,7 @@ const ComparisonsPage = () => {
         // Lazy search text evaluation
         let textMatch = true;
         if (needle) {
-          let searchString = searchMapCache.get(item);
-          if (searchString === undefined) {
-             searchString = [
-              item.query,
-              item.entityA,
-              item.entityB,
-              item.folder,
-              ...item.tags,
-            ]
-              .filter(Boolean)
-              .join(" ")
-              .toLowerCase();
-            searchMapCache.set(item, searchString);
-          }
-          textMatch = searchString.includes(needle);
+          textMatch = Boolean(item.searchString?.includes(needle));
         }
 
         if (textMatch) {
@@ -323,9 +314,25 @@ const ComparisonsPage = () => {
         comparison?: Pick<ComparisonHistoryItem, "isFavorited" | "folder" | "tags" | "updatedAt">;
       };
       if (!data.comparison) throw new Error("The saved organization was incomplete.");
-      setItems((current) => current.map((candidate) =>
-        candidate.id === item.id ? { ...candidate, ...data.comparison! } : candidate,
-      ));
+      setItems((current) => current.map((candidate) => {
+        if (candidate.id === item.id) {
+          return {
+            ...candidate,
+            ...data.comparison!,
+            searchString: [
+              candidate.query,
+              candidate.entityA,
+              candidate.entityB,
+              data.comparison!.folder,
+              ...data.comparison!.tags,
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase()
+          };
+        }
+        return candidate;
+      }));
       captureEvent("comparison_organized_frontend", {
         comparison_id: item.id,
         is_favorited: data.comparison.isFavorited,
@@ -600,29 +607,34 @@ const Metric = ({ label, value }: { label: string; value: number }) => (
   </GlowCard>
 );
 
-const jobToHistoryItem = (job: ComparisonJob): ComparisonHistoryItem => ({
-  id: job.id,
-  query: job.query,
-  slug: job.result?.slug || slugFromQuery(job.query),
-  status: job.status,
-  visibility: "private",
-  isFavorited: false,
-  folder: null,
-  tags: [],
-  sourceCount: job.result?.sourceCount || 0,
-  progress: job.progress,
-  updatedAt: new Date().toISOString(),
-  // The create endpoint can legitimately return an early, partial result
-  // while the asynchronous research job is still enriching it. The detail
-  // page fetches the complete job independently, so history construction
-  // must not prevent navigation when these optional preview fields are absent.
-  summary: job.result?.verdict?.summary || null,
-  entityA: job.result?.entities?.a?.name || null,
-  entityB: job.result?.entities?.b?.name || null,
-  queryCategory: job.result?.taxonomy?.label || null,
-  taxonomyStatus: job.result?.taxonomy?.status || null,
-  safetyLevel: job.result?.taxonomy?.safetyLevel || null,
-});
+const jobToHistoryItem = (job: ComparisonJob): ComparisonHistoryItem => {
+  const entityA = job.result?.entities?.a?.name || null;
+  const entityB = job.result?.entities?.b?.name || null;
+  return {
+    id: job.id,
+    query: job.query,
+    slug: job.result?.slug || slugFromQuery(job.query),
+    status: job.status,
+    visibility: "private",
+    isFavorited: false,
+    folder: null,
+    tags: [],
+    sourceCount: job.result?.sourceCount || 0,
+    progress: job.progress,
+    updatedAt: new Date().toISOString(),
+    // The create endpoint can legitimately return an early, partial result
+    // while the asynchronous research job is still enriching it. The detail
+    // page fetches the complete job independently, so history construction
+    // must not prevent navigation when these optional preview fields are absent.
+    summary: job.result?.verdict?.summary || null,
+    entityA,
+    entityB,
+    queryCategory: job.result?.taxonomy?.label || null,
+    taxonomyStatus: job.result?.taxonomy?.status || null,
+    safetyLevel: job.result?.taxonomy?.safetyLevel || null,
+    searchString: [job.query, entityA, entityB].filter(Boolean).join(" ").toLowerCase(),
+  };
+};
 
 const slugFromQuery = (query: string) => {
   const [left, rest = "comparison"] = query.split(/\s+vs\.?\s+/i);

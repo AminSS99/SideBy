@@ -24,6 +24,7 @@ type DocArticle = {
   title: string;
   summary: string;
   steps: string[];
+  searchString?: string;
 };
 
 const articles: DocArticle[] = [
@@ -129,6 +130,13 @@ const categoryMeta = {
 
 const categories = Object.keys(categoryMeta) as DocArticle["category"][];
 
+const processedArticles = articles.map((article) => ({
+  ...article,
+  searchString: [article.title, article.summary, article.category, ...article.steps]
+    .join(" ")
+    .toLowerCase(),
+}));
+
 const Docs = () => {
   usePageTitle("Docs");
   const pageRef = useRef<HTMLDivElement>(null);
@@ -136,25 +144,16 @@ const Docs = () => {
   const [category, setCategory] = useState<DocArticle["category"] | "All">("All");
   const [openArticle, setOpenArticle] = useState<string>("first-comparison");
 
-  const processedArticles = useMemo(() => {
-    return articles.map((article) => ({
-      ...article,
-      searchString: [article.title, article.summary, article.category, ...article.steps]
-        .join(" ")
-        .toLowerCase(),
-    }));
-  }, []);
-
   const filteredArticles = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return processedArticles.filter((article) => {
       const categoryMatches = category === "All" || article.category === category;
       const queryMatches =
         normalizedQuery.length === 0 ||
-        article.searchString.includes(normalizedQuery);
+        Boolean(article.searchString?.includes(normalizedQuery));
       return categoryMatches && queryMatches;
     });
-  }, [category, query, processedArticles]);
+  }, [category, query]);
 
   useGSAP(
     () => {
