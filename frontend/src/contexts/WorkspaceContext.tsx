@@ -177,40 +177,33 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
 
     let cancelled = false;
 
-    const fetchWithRetry = async () => {
+    const fetchWorkspaces = async () => {
       setIsLoading(true);
       setError(null);
 
-      for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        const res = await apiFetch(
+          buildApiUrl("/api/workspaces"),
+          {},
+          { retries: 3, retryDelay: 800 }
+        );
+        const data = (await res.json()) as { workspaces: WorkspaceRecord[] };
+
         if (cancelled) return;
-        try {
-          // Keep workspace retry behavior at the provider level to avoid request amplification.
-          const res = await apiFetch(buildApiUrl("/api/workspaces"), {}, { retries: 0 });
-          const data = (await res.json()) as { workspaces: WorkspaceRecord[] };
-          if (cancelled) return;
 
-          if (data.workspaces.length > 0 || attempt === 3) {
-            applyWorkspaceData(data.workspaces);
-            setIsLoading(false);
-            fetchAttemptRef.current = attempt;
-            return;
-          }
-
-          await delay(800 + attempt * 400);
-        } catch (err) {
-          if (cancelled) return;
-          if (attempt === 3) {
-            setError(err instanceof Error ? err.message : "Failed to load workspaces.");
-            setWorkspaces([]);
-            setIsLoading(false);
-            return;
-          }
-          await delay(800 + attempt * 400);
+        applyWorkspaceData(data.workspaces);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Failed to load workspaces.");
+        setWorkspaces([]);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
         }
       }
     };
 
-    void fetchWithRetry();
+    void fetchWorkspaces();
 
     return () => {
       cancelled = true;
