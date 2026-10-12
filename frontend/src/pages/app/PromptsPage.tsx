@@ -96,23 +96,23 @@ const PromptsPage = () => {
       });
       setPrompts(initialPrompts);
     });
-  }, [activeWorkspace?.id]);
+  }, [activeWorkspace?.id, activeProject?.id]);
 
-  const processedPrompts = useMemo(() => {
-    return prompts.map((p) => ({
-      ...p,
-      searchString: `${p.name} ${p.description}`.toLowerCase()
-    }));
-  }, [prompts]);
+  const searchStringCache = useMemo(() => new WeakMap<PromptTemplate, string>(), []);
 
   const filteredPrompts = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return processedPrompts;
+    if (!term) return prompts;
 
-    return processedPrompts.filter((p) => {
-      return p.searchString.includes(term);
+    return prompts.filter((p) => {
+      let searchString = searchStringCache.get(p);
+      if (searchString === undefined) {
+        searchString = `${p.name} ${p.description}`.toLowerCase();
+        searchStringCache.set(p, searchString);
+      }
+      return searchString.includes(term);
     });
-  }, [processedPrompts, search]);
+  }, [prompts, search, searchStringCache]);
 
   const copyToClipboard = async (text: string) => {
     const ok = await copyText(text);
