@@ -129,21 +129,19 @@ const categoryMeta = {
 
 const categories = Object.keys(categoryMeta) as DocArticle["category"][];
 
+const processedArticles = articles.map((article) => ({
+  ...article,
+  searchString: [article.title, article.summary, article.category, ...article.steps]
+    .join(" ")
+    .toLowerCase(),
+}));
+
 const Docs = () => {
   usePageTitle("Docs");
   const pageRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<DocArticle["category"] | "All">("All");
   const [openArticle, setOpenArticle] = useState<string>("first-comparison");
-
-  const processedArticles = useMemo(() => {
-    return articles.map((article) => ({
-      ...article,
-      searchString: [article.title, article.summary, article.category, ...article.steps]
-        .join(" ")
-        .toLowerCase(),
-    }));
-  }, []);
 
   const filteredArticles = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -154,7 +152,7 @@ const Docs = () => {
         article.searchString.includes(normalizedQuery);
       return categoryMatches && queryMatches;
     });
-  }, [category, query, processedArticles]);
+  }, [category, query]);
 
   useGSAP(
     () => {
