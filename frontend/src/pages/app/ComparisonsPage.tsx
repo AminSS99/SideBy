@@ -147,6 +147,22 @@ const ComparisonsPage = () => {
       }
 
       const data = (await res.json()) as { comparisons: ComparisonHistoryItem[] };
+
+      // Precompute search strings for all loaded comparisons to optimize the keystroke filter loop
+      for (const item of data.comparisons) {
+        const searchString = [
+          item.query,
+          item.entityA,
+          item.entityB,
+          item.folder,
+          ...item.tags,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        searchMapCache.set(item, searchString);
+      }
+
       setItems(data.comparisons);
     } catch (loadError) {
       setItems([]);
@@ -247,7 +263,7 @@ const ComparisonsPage = () => {
         item.visibility === filter;
 
       if (filterMatch) {
-        // Lazy search text evaluation
+        // Search text evaluation
         let textMatch = true;
         if (needle) {
           let searchString = searchMapCache.get(item);
