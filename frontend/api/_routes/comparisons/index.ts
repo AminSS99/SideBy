@@ -2,7 +2,7 @@
  * GET /api/comparisons - list comparisons
  * POST /api/comparisons - create comparison
  */
-import { createComparisonJob, listComparisonHistory, sendJson } from "../../_lib/sideby.js";
+import { createComparisonJob, listComparisonHistory, sendJobError, sendJson } from "../../_lib/sideby.js";
 import { requireAuth } from "../../_lib/auth.js";
 import { withRateLimit } from "../../_lib/route-guard.js";
 import { captureServerEvent } from "../../_lib/analytics.js";
@@ -156,21 +156,14 @@ export default async function handler(
         return sendJson(response, result);
       });
     } catch (error) {
-      const status =
-        error instanceof z.ZodError
-          ? 400
-          : error instanceof Error && "statusCode" in error
-          ? (error as Error & { statusCode: number }).statusCode
-          : 500;
-      return sendJson(
-        response,
-        {
-          error: error instanceof z.ZodError
-            ? error.errors[0]?.message || "Invalid request body."
-            : error instanceof Error ? error.message : "Unable to create comparison.",
-        },
-        status,
-      );
+      if (error instanceof z.ZodError) {
+        return sendJson(
+          response,
+          { error: error.errors[0]?.message || "Invalid request body." },
+          400,
+        );
+      }
+      return sendJobError(response, error, "Unable to create comparison.");
     }
   }
 

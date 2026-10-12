@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -219,6 +220,11 @@ export const comparisons = pgTable(
     searchesUsed: integer("searches_used").default(0),
     freshnessClass: text("freshness_class").default("medium"),
     reuseSourceId: uuid("reuse_source_id"),
+    // Deduplication claim for in-flight jobs: user + workspace + project +
+    // canonical intent. Enforced by a partial unique index covering only
+    // queued/running rows, so the INSERT itself is the atomic arbiter when a
+    // distributed lock expires between verification and the write.
+    intentKey: text("intent_key"),
     queryEmbedding: vector("query_embedding", { dimension: 1536 }),
     lastRefreshedAt: timestamp("last_refreshed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -234,6 +240,11 @@ export const comparisons = pgTable(
     index("comparisons_taxonomy_category_idx").on(table.taxonomyCategory),
     index("comparisons_safety_level_idx").on(table.safetyLevel),
     index("comparisons_slug_idx").on(table.slug),
+    // NULL intent keys (pre-migration rows) never conflict in Postgres
+    // unique indexes, so no backfill is required for correctness.
+    uniqueIndex("comparisons_intent_inflight_uniq")
+      .on(table.intentKey)
+      .where(sql`${table.status} IN ('queued', 'running')`),
   ],
 );
 
@@ -997,5 +1008,29 @@ export const snapSolveOutbox = pgTable(
   (table) => [
     index("snapsolve_outbox_status_next_attempt_idx").on(table.status, table.nextAttemptAt),
     index("snapsolve_outbox_user_idx").on(table.clerkUserId),
+  ],
+);
+
+// ─── Web Push Subscriptions ─────────────────────────────────────────────────
+
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clerkUserId: text("clerk_user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    // The PushSubscription.endpoint is the unique per-device identifier.
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    expirationTime: timestamp("expiration_time", { withTimezone: true }),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("push_subscriptions_endpoint_unique_idx").on(table.endpoint),
+    index("push_subscriptions_user_idx").on(table.clerkUserId),
   ],
 );

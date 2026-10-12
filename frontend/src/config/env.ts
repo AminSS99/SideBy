@@ -50,6 +50,7 @@ const clerkPublishableKey =
   shouldBlockClerkTestKey || isMalformedClerkKey ? "" : rawClerkPublishableKey;
 const hasClerkConfig = clerkPublishableKey.length > 0;
 const canUseTestAuth = normalizeEnv(import.meta.env.VITE_ENABLE_TEST_AUTH) === "true";
+const vapidPublicKey = normalizeEnv(import.meta.env.VITE_VAPID_PUBLIC_KEY);
 
 export const envConfig = {
   apiBaseUrl,
@@ -63,6 +64,8 @@ export const envConfig = {
   allowClerkTestKeyInProduction,
   isClerkTestKeyBlocked: shouldBlockClerkTestKey,
   isClerkPublishableKeyMalformed: isMalformedClerkKey,
+  vapidPublicKey,
+  hasVapidPublicKey: vapidPublicKey.length > 0,
 } as const;
 
 export const buildApiUrl = (path: string) => {

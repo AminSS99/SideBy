@@ -1,8 +1,11 @@
 /* eslint-disable react-refresh/only-export-components -- provider and hook form one public auth module. */
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { useClerk, useUser } from "@clerk/clerk-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { envConfig } from "@/config/env";
 import { identifyUser, resetPostHog } from "@/lib/posthog";
+import { unsubscribeCurrentDevice } from "@/hooks/usePushSubscription";
+import { pwaUpdates } from "@/lib/pwa/register";
 
 const AUTH_CACHE_KEY = "sideby.auth.cache";
 const AUTH_CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
@@ -52,6 +55,17 @@ function readCachedAuth(): CachedAuthState | null {
   } catch {
     return null;
   }
+}
+
+function getInitialCachedUser(): AppUser | null {
+  const cached = readCachedAuth();
+  if (!cached) return null;
+  return {
+    id: cached.userId,
+    email: cached.email,
+    fullName: cached.fullName,
+    imageUrl: cached.imageUrl,
+  };
 }
 
 function writeCachedAuth(user: AppUser | null) {
@@ -114,6 +128,7 @@ const TestAuthProvider = ({ children }: { children: React.ReactNode }) => {
       async signUpWithPassword() {},
       async signInWithGoogle() {},
       async signOut() {
+        await unsubscribeCurrentDevice();
         localStorage.removeItem("sideby.test.auth");
         window.location.href = "/";
       },
@@ -153,13 +168,10 @@ const UnconfiguredAuthProvider = ({ children }: { children: React.ReactNode }) =
 const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { isLoaded, isSignedIn, user: clerkUser } = useUser();
   const { signOut: clerkSignOut } = useClerk();
-  const [cachedUser, setCachedUser] = useState<AppUser | null>(readCachedAuth);
+  const queryClient = useQueryClient();
+  const [cachedUser, setCachedUser] = useState<AppUser | null>(getInitialCachedUser);
 
-  const user = useMemo<AppUser | null>(() => {
-    if (!isLoaded) {
-      // While Clerk is loading, show cached user to prevent flicker
-      return cachedUser;
-    }
+  const clerkAppUser = useMemo<AppUser | null>(() => {
     if (!isSignedIn || !clerkUser) {
       return null;
     }
@@ -170,20 +182,42 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
       fullName: clerkUser.fullName,
       imageUrl: clerkUser.imageUrl,
     };
-  }, [cachedUser, clerkUser, isSignedIn, isLoaded]);
+  }, [clerkUser, isSignedIn]);
+
+  // While Clerk is loading, show the cached user to prevent flicker. Once
+  // loaded, keep the live Clerk-derived object independent from cache writes
+  // so synchronizing the cache cannot trigger an authentication render loop.
+  const user = isLoaded ? clerkAppUser : cachedUser;
 
   // Sync user to cache whenever it changes
   useEffect(() => {
     if (isLoaded) {
       writeCachedAuth(user);
-      setCachedUser(user);
+      setCachedUser((current) => {
+        if (
+          current?.id === user?.id &&
+          current?.email === user?.email &&
+          current?.fullName === user?.fullName &&
+          current?.imageUrl === user?.imageUrl
+        ) {
+          return current;
+        }
+        return user;
+      });
     }
   }, [user, isLoaded]);
 
   // Clear cache on sign-out
   const handleSignOut = useCallback(async () => {
+    // This device should stop receiving push notifications for the account.
+    await unsubscribeCurrentDevice();
     writeCachedAuth(null);
     setCachedUser(null);
+    // Clear React Query cache so previous account/workspace data cannot bleed over
+    queryClient.clear();
+    // Authenticated drafts are scoped to (account, workspace); make them
+    // inaccessible on sign-out so the next account in this tab restores nothing.
+    pwaUpdates.clearAuthenticatedDrafts();
     // Clear workspace and project selections to prevent stale data on next login
     try {
       localStorage.removeItem("sideby.activeWorkspaceId");
@@ -195,7 +229,7 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Ignore storage errors
     }
     await clerkSignOut();
-  }, [clerkSignOut]);
+  }, [clerkSignOut, queryClient]);
 
   useEffect(() => {
     if (user) {

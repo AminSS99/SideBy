@@ -199,6 +199,70 @@ export async function redisAcquireLockToken(
   }
 }
 
+export async function redisRenewLockToken(
+  lock: RedisLock,
+  ttlSeconds = 30,
+): Promise<boolean> {
+  const redis = getRedis();
+
+  if (!redis) {
+    if (allowDevRedisFallback()) return true;
+    if (!(await ensurePgStore())) return false;
+    const sql = getPgSql();
+    if (!sql) return false;
+    const rows = await sql`
+      update sideby_runtime_kv
+      set expires_at = now() + (${ttlSeconds} * interval '1 second'), updated_at = now()
+      where key = ${lock.key}
+        and value->>'token' = ${lock.token}
+        and (expires_at is null or expires_at > now())
+      returning key
+    ` as Array<{ key: string }>;
+    return rows.length > 0;
+  }
+
+  const script = `
+    if redis.call("get", KEYS[1]) == ARGV[1] then
+      return redis.call("expire", KEYS[1], ARGV[2])
+    else
+      return 0
+    end
+  `;
+
+  try {
+    const result = await redis.eval(script, [lock.key], [lock.token, ttlSeconds]);
+    return result === 1;
+  } catch {
+    return false;
+  }
+}
+
+export async function redisVerifyLockToken(lock: RedisLock): Promise<boolean> {
+  const redis = getRedis();
+
+  if (!redis) {
+    if (allowDevRedisFallback()) return true;
+    if (!(await ensurePgStore())) return false;
+    const sql = getPgSql();
+    if (!sql) return false;
+    const rows = await sql`
+      select key from sideby_runtime_kv
+      where key = ${lock.key}
+        and value->>'token' = ${lock.token}
+        and (expires_at is null or expires_at > now())
+      limit 1
+    ` as Array<{ key: string }>;
+    return rows.length > 0;
+  }
+
+  try {
+    const current = await redis.get(lock.key);
+    return current === lock.token;
+  } catch {
+    return false;
+  }
+}
+
 export async function redisReleaseLock(lock: RedisLock | string): Promise<void> {
   const redis = getRedis();
 

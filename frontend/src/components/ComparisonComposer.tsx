@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ArrowLeftRight,
   ArrowRight,
@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { toast } from "sonner";
+import { pwaUpdates } from "@/lib/pwa/register";
+import { useDraftScope } from "@/hooks/useDraftScope";
 
 interface ComparisonComposerProps {
   onStart: (query: string) => void | Promise<void>;
@@ -87,10 +89,79 @@ export function ComparisonComposer({
     } finally { setIsImportingUrl(false); }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [localSubmitting, setLocalSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
+  const { scope: draftScope, isReady: isDraftScopeReady } = useDraftScope();
+  const restoreAttemptedForScope = useRef<string | null>(null);
+
+  // Register dirty state and draft saver with PWA update store to guard against accidental loss on refresh
+  useEffect(() => {
+    const unregisterChecker = pwaUpdates.registerDirtyChecker(() => {
+      return Boolean(entityA.trim() || entityB.trim());
+    });
+    const unregisterSaver = pwaUpdates.registerDraftSaver(() => {
+      if (!entityA.trim() && !entityB.trim()) return null;
+      if (!draftScope) return null;
+      return {
+        key: "composer",
+        data: { entityA, entityB, context },
+        scope: draftScope,
+      };
+    });
+    return () => {
+      unregisterChecker();
+      unregisterSaver();
+    };
+  }, [entityA, entityB, context, draftScope]);
+
+  // Restore a preserved draft only once identity and workspace resolution are
+  // complete. Never treats transient loading as anonymous identity.
+  useEffect(() => {
+    if (!isDraftScopeReady || !draftScope) return;
+    const scopeKey = JSON.stringify(draftScope);
+    if (restoreAttemptedForScope.current === scopeKey) return;
+    restoreAttemptedForScope.current = scopeKey;
+    const draft = pwaUpdates.getPreservedDraft<{
+      entityA?: string;
+      entityB?: string;
+      context?: string;
+    }>("composer", draftScope);
+    if (draft && (draft.entityA || draft.entityB)) {
+      if (draft.entityA) setEntityA(draft.entityA);
+      if (draft.entityB) setEntityB(draft.entityB);
+      if (draft.context) {
+        setContext(draft.context);
+        setShowContextInput(true);
+      }
+      pwaUpdates.clearPreservedDraft("composer");
+      toast.info("Restored your unsaved comparison draft.");
+    }
+  }, [isDraftScopeReady, draftScope, setEntityA, setEntityB, setContext]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!serializedQuery.trim() || isBlocked || isValidating) return;
-    void onStart(serializedQuery);
+    if (
+      !serializedQuery.trim() ||
+      isBlocked ||
+      isValidating ||
+      isCreating ||
+      localSubmitting ||
+      isSubmittingRef.current
+    ) {
+      return;
+    }
+
+    isSubmittingRef.current = true;
+    setLocalSubmitting(true);
+    try {
+      await onStart(serializedQuery);
+    } finally {
+      // Coalesce rapid double taps before releasing the lock
+      setTimeout(() => {
+        isSubmittingRef.current = false;
+        setLocalSubmitting(false);
+      }, 600);
+    }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -109,7 +180,9 @@ export function ComparisonComposer({
     !isBlocked &&
     !isValidating &&
     entityA.trim().length > 0 &&
-    entityB.trim().length > 0;
+    entityB.trim().length > 0 &&
+    !isCreating &&
+    !localSubmitting;
 
   return (
     <div className={cn("relative w-full max-w-3xl overflow-hidden rounded-[1.75rem] border border-white/[0.12] bg-[#0d0b0a]/92 p-4 shadow-[0_30px_100px_rgba(0,0,0,.55),0_0_80px_rgba(249,115,22,.08)] backdrop-blur-2xl sm:p-6", className)}>
@@ -282,10 +355,10 @@ export function ComparisonComposer({
         <div className="pt-1">
           <button
             type="submit"
-            disabled={!canSubmit || isCreating}
+            disabled={!canSubmit || isCreating || localSubmitting}
             className="group inline-flex h-14 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 bg-[length:200%_100%] text-xs font-bold uppercase tracking-widest text-white shadow-[0_16px_42px_rgba(244,63,94,.2)] transition-all duration-500 hover:bg-[position:100%_0] hover:shadow-[0_18px_50px_rgba(249,115,22,.3)] active:scale-[0.99] disabled:cursor-not-allowed disabled:grayscale disabled:opacity-30"
           >
-            {isCreating ? (
+            {isCreating || localSubmitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Opening research room...

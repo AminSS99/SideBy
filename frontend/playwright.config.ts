@@ -20,6 +20,20 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "mobile-safari",
+      use: { ...devices["iPhone 14"] },
+      // The real two-build update owns private builds and a private server;
+      // it runs on Desktop Chromium only (see the spec header).
+      testIgnore: "**/pwa-two-build-update.spec.ts",
+    },
+    {
+      name: "mobile-chrome",
+      // Pixel 5 runs on Chromium, so a browserName guard cannot distinguish
+      // it from Desktop Chrome: exclude by project instead.
+      use: { ...devices["Pixel 5"] },
+      testIgnore: "**/pwa-two-build-update.spec.ts",
+    },
   ],
   webServer: process.env.BASE_URL
     ? undefined
