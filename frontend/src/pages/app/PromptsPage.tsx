@@ -19,6 +19,8 @@ interface PromptTemplate {
   lastEdited: string;
 }
 
+const searchStringCache = new WeakMap<PromptTemplate, string>();
+
 const initialPrompts: PromptTemplate[] = [
   {
     id: "1",
@@ -98,8 +100,6 @@ const PromptsPage = () => {
     });
   }, [activeWorkspace?.id, activeProject?.id]);
 
-  const searchStringCache = useMemo(() => new WeakMap<PromptTemplate, string>(), []);
-
   const filteredPrompts = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return prompts;
@@ -112,7 +112,7 @@ const PromptsPage = () => {
       }
       return searchString.includes(term);
     });
-  }, [prompts, search, searchStringCache]);
+  }, [prompts, search]);
 
   const copyToClipboard = async (text: string) => {
     const ok = await copyText(text);
