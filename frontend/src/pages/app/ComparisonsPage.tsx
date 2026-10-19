@@ -54,9 +54,8 @@ type ComparisonHistoryItem = {
   queryCategory?: string | null;
   taxonomyStatus?: string | null;
   safetyLevel?: string | null;
+  searchString?: string;
 };
-
-const searchMapCache = new WeakMap<ComparisonHistoryItem, string>();
 
 type ComparisonJob = {
   id: string;
@@ -149,8 +148,9 @@ const ComparisonsPage = () => {
       const data = (await res.json()) as { comparisons: ComparisonHistoryItem[] };
 
       // Precompute search strings for all loaded comparisons to optimize the keystroke filter loop
-      for (const item of data.comparisons) {
-        const searchString = [
+      const mapped = data.comparisons.map((item) => ({
+        ...item,
+        searchString: [
           item.query,
           item.entityA,
           item.entityB,
@@ -159,11 +159,10 @@ const ComparisonsPage = () => {
         ]
           .filter(Boolean)
           .join(" ")
-          .toLowerCase();
-        searchMapCache.set(item, searchString);
-      }
+          .toLowerCase()
+      }));
 
-      setItems(data.comparisons);
+      setItems(mapped);
     } catch (loadError) {
       setItems([]);
       setError(loadError instanceof Error ? loadError.message : "Unable to load saved comparisons.");
@@ -266,9 +265,7 @@ const ComparisonsPage = () => {
         // Search text evaluation
         let textMatch = true;
         if (needle) {
-          let searchString = searchMapCache.get(item);
-          if (searchString === undefined) {
-             searchString = [
+          const searchString = item.searchString || [
               item.query,
               item.entityA,
               item.entityB,
@@ -278,8 +275,6 @@ const ComparisonsPage = () => {
               .filter(Boolean)
               .join(" ")
               .toLowerCase();
-            searchMapCache.set(item, searchString);
-          }
           textMatch = searchString.includes(needle);
         }
 
