@@ -61,6 +61,16 @@ const AppShell = () => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
+  // Dismiss the drawer with Escape while it is open.
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mobileMenuOpen]);
+
   useGSAP(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) return;
@@ -108,6 +118,119 @@ const AppShell = () => {
     <div ref={shellRef} className="relative flex min-h-screen flex-col overflow-x-hidden bg-[#070605] text-white selection:bg-orange-500/30">
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(249,115,22,.10),transparent_28%),radial-gradient(circle_at_90%_85%,rgba(217,70,239,.055),transparent_32%)]" />
       <CommandMenu open={commandOpen} setOpen={setCommandOpen} />
+
+      {/* Mobile Navigation Drawer */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileMenuOpen(false)}
+              className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm lg:hidden"
+            />
+            <motion.aside
+              role="dialog"
+              aria-modal="true"
+              aria-label="Application navigation drawer"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+              className="fixed inset-y-0 left-0 z-[70] flex w-[min(88vw,330px)] flex-col border-r border-white/10 bg-[#0d0b0a]/98 shadow-2xl backdrop-blur-2xl lg:hidden"
+            >
+              <div className="p-4 flex items-center justify-between border-b border-[#2a2a2a]">
+                <div className="flex items-center gap-3">
+                  <img src="/sideby.ico?v=20260728-real" alt="SideBy" className="h-8 w-8 rounded-lg object-contain" />
+                  <span className="font-serif text-base tracking-tight text-white">{brand.productName}</span>
+                </div>
+                <button 
+                  type="button"
+                  aria-label="Close navigation"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 text-white/50 hover:text-white transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+                
+              <div className="p-4 border-b border-[#2a2a2a] bg-[#111]/50">
+                <p className="text-sm font-semibold text-white truncate">
+                  {user?.email ?? "Guest"}
+                </p>
+                <p className="truncate text-[10px] uppercase tracking-widest font-bold text-white/40 mt-1">
+                  {activeWorkspace?.name || "Workspace"}
+                </p>
+              </div>
+
+              <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+                {primaryNavItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-sm px-4 py-3 text-xs uppercase tracking-widest font-bold transition-all ${
+                        isActive
+                          ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                          : "text-white/60 hover:bg-[#1a1a1a] hover:text-white border border-transparent"
+                      }`
+                    }
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    <span>{item.label}</span>
+                  </NavLink>
+                ))}
+
+                <div className="pt-3 mt-2">
+                  <button
+                    onClick={() => setAdvancedOpen(!advancedOpen)}
+                    className="flex w-full items-center justify-between rounded-sm px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-white/60 hover:text-white/80 transition-colors"
+                  >
+                    <span>Advanced</span>
+                    <ChevronDown className={`h-3 w-3 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {advancedOpen && (
+                    <div className="mt-1 space-y-1">
+                      {advancedNavItems.map((item) => (
+                        <NavLink
+                          key={item.to}
+                          to={item.to}
+                          end={item.end}
+                          className={({ isActive }) =>
+                            `flex items-center gap-3 rounded-sm px-4 py-2.5 text-xs uppercase tracking-widest font-bold transition-all ${
+                              isActive
+                                ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                                : "text-white/40 hover:bg-[#1a1a1a] hover:text-white/70 border border-transparent"
+                            }`
+                          }
+                        >
+                          <item.icon className="h-3.5 w-3.5 shrink-0" />
+                          <span>{item.label}</span>
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </nav>
+
+              <div className="p-4 border-t border-[#2a2a2a]">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start rounded-sm border border-[#333] bg-[#111] text-white/70 hover:bg-[#1a1a1a] hover:border-[#444] hover:text-white transition-all mb-4"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign out
+                </Button>
+                <BrandFooter className="justify-center" />
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       <div className="shell-header sticky top-0 z-50 border-b border-white/[0.08] bg-[#070605]/80 backdrop-blur-2xl">
         <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
@@ -256,116 +379,6 @@ const AppShell = () => {
             <BrandFooter />
           </div>
         </aside>
-
-        {/* Mobile Navigation Drawer */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <>
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setMobileMenuOpen(false)}
-                className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm lg:hidden"
-              />
-              <motion.aside 
-                initial={{ x: "-100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "-100%" }}
-                transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                className="fixed inset-y-0 left-0 z-[70] flex w-[min(88vw,330px)] flex-col border-r border-white/10 bg-[#0d0b0a]/98 shadow-2xl backdrop-blur-2xl lg:hidden"
-              >
-                <div className="p-4 flex items-center justify-between border-b border-[#2a2a2a]">
-                  <div className="flex items-center gap-3">
-                    <img src="/sideby.ico?v=20260728-real" alt="SideBy" className="h-8 w-8 rounded-lg object-contain" />
-                    <span className="font-serif text-base tracking-tight text-white">{brand.productName}</span>
-                  </div>
-                  <button 
-                    type="button"
-                    aria-label="Close navigation"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="p-2 text-white/50 hover:text-white transition-colors"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-                
-                <div className="p-4 border-b border-[#2a2a2a] bg-[#111]/50">
-                  <p className="text-sm font-semibold text-white truncate">
-                    {user?.email ?? "Guest"}
-                  </p>
-                  <p className="truncate text-[10px] uppercase tracking-widest font-bold text-white/40 mt-1">
-                    {activeWorkspace?.name || "Workspace"}
-                  </p>
-                </div>
-
-                <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-                  {primaryNavItems.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end={item.end}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 rounded-sm px-4 py-3 text-xs uppercase tracking-widest font-bold transition-all ${
-                          isActive
-                            ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
-                            : "text-white/60 hover:bg-[#1a1a1a] hover:text-white border border-transparent"
-                        }`
-                      }
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.label}</span>
-                    </NavLink>
-                  ))}
-
-                  <div className="pt-3 mt-2">
-                    <button
-                      onClick={() => setAdvancedOpen(!advancedOpen)}
-                      className="flex w-full items-center justify-between rounded-sm px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-white/60 hover:text-white/80 transition-colors"
-                    >
-                      <span>Advanced</span>
-                      <ChevronDown className={`h-3 w-3 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
-                    </button>
-
-                    {advancedOpen && (
-                      <div className="mt-1 space-y-1">
-                        {advancedNavItems.map((item) => (
-                          <NavLink
-                            key={item.to}
-                            to={item.to}
-                            end={item.end}
-                            className={({ isActive }) =>
-                              `flex items-center gap-3 rounded-sm px-4 py-2.5 text-xs uppercase tracking-widest font-bold transition-all ${
-                                isActive
-                                  ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
-                                  : "text-white/40 hover:bg-[#1a1a1a] hover:text-white/70 border border-transparent"
-                              }`
-                            }
-                          >
-                            <item.icon className="h-3.5 w-3.5 shrink-0" />
-                            <span>{item.label}</span>
-                          </NavLink>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </nav>
-
-                <div className="p-4 border-t border-[#2a2a2a]">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start rounded-sm border border-[#333] bg-[#111] text-white/70 hover:bg-[#1a1a1a] hover:border-[#444] hover:text-white transition-all mb-4"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign out
-                  </Button>
-                  <BrandFooter className="justify-center" />
-                </div>
-              </motion.aside>
-            </>
-          )}
-        </AnimatePresence>
 
         <main className="shell-main flex min-w-0 w-full flex-1 flex-col rounded-2xl border border-white/[0.09] bg-[#0b0a09]/80 p-4 pb-24 shadow-[0_30px_100px_rgba(0,0,0,.35)] backdrop-blur-xl sm:p-8 md:p-10 lg:pb-10">
           {workspaceError && (
