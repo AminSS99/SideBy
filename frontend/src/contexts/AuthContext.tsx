@@ -54,6 +54,17 @@ function readCachedAuth(): CachedAuthState | null {
   }
 }
 
+function getInitialCachedUser(): AppUser | null {
+  const cached = readCachedAuth();
+  if (!cached) return null;
+  return {
+    id: cached.userId,
+    email: cached.email,
+    fullName: cached.fullName,
+    imageUrl: cached.imageUrl,
+  };
+}
+
 function writeCachedAuth(user: AppUser | null) {
   try {
     if (user) {
@@ -153,13 +164,9 @@ const UnconfiguredAuthProvider = ({ children }: { children: React.ReactNode }) =
 const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { isLoaded, isSignedIn, user: clerkUser } = useUser();
   const { signOut: clerkSignOut } = useClerk();
-  const [cachedUser, setCachedUser] = useState<AppUser | null>(readCachedAuth);
+  const [cachedUser, setCachedUser] = useState<AppUser | null>(getInitialCachedUser);
 
-  const user = useMemo<AppUser | null>(() => {
-    if (!isLoaded) {
-      // While Clerk is loading, show cached user to prevent flicker
-      return cachedUser;
-    }
+  const clerkAppUser = useMemo<AppUser | null>(() => {
     if (!isSignedIn || !clerkUser) {
       return null;
     }
@@ -170,7 +177,12 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
       fullName: clerkUser.fullName,
       imageUrl: clerkUser.imageUrl,
     };
-  }, [cachedUser, clerkUser, isSignedIn, isLoaded]);
+  }, [clerkUser, isSignedIn]);
+
+  // While Clerk is loading, show the cached user to prevent flicker. Once
+  // loaded, keep the live Clerk-derived object independent from cache writes
+  // so synchronizing the cache cannot trigger an authentication render loop.
+  const user = isLoaded ? clerkAppUser : cachedUser;
 
   // Session identity is keyed only by user id: downstream providers depend
   // on the session object to trigger their loads, so a fresh object per
@@ -185,7 +197,17 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (isLoaded) {
       writeCachedAuth(user);
-      setCachedUser(user);
+      setCachedUser((current) => {
+        if (
+          current?.id === user?.id &&
+          current?.email === user?.email &&
+          current?.fullName === user?.fullName &&
+          current?.imageUrl === user?.imageUrl
+        ) {
+          return current;
+        }
+        return user;
+      });
     }
   }, [user, isLoaded]);
 
