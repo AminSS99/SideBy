@@ -128,7 +128,9 @@ test.describe("SideBy Authenticated Comparison Flow", () => {
     await expect(page).toHaveURL(new RegExp(`/app/comparisons/${COMPARISON_ID}`));
 
     // Completed result: entities, verdict summary, decision matrix, sources.
-    await expect(page.getByText("Supabase vs Firebase").first()).toBeVisible();
+    // (Visible-match: the desktop grid mounts a hidden duplicate ahead of
+    // the mobile copy, in mount order that varies run to run.)
+    await expect(visibleText(page, "Supabase vs Firebase")).toBeVisible();
     await expect(
       visibleText(page, /Open-source Firebase alternative|Google app development platform/i),
     ).toBeVisible();

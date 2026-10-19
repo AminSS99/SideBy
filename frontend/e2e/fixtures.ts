@@ -258,6 +258,30 @@ export function validateBlockedResponse(entityA = "Donald Trump", entityB = "Joe
 
 /** Register default API responses so browser tests do not depend on Vite's API proxy. */
 export async function mockAppApi(page: Page) {
+  // Keep the service worker out of app-flow specs. On WebKit, request
+  // interception stops applying once a worker takes control of the page,
+  // so API mocks race worker activation (unmocked calls fall through to
+  // the preview proxy as 500s). Removing the API surface before app boot
+  // makes registration skip itself; initServiceWorker's guards handle the
+  // rest. Worker lifecycle has dedicated coverage in pwa-lifecycle and
+  // pwa-two-build-update, which do not use this helper.
+  await page.addInitScript(() => {
+    try {
+      delete (window.Navigator.prototype as unknown as Record<string, unknown>).serviceWorker;
+    } catch {
+      // Non-configurable: fall through to the own-property stub below.
+    }
+    if ("serviceWorker" in window.navigator) {
+      try {
+        Object.defineProperty(window.navigator, "serviceWorker", {
+          value: undefined,
+          configurable: true,
+        });
+      } catch {
+        // Leave the API in place; specs assert no worker-dependent behavior.
+      }
+    }
+  });
   await page.route("**/api/csrf", (route) =>
     route.fulfill({
       status: 200,
