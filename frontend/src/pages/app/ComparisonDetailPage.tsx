@@ -60,6 +60,7 @@ type ComparisonJob = {
   sourcesFound?: number;
   factsExtracted?: number;
   dimensionsScored?: number;
+  retryable?: boolean;
 };
 
 type VersionChangeSummary = {

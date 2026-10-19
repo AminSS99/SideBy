@@ -8,6 +8,7 @@ import {
   LogOut, MessageSquare, Microscope, Database, Activity, CreditCard,
   Search, Terminal, Users, Menu, X, ChevronDown, Clock3, Orbit
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,7 +19,9 @@ import { BrandFooter } from "@/components/brand/BrandFooter";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { readOnboardingAttribution } from "@/lib/onboardingAttribution";
 
-const primaryNavItems = [
+type ShellNavItem = { to: string; label: string; icon: LucideIcon; end?: boolean };
+
+const primaryNavItems: ShellNavItem[] = [
   { to: "/app/comparisons", label: "Compare", icon: GitCompareArrows },
   { to: "/app", label: "History", icon: Clock3, end: true },
   { to: "/app/uploads", label: "Sources", icon: Database },
@@ -26,7 +29,7 @@ const primaryNavItems = [
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
-const advancedNavItems = [
+const advancedNavItems: ShellNavItem[] = [
   { to: "/app/ecosystem", label: "Snap ecosystem", icon: Orbit },
   { to: "/app/chat", label: "AI Chat", icon: MessageSquare },
   { to: "/app/research", label: "Research", icon: Microscope },

@@ -24,7 +24,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 
-export function CommandMenu({ open, setOpen }: { open: boolean, setOpen: (open: boolean) => void }) {
+export function CommandMenu({ open, setOpen }: { open: boolean, setOpen: React.Dispatch<React.SetStateAction<boolean>> }) {
   const navigate = useNavigate();
 
   useEffect(() => {

@@ -24,7 +24,7 @@ export const EntityCard = ({ entity, side }: EntityCardProps) => {
     const card = cardRef.current;
     const xTo = gsap.quickTo(card, "rotationY", { ease: "power3", duration: 0.5 });
     const yTo = gsap.quickTo(card, "rotationX", { ease: "power3", duration: 0.5 });
-    const bgTo = gsap.quickTo(card, "background", { ease: "power3", duration: 0.5 });
+    const bgTo = gsap.quickTo(card, "background", { ease: "power3", duration: 0.5 }) as unknown as (val: string) => void;
 
     const handleMouseMove = (e: MouseEvent) => {
       const rect = card.getBoundingClientRect();

@@ -180,6 +180,7 @@ const executeFetch = async (
 ) => {
   const maxRetries = retryOptions?.retries ?? 2;
   const baseDelay = retryOptions?.retryDelay ?? 1000;
+  const method = (init.method || "GET").toUpperCase();
 
   let lastError: Error | undefined;
 
