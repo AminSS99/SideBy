@@ -4,6 +4,8 @@ Prepared: 2026-10-09
 Verification Environment: macOS arm64, Playwright 1.61.1, WebKit 26.5 (iOS 17.5 / iPhone 14 profile), Chromium (Pixel 5 & Desktop), Node.js v20+, Vitest v4.1.9, TypeScript 5.6
 Working Tree Status: Active modifications in working directory (uncommitted).
 Revision 2026-10-12: closed the three review gaps (real two-build update test + explicit activation reload, database-level in-flight uniqueness with unapplied migration noted, guard-persisted chunk recovery) and re-verified all gates. Physical iPhone audit remains pending.
+Revision 2026-10-12 (later): migration 019 applied and verified against the real database (ledger + live index + concurrent twin-insert + partial-predicate + cleanup); pipeline runner repaired (uncommitted). Physical iPhone rechecked: no USB device, the one known phone reports `unavailable`, no libimobiledevice — still pending hands-on hardware.
+Revision 2026-10-19: migration runner is now atomic (statements + ledger in one `sql.transaction()`), proven by mock regression tests (4/4) and a live failing-migration rollback check against the same host; migrate re-run is idempotent. Physical iPhone QA still pending.
 
 ---
 
@@ -44,7 +46,14 @@ To maintain absolute production readiness and engineering honesty, this report e
   - `frontend/api/_lib/__tests__/duplicate-intent.test.ts` (11/11 tests passed):
     - Verifies active renewal and that loss of lock ownership during slow processing aborts insertion and returns 409.
     - Verifies the database backstop: a 23505 insert conflict adopts the winner with zero pipeline scheduling, returns retryable 409 when no winner is visible, and rethrows non-unique failures untouched.
-- **Remaining limitation**: the partial unique index exists as migration files only. No database was reachable from this environment, so `drizzle/0012_intent_inflight_uniqueness.sql` (mirrored to `neon/migrations/019_intent_inflight_uniqueness.sql`) has **not** been applied; run `pnpm db:neon:migrate` with `DATABASE_URL` in the deploy pipeline before claiming production enforcement. Until applied, the violation fallback is code-complete but the constraint does not exist in any database.
+- **Database verification, tested environment `ep-empty-recipe-a4mneve8.us-east-1.aws.neon.tech` (hostname only; tier unconfirmed)**:
+  - 2026-10-12: `019_intent_inflight_uniqueness.sql` applied (2 statements) via `pnpm db:neon:migrate` and recorded in `sideby_schema_migrations` (`applied_at 2026-10-12T21:03:41Z`); the live index reads `CREATE UNIQUE INDEX comparisons_intent_inflight_uniq ON public.comparisons USING btree (intent_key) WHERE (status = ANY (ARRAY['queued', 'running']))`.
+  - 2026-10-12: twin **concurrent** `queued` inserts with an identical `intent_key`: exactly one row won, the loser received Postgres `23505` — the atomic arbiter works under real concurrency. Same `intent_key` with `completed` status inserted successfully, confirming the partial predicate. All probe rows deleted afterwards (0 remaining).
+  - 2026-10-19: migration atomicity closed. The runner previously executed statements one at a time with the ledger write last, so a failing statement 2 left statement 1 applied with no ledger entry. `applyMigration` now runs all statements plus the ledger upsert inside a single driver-supported `sql.transaction()` (`frontend/scripts/neon-migrate.ts`, exported for tests; `main()` only runs on direct invocation). Proven live the same day against the same host with a deliberately failing migration: error propagated, first statement's table absent afterwards, zero ledger entries.
+  - 2026-10-19: `pnpm db:neon:migrate` re-run is a clean no-op (`019 ... already applied`, checksum match) — the refactor did not alter ledger semantics.
+  - Not covered here by design: full `createComparisonJob` concurrency (it would schedule real research pipelines and spend); the 23505-adopt/409 application branch is covered by `duplicate-intent.test.ts` (11/11).
+- **Verification Evidence**:
+  - `frontend/scripts/__tests__/neon-migrate.test.ts` (4/4): statements plus ledger write travel in one transaction in order; a later-statement failure rejects with nothing committed and no ledger write; empty files never touch the database; checksum mismatches refuse instead of re-applying.
 
 ---
 
