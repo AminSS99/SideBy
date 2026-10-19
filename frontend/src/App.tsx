@@ -13,6 +13,7 @@ import GlobalErrorBoundary from "@/components/ErrorBoundary";
 import ScrollToTop from "@/components/ScrollToTop";
 import { RouteMetaUpdater } from "@/components/RouteMetaUpdater";
 import CookieConsent from "@/components/privacy/CookieConsent";
+import { UpdatePrompt } from "@/components/pwa/UpdatePrompt";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
@@ -102,6 +103,7 @@ const App = ({ clerkUnavailable = false }: { clerkUnavailable?: boolean }) => {
                 <ScrollToTop />
                 <RouteMetaUpdater />
                 <CookieConsent />
+                <UpdatePrompt />
                   <Suspense fallback={<LazyFallback />}>
                     <Routes>
                     {/* Public marketing pages */}

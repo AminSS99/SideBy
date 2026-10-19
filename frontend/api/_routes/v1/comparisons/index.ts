@@ -1,7 +1,7 @@
 import { waitUntil } from "@vercel/functions";
 import { z } from "zod";
 import { assertApiKeyScope, requireApiKey } from "../../../_lib/api-key-auth.js";
-import { createComparisonJob, listComparisonHistory, sendJson } from "../../../_lib/sideby.js";
+import { createComparisonJob, listComparisonHistory, sendJobError, sendJson } from "../../../_lib/sideby.js";
 import { assertNoLikelySecrets } from "../../../_lib/secret-scan.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
@@ -60,20 +60,13 @@ export default async function handler(
 
     return sendJson(response, { error: "Method not allowed" }, 405);
   } catch (error) {
-    const status =
-      error instanceof z.ZodError
-        ? 400
-        : error instanceof Error && "statusCode" in error
-          ? (error as Error & { statusCode: number }).statusCode
-          : 500;
-    return sendJson(
-      response,
-      {
-        error: error instanceof z.ZodError
-          ? error.errors[0]?.message || "Invalid request body."
-          : error instanceof Error ? error.message : "Unable to process API request.",
-      },
-      status,
-    );
+    if (error instanceof z.ZodError) {
+      return sendJson(
+        response,
+        { error: error.errors[0]?.message || "Invalid request body." },
+        400,
+      );
+    }
+    return sendJobError(response, error, "Unable to process API request.");
   }
 }

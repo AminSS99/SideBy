@@ -1,6 +1,6 @@
 import type { VercelResponse } from "@vercel/node";
 import { z } from "zod";
-import { eq, desc, and, asc, or, sql } from "drizzle-orm";
+import { eq, desc, and, asc, or, sql, gt, isNull } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import { comparisons, aiRuns, aiRunSteps, queryAnalytics } from "../../src/db/schema.js";
 import { runComparisonJob } from "./job-engine.js";
@@ -9,6 +9,13 @@ import { logger } from "./log.js";
 import { normalizeQuery } from "./query-normalizer.js";
 import { isFreshEnough, isStaleButUsable, getFreshnessClass, freshnessLabel } from "./reuse-engine.js";
 import { comparisonCache, trackCacheHit } from "./cache-layer.js";
+import {
+  redisAcquireLockToken,
+  redisReleaseLock,
+  redisRenewLockToken,
+  redisVerifyLockToken,
+  type RedisLock,
+} from "./redis.js";
 import {
   canAccessComparison as canAccessComparisonRecord,
   canMutateComparison,
@@ -153,13 +160,67 @@ type ComparisonSource = {
   summary: string;
 };
 
-// ─── Exports ───────────────────────────────────────────────────────────────
+// ─── Exports ─────────────────────────────────────────────────────────────────
 
 export const sendJson = (response: VercelResponse, payload: unknown, status = 200) => {
   if (!response.hasHeader("Cache-Control")) {
     response.setHeader("Cache-Control", "no-store");
   }
   return response.status(status).json(payload);
+};
+
+/**
+ * Serializes a job-creation failure through existing error conventions,
+ * including the `Retry-After` delay for retryable contention outcomes
+ * (e.g. COMPARISON_IN_PROGRESS when the intent lock is unavailable).
+ */
+/**
+ * Database-enforced deduplication claim for one in-flight comparison intent.
+ * The same derivation feeds the lock scope, the partial unique index
+ * `comparisons_intent_inflight_uniq`, and the violation fallback lookup, so a
+ * lock that expires between verification and the INSERT still cannot create
+ * a duplicate: the second INSERT fails atomically with 23505.
+ */
+export const buildComparisonIntentKey = (
+  userId: string,
+  workspaceId: string | null | undefined,
+  projectId: string | null | undefined,
+  canonicalSlug: string,
+): string =>
+  [userId, workspaceId || "-", projectId || "-", canonicalSlug].join("\n");
+
+/** Postgres unique violation, whether raised directly or wrapped by a driver. */
+export const isUniqueViolationError = (error: unknown): boolean => {
+  if (!error || typeof error !== "object") return false;
+  if ((error as { code?: unknown }).code === "23505") return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return /duplicate key value violates unique constraint/i.test(message);
+};
+
+export const sendJobError = (response: VercelResponse, error: unknown, fallbackMessage: string) => {
+  const status =
+    error instanceof Error && "statusCode" in error
+      ? (error as Error & { statusCode: number }).statusCode
+      : 500;
+  const code =
+    error instanceof Error && "code" in error && typeof (error as Error & { code: unknown }).code === "string"
+      ? (error as Error & { code: string }).code
+      : undefined;
+  const retryAfter =
+    error instanceof Error && "retryAfter" in error
+      ? (error as Error & { retryAfter: unknown }).retryAfter
+      : undefined;
+  if (typeof retryAfter === "number" && Number.isFinite(retryAfter) && retryAfter > 0) {
+    response.setHeader("Retry-After", String(Math.ceil(retryAfter)));
+  }
+  return sendJson(
+    response,
+    {
+      error: error instanceof Error ? error.message : fallbackMessage,
+      ...(code ? { code } : {}),
+    },
+    status,
+  );
 };
 
 export interface CreateComparisonInput {
@@ -213,6 +274,12 @@ const createCachedComparisonRecord = async (
     id: params.id,
     query: params.parsed.normalizedQuery,
     slug: params.comparisonSlug,
+    intentKey: buildComparisonIntentKey(
+      params.input.userId,
+      params.input.workspaceId,
+      params.input.projectId,
+      params.normalized.canonicalSlug,
+    ),
     taxonomyCategory: params.normalized.category,
     taxonomyStatus: params.normalized.taxonomyStatus,
     taxonomyConfidence: String(params.normalized.confidence),
@@ -313,6 +380,52 @@ const findReusableComparison = async (
     .sort((a, b) => b.score - a.score || b.updatedAt.getTime() - a.updatedAt.getTime())[0];
 };
 
+const findActiveInFlightComparison = async (
+  db: ReturnType<typeof createDbClient>,
+  userId: string,
+  canonicalSlug: string,
+  workspaceId?: string | null,
+  projectId?: string | null,
+) => {
+  const conditions = [
+    eq(comparisons.clerkUserId, userId),
+    eq(queryAnalytics.canonicalSlug, canonicalSlug),
+    or(eq(comparisons.status, "queued"), eq(comparisons.status, "running")),
+    gt(comparisons.createdAt, new Date(Date.now() - 120_000)),
+  ];
+
+  if (workspaceId) {
+    conditions.push(eq(comparisons.workspaceId, workspaceId));
+  } else {
+    conditions.push(isNull(comparisons.workspaceId));
+  }
+
+  if (projectId) {
+    conditions.push(eq(comparisons.projectId, projectId));
+  } else {
+    conditions.push(isNull(comparisons.projectId));
+  }
+
+  const rows = await db
+    .select({
+      id: comparisons.id,
+      status: comparisons.status,
+      progress: comparisons.progress,
+      activeStep: comparisons.activeStep,
+      query: comparisons.query,
+      result: comparisons.result,
+      visibility: comparisons.visibility,
+      errorMessage: comparisons.errorMessage,
+    })
+    .from(comparisons)
+    .innerJoin(queryAnalytics, eq(comparisons.id, queryAnalytics.comparisonId))
+    .where(and(...conditions))
+    .orderBy(desc(comparisons.createdAt))
+    .limit(1);
+
+  return rows[0];
+};
+
 export const createComparisonJob = async (
   input: CreateComparisonInput,
   scheduleResearch?: ResearchScheduler,
@@ -329,219 +442,486 @@ export const createComparisonJob = async (
   const normalized = normalizeQuery(input.query, { entityA: parsed.entityA, entityB: parsed.entityB });
   const id = crypto.randomUUID();
   const comparisonSlug = uniqueSlug(slug(parsed.entityA, parsed.entityB));
+  const intentKey = buildComparisonIntentKey(
+    input.userId,
+    input.workspaceId,
+    input.projectId,
+    normalized.canonicalSlug,
+  );
 
   const db = createDbClient();
   const freshnessClass = getFreshnessClass(normalized.category);
 
-  // ─── Phase 12: In-memory cache check (fastest) ───────────────────────
-  const memoryHit = comparisonCache.get<ComparisonResult>(normalized.canonicalSlug);
-  if (memoryHit) {
-    logger.info("Memory cache hit", { canonicalSlug: normalized.canonicalSlug });
-    const result = materializeCachedResult(memoryHit, comparisonSlug, parsed.normalizedQuery);
-    await createCachedComparisonRecord(db, {
-      id,
-      input,
-      parsed,
-      normalized,
-      comparisonSlug,
-      result,
-      sourceCount: result.sourceCount || 0,
+  // ─── Phase 10.5: In-flight duplicate intent prevention (Atomic & Scoped) ─────
+  // Scoped strictly by (userId, workspaceId, projectId, canonicalSlug).
+  // Uses a distributed lock to serialize concurrent submissions and prevent duplicate parallel jobs.
+  // No new-job insertion or pipeline scheduling may happen without holding
+  // this lock: exhausted retries produce an explicit retryable 409 instead of
+  // falling through to unprotected insertion.
+  const scopeKey = `${input.userId}:${input.workspaceId || "none"}:${input.projectId || "none"}:${normalized.canonicalSlug}`;
+  const lockKey = `job-intent-lock:${scopeKey}`;
+
+  let lock = await redisAcquireLockToken(lockKey, 30);
+  if (!lock) {
+    // A concurrent submission is actively holding the lock.
+    // Poll briefly to check if it creates the record.
+    for (let attempt = 0; attempt < 4; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)));
+      const existing = await findActiveInFlightComparison(
+        db,
+        input.userId,
+        normalized.canonicalSlug,
+        input.workspaceId,
+        input.projectId,
+      );
+      if (existing) {
+        logger.info("Reusing in-flight comparison job after concurrent lock wait", {
+          comparisonId: existing.id,
+          canonicalSlug: normalized.canonicalSlug,
+        });
+        return {
+          id: existing.id,
+          status: existing.status as ComparisonJob["status"],
+          progress: existing.progress ?? 0,
+          activeStep: existing.activeStep ?? 0,
+          query: existing.query,
+          result: existing.result as ComparisonResult | null,
+          visibility: (existing.visibility as ComparisonJob["visibility"]) ?? "private",
+          error: existing.errorMessage ?? null,
+        };
+      }
+      lock = await redisAcquireLockToken(lockKey, 30);
+      if (lock) break;
+    }
+  }
+
+  if (!lock) {
+    // Lock never became available and no job appeared: never fall through to
+    // unprotected insertion (that path created duplicates). This also covers
+    // lock-storage outages — there is no silent unsafe fallback.
+    const lateWinner = await findActiveInFlightComparison(
+      db,
+      input.userId,
+      normalized.canonicalSlug,
+      input.workspaceId,
+      input.projectId,
+    ).catch(() => undefined);
+    if (lateWinner) {
+      logger.info("Reusing in-flight comparison job after lock exhaustion", {
+        comparisonId: lateWinner.id,
+        canonicalSlug: normalized.canonicalSlug,
+      });
+      return {
+        id: lateWinner.id,
+        status: lateWinner.status as ComparisonJob["status"],
+        progress: lateWinner.progress ?? 0,
+        activeStep: lateWinner.activeStep ?? 0,
+        query: lateWinner.query,
+        result: lateWinner.result as ComparisonResult | null,
+        visibility: (lateWinner.visibility as ComparisonJob["visibility"]) ?? "private",
+        error: lateWinner.errorMessage ?? null,
+      };
+    }
+    throw Object.assign(
+      new Error("Another comparison request is still starting. Please try again in a moment."),
+      { statusCode: 409, code: "COMPARISON_IN_PROGRESS", retryAfter: 2 },
+    );
+  }
+
+  // Active lock heartbeat: keeps the lease fresh during slow requests so
+  // processing never outlives the 30-second TTL and lets concurrent races slip in.
+  let heartbeatTimer: NodeJS.Timeout | null = null;
+  let lockLost = false;
+
+  const startHeartbeat = (activeLock: RedisLock) => {
+    heartbeatTimer = setInterval(async () => {
+      try {
+        const renewed = await redisRenewLockToken(activeLock, 30);
+        if (!renewed) {
+          lockLost = true;
+          if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+          }
+        }
+      } catch {
+        // Transient network issue, next heartbeat interval will retry
+      }
+    }, 10_000);
+  };
+
+  startHeartbeat(lock);
+
+  const verifyLockStillHeld = async () => {
+    if (lockLost || !(await redisVerifyLockToken(lock))) {
+      logger.warn("Lock ownership lost or expired during comparison job preparation", {
+        lockKey,
+        canonicalSlug: normalized.canonicalSlug,
+      });
+      const existingAfterLoss = await findActiveInFlightComparison(
+        db,
+        input.userId,
+        normalized.canonicalSlug,
+        input.workspaceId,
+        input.projectId,
+      );
+      if (existingAfterLoss) {
+        return existingAfterLoss;
+      }
+      throw Object.assign(
+        new Error("Comparison lock expired during job setup. Please retry."),
+        { statusCode: 409, code: "COMPARISON_IN_PROGRESS", retryAfter: 2 },
+      );
+    }
+    return null;
+  };
+
+  try {
+    // ─── Phase 12: In-memory cache check ─────────────────────────────────────
+    // Runs inside the lock so even instant cache hits serialize per scope and
+    // never bypass the concurrency guarantee with unguarded inserts.
+    const memoryHit = comparisonCache.get<ComparisonResult>(normalized.canonicalSlug);
+    if (memoryHit) {
+      logger.info("Memory cache hit", { canonicalSlug: normalized.canonicalSlug });
+      const result = materializeCachedResult(memoryHit, comparisonSlug, parsed.normalizedQuery);
+
+      const lostJob = await verifyLockStillHeld();
+      if (lostJob) {
+        return {
+          id: lostJob.id,
+          status: lostJob.status as ComparisonJob["status"],
+          progress: lostJob.progress ?? 0,
+          activeStep: lostJob.activeStep ?? 0,
+          query: lostJob.query,
+          result: lostJob.result as ComparisonResult | null,
+          visibility: (lostJob.visibility as ComparisonJob["visibility"]) ?? "private",
+          error: lostJob.errorMessage ?? null,
+        };
+      }
+
+      await createCachedComparisonRecord(db, {
+        id,
+        input,
+        parsed,
+        normalized,
+        comparisonSlug,
+        result,
+        sourceCount: result.sourceCount || 0,
+        freshnessClass,
+        reuseSourceId: null,
+        cacheHits: 0,
+      });
+      await trackCacheHit(db, id, "memory", 0);
+
+      return {
+        id,
+        status: "completed",
+        progress: 100,
+        activeStep: 5,
+        query: parsed.normalizedQuery,
+        result,
+        visibility: "private",
+        error: null,
+        reuseSource: {
+          sourceId: null,
+          type: "memory",
+          label: "Instant hot-cache result",
+          confidence: null,
+        },
+      };
+    }
+
+    const existing = await findActiveInFlightComparison(
+      db,
+      input.userId,
+      normalized.canonicalSlug,
+      input.workspaceId,
+      input.projectId,
+    );
+
+    if (existing) {
+      logger.info("Reusing in-flight comparison job for duplicate intent", {
+        comparisonId: existing.id,
+        canonicalSlug: normalized.canonicalSlug,
+      });
+      return {
+        id: existing.id,
+        status: existing.status as ComparisonJob["status"],
+        progress: existing.progress ?? 0,
+        activeStep: existing.activeStep ?? 0,
+        query: existing.query,
+        result: existing.result as ComparisonResult | null,
+        visibility: (existing.visibility as ComparisonJob["visibility"]) ?? "private",
+        error: existing.errorMessage ?? null,
+      };
+    }
+
+    // ─── Phase 11: True Result Reuse ──────────────────────────────────────────
+    const reusedSource = await findReusableComparison(db, input, normalized);
+    const isCached = reusedSource && isFreshEnough(reusedSource.updatedAt, normalized.category);
+    const canServeStale =
+      reusedSource && !isCached && isStaleButUsable(reusedSource.updatedAt, normalized.category);
+
+    const lostJob = await verifyLockStillHeld();
+    if (lostJob) {
+      return {
+        id: lostJob.id,
+        status: lostJob.status as ComparisonJob["status"],
+        progress: lostJob.progress ?? 0,
+        activeStep: lostJob.activeStep ?? 0,
+        query: lostJob.query,
+        result: lostJob.result as ComparisonResult | null,
+        visibility: (lostJob.visibility as ComparisonJob["visibility"]) ?? "private",
+        error: lostJob.errorMessage ?? null,
+      };
+    }
+
+    // Uniqueness guarantee: final in-flight check immediately before insert
+    const inFlightBeforeInsert = await findActiveInFlightComparison(
+      db,
+      input.userId,
+      normalized.canonicalSlug,
+      input.workspaceId,
+      input.projectId,
+    );
+    if (inFlightBeforeInsert) {
+      logger.info("Reusing in-flight comparison job discovered immediately before insert", {
+        comparisonId: inFlightBeforeInsert.id,
+        canonicalSlug: normalized.canonicalSlug,
+      });
+      return {
+        id: inFlightBeforeInsert.id,
+        status: inFlightBeforeInsert.status as ComparisonJob["status"],
+        progress: inFlightBeforeInsert.progress ?? 0,
+        activeStep: inFlightBeforeInsert.activeStep ?? 0,
+        query: inFlightBeforeInsert.query,
+        result: inFlightBeforeInsert.result as ComparisonResult | null,
+        visibility: (inFlightBeforeInsert.visibility as ComparisonJob["visibility"]) ?? "private",
+        error: inFlightBeforeInsert.errorMessage ?? null,
+      };
+    }
+
+    // Create the comparison record. The INSERT itself is the final atomic
+    // arbiter: if the distributed lock expired between verification and this
+    // write, a concurrent winner's row trips the partial unique index
+    // (comparisons_intent_inflight_uniq) and this branch adopts the winner
+    // instead of scheduling a duplicate pipeline.
+    let insertConflictWinner: Awaited<ReturnType<typeof findActiveInFlightComparison>> | undefined =
+      undefined;
+    try {
+      await db.insert(comparisons).values({
+        id,
+        query: parsed.normalizedQuery,
+        slug: comparisonSlug,
+        intentKey,
+      taxonomyCategory: normalized.category,
+      taxonomyStatus: normalized.taxonomyStatus,
+      taxonomyConfidence: String(normalized.confidence),
+      safetyLevel: normalized.safetyLevel,
+      policyNote: normalized.policyNote || null,
+      status: isCached || canServeStale ? "completed" : "queued",
+      visibility: "private",
+      clerkUserId: input.userId,
+      clerkOrgId: input.orgId || null,
+      workspaceId: input.workspaceId || null,
+      projectId: input.projectId || null,
+      progress: isCached || canServeStale ? 100 : 0,
+      activeStep: isCached || canServeStale ? 5 : 0,
+      sourceCount: isCached || canServeStale ? (reusedSource?.sourceCount || 0) : 0,
+      result: isCached || canServeStale
+        ? materializeCachedResult(reusedSource?.result as ComparisonResult, comparisonSlug, parsed.normalizedQuery)
+        : null,
       freshnessClass,
-      reuseSourceId: null,
+      reuseSourceId: isCached || canServeStale ? reusedSource?.id : null,
+      overallConfidence: isCached || canServeStale
+        ? reusedSource?.overallConfidence || null
+        : null,
+      totalCost: isCached || canServeStale ? "0" : null,
+      });
+    } catch (error) {
+      if (!isUniqueViolationError(error)) throw error;
+      logger.warn("Comparison insert hit in-flight uniqueness; adopting winner", {
+        intentKey,
+        canonicalSlug: normalized.canonicalSlug,
+      });
+      insertConflictWinner = await findActiveInFlightComparison(
+        db,
+        input.userId,
+        normalized.canonicalSlug,
+        input.workspaceId,
+        input.projectId,
+      );
+      if (!insertConflictWinner) {
+        // Winner already finished between the conflict and this lookup; let
+        // the client retry into the reuse path rather than inserting again.
+        throw Object.assign(
+          new Error("Another comparison request just created this job. Please try again in a moment."),
+          { statusCode: 409, code: "COMPARISON_IN_PROGRESS", retryAfter: 2 },
+        );
+      }
+    }
+
+    if (insertConflictWinner) {
+      const winner = insertConflictWinner;
+      return {
+        id: winner.id,
+        status: winner.status as ComparisonJob["status"],
+        progress: winner.progress ?? 0,
+        activeStep: winner.activeStep ?? 0,
+        query: winner.query,
+        result: winner.result as ComparisonResult | null,
+        visibility: (winner.visibility as ComparisonJob["visibility"]) ?? "private",
+        error: winner.errorMessage ?? null,
+      };
+    }
+
+    // Phase 10: Save query analytics
+    await db.insert(queryAnalytics).values({
+      comparisonId: id,
+      rawQuery: input.query,
+      normalizedQuery: normalized.normalizedQuery,
+      canonicalSlug: normalized.canonicalSlug,
+      detectedEntities: JSON.stringify([
+        { name: parsed.entityA, type: null },
+        { name: parsed.entityB, type: null },
+      ]),
+      queryCategory: normalized.category,
+      taxonomyStatus: normalized.taxonomyStatus,
+      safetyLevel: normalized.safetyLevel,
+      taxonomyConfidence: String(normalized.confidence),
+      policyNote: normalized.policyNote || null,
+      policySignals: null,
+      sourceStrategy: {
+        requirements: normalized.sourceRequirements,
+        disclaimer: normalized.disclaimer,
+      },
+      isVague: normalized.isVague,
+      reusedFromId: isCached || canServeStale ? reusedSource?.id : null,
+      totalCost: isCached || canServeStale ? "0" : null,
+      searchesUsed: isCached || canServeStale ? 0 : undefined,
+      sourcesFound: isCached || canServeStale ? reusedSource?.sourceCount || 0 : undefined,
       cacheHits: 0,
     });
-    await trackCacheHit(db, id, "memory", 0);
 
-    return {
-      id,
-      status: "completed",
-      progress: 100,
-      activeStep: 5,
-      query: parsed.normalizedQuery,
-      result,
-      visibility: "private",
-      error: null,
-      reuseSource: {
-        sourceId: null,
-        type: "memory",
-        label: "Instant hot-cache result",
-        confidence: null,
-      },
-    };
-  }
+    // If we have a cached fresh result, return it immediately
+    if (isCached && reusedSource?.result) {
+      const cachedResult = materializeCachedResult(reusedSource.result as ComparisonResult, comparisonSlug, parsed.normalizedQuery);
 
-  // ─── Phase 11: True Result Reuse ──────────────────────────────────────
-  const reusedSource = await findReusableComparison(db, input, normalized);
-  const isCached = reusedSource && isFreshEnough(reusedSource.updatedAt, normalized.category);
-  const canServeStale =
-    reusedSource && !isCached && isStaleButUsable(reusedSource.updatedAt, normalized.category);
+      // Phase 12: Populate in-memory cache for next lookup
+      comparisonCache.set(normalized.canonicalSlug, cachedResult, 10 * 60 * 1000);
 
-  // Create the comparison record
-  await db.insert(comparisons).values({
-    id,
-    query: parsed.normalizedQuery,
-    slug: comparisonSlug,
-    taxonomyCategory: normalized.category,
-    taxonomyStatus: normalized.taxonomyStatus,
-    taxonomyConfidence: String(normalized.confidence),
-    safetyLevel: normalized.safetyLevel,
-    policyNote: normalized.policyNote || null,
-    status: isCached || canServeStale ? "completed" : "queued",
-    visibility: "private",
-    clerkUserId: input.userId,
-    clerkOrgId: input.orgId || null,
-    workspaceId: input.workspaceId || null,
-    projectId: input.projectId || null,
-    progress: isCached || canServeStale ? 100 : 0,
-    activeStep: isCached || canServeStale ? 5 : 0,
-    sourceCount: isCached || canServeStale ? (reusedSource?.sourceCount || 0) : 0,
-    result: isCached || canServeStale
-      ? materializeCachedResult(reusedSource?.result as ComparisonResult, comparisonSlug, parsed.normalizedQuery)
-      : null,
-    freshnessClass,
-    reuseSourceId: isCached || canServeStale ? reusedSource?.id : null,
-    overallConfidence: isCached || canServeStale
-      ? reusedSource?.overallConfidence || null
-      : null,
-    totalCost: isCached || canServeStale ? "0" : null,
-  });
+      // Track cache hit for analytics
+      trackCacheHit(db, id, "db", 0).catch(() => {});
 
-  // Phase 10: Save query analytics
-  await db.insert(queryAnalytics).values({
-    comparisonId: id,
-    rawQuery: input.query,
-    normalizedQuery: normalized.normalizedQuery,
-    canonicalSlug: normalized.canonicalSlug,
-    detectedEntities: JSON.stringify([
-      { name: parsed.entityA, type: null },
-      { name: parsed.entityB, type: null },
-    ]),
-    queryCategory: normalized.category,
-    taxonomyStatus: normalized.taxonomyStatus,
-    safetyLevel: normalized.safetyLevel,
-    taxonomyConfidence: String(normalized.confidence),
-    policyNote: normalized.policyNote || null,
-    policySignals: null,
-    sourceStrategy: {
-      requirements: normalized.sourceRequirements,
-      disclaimer: normalized.disclaimer,
-    },
-    isVague: normalized.isVague,
-    reusedFromId: isCached || canServeStale ? reusedSource?.id : null,
-    totalCost: isCached || canServeStale ? "0" : null,
-    searchesUsed: isCached || canServeStale ? 0 : undefined,
-    sourcesFound: isCached || canServeStale ? reusedSource?.sourceCount || 0 : undefined,
-    cacheHits: 0,
-  });
-
-  // If we have a cached fresh result, return it immediately
-  if (isCached && reusedSource?.result) {
-    const cachedResult = materializeCachedResult(reusedSource.result as ComparisonResult, comparisonSlug, parsed.normalizedQuery);
-
-    // Phase 12: Populate in-memory cache for next lookup
-    comparisonCache.set(normalized.canonicalSlug, cachedResult, 10 * 60 * 1000);
-
-    // Track cache hit for analytics
-    trackCacheHit(db, id, "db", 0).catch(() => {});
-
-    logger.info("Returning cached comparison", {
-      comparisonId: id,
-      sourceId: reusedSource.id,
-      category: normalized.category,
-      freshnessClass,
-    });
-
-    return {
-      id,
-      status: "completed",
-      progress: 100,
-      activeStep: 5,
-      query: parsed.normalizedQuery,
-      result: cachedResult,
-      visibility: "private",
-      error: null,
-      reuseSource: {
+      logger.info("Returning cached comparison", {
+        comparisonId: id,
         sourceId: reusedSource.id,
-        type: "database",
-        label: freshnessLabel(reusedSource.updatedAt!, normalized.category),
-        confidence: reusedSource.overallConfidence ? Number(reusedSource.overallConfidence) : null,
-      },
-    };
-  }
+        category: normalized.category,
+        freshnessClass,
+      });
 
-  // Phase 12: Background refresh for stale (but existing) comparisons
-  if (canServeStale && reusedSource?.result) {
-    const staleResult = materializeCachedResult(reusedSource.result as ComparisonResult, comparisonSlug, parsed.normalizedQuery);
-    trackCacheHit(db, id, "reuse", 0).catch(() => {});
+      return {
+        id,
+        status: "completed",
+        progress: 100,
+        activeStep: 5,
+        query: parsed.normalizedQuery,
+        result: cachedResult,
+        visibility: "private",
+        error: null,
+        reuseSource: {
+          sourceId: reusedSource.id,
+          type: "database",
+          label: freshnessLabel(reusedSource.updatedAt!, normalized.category),
+          confidence: reusedSource.overallConfidence ? Number(reusedSource.overallConfidence) : null,
+        },
+      };
+    }
 
-    // Serve the stale result immediately while refreshing the source record for future users.
-    if (process.env.DISABLE_IN_PROCESS_JOBS === "true") {
-      db.update(comparisons)
-        .set({ status: "queued", progress: 0, activeStep: 0, updatedAt: new Date() })
-        .where(eq(comparisons.id, reusedSource.id))
-        .catch((e) => {
-          logger.warn("Failed to queue background refresh", { error: String(e) });
+    // Phase 12: Background refresh for stale (but existing) comparisons
+    if (canServeStale && reusedSource?.result) {
+      const staleResult = materializeCachedResult(reusedSource.result as ComparisonResult, comparisonSlug, parsed.normalizedQuery);
+      trackCacheHit(db, id, "reuse", 0).catch(() => {});
+
+      // Serve the stale result immediately while refreshing the source record for future users.
+      if (process.env.DISABLE_IN_PROCESS_JOBS === "true") {
+        db.update(comparisons)
+          .set({ status: "queued", progress: 0, activeStep: 0, updatedAt: new Date() })
+          .where(eq(comparisons.id, reusedSource.id))
+          .catch((e) => {
+            logger.warn("Failed to queue background refresh", { error: String(e) });
+          });
+        logger.info(`[DISABLE_IN_PROCESS_JOBS] Background refresh for source ${reusedSource.id} queued for external worker.`);
+      } else {
+        const bgRefresh = runComparisonJob(reusedSource.id, input.userId, input.query, input.orgId).catch((e) => {
+          logger.warn(`Background refresh failed for ${reusedSource!.id}`, { error: e instanceof Error ? e.message : String(e) });
         });
-      logger.info(`[DISABLE_IN_PROCESS_JOBS] Background refresh for source ${reusedSource.id} queued for external worker.`);
-    } else {
-      const bgRefresh = runComparisonJob(reusedSource.id, input.userId, input.query, input.orgId).catch((e) => {
-        logger.warn(`Background refresh failed for ${reusedSource!.id}`, { error: e instanceof Error ? e.message : String(e) });
+        if (scheduleResearch) scheduleResearch(bgRefresh);
+        else bgRefresh.catch((e) => {
+          logger.error("Unscheduled background refresh failed", e instanceof Error ? e : undefined);
+        });
+      }
+
+      logger.info("Serving stale comparison + enqueued background refresh", {
+        comparisonId: id,
+        sourceId: reusedSource.id,
+        freshnessClass,
       });
-      if (scheduleResearch) scheduleResearch(bgRefresh);
-      else bgRefresh.catch((e) => {
-        logger.error("Unscheduled background refresh failed", e instanceof Error ? e : undefined);
-      });
+
+      return {
+        id,
+        status: "completed",
+        progress: 100,
+        activeStep: 5,
+        query: parsed.normalizedQuery,
+        result: staleResult,
+        visibility: "private",
+        error: null,
+        reuseSource: {
+          sourceId: reusedSource.id,
+          type: "stale",
+          label: `Stale; refreshing in background (${freshnessLabel(reusedSource.updatedAt!, normalized.category)})`,
+          confidence: reusedSource.overallConfidence ? Number(reusedSource.overallConfidence) : null,
+        },
+      };
     }
 
-    logger.info("Serving stale comparison + enqueued background refresh", {
-      comparisonId: id,
-      sourceId: reusedSource.id,
-      freshnessClass,
-    });
+    // Otherwise, run the full research pipeline
+    if (process.env.DISABLE_IN_PROCESS_JOBS === "true") {
+      logger.info(`[DISABLE_IN_PROCESS_JOBS] Comparison job ${id} queued for external worker.`);
+    } else {
+      const research = runComparisonJob(id, input.userId, input.query, input.orgId).catch((e) => {
+        logger.error(`Research job ${id} failed`, e instanceof Error ? e : undefined, { comparisonId: id });
+      });
+
+      if (scheduleResearch) {
+        scheduleResearch(research);
+      } else {
+        research.catch(() => {});
+      }
+    }
 
     return {
       id,
-      status: "completed",
-      progress: 100,
-      activeStep: 5,
+      status: "running",
+      progress: 0,
+      activeStep: 0,
       query: parsed.normalizedQuery,
-      result: staleResult,
+      result: null,
       visibility: "private",
       error: null,
-      reuseSource: {
-        sourceId: reusedSource.id,
-        type: "stale",
-        label: `Stale; refreshing in background (${freshnessLabel(reusedSource.updatedAt!, normalized.category)})`,
-        confidence: reusedSource.overallConfidence ? Number(reusedSource.overallConfidence) : null,
-      },
     };
-  }
-
-  // Otherwise, run the full research pipeline
-  if (process.env.DISABLE_IN_PROCESS_JOBS === "true") {
-    logger.info(`[DISABLE_IN_PROCESS_JOBS] Comparison job ${id} queued for external worker.`);
-  } else {
-    const research = runComparisonJob(id, input.userId, input.query, input.orgId).catch((e) => {
-      logger.error(`Research job ${id} failed`, e instanceof Error ? e : undefined, { comparisonId: id });
-    });
-
-    if (scheduleResearch) {
-      scheduleResearch(research);
-    } else {
-      research.catch(() => {});
+  } finally {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+    if (lock) {
+      await redisReleaseLock(lock).catch((err) => {
+        logger.warn("Failed to release comparison submission lock", { lockKey, error: String(err) });
+      });
     }
   }
-
-  return {
-    id,
-    status: "running",
-    progress: 0,
-    activeStep: 0,
-    query: parsed.normalizedQuery,
-    result: null,
-    visibility: "private",
-    error: null,
-  };
 };
 
 const summarizeSnapshot = (snapshot: unknown): string | null => {
@@ -833,7 +1213,7 @@ export const listComparisonHistory = async (
   });
 };
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 type ParsedComparison = {
   entityA: string;

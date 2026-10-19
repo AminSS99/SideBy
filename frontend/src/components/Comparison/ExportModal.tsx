@@ -95,7 +95,7 @@ export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
   const handleExportCsv = () => {
     setDownloading("csv");
     window.setTimeout(() => {
-      const escape = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""').replaceAll(/\r?\n/g, " ")}"`;
+      const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""').replace(/\r?\n/g, " ")}"`;
       const rows = [["Category", "Criterion", result.entities.a.name, result.entities.b.name, "Sources"]];
       result.categories.forEach((category) => {
         const a = new Map<string, string>();

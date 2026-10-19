@@ -1,6 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { sideByManifest } from "../src/lib/pwa/manifest.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (relativePath: string) =>
@@ -8,9 +9,7 @@ const read = (relativePath: string) =>
 
 const sitemap = await read("public/sitemap.xml");
 const indexHtml = await read("index.html");
-const manifest = JSON.parse(await read("public/manifest.json")) as {
-  icons?: Array<{ src?: string; sizes?: string; type?: string }>;
-};
+const manifest = sideByManifest;
 const vercel = JSON.parse(await read("vercel.json")) as {
   headers?: Array<{
     source?: string;
@@ -49,11 +48,11 @@ for (const entry of urls) {
 if (!indexHtml.includes('rel="icon" type="image/x-icon" href="/sideby.ico?v=20260728-real"')) {
   fail("index.html does not reference the versioned SideBy logo as the primary icon");
 }
-if (!manifest.icons?.some((icon) => icon.src === "/icon-192.png?v=20260728-real")) {
-  fail("manifest.json is missing the 192px icon");
+if (!manifest.icons.some((icon) => icon.src === "/icon-192.png")) {
+  fail("the generated web manifest is missing the 192px icon");
 }
-if (!manifest.icons?.some((icon) => icon.src === "/icon-512.png?v=20260728-real")) {
-  fail("manifest.json is missing the 512px icon");
+if (!manifest.icons.some((icon) => icon.src === "/icon-512.png")) {
+  fail("the generated web manifest is missing the 512px icon");
 }
 
 const favicon = await stat(path.join(projectRoot, "public", "sideby.ico"));
@@ -80,5 +79,5 @@ if (!sitemapMime?.startsWith("application/xml")) {
 }
 
 console.log(
-  `SEO validation passed: ${urls.length} sitemap URLs, favicon and manifest assets, and MIME headers.`,
+  `SEO validation passed: ${urls.length} sitemap URLs, favicon and generated manifest assets, and MIME headers.`,
 );

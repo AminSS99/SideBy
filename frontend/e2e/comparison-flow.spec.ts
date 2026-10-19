@@ -11,6 +11,14 @@ import {
 
 const COMPARISON_ID = "cmp_e2e_001";
 
+/**
+ * The workbench mounts desktop and mobile layouts side by side with one
+ * hidden per viewport, so a bare `.first()` text match can resolve to the
+ * hidden copy. Prefer the visible match to assert what the user sees.
+ */
+const visibleText = (page: import("@playwright/test").Page, text: string | RegExp) =>
+  page.getByText(text).filter({ visible: true }).first();
+
 async function setupComparison(page: import("@playwright/test").Page) {
   await seedTestAuth(page);
   await page.route("**/api/comparisons/validate", (route) =>
@@ -72,7 +80,11 @@ async function startComparison(page: import("@playwright/test").Page, query: str
 }
 
 test.describe("SideBy Authenticated Comparison Flow", () => {
-  test("creates a comparison and renders the completed result workbench", async ({ page }) => {
+  test("creates a comparison and renders the completed result workbench", async ({ page }, testInfo) => {
+    // The completed workbench (GSAP entrance, charts, panels) can exceed
+    // the default 5s assertion budget under parallel CI load; triple it.
+    // Unloaded renders land in ~250ms, so this only absorbs CI contention.
+    test.slow();
     let createCalls = 0;
     await seedTestAuth(page);
     await page.route("**/api/comparisons/validate", (route) =>
@@ -116,22 +128,33 @@ test.describe("SideBy Authenticated Comparison Flow", () => {
     await expect(page).toHaveURL(new RegExp(`/app/comparisons/${COMPARISON_ID}`));
 
     // Completed result: entities, verdict summary, decision matrix, sources.
-    await expect(page.getByText("Supabase vs Firebase").first()).toBeVisible();
+    // (Visible-match: the desktop grid mounts a hidden duplicate ahead of
+    // the mobile copy, in mount order that varies run to run.)
+    await expect(visibleText(page, "Supabase vs Firebase")).toBeVisible();
     await expect(
-      page.getByText(/Open-source Firebase alternative|Google app development platform/i).first(),
+      visibleText(page, /Open-source Firebase alternative|Google app development platform/i),
     ).toBeVisible();
-    await expect(page.getByText(/open-source portability and Postgres fidelity/i).first()).toBeVisible();
+    await expect(visibleText(page, /open-source portability and Postgres fidelity/i)).toBeVisible();
 
-    await expect(page.getByText("Best Overall").first()).toBeVisible();
+    await expect(visibleText(page, "Best Overall")).toBeVisible();
 
-    await expect(page.getByRole("heading", { name: /sources reviewed/i })).toBeVisible();
-    await expect(page.getByText("Supabase Pricing").first()).toBeVisible();
-    await expect(page.getByText("Firebase Pricing").first()).toBeVisible();
+    // Sources live behind the metadata tab on mobile viewports.
+    if (testInfo.project.name !== "chromium") {
+      await page.getByRole("tab", { name: "Sources & Tech" }).click();
+    }
+
+    await expect(
+      page.getByRole("heading", { name: /sources reviewed/i }).filter({ visible: true }).first(),
+    ).toBeVisible();
+    await expect(visibleText(page, "Supabase Pricing")).toBeVisible();
+    await expect(visibleText(page, "Firebase Pricing")).toBeVisible();
 
     expect(createCalls).toBe(1);
   });
 
   test("completed comparison opens the export modal", async ({ page }) => {
+    // Same heavy workbench page as above; allow headroom under CI load.
+    test.slow();
     await setupComparison(page);
     await page.goto("/app/comparisons");
     await startComparison(page, "Supabase vs Firebase");
@@ -144,6 +167,8 @@ test.describe("SideBy Authenticated Comparison Flow", () => {
   });
 
   test("partial create response still opens the comparison workbench", async ({ page }) => {
+    // Same heavy workbench page as above; allow headroom under CI load.
+    test.slow();
     await seedTestAuth(page);
     await page.route("**/api/comparisons/validate", (route) =>
       route.fulfill({
@@ -180,6 +205,6 @@ test.describe("SideBy Authenticated Comparison Flow", () => {
     await startComparison(page, "Supabase vs Firebase");
 
     await expect(page).toHaveURL(new RegExp(`/app/comparisons/${COMPARISON_ID}`));
-    await expect(page.getByText(/open-source portability and Postgres fidelity/i).first()).toBeVisible();
+    await expect(visibleText(page, /open-source portability and Postgres fidelity/i)).toBeVisible();
   });
 });

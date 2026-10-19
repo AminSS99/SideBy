@@ -8,6 +8,7 @@ import {
 import { BrowserRouter } from "react-router-dom";
 import { envConfig } from "@/config/env";
 import { initSentry } from "@/lib/sentry";
+import { initServiceWorker } from "@/lib/pwa/register";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import App from "./App.tsx";
@@ -21,6 +22,7 @@ ScrollTrigger.config({
 });
 
 initSentry();
+initServiceWorker();
 
 const clerkOptions = {
   signInUrl: "/auth/sign-in",
@@ -37,7 +39,6 @@ const authLoadingScreen = (
     />
   </div>
 );
-
 createRoot(document.getElementById("root")!).render(
   <BrowserRouter
     future={{
@@ -67,11 +68,3 @@ createRoot(document.getElementById("root")!).render(
     )}
   </BrowserRouter>,
 );
-
-if ("serviceWorker" in navigator && import.meta.env.PROD) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js")
-      .then((reg) => console.log("Service Worker registered on scope:", reg.scope))
-      .catch((err) => console.error("Service Worker registration failed:", err));
-  });
-}

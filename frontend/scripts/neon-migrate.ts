@@ -1,23 +1,26 @@
-import { neon } from "@neondatabase/serverless";
+import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 import { config as loadEnv } from "dotenv";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
+/**
+ * Minimal database surface the migrator needs. The real Neon HTTP client
+ * satisfies this structurally; tests substitute a mock with identical
+ * transactional discipline.
+ */
+export type MigrationDb = Pick<NeonQueryFunction<false, false>, "query" | "transaction">;
+
 loadEnv({ path: ".env" });
 loadEnv({ path: "../.env" });
 
-const databaseUrl =
+const resolveDatabaseUrl = () =>
   process.env.DATABASE_URL_UNPOOLED ||
   process.env.DATABASE_URL ||
   process.env.POSTGRES_URL ||
   process.env.POSTGRES_PRISMA_URL ||
   "";
-
-if (!databaseUrl) {
-  throw new Error("Set DATABASE_URL or POSTGRES_URL before running Neon migrations.");
-}
 
 const repoRoot = path.resolve(process.cwd(), "..");
 const migrationsDir = path.join(repoRoot, "neon", "migrations");
@@ -25,8 +28,6 @@ const migrationsDir = path.join(repoRoot, "neon", "migrations");
 if (!existsSync(migrationsDir)) {
   throw new Error(`Migration directory not found: ${migrationsDir}`);
 }
-
-const sql = neon(databaseUrl);
 
 type AppliedMigration = {
   id: string;
@@ -105,8 +106,17 @@ const splitSqlStatements = (content: string) => {
   return statements;
 };
 
-const ensureLedger = async () => {
-  await sql.query(`
+const LEDGER_UPSERT_SQL = `
+  insert into sideby_schema_migrations (id, filename, checksum)
+  values ($1, $2, $3)
+  on conflict (id) do update
+  set filename = excluded.filename,
+      checksum = excluded.checksum,
+      applied_at = now()
+`;
+
+const ensureLedger = async (db: MigrationDb) => {
+  await db.query(`
     create table if not exists sideby_schema_migrations (
       id text primary key,
       filename text not null,
@@ -116,44 +126,42 @@ const ensureLedger = async () => {
   `);
 };
 
-const loadAppliedMigrations = async () => {
-  const rows = await sql.query("select id, checksum from sideby_schema_migrations order by id");
+const loadAppliedMigrations = async (db: MigrationDb) => {
+  const rows = await db.query("select id, checksum from sideby_schema_migrations order by id");
   return new Map((rows as AppliedMigration[]).map((row) => [row.id, row.checksum]));
 };
 
-const applyMigration = async (filename: string, content: string) => {
+/**
+ * Applies one migration file atomically: every statement plus the ledger
+ * write runs inside a single driver-supported transaction, so a failing
+ * later statement rolls back earlier ones and leaves no ledger entry.
+ * Returns the number of applied statements (0 for empty files).
+ */
+export const applyMigration = async (
+  db: MigrationDb,
+  filename: string,
+  content: string,
+): Promise<number> => {
   const id = filename.replace(/\.sql$/i, "");
   const fileChecksum = checksum(content);
   const statements = splitSqlStatements(normalizeSql(content));
 
   if (statements.length === 0) {
     console.log(`- ${filename}: skipped empty migration`);
-    return;
+    return 0;
   }
 
-  // Batch statements into a single string to prevent sequential O(N) network round-trips
-  // while preserving the required sequential execution order of migrations
-  await sql.query(statements.join(';\n'));
-
-  await sql.query(
-    `
-      insert into sideby_schema_migrations (id, filename, checksum)
-      values ($1, $2, $3)
-      on conflict (id) do update
-      set filename = excluded.filename,
-          checksum = excluded.checksum,
-          applied_at = now()
-    `,
-    [id, filename, fileChecksum],
-  );
+  await db.transaction((txn) => [
+    ...statements.map((statement) => txn.query(statement)),
+    txn.query(LEDGER_UPSERT_SQL, [id, filename, fileChecksum]),
+  ]);
 
   console.log(`+ ${filename}: applied ${statements.length} statement${statements.length === 1 ? "" : "s"}`);
+  return statements.length;
 };
 
-const main = async () => {
-  await ensureLedger();
-
-  const files = (await readdir(migrationsDir))
+export const migrateDirectory = async (db: MigrationDb, dir: string): Promise<void> => {
+  const files = (await readdir(dir))
     .filter((file) => file.endsWith(".sql"))
     .sort((a, b) => a.localeCompare(b));
 
@@ -162,10 +170,10 @@ const main = async () => {
     return;
   }
 
-  const applied = await loadAppliedMigrations();
+  const applied = await loadAppliedMigrations(db);
 
   for (const filename of files) {
-    const fullPath = path.join(migrationsDir, filename);
+    const fullPath = path.join(dir, filename);
     const content = await readFile(fullPath, "utf8");
     const id = filename.replace(/\.sql$/i, "");
     const fileChecksum = checksum(content);
@@ -182,11 +190,24 @@ const main = async () => {
       );
     }
 
-    await applyMigration(filename, content);
+    await applyMigration(db, filename, content);
   }
 };
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+const main = async () => {
+  const databaseUrl = resolveDatabaseUrl();
+  if (!databaseUrl) {
+    throw new Error("Set DATABASE_URL or POSTGRES_URL before running Neon migrations.");
+  }
+  const db = neon(databaseUrl);
+  await ensureLedger(db);
+  await migrateDirectory(db, migrationsDir);
+};
+
+const invokedDirectly = process.argv[1]?.endsWith("neon-migrate.ts") ?? false;
+if (invokedDirectly) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}
