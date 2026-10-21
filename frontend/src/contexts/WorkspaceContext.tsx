@@ -1,6 +1,5 @@
 /* eslint-disable react-refresh/only-export-components -- provider and hook form one public workspace module. */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
@@ -106,9 +105,8 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) => {
   const { session, isLoading: authLoading } = useAuth();
-  const { pathname } = useLocation();
   const sessionUserId = session?.userId ?? null;
-  const shouldLoadWorkspaces = pathname.startsWith("/onboarding") || pathname === "/app" || pathname.startsWith("/app/");
+  const shouldLoadWorkspaces = sessionUserId !== null;
   const cachedWorkspaces = useMemo(() => readCachedWorkspaces(), []);
   const [workspaces, setWorkspaces] = useState<WorkspaceRecord[]>(cachedWorkspaces ?? []);
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string | null>(readStoredWorkspaceId);
