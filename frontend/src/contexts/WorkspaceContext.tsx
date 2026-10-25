@@ -1,6 +1,5 @@
 /* eslint-disable react-refresh/only-export-components -- provider and hook form one public workspace module. */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
@@ -106,9 +105,7 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) => {
   const { session, isLoading: authLoading } = useAuth();
-  const { pathname } = useLocation();
   const sessionUserId = session?.userId ?? null;
-  const shouldLoadWorkspaces = pathname.startsWith("/onboarding") || pathname === "/app" || pathname.startsWith("/app/");
   const cachedWorkspaces = useMemo(() => readCachedWorkspaces(), []);
   const [workspaces, setWorkspaces] = useState<WorkspaceRecord[]>(cachedWorkspaces ?? []);
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string | null>(readStoredWorkspaceId);
@@ -168,12 +165,6 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
       clearCachedWorkspaces();
       return;
     }
-    if (!shouldLoadWorkspaces) {
-      // Workspace data is only needed by authenticated app/onboarding routes.
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
 
     let cancelled = false;
 
@@ -208,7 +199,7 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
     return () => {
       cancelled = true;
     };
-  }, [sessionUserId, authLoading, shouldLoadWorkspaces, applyWorkspaceData]);
+  }, [sessionUserId, authLoading, applyWorkspaceData]);
 
   const setActiveWorkspaceId = useCallback((id: string | null) => {
     setActiveWorkspaceIdState(id);
@@ -221,11 +212,10 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
   }, [workspaces, activeWorkspaceId]);
 
   const needsOnboarding = useMemo(() => {
-    if (!shouldLoadWorkspaces) return false;
     if (authLoading || isLoading) return false;
     if (!sessionUserId) return false;
     return workspaces.length === 0;
-  }, [authLoading, isLoading, sessionUserId, shouldLoadWorkspaces, workspaces.length]);
+  }, [authLoading, isLoading, sessionUserId, workspaces.length]);
 
   const value = useMemo<WorkspaceContextValue>(
     () => ({
