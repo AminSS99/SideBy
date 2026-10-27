@@ -21,7 +21,7 @@ type DecisionMatrixRecord = {
   createdAt: string;
 };
 
-export const DecisionMatrixPanel = ({ 
+export const DecisionMatrixPanel = React.memo(({
   result, 
   comparisonId 
 }: { 
@@ -34,24 +34,21 @@ export const DecisionMatrixPanel = ({
   const [selectedDimension, setSelectedDimension] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Weights state: maps dimension subject -> slider value (1-5)
-  const [weights, setWeights] = useState<Record<string, number>>({});
+  // Weights state: maps dimension subject -> slider value (1-5), initialized lazily
+  const [weights, setWeights] = useState<Record<string, number>>(() => {
+    const initial: Record<string, number> = {};
+    if (result.dimensions) {
+      result.dimensions.forEach((d) => {
+        initial[d.subject] = 3;
+      });
+    }
+    return initial;
+  });
   const [savedMatrices, setSavedMatrices] = useState<DecisionMatrixRecord[]>([]);
   const [defaultProfiles, setDefaultProfiles] = useState<DecisionMatrixRecord[]>([]);
   const [matrixName, setMatrixName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
-
-  // Initialize weights with 3 (default midpoint) for all subjects
-  useEffect(() => {
-    if (result.dimensions) {
-      const initial: Record<string, number> = {};
-      result.dimensions.forEach((d) => {
-        initial[d.subject] = 3;
-      });
-      setWeights(initial);
-    }
-  }, [result.dimensions]);
 
   // Load saved matrices for this comparison
   const loadSavedMatrices = useCallback(async () => {
@@ -488,4 +485,6 @@ export const DecisionMatrixPanel = ({
       />
     </div>
   );
-};
+});
+
+DecisionMatrixPanel.displayName = "DecisionMatrixPanel";

@@ -359,16 +359,6 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
     return init;
   });
 
-  useEffect(() => {
-    setWeights((current) => {
-      const next: Record<string, number> = {};
-      for (const metric of metrics) {
-        next[metric.subject] = current[metric.subject] ?? 1;
-      }
-      return next;
-    });
-  }, [metrics]);
-
   const weighted = useMemo(() => {
     let sumWeight = 0;
     let sumA = 0;
