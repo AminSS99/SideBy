@@ -1,17 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import * as React from "react";
 import { EntityFactPanel } from "../EntityFactPanel.js";
 import type { ComparisonData } from "../types.js";
-
-let memoizedState: Map<any, any> = new Map();
 
 vi.mock("react", async (importOriginal) => {
   const original = await importOriginal<typeof React>();
   return {
     ...original,
     useRef: (initial: any) => ({ current: initial }),
-    useMemo: (fn: () => any, deps: any[]) => {
+    useMemo: (fn: () => any) => {
       // For unit test simplicity, execute the memoized function directly
       return fn();
     },
