@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -14,6 +14,18 @@ interface EntityFactPanelProps {
 export const EntityFactPanel = ({ result, facts }: EntityFactPanelProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const countRefs = useRef<(HTMLSpanElement | null)[]>([]);
+
+  const entityFactSummary = useMemo(() => {
+    return (["a", "b"] as const).map((key) => {
+      const entityFacts = facts[key] || [];
+      return {
+        key,
+        entity: result.entities[key],
+        totalCount: entityFacts.length,
+        categories: entityFacts.slice(0, 6),
+      };
+    });
+  }, [facts, result]);
 
   useGSAP(() => {
     if (!containerRef.current) return;
@@ -32,7 +44,7 @@ export const EntityFactPanel = ({ result, facts }: EntityFactPanelProps) => {
     });
 
     // Count up animation for the numbers
-    countRefs.current.forEach((el, index) => {
+    countRefs.current.forEach((el) => {
       if (!el) return;
       const targetValue = parseInt(el.getAttribute("data-value") || "0", 10);
       
@@ -59,25 +71,25 @@ export const EntityFactPanel = ({ result, facts }: EntityFactPanelProps) => {
     >
       <h3 className="mb-6 font-serif text-2xl text-[#fdfbf7] tracking-tight">Fact Coverage</h3>
       <div className="space-y-4">
-        {(["a", "b"] as const).map((key, i) => (
+        {entityFactSummary.map(({ key, entity, totalCount, categories }, i) => (
           <div key={key} className="efp-item border border-[#2a2a2a] bg-[#111] p-5 rounded-sm">
             <div className="mb-4 flex items-center justify-between">
-              <span className="text-base font-serif" style={{ color: result.entities[key].hex }}>
-                {result.entities[key].name}
+              <span className="text-base font-serif" style={{ color: entity.hex }}>
+                {entity.name}
               </span>
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 flex items-center gap-1">
                 <span 
                   ref={(el) => { countRefs.current[i] = el; }} 
-                  data-value={facts[key].length}
+                  data-value={totalCount}
                   className="text-[#fdfbf7] text-xs"
                 >
-                  {facts[key].length}
+                  {totalCount}
                 </span>
                 facts
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {facts[key].slice(0, 6).map((f, idx) => (
+              {categories.map((f, idx) => (
                 <span
                   key={`${key}-${f.category}-${idx}`}
                   className="border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 truncate max-w-[120px]"
