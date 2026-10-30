@@ -616,7 +616,10 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
     setSelectedId(graph.nodes[0]?.id || "");
   }, [graph.nodes]);
 
-  const nodeMap = new Map(graph.nodes.map((node) => [node.id, node]));
+  const nodeMap = useMemo(
+    () => new Map(graph.nodes.map((node) => [node.id, node])),
+    [graph.nodes]
+  );
   const selected = nodeMap.get(selectedId) || graph.nodes[0];
 
   // Compute related nodes for highlighting & dimming
