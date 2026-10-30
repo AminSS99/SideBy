@@ -1,10 +1,10 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { Trophy } from 'lucide-react';
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { FactCard } from './FactCard';
-import type { Category, Entity } from './types';
+import type { Category, Entity, ComparisonFact } from './types';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -63,6 +63,19 @@ export const CategorySection = ({ category, entities, index }: CategorySectionPr
 
   }, { scope: containerRef });
 
+  const { factsA, factsB } = useMemo(() => {
+    const a: ComparisonFact[] = [];
+    const b: ComparisonFact[] = [];
+    if (category?.facts) {
+      for (let i = 0; i < category.facts.length; i++) {
+        const f = category.facts[i];
+        if (f.entity === 'a') a.push(f);
+        else if (f.entity === 'b') b.push(f);
+      }
+    }
+    return { factsA: a, factsB: b };
+  }, [category?.facts]);
+
   if (!category) return null;
 
   const winnerEntity = category.winner === 'a' ? entities.a 
@@ -106,31 +119,20 @@ export const CategorySection = ({ category, entities, index }: CategorySectionPr
       )}
 
       <div className="grid gap-6 md:grid-cols-2 relative z-10">
-        {(() => {
-          const factsA = [];
-          const factsB = [];
-          if (category.facts) {
-            category.facts.forEach(f => {
-              if (f.entity === 'a') factsA.push(f);
-              else if (f.entity === 'b') factsB.push(f);
-            });
-          }
+        {(["a", "b"] as const).map((key) => {
+          const entity = entities[key];
+          const entityFacts = key === 'a' ? factsA : factsB;
 
-          return (["a", "b"] as const).map((key) => {
-            const entity = entities[key];
-            const entityFacts = key === 'a' ? factsA : factsB;
+          if (entityFacts.length === 0) return null;
 
-            if (entityFacts.length === 0) return null;
-
-            return (
-              <div key={key} className="space-y-6">
-                {entityFacts.map((fact, i) => (
-                  <FactCard key={i} fact={fact} entity={entity} index={i} />
-                ))}
-              </div>
-            );
-          });
-        })()}
+          return (
+            <div key={key} className="space-y-6">
+              {entityFacts.map((fact, i) => (
+                <FactCard key={`${entity.name}-${fact.label}-${i}`} fact={fact} entity={entity} index={i} />
+              ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
