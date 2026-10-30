@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { useRef } from 'react';
 import { BookOpen, ExternalLink, Shield, FileText, Newspaper, Globe } from 'lucide-react';
 import gsap from "gsap";
@@ -31,6 +32,25 @@ function getDomain(url?: string) {
   } catch {
     return null;
   }
+}
+
+export type ParsedSourceMeta = {
+  domain: string | null;
+  rel: (typeof reliabilityConfig)[string];
+};
+
+const parsedSourceCache = new WeakMap<ComparisonSource, ParsedSourceMeta>();
+
+export function getParsedSourceMeta(source: ComparisonSource): ParsedSourceMeta {
+  let cached = parsedSourceCache.get(source);
+  if (!cached) {
+    cached = {
+      domain: getDomain(source.url),
+      rel: getReliabilityInfo(source.reliability),
+    };
+    parsedSourceCache.set(source, cached);
+  }
+  return cached;
 }
 
 export const SourcesPanel = ({ sources }: { sources: ComparisonSource[] }) => {
@@ -67,8 +87,7 @@ export const SourcesPanel = ({ sources }: { sources: ComparisonSource[] }) => {
 
       <ul className="space-y-3">
         {sources.map((source) => {
-          const domain = getDomain(source.url);
-          const rel = getReliabilityInfo(source.reliability);
+          const { domain, rel } = getParsedSourceMeta(source);
           const RelIcon = rel.icon;
 
           return (
