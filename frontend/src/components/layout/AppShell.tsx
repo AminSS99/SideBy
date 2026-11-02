@@ -18,7 +18,9 @@ import { BrandFooter } from "@/components/brand/BrandFooter";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { readOnboardingAttribution } from "@/lib/onboardingAttribution";
 
-const primaryNavItems = [
+type NavItem = { to: string; label: string; icon: React.ElementType; end?: boolean };
+
+const primaryNavItems: NavItem[] = [
   { to: "/app/comparisons", label: "Compare", icon: GitCompareArrows },
   { to: "/app", label: "History", icon: Clock3, end: true },
   { to: "/app/uploads", label: "Sources", icon: Database },
@@ -26,7 +28,7 @@ const primaryNavItems = [
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
-const advancedNavItems = [
+const advancedNavItems: NavItem[] = [
   { to: "/app/ecosystem", label: "Snap ecosystem", icon: Orbit },
   { to: "/app/chat", label: "AI Chat", icon: MessageSquare },
   { to: "/app/research", label: "Research", icon: Microscope },

@@ -63,7 +63,7 @@ pnpm run build
 pnpm lint
 
 # Type check
-pnpm exec tsc --noEmit
+pnpm run typecheck
 ```
 
 ## Environment Variables

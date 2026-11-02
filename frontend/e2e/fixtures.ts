@@ -154,6 +154,251 @@ export const COMPARISON_RESULT = {
   },
 };
 
+/** Completed comparison payload for hardware products / devices archetype. */
+export const DEVICE_COMPARISON_RESULT = {
+  slug: "iphone-16-pro-vs-pixel-9-pro",
+  query: "iPhone 16 Pro vs Pixel 9 Pro",
+  context: "product",
+  taxonomy: {
+    category: "product",
+    label: "Consumer Electronics",
+    status: "ready",
+    safetyLevel: "standard",
+  },
+  entities: {
+    a: { name: "iPhone 16 Pro", subtitle: "Apple flagship smartphone", mark: "i", hex: "#475569" },
+    b: { name: "Pixel 9 Pro", subtitle: "Google flagship smartphone", mark: "P", hex: "#0ea5e9" },
+  },
+  sourceCount: 6,
+  updatedAt: "2025-09-01T00:00:00.000Z",
+  verdict: {
+    bestOverall: "iPhone 16 Pro",
+    bestValue: "Pixel 9 Pro",
+    developers: "iPhone 16 Pro",
+    teams: "iPhone 16 Pro",
+    students: "Pixel 9 Pro",
+    powerUsers: "iPhone 16 Pro",
+    ecosystem: "Apple Ecosystem vs Google AI",
+    summary:
+      "iPhone 16 Pro leads on raw silicon efficiency and video recording; Pixel 9 Pro leads on display brightness and generative photo tools.",
+  },
+  dimensions: [
+    { subject: "Battery Life & Efficiency", a: 88, b: 82, fullMark: 100 },
+    { subject: "Display & Peak Brightness", a: 95, b: 92, fullMark: 100 },
+    { subject: "Camera & Optical Zoom", a: 94, b: 96, fullMark: 100 },
+  ],
+  consensus: ["Both are premium flagship smartphones with 120 Hz OLED panels and 5x telephoto lenses"],
+  contradictions: ["Apple uses iOS with Apple Intelligence; Google uses Android with Gemini Nano"],
+  categories: [
+    {
+      name: "Display & Optics",
+      winner: "b",
+      verdict: "Pixel leads on peak brightness while iPhone provides ProMotion adaptive color accuracy.",
+      facts: [
+        {
+          entity: "a",
+          label: "Display Brightness",
+          value: "2000 nits peak outdoor brightness",
+          source: "Apple Tech Specs",
+          sourceUrl: "https://apple.com/iphone-16-pro/specs",
+          sourceTitle: "iPhone 16 Pro Tech Specs",
+          confidence: 0.95,
+          freshness: "Fresh",
+        },
+        {
+          entity: "b",
+          label: "Display Brightness",
+          value: "2050 nits peak outdoor brightness",
+          source: "Google Store Specs",
+          sourceUrl: "https://store.google.com/pixel_9_pro/specs",
+          sourceTitle: "Pixel 9 Pro Tech Specs",
+          confidence: 0.95,
+          freshness: "Fresh",
+        },
+      ],
+    },
+    {
+      name: "Battery & Charging",
+      winner: "a",
+      verdict: "iPhone demonstrates superior runtime efficiency under sustained media workloads.",
+      facts: [
+        {
+          entity: "a",
+          label: "Battery Capacity",
+          value: "3582 mAh rechargeable lithium-ion battery",
+          source: "Apple Battery Report",
+          sourceUrl: "https://apple.com/iphone-16-pro/specs",
+          sourceTitle: "iPhone 16 Pro Tech Specs",
+          confidence: 0.92,
+          freshness: "Fresh",
+        },
+        {
+          entity: "b",
+          label: "Battery Capacity",
+          value: "4700 mAh battery with 27 W wired charging",
+          source: "Google Pixel Battery",
+          sourceUrl: "https://store.google.com/pixel_9_pro/specs",
+          sourceTitle: "Pixel 9 Pro Tech Specs",
+          confidence: 0.92,
+          freshness: "Fresh",
+        },
+      ],
+    },
+  ],
+  sources: [
+    {
+      title: "iPhone 16 Pro Tech Specs",
+      url: "https://apple.com/iphone-16-pro/specs",
+      reliability: "Official",
+      sourceType: "web",
+      extractionMethod: "tavily",
+      fetchedAt: "2025-09-01T00:00:00.000Z",
+      confidence: 0.95,
+    },
+    {
+      title: "Pixel 9 Pro Tech Specs",
+      url: "https://store.google.com/pixel_9_pro/specs",
+      reliability: "Official",
+      sourceType: "web",
+      extractionMethod: "tavily",
+      fetchedAt: "2025-09-01T00:00:00.000Z",
+      confidence: 0.95,
+    },
+  ],
+  telemetry: {
+    latencyMs: 14200,
+    inputTokens: 3800,
+    outputTokens: 1600,
+    estimatedCost: 0.028,
+    models: ["deepseek-chat"],
+  },
+};
+
+/** Completed comparison payload for general multi-criteria decisions archetype. */
+export const GENERAL_COMPARISON_RESULT = {
+  slug: "remote-work-vs-office-work",
+  query: "Remote Work vs Office Work",
+  context: "workplace",
+  taxonomy: {
+    category: "workplace",
+    label: "Workplace & Workstyle",
+    status: "ready",
+    safetyLevel: "standard",
+  },
+  entities: {
+    a: { name: "Remote Work", subtitle: "Distributed home-based model", mark: "R", hex: "#10b981" },
+    b: { name: "Office Work", subtitle: "Colocated in-person model", mark: "O", hex: "#6366f1" },
+  },
+  sourceCount: 5,
+  updatedAt: "2025-05-01T00:00:00.000Z",
+  verdict: {
+    bestOverall: "Remote Work",
+    bestValue: "Remote Work",
+    developers: "Remote Work",
+    teams: "Office Work",
+    students: "Remote Work",
+    powerUsers: "Remote Work",
+    ecosystem: "Hybrid balance",
+    summary:
+      "Remote Work offers superior autonomy, zero commute time, and deep focus; Office Work provides spontaneous collaboration and tighter team bonding.",
+  },
+  dimensions: [
+    { subject: "Flexibility & Autonomy", a: 95, b: 50, fullMark: 100 },
+    { subject: "Team Connection & Spontaneity", a: 60, b: 92, fullMark: 100 },
+    { subject: "Work-Life Integration", a: 90, b: 65, fullMark: 100 },
+  ],
+  consensus: ["Both working models can achieve high productivity depending on organization culture and tooling"],
+  contradictions: ["Remote work eliminates commuting while office work facilitates spontaneous face-to-face problem solving"],
+  categories: [
+    {
+      name: "Productivity & Focus",
+      winner: "a",
+      verdict: "Remote work reduces commute fatigue and provides uninterrupted deep work blocks.",
+      facts: [
+        {
+          entity: "a",
+          label: "Commute Time",
+          value: "0 hours daily commute",
+          source: "Bureau of Labor Statistics",
+          sourceUrl: "https://bls.gov/remote-work",
+          sourceTitle: "Remote Work Statistics",
+          confidence: 0.94,
+          freshness: "Fresh",
+        },
+        {
+          entity: "b",
+          label: "Commute Time",
+          value: "54 minutes average daily round trip",
+          source: "Census Bureau",
+          sourceUrl: "https://census.gov/commute",
+          sourceTitle: "Commute Time Analysis",
+          confidence: 0.94,
+          freshness: "Fresh",
+        },
+      ],
+    },
+  ],
+  sources: [
+    {
+      title: "Remote Work Statistics",
+      url: "https://bls.gov/remote-work",
+      reliability: "Official",
+      sourceType: "web",
+      extractionMethod: "tavily",
+      fetchedAt: "2025-05-01T00:00:00.000Z",
+      confidence: 0.94,
+    },
+    {
+      title: "Commute Time Analysis",
+      url: "https://census.gov/commute",
+      reliability: "Official",
+      sourceType: "web",
+      extractionMethod: "tavily",
+      fetchedAt: "2025-05-01T00:00:00.000Z",
+      confidence: 0.94,
+    },
+  ],
+  telemetry: {
+    latencyMs: 12500,
+    inputTokens: 3200,
+    outputTokens: 1400,
+    estimatedCost: 0.024,
+    models: ["deepseek-chat"],
+  },
+};
+
+export function deviceComparisonJobCompletedResponse(id = "cmp_device_test_456") {
+  return {
+    id,
+    status: "completed",
+    progress: 100,
+    activeStep: 8,
+    query: "iPhone 16 Pro vs Pixel 9 Pro",
+    result: DEVICE_COMPARISON_RESULT,
+    visibility: "private",
+    error: null,
+    failedStep: null,
+    retryable: false,
+    activity: [],
+  };
+}
+
+export function generalComparisonJobCompletedResponse(id = "cmp_general_test_789") {
+  return {
+    id,
+    status: "completed",
+    progress: 100,
+    activeStep: 8,
+    query: "Remote Work vs Office Work",
+    result: GENERAL_COMPARISON_RESULT,
+    visibility: "private",
+    error: null,
+    failedStep: null,
+    retryable: false,
+    activity: [],
+  };
+}
+
 /** The JSON returned by POST /api/comparisons (create job). */
 export function createJobResponse(id = "cmp_12345") {
   return {
@@ -287,6 +532,15 @@ export async function mockAppApi(page: Page) {
   );
   await page.route("**/api/watchlists**", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ watchlists: [] }) }),
+  );
+  await page.route("**/api/consent**", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) }),
+  );
+  await page.route("**/api/comparisons/*/notes**", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ notes: [] }) }),
+  );
+  await page.route("**/api/comparisons/*/versions**", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ versions: [] }), }),
   );
 }
 

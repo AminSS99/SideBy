@@ -386,7 +386,7 @@ See `frontend/src/db/schema.ts` for the full schema.
 
 ```bash
 # Type check
-pnpm exec tsc --noEmit
+pnpm run typecheck
 
 # Lint
 pnpm lint

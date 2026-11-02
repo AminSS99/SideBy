@@ -77,6 +77,7 @@ export type FollowUpEvidence = {
 };
 
 export type ComparisonData = {
+  provenance?: "researched" | "illustrative";
   slug: string;
   query: string;
   context: string;

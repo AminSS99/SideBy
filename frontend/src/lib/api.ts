@@ -58,14 +58,56 @@ const getCsrfToken = async (authorizationToken: string | null) => {
 export class ApiError extends Error {
   status: number;
   code?: string;
+  /** Server-requested wait before retrying (from Retry-After), when given. */
+  retryAfterMs?: number;
 
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number, code?: string, retryAfterMs?: number) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.retryAfterMs = retryAfterMs;
   }
 }
+
+/** Parse a Retry-After header (delay-seconds or HTTP date) into ms. */
+export const parseRetryAfterMs = (header: string | null): number | undefined => {
+  if (!header) return undefined;
+  const seconds = Number(header);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.round(seconds * 1000);
+  const date = Date.parse(header);
+  if (Number.isFinite(date)) return Math.max(0, date - Date.now());
+  return undefined;
+};
+
+/**
+ * One user-facing vocabulary for request failures. Server messages remain
+ * the source of truth when present and safe; this maps the failure classes
+ * product UI must distinguish (offline, timeout, signed-out, forbidden,
+ * rate-limited, provider down) without leaking provider internals.
+ */
+export const describeApiFailure = (error: unknown): string => {
+  if (error instanceof ApiError) {
+    if (error.status === 401) return "Your session has expired. Sign in again to continue.";
+    if (error.status === 403) return "You don't have access to this in the current workspace.";
+    if (error.status === 404) return "That record no longer exists or isn't shared with you.";
+    if (error.status === 408) return "The request timed out. Check your connection and try again.";
+    if (error.status === 429) {
+      return error.retryAfterMs && error.retryAfterMs > 0
+        ? `You've hit the usage limit. Try again in about ${Math.max(1, Math.ceil(error.retryAfterMs / 1000))} seconds.`
+        : "You've hit the usage limit. Wait a moment and try again.";
+    }
+    if (error.status >= 500) return "SideBy's service hit a problem. Your work is saved — try again shortly.";
+    return error.message;
+  }
+  if (error instanceof Error && error.name === "AbortError") {
+    return "The request timed out. Check your connection and try again.";
+  }
+  if (error instanceof TypeError) {
+    return "You're offline or the connection dropped. Reconnect and try again — nothing was submitted twice.";
+  }
+  return "Something went wrong. Please try again.";
+};
 
 export const shouldReportApiError = (error: unknown): boolean => {
   if (error instanceof ApiError) {
@@ -185,6 +227,7 @@ const executeFetch = async (
 ) => {
   const maxRetries = retryOptions?.retries ?? 2;
   const baseDelay = retryOptions?.retryDelay ?? 1000;
+  const method = (init.method || "GET").toUpperCase();
 
   let lastError: Error | undefined;
 
