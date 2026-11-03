@@ -66,31 +66,34 @@ export default function CookieConsent() {
       {showBanner ? (
         <section
           aria-label="Cookie preferences"
-          className="fixed bottom-3 left-3 right-3 z-[100] mx-auto max-w-2xl rounded-2xl border border-white/15 bg-[#0d0b0a]/95 p-4 shadow-[0_24px_80px_rgba(0,0,0,.7)] backdrop-blur-2xl sm:bottom-5 sm:p-5"
+          className="fixed bottom-2 left-2 right-2 z-[100] mx-auto max-w-2xl rounded-xl border border-white/15 bg-[#0d0b0a]/95 p-3 shadow-[0_24px_80px_rgba(0,0,0,.7)] backdrop-blur-2xl sm:bottom-5 sm:p-5"
         >
-          <div className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-lg bg-orange-400/10 text-orange-300"><Cookie className="h-4 w-4" /></span><h2 className="text-sm font-semibold text-white sm:text-base">Your privacy choices</h2></div>
-          <p className="mt-2 text-xs leading-5 text-white/60 sm:text-sm sm:leading-6">
-            SideBy uses essential cookies for sign-in and security. With your permission, we also use PostHog analytics to understand product usage. You can change this anytime.
+          <div className="flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-md bg-orange-400/10 text-orange-300 sm:h-8 sm:w-8 sm:rounded-lg"><Cookie className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></span><h2 className="text-sm font-semibold text-white sm:text-base">Your privacy choices</h2></div>
+          <p className="mt-1.5 text-xs leading-5 text-white/60 sm:mt-2 sm:text-sm sm:leading-6">
+            <span className="sm:hidden">Essential cookies for sign-in; optional analytics with your permission.</span>
+            <span className="hidden sm:inline">SideBy uses essential cookies for sign-in and security. With your permission, we also use PostHog analytics to understand product usage. You can change this anytime.</span>
           </p>
           {gpcEnabled ? (
             <p className="mt-2 text-sm text-amber-300">
               Your browser’s Global Privacy Control is on, so analytics remain disabled.
             </p>
           ) : null}
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:flex sm:justify-end">
-            <button type="button" onClick={() => setShowSettings(true)} className="min-h-11 rounded-xl border border-white/15 px-3 text-xs font-medium text-white/75 hover:bg-white/10 sm:px-4 sm:text-sm">
-              Manage settings
-            </button>
-            <button type="button" onClick={() => save("rejected", "banner")} className="min-h-11 rounded-xl border border-white/15 px-3 text-xs font-medium text-white/75 hover:bg-white/10 sm:px-4 sm:text-sm">
+          <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-4 sm:flex sm:justify-end">
+            <button type="button" onClick={() => save("rejected", "banner")} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs font-medium text-white/80 hover:bg-white/10 sm:min-h-11 sm:rounded-xl sm:px-4 sm:text-sm">
               Essential only
             </button>
-            <button type="button" onClick={() => save("accepted", "banner")} disabled={gpcEnabled} className="col-span-2 min-h-11 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 text-xs font-semibold text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 sm:col-auto sm:text-sm">
+            <button type="button" onClick={() => save("accepted", "banner")} disabled={gpcEnabled} className="min-h-10 rounded-lg bg-orange-700 px-3 text-xs font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:rounded-xl sm:px-4 sm:text-sm">
               Allow analytics
             </button>
           </div>
-          <Link to="/legal/cookies" className="mt-2 inline-block text-[10px] text-white/40 underline underline-offset-2 hover:text-white sm:mt-3 sm:text-xs">
-            Cookie Policy
-          </Link>
+          <div className="mt-2 flex items-center gap-4 text-[10px] sm:mt-3 sm:text-xs">
+            <button type="button" onClick={() => setShowSettings(true)} className="text-white/50 underline underline-offset-2 hover:text-white">
+              Manage settings
+            </button>
+            <Link to="/legal/cookies" className="text-white/40 underline underline-offset-2 hover:text-white">
+              Cookie Policy
+            </Link>
+          </div>
         </section>
       ) : null}
 
