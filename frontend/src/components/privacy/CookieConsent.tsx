@@ -82,7 +82,7 @@ export default function CookieConsent() {
             <button type="button" onClick={() => save("rejected", "banner")} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs font-medium text-white/80 hover:bg-white/10 sm:min-h-11 sm:rounded-xl sm:px-4 sm:text-sm">
               Essential only
             </button>
-            <button type="button" onClick={() => save("accepted", "banner")} disabled={gpcEnabled} className="min-h-10 rounded-lg bg-orange-700 px-3 text-xs font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:rounded-xl sm:px-4 sm:text-sm">
+            <button type="button" onClick={() => save("accepted", "banner")} disabled={gpcEnabled} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs font-medium text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:rounded-xl sm:border-transparent sm:bg-orange-700 sm:px-4 sm:text-sm sm:font-semibold sm:text-white sm:hover:bg-orange-600">
               Allow analytics
             </button>
           </div>
