@@ -127,6 +127,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/", "destination": "/home-entry.html" },
     {
       "source": "/api/:path*",
       "destination": "/api/[...path]"

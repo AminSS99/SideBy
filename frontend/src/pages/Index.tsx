@@ -108,7 +108,7 @@ const Index = () => {
           <div className="grid items-center gap-8 sm:gap-12 lg:grid-cols-[minmax(0,.9fr)_minmax(520px,1.1fr)] lg:gap-14">
             <div className="text-center lg:text-left">
               <div className="hero-kicker mb-5 inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-400/[0.08] px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-orange-200 shadow-[0_0_40px_rgba(249,115,22,.1)]">
-                <Sparkles className="h-3.5 w-3.5" /> Evidence before opinions
+                <Sparkles className="h-3.5 w-3.5" /> SideBy AI · Source-backed comparisons
               </div>
               <h1 className="hero-title font-serif text-[clamp(3.15rem,12vw,5.6rem)] leading-[0.9] tracking-[-0.055em] text-[#fffaf1] lg:text-[5.8rem]">
                 <span className="block overflow-hidden pb-2"><span className="block">Compare less.</span></span>
