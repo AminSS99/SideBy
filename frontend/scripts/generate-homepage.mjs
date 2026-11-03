@@ -9,4 +9,5 @@ const homepage = template
   .replace("</head>", '  <link rel="canonical" href="https://sideby.ink/" />\n  </head>')
   .replace(root, `<div id="root">
 ${intro}</div>`);
-await writeFile("dist/home-entry.html", homepage);
+await writeFile("dist/spa-shell.html", template);
+await writeFile("dist/index.html", homepage);
