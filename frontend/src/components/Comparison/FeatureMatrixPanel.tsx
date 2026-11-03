@@ -107,7 +107,7 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
       }
 
       return acc;
-    }, [] as Array<{ category: string; winner: "a" | "b" | "tie" | null; rows: Array<{ label: string; factA: unknown; factB: unknown }> }>);
+    }, [] as Array<{ category: string; winner: "a" | "b" | "tie" | null; rows: Array<{ label: string; factA: ComparisonFact | undefined; factB: ComparisonFact | undefined }> }>);
   }, [processedCategories, filter]);
 
   useGSAP(() => {

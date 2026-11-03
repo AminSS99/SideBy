@@ -7,8 +7,9 @@ describe("SourcesPanel getParsedSourceMeta caching & domain parsing", () => {
     const source: ComparisonSource = {
       title: "React Documentation",
       url: "https://www.react.dev/reference/react",
-      reliability: "official",
+      reliability: "Official",
       confidence: 0.95,
+      fetchedAt: "2025-01-01T00:00:00.000Z",
     };
 
     const meta = getParsedSourceMeta(source);
@@ -17,11 +18,14 @@ describe("SourcesPanel getParsedSourceMeta caching & domain parsing", () => {
   });
 
   it("should handle missing or malformed URLs without crashing", () => {
-    const invalidSource: ComparisonSource = {
+    // Server payloads can carry reliability strings outside the canonical
+    // union; the parser must normalize them instead of crashing.
+    const invalidSource = {
       title: "Broken Link",
       url: "invalid-url-string",
       reliability: "news",
-    };
+      fetchedAt: "2025-01-01T00:00:00.000Z",
+    } as unknown as ComparisonSource;
 
     const meta = getParsedSourceMeta(invalidSource);
     expect(meta.domain).toBeNull();
@@ -29,11 +33,12 @@ describe("SourcesPanel getParsedSourceMeta caching & domain parsing", () => {
   });
 
   it("should default to Review reliability for unrecognized reliability strings", () => {
-    const unknownSource: ComparisonSource = {
+    const unknownSource = {
       title: "Blog Post",
       url: "https://example.com/post",
       reliability: "unrecognized_type",
-    };
+      fetchedAt: "2025-01-01T00:00:00.000Z",
+    } as unknown as ComparisonSource;
 
     const meta = getParsedSourceMeta(unknownSource);
     expect(meta.domain).toBe("example.com");
@@ -44,7 +49,8 @@ describe("SourcesPanel getParsedSourceMeta caching & domain parsing", () => {
     const source: ComparisonSource = {
       title: "Vite Docs",
       url: "https://vite.dev/guide/",
-      reliability: "docs",
+      reliability: "Docs",
+      fetchedAt: "2025-01-01T00:00:00.000Z",
     };
 
     const firstMeta = getParsedSourceMeta(source);

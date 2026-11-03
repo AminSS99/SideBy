@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: process.env.PORT ? parseInt(process.env.PORT) : 5173,
-    allowedHosts: "all",
+    allowedHosts: true,
     proxy: process.env.VITE_API_BASE_URL
       ? undefined
       : {

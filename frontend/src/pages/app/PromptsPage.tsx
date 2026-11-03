@@ -98,7 +98,7 @@ const PromptsPage = () => {
       });
       setPrompts(initialPrompts);
     });
-  }, [activeWorkspace?.id, activeProject?.id]);
+  }, [activeWorkspace?.id]);
 
   const filteredPrompts = useMemo(() => {
     const term = search.trim().toLowerCase();

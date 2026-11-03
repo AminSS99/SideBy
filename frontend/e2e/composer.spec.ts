@@ -164,7 +164,9 @@ test.describe("SideBy Authenticated Result Interactive Evidence Panel E2E", () =
     );
   });
 
-  test("should open the evidence panel drawer when clicking on matrix elements", async ({ page }) => {
+  test("should open the evidence panel drawer when clicking on matrix elements", async ({ page }, testInfo) => {
+    // Targets the desktop-only matrix (`.hidden.md:block`).
+    test.skip(testInfo.project.name !== "chromium", "Desktop workbench layout only");
     await page.goto(`/app/comparisons/${COMPARISON_ID}`);
 
     // Wait for the workbench to render
@@ -193,7 +195,8 @@ test.describe("SideBy Authenticated Result Interactive Evidence Panel E2E", () =
     await expect(page.getByRole("heading", { name: "Pricing Evidence", exact: true })).not.toBeVisible();
   });
 
-  test("should open decision evidence without interfering with the importance slider", async ({ page }) => {
+  test("should open decision evidence without interfering with the importance slider", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "Desktop workbench layout only");
     await page.goto(`/app/comparisons/${COMPARISON_ID}`);
 
     const importanceSlider = page.getByRole("slider", { name: "Importance of Pricing" });

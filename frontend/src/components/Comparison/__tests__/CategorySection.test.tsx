@@ -22,14 +22,14 @@ vi.mock("@gsap/react", () => ({
 
 describe("CategorySection facts partitioning logic", () => {
   const mockEntities: { a: Entity; b: Entity } = {
-    a: { name: "React", hex: "#61dafb" },
-    b: { name: "Vue", hex: "#42b883" },
+    a: { name: "React", subtitle: "UI Library", mark: "R", hex: "#61dafb" },
+    b: { name: "Vue", subtitle: "Progressive Framework", mark: "V", hex: "#42b883" },
   };
 
   const mockFacts: ComparisonFact[] = [
-    { entity: "a", label: "Ecosystem", value: "Huge ecosystem with npm", confidence: 0.95, freshness: "Fresh", source: "Docs" },
-    { entity: "b", label: "Ecosystem", value: "Growing ecosystem with official packages", confidence: 0.90, freshness: "Fresh", source: "Docs" },
-    { entity: "a", label: "Performance", value: "Virtual DOM reconciliation", confidence: 0.88, freshness: "Fresh", source: "Benchmark" },
+    { entity: "a", label: "Ecosystem", value: "Huge ecosystem with npm", confidence: 0.95, freshness: "Fresh", source: "Docs", sourceUrl: "https://react.dev", sourceTitle: "React Docs" },
+    { entity: "b", label: "Ecosystem", value: "Growing ecosystem with official packages", confidence: 0.90, freshness: "Fresh", source: "Docs", sourceUrl: "https://vuejs.org", sourceTitle: "Vue Docs" },
+    { entity: "a", label: "Performance", value: "Virtual DOM reconciliation", confidence: 0.88, freshness: "Fresh", source: "Benchmark", sourceUrl: "https://react.dev", sourceTitle: "React Docs" },
   ];
 
   const mockCategory: Category = {
