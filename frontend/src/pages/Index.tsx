@@ -108,7 +108,7 @@ const Index = () => {
             <div className="text-center lg:text-left">
               <p className="hero-kicker mb-5 flex items-center justify-center gap-3 text-[10px] font-bold uppercase tracking-[0.22em] text-orange-200/90 lg:justify-start">
                 <span className="h-px w-8 bg-orange-300/50" aria-hidden="true" />
-                Evidence before opinions
+                SideBy AI · Source-backed comparisons
               </p>
               <h1 className="hero-title font-serif text-[clamp(3.15rem,12vw,5.6rem)] leading-[0.9] tracking-[-0.055em] text-[#fffaf1] lg:text-[5.8rem]">
                 <span className="block overflow-hidden pb-2"><span className="block">Compare less.</span></span>
