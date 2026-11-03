@@ -43,7 +43,7 @@ export function MarketingFooter() {
           <div className="max-w-md">
             <Link to="/" aria-label="SideBy home" className="inline-flex items-center gap-3 text-[#fffaf1]">
               <span className="relative h-9 w-9 shrink-0 overflow-hidden" aria-hidden="true">
-                <img src="/sideby.ico?v=20260728-real" alt="" className="absolute -left-[30px] -top-[25px] h-24 w-24 max-w-none object-contain" />
+                <img src="/sideby-mark.png" alt="" className="absolute -left-[30px] -top-[25px] h-24 w-24 max-w-none object-contain" />
               </span>
               <span className="font-serif text-2xl tracking-[-0.03em]">SideBy</span>
             </Link>

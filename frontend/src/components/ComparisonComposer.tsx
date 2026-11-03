@@ -7,7 +7,6 @@ import {
   Loader2,
   Plus,
   ShieldAlert,
-  Sparkles,
   X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -114,15 +113,12 @@ export function ComparisonComposer({
   return (
     <div className={cn("relative w-full max-w-3xl overflow-hidden rounded-[1.75rem] border border-white/[0.12] bg-[#0d0b0a]/92 p-4 shadow-[0_30px_100px_rgba(0,0,0,.55),0_0_80px_rgba(249,115,22,.08)] backdrop-blur-2xl sm:p-6", className)}>
       <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-orange-500/[0.12] blur-[90px]" />
-      <div className="pointer-events-none absolute -bottom-28 -left-20 h-64 w-64 rounded-full bg-fuchsia-500/[0.07] blur-[100px]" />
+{/* single warm accent only */}
       <div className="relative mb-5 flex items-center justify-between gap-4 px-1">
         <div className="text-left">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-300">Build your comparison</p>
           <p className="mt-1 text-xs text-white/45">Two options in. A defensible answer out.</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/15 bg-emerald-400/[0.07] px-2.5 py-1.5 text-[8px] font-bold uppercase tracking-widest text-emerald-300 sm:px-3 sm:text-[9px]">
-          <Sparkles className="h-3 w-3" /> Source backed
-        </span>
       </div>
 
       <form onSubmit={handleSubmit} className="relative space-y-4">

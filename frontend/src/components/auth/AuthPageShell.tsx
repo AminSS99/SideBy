@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ArrowLeft, CheckCircle2, Lock, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { brand } from "@/config/brand";
 import InteractiveConstellation from "./InteractiveConstellation";
 
@@ -117,7 +117,7 @@ const AuthPageShell = ({
       <div className="relative z-10 mx-auto w-full max-w-6xl">
         <div className="mb-7 flex items-center justify-between lg:hidden">
           <Link to="/" className="auth-logo flex items-center gap-3">
-            <img src="/sideby.ico?v=20260728-real" alt="SideBy" className="h-9 w-9 rounded-xl object-contain" />
+            <img src="/sideby-mark.png" alt="SideBy" className="h-9 w-9 rounded-xl object-contain" />
             <span className="font-serif text-xl text-[#fdfbf7]">{brand.productName}</span>
           </Link>
           <Link to="/" aria-label="Back to home" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/50">
@@ -139,7 +139,7 @@ const AuthPageShell = ({
                 className="auth-logo flex items-center gap-4 group self-start"
               >
                 <img
-                  src="/sideby.ico?v=20260728-real"
+                  src="/sideby-mark.png"
                   alt="SideBy"
                   className="h-11 w-11 rounded-xl object-contain shadow-lg transition-transform group-hover:scale-105"
                 />
@@ -155,7 +155,6 @@ const AuthPageShell = ({
 
               {/* Glowing Beta Pill Badge */}
               <div className="auth-badge inline-flex items-center gap-2 self-start rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-orange-300 shadow-[0_0_15px_-3px_rgba(249,115,22,0.15)]">
-                <Sparkles className="h-3.5 w-3.5" />
                 {eyebrow}
               </div>
 
@@ -189,8 +188,8 @@ const AuthPageShell = ({
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
             >
-              {/* Subtle colored border glow wrapper */}
-              <div className="pointer-events-none absolute -inset-px rounded-[28px] bg-gradient-to-br from-orange-500/35 via-rose-500/20 to-fuchsia-500/25 opacity-80 blur-[2px]" />
+              {/* Plain border; no gradient glow wrapper */}
+              <div className="pointer-events-none absolute -inset-px rounded-[28px] border border-white/[0.09]" />
 
               <div className="relative overflow-hidden rounded-[28px] border border-white/[0.07] bg-[#09090b]/95 p-5 shadow-2xl backdrop-blur-xl sm:p-8 md:p-10">
                 {/* Soft inner glow top right */}
@@ -198,7 +197,7 @@ const AuthPageShell = ({
 
                 <div className="relative z-10 mb-7 lg:hidden">
                   <div className="inline-flex items-center gap-2 rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-orange-300">
-                    <Sparkles className="h-3.5 w-3.5" /> {eyebrow}
+                    {eyebrow}
                   </div>
                   <h1 className="mt-5 font-serif text-3xl leading-tight tracking-tight text-[#fdfbf7] sm:text-4xl">{title}</h1>
                   <p className="mt-3 text-sm leading-6 text-white/45">{description}</p>
@@ -222,17 +221,7 @@ const AuthPageShell = ({
               </div>
             </div>
 
-            {/* trust/security badges below card */}
-            <div className="auth-footer-features mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[9px] font-medium uppercase tracking-wider text-white/30">
-              <div className="flex items-center gap-1.5 hover:text-white/40 transition-colors duration-200 cursor-default">
-                <ShieldCheck className="h-3.5 w-3.5 stroke-[1.5]" />
-                <span>SOC 2 Ready</span>
-              </div>
-              <div className="flex items-center gap-1.5 hover:text-white/40 transition-colors duration-200 cursor-default">
-                <Lock className="h-3.5 w-3.5 stroke-[1.5]" />
-                <span>256-bit Encrypted</span>
-              </div>
-            </div>
+{/* Unverified compliance claims removed; auth security lives in product docs. */}
           </div>
 
         </div>
