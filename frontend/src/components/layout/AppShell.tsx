@@ -18,7 +18,9 @@ import { BrandFooter } from "@/components/brand/BrandFooter";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { readOnboardingAttribution } from "@/lib/onboardingAttribution";
 
-const primaryNavItems = [
+type NavItem = { to: string; label: string; icon: React.ElementType; end?: boolean };
+
+const primaryNavItems: NavItem[] = [
   { to: "/app/comparisons", label: "Compare", icon: GitCompareArrows },
   { to: "/app", label: "History", icon: Clock3, end: true },
   { to: "/app/uploads", label: "Sources", icon: Database },
@@ -26,7 +28,7 @@ const primaryNavItems = [
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
-const advancedNavItems = [
+const advancedNavItems: NavItem[] = [
   { to: "/app/ecosystem", label: "Snap ecosystem", icon: Orbit },
   { to: "/app/chat", label: "AI Chat", icon: MessageSquare },
   { to: "/app/research", label: "Research", icon: Microscope },
@@ -119,7 +121,7 @@ const AppShell = () => {
               <Menu className="h-6 w-6" />
             </button>
             <Link to="/" className="flex items-center gap-4 group">
-              <span className="grid h-10 w-10 place-items-center rounded-xl border border-orange-300/15 bg-orange-400/[0.07]"><img src="/sideby.ico?v=20260728-real" alt="SideBy" className="h-8 w-8 rounded-lg object-contain transition-transform duration-300 group-hover:scale-105" /></span>
+              <span className="grid h-10 w-10 place-items-center rounded-xl border border-orange-300/15 bg-orange-400/[0.07]"><img src="/sideby-mark.png" alt="SideBy" className="h-8 w-8 rounded-lg object-contain transition-transform duration-300 group-hover:scale-105" /></span>
               <div className="hidden sm:block">
                 <span className="font-serif text-lg tracking-tight text-white group-hover:text-orange-50 transition-colors">
                   {brand.productName}
@@ -274,7 +276,7 @@ const AppShell = () => {
               >
                 <div className="p-4 flex items-center justify-between border-b border-[#2a2a2a]">
                   <div className="flex items-center gap-3">
-                    <img src="/sideby.ico?v=20260728-real" alt="SideBy" className="h-8 w-8 rounded-lg object-contain" />
+                    <img src="/sideby-mark.png" alt="SideBy" className="h-8 w-8 rounded-lg object-contain" />
                     <span className="font-serif text-base tracking-tight text-white">{brand.productName}</span>
                   </div>
                   <button 

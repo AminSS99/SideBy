@@ -18,7 +18,7 @@ const SignIn = () => {
     <AuthPageShell
       eyebrow="Private beta"
       title={`Sign in to ${brand.productName}`}
-      description={`${brand.productName} uses Clerk for beta access, workspace routing, and API authentication.`}
+      description={`Pick up your comparisons, workspaces, and source-backed research where you left off.`}
       footerLabel="Need an account?"
       footerLinkLabel="Create one"
       footerHref="/auth/sign-up"

@@ -67,6 +67,7 @@ export type ComparisonTaxonomySummary = {
   disclaimer?: string;
   policyNote?: string;
   sourceRequirements: string[];
+  freshnessClass?: TaxonomyFreshnessClass;
 };
 
 export type ComparisonIntent = ComparisonTaxonomySummary & {
@@ -921,6 +922,7 @@ export const summarizeComparisonTaxonomy = (intent: ComparisonIntent): Compariso
     disclaimer: intent.disclaimer,
     policyNote: intent.policyNote,
     sourceRequirements: definition.sourceRequirements,
+    freshnessClass: definition.freshnessClass,
   };
 };
 

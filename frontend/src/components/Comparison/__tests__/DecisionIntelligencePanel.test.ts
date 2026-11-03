@@ -3,29 +3,35 @@ import type { ComparisonData } from "../types";
 
 describe("DecisionIntelligencePanel Evidence Graph helper logic", () => {
   const sampleResult: ComparisonData = {
-    id: "test-comp-1",
     query: "React vs Vue",
     slug: "react-vs-vue",
+    context: "",
     sourceCount: 3,
-    status: "completed",
-    visibility: "private",
+    dimensions: [],
+    consensus: [],
+    contradictions: [],
     updatedAt: "2025-01-01T00:00:00.000Z",
     entities: {
       a: {
-        id: "react",
         name: "React",
         subtitle: "UI Library",
+        mark: "R",
         hex: "#61dafb",
       },
       b: {
-        id: "vue",
         name: "Vue",
         subtitle: "Progressive Framework",
+        mark: "V",
         hex: "#42b883",
       },
     },
     verdict: {
       bestOverall: "React",
+      bestValue: "Vue",
+      developers: "React",
+      teams: "React",
+      students: "Vue",
+      powerUsers: "React",
       summary: "React has a larger ecosystem while Vue offers easier onboarding.",
     },
     categories: [
@@ -41,6 +47,7 @@ describe("DecisionIntelligencePanel Evidence Graph helper logic", () => {
             confidence: 0.95,
             source: "npm",
             sourceUrl: "https://npmjs.com",
+            sourceTitle: "npm trends",
             freshness: "Fresh",
           },
           {
@@ -50,6 +57,7 @@ describe("DecisionIntelligencePanel Evidence Graph helper logic", () => {
             confidence: 0.9,
             source: "npm",
             sourceUrl: "https://npmjs.com",
+            sourceTitle: "npm trends",
             freshness: "Fresh",
           },
         ],
@@ -59,7 +67,7 @@ describe("DecisionIntelligencePanel Evidence Graph helper logic", () => {
       {
         title: "npm trends",
         url: "https://npmjs.com",
-        reliability: "official",
+        reliability: "Official",
         confidence: 0.95,
         fetchedAt: "2025-01-01T00:00:00.000Z",
       },

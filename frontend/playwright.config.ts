@@ -20,6 +20,14 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      name: "mobile-safari",
+      use: { ...devices["iPhone 14"], serviceWorkers: "block" },
+    },
+    {
+      name: "mobile-chrome",
+      use: { ...devices["Pixel 5"], serviceWorkers: "block" },
+    },
   ],
   webServer: process.env.BASE_URL
     ? undefined

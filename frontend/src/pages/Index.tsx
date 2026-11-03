@@ -11,7 +11,6 @@ import {
   Network,
   SearchCheck,
   ShieldCheck,
-  Sparkles,
   Zap,
 } from "lucide-react";
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
@@ -104,15 +103,16 @@ const Index = () => {
 
       <main className="relative z-10">
         <section ref={heroRef} className="relative mx-auto max-w-7xl px-4 pb-20 pt-10 sm:px-6 sm:pb-28 sm:pt-20 lg:pt-24">
-          <div className="hero-pointer-glow pointer-events-none absolute left-1/2 top-1/3 -z-10 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(249,115,22,.15),rgba(244,63,94,.06)_38%,transparent_68%)] blur-2xl" />
+          <div className="hero-pointer-glow pointer-events-none absolute left-1/2 top-1/3 -z-10 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(249,115,22,.13),transparent_65%)] blur-2xl" />
           <div className="grid items-center gap-8 sm:gap-12 lg:grid-cols-[minmax(0,.9fr)_minmax(520px,1.1fr)] lg:gap-14">
             <div className="text-center lg:text-left">
-              <div className="hero-kicker mb-5 inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-400/[0.08] px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-orange-200 shadow-[0_0_40px_rgba(249,115,22,.1)]">
-                <Sparkles className="h-3.5 w-3.5" /> SideBy AI · Source-backed comparisons
-              </div>
+              <p className="hero-kicker mb-5 flex items-center justify-center gap-3 text-[10px] font-bold uppercase tracking-[0.22em] text-orange-200/90 lg:justify-start">
+                <span className="h-px w-8 bg-orange-300/50" aria-hidden="true" />
+                SideBy AI · Source-backed comparisons
+              </p>
               <h1 className="hero-title font-serif text-[clamp(3.15rem,12vw,5.6rem)] leading-[0.9] tracking-[-0.055em] text-[#fffaf1] lg:text-[5.8rem]">
                 <span className="block overflow-hidden pb-2"><span className="block">Compare less.</span></span>
-                <span className="block overflow-hidden pb-3"><span className="block bg-gradient-to-r from-orange-300 via-rose-400 to-fuchsia-400 bg-clip-text italic text-transparent">Know more.</span></span>
+                <span className="block overflow-hidden pb-3"><span className="block italic text-orange-200">Know more.</span></span>
               </h1>
               <p className="hero-copy mx-auto mt-5 max-w-xl text-base leading-7 text-white/60 sm:text-lg lg:mx-0">
                 SideBy turns scattered research into a decision you can defend—with sourced facts, meaningful scores, and a verdict that shows its work.

@@ -116,9 +116,10 @@ const Pricing = () => {
 
         <section className="mx-auto mt-10 grid max-w-7xl gap-4 md:grid-cols-2 lg:mt-14 xl:grid-cols-4 xl:items-stretch">
           {TIERS.map((tier) => {
-            const ctaClass = `group mt-7 flex min-h-[52px] items-center justify-center gap-2 rounded-2xl px-5 text-center text-[10px] font-bold uppercase tracking-[0.16em] transition hover:brightness-110 ${tier.featured ? "bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 text-white" : "border border-white/10 bg-white/[0.04] text-white/70"}`;
+            const isFeatured = "featured" in tier && Boolean(tier.featured);
+            const ctaClass = `group mt-7 flex min-h-[52px] items-center justify-center gap-2 rounded-2xl px-5 text-center text-[10px] font-bold uppercase tracking-[0.16em] transition hover:brightness-110 ${isFeatured ? "bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 text-white" : "border border-white/10 bg-white/[0.04] text-white/70"}`;
             return (
-              <article key={tier.id} className={`pricing-card relative flex flex-col overflow-hidden rounded-[28px] border p-5 sm:p-7 ${tier.featured ? "border-orange-300/25 bg-gradient-to-br from-orange-500/[0.13] via-rose-500/[0.06] to-fuchsia-500/[0.07] shadow-[0_28px_80px_-40px_rgba(244,63,94,.75)]" : "border-white/[0.09] bg-white/[0.035]"}`}>
+              <article key={tier.id} className={`pricing-card relative flex flex-col overflow-hidden rounded-[28px] border p-5 sm:p-7 ${isFeatured ? "border-orange-300/25 bg-gradient-to-br from-orange-500/[0.13] via-rose-500/[0.06] to-fuchsia-500/[0.07] shadow-[0_28px_80px_-40px_rgba(244,63,94,.75)]" : "border-white/[0.09] bg-white/[0.035]"}`}>
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-300/60 to-transparent" />
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/25 text-orange-300"><tier.icon className="h-5 w-5" /></div>

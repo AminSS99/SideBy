@@ -19,6 +19,7 @@
     "lint:seo": "tsx scripts/validate-seo.ts",
     "generate:sitemap": "tsx scripts/generate-sitemap.ts",
     "test": "vitest run",
+    "typecheck": "tsc -b && tsc --noEmit -p api/tsconfig.json",
     "typecheck:api": "tsc --noEmit -p api/tsconfig.json",
     "preview": "vite preview",
     "db:generate": "drizzle-kit generate",

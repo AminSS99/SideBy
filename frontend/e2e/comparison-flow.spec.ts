@@ -72,7 +72,9 @@ async function startComparison(page: import("@playwright/test").Page, query: str
 }
 
 test.describe("SideBy Authenticated Comparison Flow", () => {
-  test("creates a comparison and renders the completed result workbench", async ({ page }) => {
+  test("creates a comparison and renders the completed result workbench", async ({ page }, testInfo) => {
+    // Asserts the desktop workbench grid, which is hidden on mobile layouts.
+    test.skip(testInfo.project.name !== "chromium", "Desktop workbench layout only");
     let createCalls = 0;
     await seedTestAuth(page);
     await page.route("**/api/comparisons/validate", (route) =>
@@ -143,7 +145,8 @@ test.describe("SideBy Authenticated Comparison Flow", () => {
     await expect(page.getByText(/markdown|export json/i, { exact: false }).first()).toBeVisible();
   });
 
-  test("partial create response still opens the comparison workbench", async ({ page }) => {
+  test("partial create response still opens the comparison workbench", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "Desktop workbench layout only");
     await seedTestAuth(page);
     await page.route("**/api/comparisons/validate", (route) =>
       route.fulfill({

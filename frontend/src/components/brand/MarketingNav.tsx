@@ -22,7 +22,7 @@ export const MarketingNav = () => {
           >
             <span className="relative h-8 w-8 shrink-0 overflow-hidden" aria-hidden="true">
               <img
-                src="/sideby.ico?v=20260728-real"
+                src="/sideby-mark.png"
                 alt=""
                 className="absolute -left-[26px] -top-[22px] h-[84px] w-[84px] max-w-none object-contain transition-transform duration-500 ease-out group-hover:scale-[1.04]"
               />

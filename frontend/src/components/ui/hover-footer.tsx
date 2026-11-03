@@ -10,8 +10,8 @@ interface TextHoverEffectProps {
 
 export function TextHoverEffect({ text, duration = 0.12, className }: TextHoverEffectProps) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const gradientId = useId().replaceAll(":", "");
-  const maskId = useId().replaceAll(":", "");
+  const gradientId = useId().replace(/:/g, "");
+  const maskId = useId().replace(/:/g, "");
   const [hovered, setHovered] = useState(false);
   const [maskPosition, setMaskPosition] = useState({ cx: "50%", cy: "50%" });
 

@@ -18,6 +18,8 @@ export * from "./ExportModal";
 export * from "./RunTelemetryPanel";
 export * from "./FeedbackPanel";
 export * from "./DecisionIntelligencePanel";
+export * from "./EvidenceGapPanel";
+export * from "./DecisionReceiptPanel";
 export * from "./TeamNotesPanel";
 export * from "./VersionHistoryUI";
 export * from "./DecisionMatrixPanel";
