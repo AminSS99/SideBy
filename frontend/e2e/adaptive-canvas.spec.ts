@@ -147,6 +147,7 @@ test.describe("EXPERIENCE-01: Adaptive Decision Canvas Browser Verification", ()
   test("Desktop (1280px): Adjusts priorities, asserts recalculated scores, verifies evidence modal, and preserves weights across classic round trip", async ({
     page,
   }, testInfo) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/app/comparisons/${SOFTWARE_CMP_ID}?canvas=1`);
     await waitForSettled(page);
