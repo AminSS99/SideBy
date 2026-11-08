@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { Sliders, Trophy, Save, Trash2, HelpCircle, Activity, Sparkles, FolderOpen, Lock } from "lucide-react";
 import gsap from "gsap";
@@ -7,10 +8,54 @@ import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import type { ComparisonData } from "./types";
+import type { ComparisonData, ComparisonDimension } from "./types";
 import { panelClass } from "./constants";
 
 import { ScoreDetailDrawer } from "./ScoreDetailDrawer";
+
+export type DecisionScores = {
+  scoreA: number;
+  scoreB: number;
+  winner: "a" | "b" | "tie";
+};
+
+export const computeDecisionScores = (
+  dimensions?: ComparisonDimension[],
+  weights: Record<string, number> = {}
+): DecisionScores => {
+  if (!dimensions || dimensions.length === 0) {
+    return { scoreA: 0, scoreB: 0, winner: "tie" };
+  }
+
+  let sumWeights = 0;
+  let weightedSumA = 0;
+  let weightedSumB = 0;
+
+  for (let i = 0; i < dimensions.length; i++) {
+    const d = dimensions[i];
+    const w = weights[d.subject] ?? 3;
+    sumWeights += w;
+    // Normalize raw score relative to full mark, scaled to 100
+    const normA = (d.a / d.fullMark) * 100;
+    const normB = (d.b / d.fullMark) * 100;
+
+    weightedSumA += normA * w;
+    weightedSumB += normB * w;
+  }
+
+  const finalA = sumWeights > 0 ? Number((weightedSumA / sumWeights).toFixed(1)) : 0;
+  const finalB = sumWeights > 0 ? Number((weightedSumB / sumWeights).toFixed(1)) : 0;
+
+  let winner: "a" | "b" | "tie" = "tie";
+  if (finalA > finalB) winner = "a";
+  else if (finalB > finalA) winner = "b";
+
+  return {
+    scoreA: finalA,
+    scoreB: finalB,
+    winner,
+  };
+};
 
 type DecisionMatrixRecord = {
   id: string;
@@ -35,23 +80,20 @@ export const DecisionMatrixPanel = ({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Weights state: maps dimension subject -> slider value (1-5)
-  const [weights, setWeights] = useState<Record<string, number>>({});
+  const [weights, setWeights] = useState<Record<string, number>>(() => {
+    const initial: Record<string, number> = {};
+    if (result.dimensions) {
+      for (let i = 0; i < result.dimensions.length; i++) {
+        initial[result.dimensions[i].subject] = 3;
+      }
+    }
+    return initial;
+  });
   const [savedMatrices, setSavedMatrices] = useState<DecisionMatrixRecord[]>([]);
   const [defaultProfiles, setDefaultProfiles] = useState<DecisionMatrixRecord[]>([]);
   const [matrixName, setMatrixName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
-
-  // Initialize weights with 3 (default midpoint) for all subjects
-  useEffect(() => {
-    if (result.dimensions) {
-      const initial: Record<string, number> = {};
-      result.dimensions.forEach((d) => {
-        initial[d.subject] = 3;
-      });
-      setWeights(initial);
-    }
-  }, [result.dimensions]);
 
   // Load saved matrices for this comparison
   const loadSavedMatrices = useCallback(async () => {
@@ -90,37 +132,7 @@ export const DecisionMatrixPanel = ({
 
   // Calculate weighted scores in real-time
   const scores = useMemo(() => {
-    if (!result.dimensions || result.dimensions.length === 0) {
-      return { scoreA: 0, scoreB: 0, winner: "tie" };
-    }
-
-    let sumWeights = 0;
-    let weightedSumA = 0;
-    let weightedSumB = 0;
-
-    result.dimensions.forEach((d) => {
-      const w = weights[d.subject] ?? 3;
-      sumWeights += w;
-      // Normalize raw score relative to full mark, scaled to 100
-      const normA = (d.a / d.fullMark) * 100;
-      const normB = (d.b / d.fullMark) * 100;
-      
-      weightedSumA += normA * w;
-      weightedSumB += normB * w;
-    });
-
-    const finalA = sumWeights > 0 ? Number((weightedSumA / sumWeights).toFixed(1)) : 0;
-    const finalB = sumWeights > 0 ? Number((weightedSumB / sumWeights).toFixed(1)) : 0;
-
-    let winner: "a" | "b" | "tie" = "tie";
-    if (finalA > finalB) winner = "a";
-    else if (finalB > finalA) winner = "b";
-
-    return {
-      scoreA: finalA,
-      scoreB: finalB,
-      winner
-    };
+    return computeDecisionScores(result.dimensions, weights);
   }, [result.dimensions, weights]);
 
   // Animate the winner trophy when winner changes
