@@ -129,6 +129,13 @@ const categoryMeta = {
 
 const categories = Object.keys(categoryMeta) as DocArticle["category"][];
 
+const processedArticles = articles.map((article) => ({
+  ...article,
+  searchString: [article.title, article.summary, article.category, ...article.steps]
+    .join(" ")
+    .toLowerCase(),
+}));
+
 const Docs = () => {
   usePageTitle("Docs");
   const pageRef = useRef<HTMLDivElement>(null);
@@ -138,14 +145,11 @@ const Docs = () => {
 
   const filteredArticles = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return articles.filter((article) => {
+    return processedArticles.filter((article) => {
       const categoryMatches = category === "All" || article.category === category;
       const queryMatches =
         normalizedQuery.length === 0 ||
-        [article.title, article.summary, article.category, ...article.steps]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedQuery);
+        article.searchString.includes(normalizedQuery);
       return categoryMatches && queryMatches;
     });
   }, [category, query]);

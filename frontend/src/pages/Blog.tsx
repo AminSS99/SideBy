@@ -106,6 +106,11 @@ const fieldNotes: FieldNote[] = [
 
 const categories = ["All", "Decision craft", "Research systems", "Inside SideBy"] as const;
 
+const processedNotes = fieldNotes.map((note) => ({
+  ...note,
+  searchString: [note.title, note.excerpt, note.category, ...note.takeaways].join(" ").toLowerCase(),
+}));
+
 const Blog = () => {
   usePageTitle("Field Notes");
   const pageRef = useRef<HTMLDivElement>(null);
@@ -115,9 +120,9 @@ const Blog = () => {
 
   const visibleNotes = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return fieldNotes.filter((note) => {
+    return processedNotes.filter((note) => {
       const categoryMatches = category === "All" || note.category === category;
-      const queryMatches = !normalizedQuery || [note.title, note.excerpt, note.category, ...note.takeaways].join(" ").toLowerCase().includes(normalizedQuery);
+      const queryMatches = !normalizedQuery || note.searchString.includes(normalizedQuery);
       return categoryMatches && queryMatches;
     });
   }, [category, query]);

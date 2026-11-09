@@ -189,8 +189,9 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
   // so synchronizing the cache cannot trigger an authentication render loop.
   const user = isLoaded ? clerkAppUser : cachedUser;
 
-  // Consumers use session identity as an effect dependency. Cache synchronization
-  // and profile updates must not restart their requests for the same principal.
+  // Session identity is keyed only by user id: downstream providers depend
+  // on the session object to trigger their loads, so a fresh object per
+  // render would re-fire every fetch (the network half of the crash loop).
   const sessionUserId = user?.id ?? null;
   const session = useMemo<AppSession | null>(
     () => (sessionUserId ? { userId: sessionUserId } : null),

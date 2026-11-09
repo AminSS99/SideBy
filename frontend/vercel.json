@@ -141,8 +141,8 @@
       "destination": "/api/[...path]"
     },
     {
-      "source": "/((?!api(?:/|$)|src(?:/|$)|node_modules(?:/|$)|@vite(?:/|$)|@fs(?:/|$)|@react-refresh|assets(?:/|$)|favicon\\.ico$|favicon-48x48\\.png$|icon\\.svg$|icon-192\\.png$|icon-512\\.png$|icon-maskable-192\\.png$|icon-maskable-512\\.png$|apple-touch-icon\\.png$|manifest\\.json$|manifest\\.webmanifest$|sideby\\.ico$|sw\\.js$|registerSW\\.js$|workbox-.*\\.js$|robots\\.txt$|sitemap\\.xml$).*)",
-      "destination": "/index.html"
+      "source": "/((?!api(?:/|$)|src(?:/|$)|node_modules(?:/|$)|@vite(?:/|$)|@fs(?:/|$)|@react-refresh|assets(?:/|$)|favicon\\.ico$|favicon-48x48\\.png$|icon\\.svg$|icon-192\\.png$|icon-512\\.png$|icon-maskable-192\\.png$|icon-maskable-512\\.png$|apple-touch-icon\\.png$|manifest\\.json$|manifest\\.webmanifest$|sideby\\.ico$|sw\\.js$|registerSW\\.js$|workbox-.*\\.js$|robots\\.txt$|sitemap\\.xml$).+)",
+      "destination": "/spa-shell.html"
     }
   ]
 }

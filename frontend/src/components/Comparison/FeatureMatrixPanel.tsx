@@ -7,8 +7,69 @@ import type { ComparisonData } from './types';
 import { panelClass } from './constants';
 import { cn } from '@/lib/utils';
 import { ScoreDetailDrawer } from "./ScoreDetailDrawer";
+import type { ComparisonFact } from './types';
 
 gsap.registerPlugin(ScrollTrigger);
+
+type ProcessedCategory = {
+  category: string;
+  winner: "a" | "b" | "tie" | null;
+  allRows: Array<{
+    label: string;
+    searchString: string;
+    factA: ComparisonFact | undefined;
+    factB: ComparisonFact | undefined;
+  }>;
+};
+
+const processedCategoriesCache = new WeakMap<ComparisonData["categories"], ProcessedCategory[]>();
+
+const getProcessedCategories = (categories: ComparisonData["categories"]): ProcessedCategory[] => {
+  if (processedCategoriesCache.has(categories)) {
+    return processedCategoriesCache.get(categories)!;
+  }
+
+  const processed = categories.map(cat => {
+    const factsA = new Map<string, ComparisonFact>();
+    const factsB = new Map<string, ComparisonFact>();
+    const labels: string[] = [];
+    const catNameLower = cat.name.toLowerCase();
+
+    cat.facts.forEach(f => {
+      if (f.entity === 'a' && !factsA.has(f.label)) {
+        if (!factsB.has(f.label)) {
+          labels.push(f.label);
+        }
+        factsA.set(f.label, f);
+      }
+      if (f.entity === 'b' && !factsB.has(f.label)) {
+        if (!factsA.has(f.label)) {
+          labels.push(f.label);
+        }
+        factsB.set(f.label, f);
+      }
+    });
+
+    const allRows = labels.map(label => {
+      const lowerLabel = label.toLowerCase();
+      return {
+        label,
+        searchString: `${catNameLower} ${lowerLabel}`,
+        factA: factsA.get(label),
+        factB: factsB.get(label),
+      };
+    });
+
+    return {
+      category: cat.name,
+      winner: cat.winner,
+      allRows,
+    };
+  });
+
+  processedCategoriesCache.set(categories, processed);
+  return processed;
+};
 
 export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -16,37 +77,38 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  const processedCategories = getProcessedCategories(result.categories);
+
   const matrixData = useMemo(() => {
-    const term = filter.toLowerCase();
-    
-    return result.categories.map(cat => {
-      // Pre-compute maps for O(1) lookups instead of O(N) array finds
-      const factsA = new Map();
-      const factsB = new Map();
+    const term = filter.trim().toLowerCase();
 
-      cat.facts.forEach(f => {
-        if (f.entity === 'a' && !factsA.has(f.label)) factsA.set(f.label, f);
-        if (f.entity === 'b' && !factsB.has(f.label)) factsB.set(f.label, f);
-      });
-
-      const labels = Array.from(new Set(cat.facts.map(f => f.label)));
-      const catNameLower = cat.name.toLowerCase();
-      
-      const rows = labels
-        .filter(label => label.toLowerCase().includes(term) || catNameLower.includes(term))
-        .map(label => {
-          const factA = factsA.get(label);
-          const factB = factsB.get(label);
-          return { label, factA, factB };
-        });
-
-      return {
-        category: cat.name,
+    if (!term) {
+      return processedCategories.map(cat => ({
+        category: cat.category,
         winner: cat.winner,
-        rows
-      };
-    }).filter(cat => cat.rows.length > 0);
-  }, [result.categories, filter]);
+        rows: cat.allRows,
+      })).filter(cat => cat.rows.length > 0);
+    }
+
+    return processedCategories.reduce((acc, cat) => {
+      const rows = [];
+      for (const row of cat.allRows) {
+        if (row.searchString.includes(term)) {
+          rows.push(row);
+        }
+      }
+
+      if (rows.length > 0) {
+        acc.push({
+          category: cat.category,
+          winner: cat.winner,
+          rows
+        });
+      }
+
+      return acc;
+    }, [] as Array<{ category: string; winner: "a" | "b" | "tie" | null; rows: Array<{ label: string; factA: ComparisonFact | undefined; factB: ComparisonFact | undefined }> }>);
+  }, [processedCategories, filter]);
 
   useGSAP(() => {
     if (!containerRef.current) return;

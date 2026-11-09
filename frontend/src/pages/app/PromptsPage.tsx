@@ -9,6 +9,7 @@ import { GlowCard } from "@/components/GlowCard";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useProjects } from "@/contexts/ProjectsContext";
 
 interface PromptTemplate {
   id: string;
@@ -18,6 +19,8 @@ interface PromptTemplate {
   variables: string[];
   lastEdited: string;
 }
+
+const searchStringCache = new WeakMap<PromptTemplate, string>();
 
 const initialPrompts: PromptTemplate[] = [
   {
@@ -48,6 +51,7 @@ const extractVariables = (text: string): string[] => {
 
 const PromptsPage = () => {
   const { activeWorkspace } = useWorkspace();
+  const { activeProject } = useProjects();
   const [prompts, setPrompts] = useState<PromptTemplate[]>([]);
   const [search, setSearch] = useState("");
   
@@ -99,12 +103,21 @@ const PromptsPage = () => {
       });
       setPrompts(initialPrompts);
     });
-  }, [activeWorkspace?.id]);
+  }, [activeWorkspace?.id, activeProject?.id]);
 
-  const filteredPrompts = prompts.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.description.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredPrompts = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return prompts;
+
+    return prompts.filter((p) => {
+      let searchString = searchStringCache.get(p);
+      if (searchString === undefined) {
+        searchString = `${p.name} ${p.description}`.toLowerCase();
+        searchStringCache.set(p, searchString);
+      }
+      return searchString.includes(term);
+    });
+  }, [prompts, search]);
 
   const copyToClipboard = async (text: string) => {
     const ok = await copyText(text);

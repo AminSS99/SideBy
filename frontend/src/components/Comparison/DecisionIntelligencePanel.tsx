@@ -86,13 +86,23 @@ const safeHostname = (url?: string | null) => {
   }
 };
 
-const allFacts = (result: ComparisonData): FactWithCategory[] =>
-  result.categories.flatMap((category) =>
-    category.facts.map((fact) => ({
-      ...fact,
-      category: category.name,
-    })),
-  );
+const factsCache = new WeakMap<ComparisonData, FactWithCategory[]>();
+
+const allFacts = (result: ComparisonData): FactWithCategory[] => {
+  if (factsCache.has(result)) {
+    return factsCache.get(result)!;
+  }
+
+  const all: FactWithCategory[] = [];
+  for (const category of result.categories) {
+    for (const fact of category.facts) {
+      all.push({ ...fact, category: category.name });
+    }
+  }
+
+  factsCache.set(result, all);
+  return all;
+};
 
 const categoryScore = (category: Category, entity: EntityKey) => {
   if (category.winner === "tie") return 68;
@@ -100,20 +110,30 @@ const categoryScore = (category: Category, entity: EntityKey) => {
   return 54;
 };
 
+const metricsCache = new WeakMap<ComparisonData, DecisionMetric[]>();
+
 const buildMetrics = (result: ComparisonData): DecisionMetric[] => {
+  if (metricsCache.has(result)) {
+    return metricsCache.get(result)!;
+  }
+
+  let metrics: DecisionMetric[];
   if (result.dimensions?.length) {
-    return result.dimensions.map((dimension) => ({
+    metrics = result.dimensions.map((dimension) => ({
       subject: dimension.subject,
       a: dimension.a,
       b: dimension.b,
     }));
+  } else {
+    metrics = result.categories.map((category) => ({
+      subject: category.name,
+      a: categoryScore(category, "a"),
+      b: categoryScore(category, "b"),
+    }));
   }
 
-  return result.categories.map((category) => ({
-    subject: category.name,
-    a: categoryScore(category, "a"),
-    b: categoryScore(category, "b"),
-  }));
+  metricsCache.set(result, metrics);
+  return metrics;
 };
 
 const sourceReliability = (source: ComparisonSource) =>
@@ -331,7 +351,7 @@ const ExecutiveBriefPanel = ({ result }: { result: ComparisonData }) => {
 };
 
 const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
-  const metrics = useMemo(() => buildMetrics(result), [result]);
+  const metrics = buildMetrics(result);
   const [weights, setWeights] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {};
     for (const metric of metrics) {
@@ -351,9 +371,21 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
   }, [metrics]);
 
   const weighted = useMemo(() => {
-    const totalWeight = metrics.reduce((sum, metric) => sum + (weights[metric.subject] ?? 1), 0) || 1;
-    const a = metrics.reduce((sum, metric) => sum + metric.a * (weights[metric.subject] ?? 1), 0) / totalWeight;
-    const b = metrics.reduce((sum, metric) => sum + metric.b * (weights[metric.subject] ?? 1), 0) / totalWeight;
+    let sumWeight = 0;
+    let sumA = 0;
+    let sumB = 0;
+
+    for (const metric of metrics) {
+      const weight = weights[metric.subject] ?? 1;
+      sumWeight += weight;
+      sumA += metric.a * weight;
+      sumB += metric.b * weight;
+    }
+
+    const totalWeight = sumWeight || 1;
+    const a = sumA / totalWeight;
+    const b = sumB / totalWeight;
+
     return { a, b, winner: Math.abs(a - b) < 1 ? "tie" : a > b ? "a" : "b" };
   }, [metrics, weights]);
 
@@ -524,8 +556,17 @@ const ScoreBar = ({ label, score, color }: { label: string; score: number; color
 
 const ChangeTimelinePanel = ({ result }: { result: ComparisonData }) => {
   const facts = useMemo(() => allFacts(result), [result]);
-  const changedFacts = facts.filter((fact) => fact.changed);
-  const monitorFacts = facts.filter((fact) => fact.freshness === "Monitor").slice(0, 4);
+
+  const { changedFacts, monitorFacts } = useMemo(() => {
+    const changed = [];
+    const monitor = [];
+    for (const fact of facts) {
+      if (fact.changed) changed.push(fact);
+      if (fact.freshness === "Monitor" && monitor.length < 4) monitor.push(fact);
+    }
+    return { changedFacts: changed, monitorFacts: monitor };
+  }, [facts]);
+
   const timeline = changedFacts.length > 0 ? changedFacts : monitorFacts;
 
   return (
@@ -634,7 +675,10 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
     setSelectedId(graph.nodes[0]?.id || "");
   }, [graph.nodes]);
 
-  const nodeMap = new Map(graph.nodes.map((node) => [node.id, node]));
+  const nodeMap = useMemo(
+    () => new Map(graph.nodes.map((node) => [node.id, node])),
+    [graph.nodes]
+  );
   const selected = nodeMap.get(selectedId) || graph.nodes[0];
 
   // Compute related nodes for highlighting & dimming

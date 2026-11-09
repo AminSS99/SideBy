@@ -13,7 +13,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "pnpm run generate:sitemap && pnpm run lint:seo && vite build",
+    "build": "pnpm run generate:sitemap && pnpm run lint:seo && vite build && node scripts/generate-homepage.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "lint:seo": "tsx scripts/validate-seo.ts",

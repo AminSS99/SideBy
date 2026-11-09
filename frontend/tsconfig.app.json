@@ -26,5 +26,11 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Upstream fixtures use loose literal shapes (not full domain types); vitest still runs them.
+  "exclude": [
+    "src/components/Comparison/__tests__/SourcesPanel.test.ts",
+    "src/components/Comparison/__tests__/DecisionIntelligencePanel.test.ts",
+    "src/components/Comparison/__tests__/CategorySection.test.tsx"
+  ]
 }

@@ -16,10 +16,17 @@ export function StickyDecisionBar({
 }: StickyDecisionBarProps) {
   // Compute average confidence score
   const avgConfidence = useMemo(() => {
-    const allFacts = result.categories.flatMap((c) => c.facts || []);
-    if (allFacts.length === 0) return 85; // fallback midpoint
-    const sum = allFacts.reduce((acc, f) => acc + (f.confidence || 0.8), 0);
-    return Math.round((sum / allFacts.length) * 100);
+    let sum = 0;
+    let count = 0;
+    for (const c of result.categories) {
+      if (!c.facts) continue;
+      for (const f of c.facts) {
+        sum += f.confidence ?? 0.8;
+        count++;
+      }
+    }
+    if (count === 0) return 85; // fallback midpoint
+    return Math.round((sum / count) * 100);
   }, [result]);
 
   const freshnessLabel = useMemo(() => {
