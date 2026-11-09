@@ -29,16 +29,4 @@ Scope: `frontend/api`. No live probing beyond the earlier read-only production c
 - Slack, Clerk (svix) signature verification; legacy Dodo webhook disabled (404).
 - Secrets: no committed keys; only `.env.example` is tracked.
 
-## Open risks (ordered)
-1. **Hobby plan**: commercial-use terms, hard quotas, daily-only crons. Move to Pro before launch.
-2. **Provider spend**: no hard cap in code beyond per-job $0.50. Set spend limits at DeepSeek, Tavily, Firecrawl, OpenAI.
-3. **Counters live in Postgres** (no Redis in production). Burst traffic on counters competes with app queries on Neon.
-4. **CSP** residual: `style-src 'unsafe-inline'` and `img-src https:`; no violation reporting endpoint yet.
-5. **Dependencies**: 17 advisories (2 high, 13 moderate), all transitive via build/PWA tooling or `@vercel/blob`; none on a request path we found.
-7. **`x-forwarded-for`** first hop is trusted for IP limits; correct on Vercel, wrong behind another proxy.
-8. Missing production keys: PostHog, web push (VAPID).
-
-## Not yet fixed / observed
-- `DELETE /api/account` removes database rows only; the Clerk user remains and there is no recent-sign-in requirement.
-- Invalid API-key attempts are not rate limited before the database lookup (keys are 256-bit, so this is load, not guessing risk).
-- Coverage: single-pass source review of the API routes, auth, team, API keys, Slack, public read path and link rendering. No full multi-agent run, no dependency re-scan.
+_Open items are tracked privately and are not published in this repository._

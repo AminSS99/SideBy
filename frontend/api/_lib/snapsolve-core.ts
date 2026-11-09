@@ -64,7 +64,13 @@ export type SnapSolveProductWorkspace = {
 function getConfig() {
   const coreUrl = serverEnv.snapsolveCoreUrl?.replace(/\/+$/, "");
   const secret = serverEnv.snapsolveSidebySecret;
-  return coreUrl && secret ? { coreUrl, secret } : null;
+  if (!coreUrl || !secret) return null;
+  // The signing secret must never travel over cleartext HTTP in production.
+  if (!coreUrl.startsWith("https://") && (process.env.VERCEL === "1" || process.env.NODE_ENV === "production")) {
+    logger.error("SNAPSOLVE_CORE_URL must use https in production; bridge disabled.");
+    return null;
+  }
+  return { coreUrl, secret };
 }
 
 function signPayload(secret: string, timestamp: string, body: string) {
