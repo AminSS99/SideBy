@@ -216,7 +216,7 @@ export function ComparisonComposer({
       <div className="relative mb-5 flex items-center justify-between gap-4 px-1">
         <div className="text-left">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-300">Build your comparison</p>
-          <p className="mt-1 text-xs text-white/45">Two options in. A defensible answer out.</p>
+          <p className="mt-1 text-xs text-white/65">Two options in. A defensible answer out.</p>
         </div>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/15 bg-emerald-400/[0.07] px-2.5 py-1.5 text-[8px] font-bold uppercase tracking-widest text-emerald-300 sm:px-3 sm:text-[9px]">
           <Sparkles className="h-3 w-3" /> Source backed
@@ -227,7 +227,7 @@ export function ComparisonComposer({
         {/* Entity Inputs Row */}
         <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-2.5 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
           <div className="relative col-span-2 w-full sm:col-span-1">
-            <label htmlFor="hero-comparison-input" className="mb-2 block px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/45">
+            <label htmlFor="hero-comparison-input" className="mb-2 block px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/65">
               First option
             </label>
             <Input
@@ -247,13 +247,13 @@ export function ComparisonComposer({
             onClick={swapEntities}
             aria-label="Swap comparison options"
             disabled={!entityA.trim() && !entityB.trim()}
-            className="order-3 grid h-12 w-12 place-items-center self-end rounded-xl border border-white/[0.08] bg-white/[0.035] text-white/45 transition-colors hover:border-orange-300/25 hover:text-orange-300 disabled:cursor-not-allowed disabled:opacity-25 sm:order-none sm:mb-1 sm:h-10 sm:w-10 sm:rounded-full"
+            className="order-3 grid h-12 w-12 place-items-center self-end rounded-xl border border-white/[0.08] bg-white/[0.035] text-white/65 transition-colors hover:border-orange-300/25 hover:text-orange-300 disabled:cursor-not-allowed disabled:opacity-25 sm:order-none sm:mb-1 sm:h-10 sm:w-10 sm:rounded-full"
           >
             <ArrowLeftRight className="h-4 w-4 rotate-90 sm:rotate-0" />
           </button>
 
           <div className="relative order-2 w-full sm:order-none">
-            <label htmlFor="hero-comparison-input-b" className="mb-2 block px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/45">
+            <label htmlFor="hero-comparison-input-b" className="mb-2 block px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/65">
               Compare against
             </label>
             <Input
@@ -275,7 +275,7 @@ export function ComparisonComposer({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-orange-300">Decision context</p>
-                <p className="mt-1 text-[10px] text-white/35">Optional, but it sharpens scoring.</p>
+                <p className="mt-1 text-[11px] text-white/60">Optional, but it sharpens scoring.</p>
               </div>
               <button type="button" onClick={() => { setContext(""); setShowContextInput(false); }} aria-label="Remove comparison context" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white/40 transition-colors hover:bg-white/5 hover:text-white"><X className="h-4 w-4" /></button>
             </div>
@@ -296,12 +296,12 @@ export function ComparisonComposer({
             </div>
             <p className="text-[9px] leading-4 text-[#fdfbf7]/35">Priorities weight the scoring; non-negotiables are recorded verbatim in your brief. SideBy never invents requirements you didn't state.</p>
             <div>
-              <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.18em] text-white/35">Quick templates</p>
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">Quick templates</p>
               <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 no-scrollbar sm:flex-wrap">
                 {COMPARISON_TEMPLATES.map((template) => {
                   const isSelected = context.trim().toLowerCase() === template.context.toLowerCase();
                   return (
-                    <button key={template.label} type="button" onClick={() => setContext(template.context)} className={cn("min-h-9 shrink-0 rounded-full border px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors", isSelected ? "border-orange-500/50 bg-orange-500/10 text-orange-300" : "border-white/[0.08] bg-black/30 text-white/50 hover:border-orange-500/30 hover:text-orange-300")}>{template.label}</button>
+                    <button key={template.label} type="button" onClick={() => setContext(template.context)} className={cn("min-h-11 shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors", isSelected ? "border-orange-500/50 bg-orange-500/10 text-orange-300" : "border-white/[0.08] bg-black/30 text-white/70 hover:border-orange-500/30 hover:text-orange-300")}>{template.label}</button>
                   );
                 })}
               </div>
@@ -427,7 +427,7 @@ export function ComparisonComposer({
               key={suggestion}
               type="button"
               onClick={() => handleSuggestionClick(suggestion)}
-              className="min-h-9 shrink-0 rounded-full border border-white/[0.08] bg-black/30 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white/60 transition-all hover:border-orange-500/30 hover:bg-orange-500/5 hover:text-orange-300"
+              className="min-h-11 shrink-0 rounded-full border border-white/[0.08] bg-black/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/70 transition-all hover:border-orange-500/30 hover:bg-orange-500/5 hover:text-orange-300"
             >
               {suggestion}
             </button>

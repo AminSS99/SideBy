@@ -48,7 +48,7 @@ export function MarketingFooter() {
               </span>
               <span className="font-serif text-2xl tracking-[-0.03em]">SideBy</span>
             </Link>
-            <p className="mt-5 text-sm leading-6 text-white/45">
+            <p className="mt-5 text-sm leading-6 text-white/65">
               Source-backed comparisons for decisions that deserve more than another browser tab.
             </p>
             <a
@@ -67,7 +67,7 @@ export function MarketingFooter() {
                 <ul className="mt-5 flex flex-col gap-3">
                   {group.links.map((link) => (
                     <li key={link.to}>
-                      <Link to={link.to} className="group inline-flex items-center gap-1.5 text-sm text-white/42 transition hover:text-white/85">
+                      <Link to={link.to} className="group inline-flex min-h-11 items-center gap-1.5 text-sm text-white/65 transition hover:text-white">
                         {link.label}
                         <ArrowUpRight className="h-3 w-3 opacity-0 transition group-hover:opacity-70" />
                       </Link>
@@ -79,7 +79,7 @@ export function MarketingFooter() {
           </nav>
         </div>
 
-        <div className="flex flex-col items-center justify-between gap-5 py-7 text-xs text-white/35 sm:flex-row">
+        <div className="flex flex-col items-center justify-between gap-5 py-7 text-xs text-white/60 sm:flex-row">
           <p>© {new Date().getFullYear()} SideBy. All rights reserved.</p>
           <BrandFooter className="border-0 bg-transparent px-0 pr-0 shadow-none" />
         </div>

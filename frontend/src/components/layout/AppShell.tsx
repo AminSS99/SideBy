@@ -44,10 +44,19 @@ const advancedNavItems: NavItem[] = [
   { to: "/app/projects", label: "Projects", icon: FolderKanban },
 ];
 
+const routeTitle = (pathname: string) => {
+  if (/^\/app\/comparisons\/[^/]+/.test(pathname)) return "Comparison";
+  if (pathname === "/app" || pathname === "/app/") return "Dashboard";
+  const match = [...primaryNavItems, ...advancedNavItems]
+    .filter((item) => item.to !== "/app" && (pathname === item.to || pathname.startsWith(`${item.to}/`)))
+    .sort((a, b) => b.to.length - a.to.length)[0];
+  return match?.label ?? "Workspace";
+};
+
 const AppShell = () => {
-  usePageTitle("Dashboard");
   const navigate = useNavigate();
   const location = useLocation();
+  usePageTitle(routeTitle(location.pathname));
   const { signOut, user } = useAuth();
   const {
     activeWorkspace,

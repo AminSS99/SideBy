@@ -79,7 +79,7 @@ export default function CookieConsent() {
           <p className="text-xs leading-5 text-white/80">
             <Cookie aria-hidden="true" className="mr-1.5 -mt-0.5 inline h-3.5 w-3.5 text-orange-300" />
             Essential cookies keep you signed in. Optional analytics help us improve SideBy.{" "}
-            <Link to="/legal/cookies" className="inline-flex min-h-11 items-center px-1 text-white/80 underline underline-offset-2 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400">Learn more</Link>
+            <Link to="/legal/cookies" className="text-white/80 underline underline-offset-2 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400">Learn more</Link>
           </p>
           {gpcEnabled ? (
             <p className="mt-1 text-xs text-amber-300">Global Privacy Control is on, so analytics stay off.</p>
