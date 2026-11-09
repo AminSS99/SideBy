@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- provider and hook form one public workspace module. */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
@@ -217,11 +218,15 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
     };
   }, [sessionUserId, authLoading, shouldLoadWorkspaces, applyWorkspaceData]);
 
+  const queryClient = useQueryClient();
+
   const setActiveWorkspaceId = useCallback((id: string | null) => {
     setActiveWorkspaceIdState(id);
     storeWorkspaceId(id);
     writeCachedWorkspaces(workspaces, id);
-  }, [workspaces]);
+    // Invalidate cached query data on workspace switch to avoid stale cross-workspace leakage
+    queryClient.invalidateQueries();
+  }, [workspaces, queryClient]);
 
   const activeWorkspace = useMemo(() => {
     return workspaces.find((w) => w.id === activeWorkspaceId) ?? null;

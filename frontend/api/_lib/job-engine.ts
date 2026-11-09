@@ -5,7 +5,7 @@
  * Enforces cost/time guardrails per job.
  */
 import { z } from "zod";
-import { asc, eq, and, sql, or, lte, inArray } from "drizzle-orm";
+import { asc, eq, and, sql, or, lte, lt, inArray } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
@@ -45,7 +45,13 @@ import {
 } from "../../src/lib/comparisonTaxonomy.js";
 import { triggerWebhooks } from "./webhook-notifier.js";
 import { queueSnapSolveEvent } from "./snapsolve-core.js";
+import {
+  buildComparisonCompletedPayload,
+  buildComparisonFailedPayload,
+  notifyUserOfComparisonEvent,
+} from "./push.js";
 import { waitUntil as vercelWaitUntil } from "@vercel/functions";
+import { httpUrlOrNull } from "./safe-url.js";
 
 const safeWaitUntil = (promise: Promise<unknown>) => {
   if (process.env.VERCEL === "1") {
@@ -621,6 +627,20 @@ export async function runComparisonJob(
 
     comparisonCache.set(normalized.canonicalSlug, result, 10 * 60 * 1000);
 
+    // Notify the requesting user's devices that research finished. Only fired
+    // on terminal states — never on progress updates.
+    safeWaitUntil(
+      notifyUserOfComparisonEvent({
+        userId,
+        payload: buildComparisonCompletedPayload({ comparisonId, query }),
+      }).catch((error) => {
+        logger.warn("Completion push notification failed", {
+          comparisonId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }),
+    );
+
     // Phase 11: Save reusable facts to entity knowledge base
     const knowledgeToInsert = new Map<string, {
       entitySlug: string;
@@ -650,7 +670,7 @@ export async function runComparisonJob(
           entityDisplayName: entityName,
           dimension,
           value,
-          sourceUrl: (fact.citation || null) as string | null,
+          sourceUrl: httpUrlOrNull(fact.citation),
           sourceTitle: null,
           confidence: String(fact.confidence || 0.5),
           freshnessClass,
@@ -816,28 +836,46 @@ export async function runComparisonJob(
     });
 
     const db = createDbClient();
-    const [comp] = await db
-      .select({ retryCount: comparisons.retryCount })
-      .from(comparisons)
-      .where(eq(comparisons.id, comparisonId))
-      .limit(1);
 
-    const currentRetries = comp?.retryCount || 0;
+    // Atomic retry transition: only claim the retry if we are still under the
+    // cap. This prevents two concurrent failures from double-incrementing or
+    // resurrecting a job that already reached a terminal state.
+    const retried = await db
+      .update(comparisons)
+      .set({
+        status: "queued",
+        errorMessage: message.slice(0, 500),
+        retryCount: sql`${comparisons.retryCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(comparisons.id, comparisonId),
+          lt(comparisons.retryCount, MAX_RETRIES),
+          // Never pull a terminal row back into the queue.
+          or(eq(comparisons.status, "running"), eq(comparisons.status, "queued")),
+        ),
+      )
+      .returning({ id: comparisons.id, retryCount: comparisons.retryCount });
 
-    if (currentRetries < MAX_RETRIES) {
-      logger.info("Queueing retry", { comparisonId, retry: currentRetries + 1 });
+    if (retried.length > 0) {
+      const nextRetry = retried[0].retryCount;
+      logger.info("Queueing retry", { comparisonId, retry: nextRetry });
 
       await clearDerivedComparisonData(db, comparisonId);
 
-      await db
-        .update(comparisons)
-        .set({
-          status: "queued",
-          errorMessage: `Retry ${currentRetries + 1}/${MAX_RETRIES}: ${message}`,
-          retryCount: currentRetries + 1,
-          updatedAt: new Date(),
-        })
-        .where(eq(comparisons.id, comparisonId));
+      // Schedule the retry with exponential backoff. waitUntil keeps the
+      // function alive past the response; the cron drain acts as the safety
+      // net if this process dies before the retry fires.
+      safeWaitUntil(
+        new Promise((resolve) => setTimeout(resolve, retryBackoffMs(nextRetry)))
+          .then(() => runComparisonJob(comparisonId, userId, query, orgId))
+          .catch((retryError) => {
+            logger.error("Scheduled comparison retry failed", retryError instanceof Error ? retryError : undefined, {
+              comparisonId,
+            });
+          }),
+      );
     } else {
       // Build partial result from whatever data exists
       const partialResult = await buildPartialResult(db, comparisonId);
@@ -851,6 +889,20 @@ export async function runComparisonJob(
           updatedAt: new Date(),
         })
         .where(eq(comparisons.id, comparisonId));
+
+      // Terminal failure: tell the user's devices so they can retry. Only
+      // fired on the terminal state — retries in progress stay silent.
+      safeWaitUntil(
+        notifyUserOfComparisonEvent({
+          userId,
+          payload: buildComparisonFailedPayload({ comparisonId, query }),
+        }).catch((notifyError) => {
+          logger.warn("Failure push notification failed", {
+            comparisonId,
+            error: notifyError instanceof Error ? notifyError.message : String(notifyError),
+          });
+        }),
+      );
 
       // Phase 3: Trigger outgoing webhooks on failure
       triggerWebhooks(
@@ -901,7 +953,7 @@ export async function drainQueuedComparisonJobs(
 ) {
   const db = createDbClient();
   const safeLimit = Math.max(1, Math.min(limit, 10));
-  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+  const tenMinutesAgo = new Date(Date.now() - 7 * 60 * 1000); // job cap is 5 min + lock TTL
 
   const rows = await db
     .select({
@@ -1571,7 +1623,7 @@ async function runFactStep(
         category: dimensionName,
         label: dimensionName,
         value: fact.value,
-        sourceUrl: citation || sourceRow?.url || "#",
+        sourceUrl: httpUrlOrNull(citation) || sourceRow?.url || "#",
         sourceTitle: sourceRow?.title || "Web source",
         confidence: String(fact.confidence || 0.7),
         freshnessClass: "product",
@@ -2175,7 +2227,7 @@ function buildResultJson(
               label: f.dimension,
               value: f.value,
               source: matchedSource?.title || f.citation || "Web sources",
-              sourceUrl: f.citation || matchedSource?.url || "#",
+              sourceUrl: httpUrlOrNull(f.citation) || matchedSource?.url || "#",
               sourceTitle: matchedSource?.title || (f.citation ? "Cited source" : "Source"),
               confidence: f.confidence,
               freshness: taxonomySummary.safetyLevel === "informational" ? "Monitor" as const : "Fresh" as const,

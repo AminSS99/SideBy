@@ -29,6 +29,7 @@ import type {
   ComparisonSource,
   EntityKey,
 } from "./types";
+import { safeHref } from "@/lib/safe-url";
 
 type DecisionIntelligencePanelProps = {
   result: ComparisonData;
@@ -356,6 +357,38 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
     return { a, b, winner: Math.abs(a - b) < 1 ? "tie" : a > b ? "a" : "b" };
   }, [metrics, weights]);
 
+  // Balanced-weights outcome (every dimension at 1x) is the preserved
+  // "original" this panel compares against; it never mutates stored scores.
+  const balanced = useMemo(() => {
+    if (metrics.length === 0) return null;
+    const a = metrics.reduce((sum, metric) => sum + metric.a, 0) / metrics.length;
+    const b = metrics.reduce((sum, metric) => sum + metric.b, 0) / metrics.length;
+    return { a, b, winner: (Math.abs(a - b) < 1 ? "tie" : a > b ? "a" : "b") as "a" | "b" | "tie" };
+  }, [metrics]);
+
+  const hasAdjustedWeights = metrics.some(
+    (metric) => Math.abs((weights[metric.subject] ?? 1) - 1) > 0.001,
+  );
+
+  const restoreOriginalWeights = () => {
+    const next: Record<string, number> = {};
+    for (const metric of metrics) next[metric.subject] = 1;
+    setWeights(next);
+  };
+
+  // Dimensions most responsible for the current leader: highest weight where
+  // the leader also outscores the other side. Used only for explanation text.
+  const drivers = useMemo(() => {
+    if (!balanced || weighted.winner === "tie") return [];
+    const leader = weighted.winner;
+    return metrics
+      .filter((metric) => (leader === "a" ? metric.a > metric.b : metric.b > metric.a))
+      .map((metric) => ({ subject: metric.subject, weight: weights[metric.subject] ?? 1 }))
+      .sort((x, y) => y.weight - x.weight)
+      .slice(0, 2)
+      .map((metric) => metric.subject);
+  }, [balanced, metrics, weighted.winner, weights]);
+
   const applyPreset = (preset: "startup" | "enterprise" | "developer" | "balanced") => {
     const next: Record<string, number> = {};
     for (const metric of metrics) {
@@ -404,6 +437,13 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
         }
       />
 
+      {metrics.length === 0 || !balanced ? (
+        <div role="note" className="rounded-sm border border-[#2a2a2a] bg-[#111] p-6 text-sm leading-relaxed text-[#fdfbf7]/55">
+          Sensitivity analysis isn't available for this comparison yet — the research didn't return
+          dimension scores to re-weight. The recommendation above stands as recorded; re-running
+          research may produce scoreable dimensions.
+        </div>
+      ) : (
       <div className="grid gap-8 xl:grid-cols-[0.8fr_1.2fr]">
         <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">
@@ -414,6 +454,24 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
             <ScoreBar label={result.entities.a.name} score={weighted.a} color={result.entities.a.hex} />
             <ScoreBar label={result.entities.b.name} score={weighted.b} color={result.entities.b.hex} />
           </div>
+          <p className="mt-6 text-xs leading-relaxed text-[#fdfbf7]/55" aria-live="polite">
+            {!hasAdjustedWeights
+              ? "These are the original balanced weights (every dimension at 1.0x). Adjust them to see how the recommendation responds — the recorded verdict never changes here."
+              : weighted.winner !== balanced.winner
+                ? `With your current weights, ${winnerName} moves ahead of the balanced-weights result${drivers.length ? ` — driven most by ${drivers.join(" and ")}` : ""}. Restore the original weights any time to return to the recorded outcome.`
+                : weighted.winner === "tie"
+                  ? "Your weights level the two options out. Restore the original weights to return to the recorded outcome."
+                  : `${winnerName} still leads with your weights${drivers.length ? `, carried mainly by ${drivers.join(" and ")}` : ""}. The margin ${Math.abs(weighted.a - weighted.b) >= Math.abs(balanced.a - balanced.b) ? "widened" : "narrowed"} versus balanced weights.`}
+          </p>
+          {hasAdjustedWeights && (
+            <button
+              type="button"
+              onClick={restoreOriginalWeights}
+              className="mt-4 inline-flex min-h-10 items-center rounded-sm border border-orange-500/30 bg-orange-500/10 px-3.5 text-[10px] font-bold uppercase tracking-widest text-orange-300 transition-colors hover:bg-orange-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+            >
+              Restore original weights
+            </button>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -447,6 +505,7 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
           ))}
         </div>
       </div>
+      )}
     </section>
   );
 };
@@ -1050,7 +1109,7 @@ const SourceQualityPanel = ({ result }: { result: ComparisonData }) => {
           {sources.slice(0, 6).map((source) => (
             <a
               key={sourceKey(source)}
-              href={source.url}
+              href={safeHref(source.url)}
               target="_blank"
               rel="noopener noreferrer"
               className="block rounded-sm border border-[#2a2a2a] bg-[#111] p-4 transition-colors hover:border-orange-500/40"

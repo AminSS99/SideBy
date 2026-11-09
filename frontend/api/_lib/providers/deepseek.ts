@@ -3,7 +3,7 @@
  */
 import { z } from "zod";
 import type { AIProvider, GenerateOptions, GenerateResult } from "../ai-adapter.js";
-import { estimateCost, estimateTokens, validateWithRepair } from "../ai-adapter.js";
+import { estimateCost, estimateTokens, validateWithRepair, withOutputContract } from "../ai-adapter.js";
 
 const DEEPSEEK_API_URL = process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/v1/chat/completions";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
@@ -17,7 +17,7 @@ export class DeepSeekAdapter implements AIProvider {
     schema: z.ZodType<T>,
     options?: GenerateOptions,
   ): Promise<GenerateResult<T>> {
-    const textResult = await this.generateText(messages, {
+    const textResult = await this.generateText(withOutputContract(messages, schema), {
       ...options,
       responseFormat: "json",
     });

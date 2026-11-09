@@ -54,23 +54,16 @@ function cacheKey(query: string, maxResults: number, depth: string): string {
   return `search:${hashQuery(query.toLowerCase().trim())}:${maxResults}:${depth}`;
 }
 
-export async function searchTavily(params: SearchParams): Promise<SearchResult[]> {
+async function fetchTavily(params: SearchParams): Promise<SearchResult[]> {
   if (!TAVILY_API_KEY) {
     throw new Error("TAVILY_API_KEY not configured.");
   }
 
   const maxResults = params.maxResults || 6;
   const depth = params.searchDepth || "basic";
-  const cache = cacheKey(params.query, maxResults, depth);
-
-  // Try cache first
-  const cached = await redisGet<SearchResult[]>(cache);
-  if (cached) {
-    logger.debug("Tavily cache hit", { query: params.query });
-    return cached;
-  }
 
   const response = await fetch(TAVILY_API_URL, {
+    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -109,15 +102,153 @@ export async function searchTavily(params: SearchParams): Promise<SearchResult[]
     rawContent: r.raw_content?.slice(0, 4000),
   }));
 
-  // Cache for 1 hour
-  await redisSet(cache, results, 3600);
-
-  logger.info("Tavily search completed", {
-    query: params.query,
-    results: results.length,
-  });
-
   return results;
+}
+
+const PROVIDER_TIMEOUT_MS = 12_000;
+
+/** Backup provider: Exa neural search with page text. */
+async function fetchExa(params: SearchParams): Promise<SearchResult[]> {
+  const key = process.env.EXA_API_KEY;
+  if (!key) throw new Error("EXA_API_KEY not configured.");
+  const response = await fetch("https://api.exa.ai/search", {
+    method: "POST",
+    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+    headers: { "Content-Type": "application/json", "x-api-key": key },
+    body: JSON.stringify({
+      query: params.query,
+      numResults: params.maxResults || 6,
+      type: "auto",
+      contents: { text: { maxCharacters: 4000 } },
+    }),
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`Exa search error ${response.status}: ${text.slice(0, 200)}`);
+  }
+  const data = (await response.json()) as {
+    results?: Array<{ title?: string; url: string; text?: string; score?: number }>;
+  };
+  return (data.results || []).map((r, index) => ({
+    title: r.title || r.url,
+    url: normalizeUrl(r.url),
+    content: (r.text || "").slice(0, 800),
+    score: typeof r.score === "number" ? r.score : Math.max(0.1, 1 - index * 0.1),
+    rawContent: params.includeRawContent === false ? undefined : (r.text || "").slice(0, 4000),
+  }));
+}
+
+/** Backup provider: TinyFish search (snippets only; no page text). */
+async function fetchTinyFish(params: SearchParams): Promise<SearchResult[]> {
+  const key = process.env.TINYFISH_API_KEY;
+  if (!key) throw new Error("TINYFISH_API_KEY not configured.");
+  const url = new URL("https://api.search.tinyfish.ai");
+  url.searchParams.set("query", params.query);
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+    headers: { "X-API-Key": key },
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`TinyFish search error ${response.status}: ${text.slice(0, 200)}`);
+  }
+  const data = (await response.json()) as {
+    results?: Array<{ title?: string; url: string; snippet?: string; position?: number }>;
+  };
+  return (data.results || []).slice(0, params.maxResults || 6).map((r, index) => ({
+    title: r.title || r.url,
+    url: normalizeUrl(r.url),
+    content: (r.snippet || "").slice(0, 800),
+    score: Math.max(0.1, 1 - (r.position ? r.position - 1 : index) * 0.1),
+  }));
+}
+
+/** Backup provider: Parallel Search (LLM-ready excerpts). Only used when PARALLEL_API_KEY is set. */
+async function fetchParallel(params: SearchParams): Promise<SearchResult[]> {
+  const key = process.env.PARALLEL_API_KEY;
+  if (!key) throw new Error("PARALLEL_API_KEY not configured.");
+  const response = await fetch("https://api.parallel.ai/v1/search", {
+    method: "POST",
+    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+    headers: { "Content-Type": "application/json", "x-api-key": key },
+    body: JSON.stringify({
+      objective: params.query,
+      search_queries: [params.query],
+      max_results: params.maxResults || 6,
+    }),
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`Parallel search error ${response.status}: ${text.slice(0, 200)}`);
+  }
+  const data = (await response.json()) as {
+    results?: Array<{ title?: string; url: string; excerpts?: string[] }>;
+  };
+  return (data.results || []).slice(0, params.maxResults || 6).map((r, index) => {
+    const text = (r.excerpts || []).join("\n\n");
+    return {
+      title: r.title || r.url,
+      url: normalizeUrl(r.url),
+      content: text.slice(0, 800),
+      score: Math.max(0.1, 1 - index * 0.1),
+      rawContent: params.includeRawContent === false ? undefined : text.slice(0, 4000),
+    };
+  });
+}
+
+const PROVIDERS: Array<{ name: string; run: (params: SearchParams) => Promise<SearchResult[]> }> = [
+  { name: "tavily", run: fetchTavily },
+  { name: "exa", run: fetchExa },
+  { name: "parallel", run: fetchParallel },
+  { name: "tinyfish", run: fetchTinyFish },
+];
+
+// After a provider fails, skip it briefly so an outage or exhausted quota does
+// not add its timeout to every search in the fan-out.
+const PROVIDER_COOLDOWN_MS = 60_000;
+const providerCooldownUntil = new Map<string, number>();
+
+/**
+ * Searches Tavily first, then Exa, Parallel (if keyed) and TinyFish. A provider is only used when
+ * the previous one errors, times out, or returns nothing. Results are cached
+ * regardless of which provider answered.
+ */
+export async function searchTavily(params: SearchParams): Promise<SearchResult[]> {
+  const maxResults = params.maxResults || 6;
+  const depth = params.searchDepth || "basic";
+  const cache = cacheKey(params.query, maxResults, depth);
+
+  const cached = await redisGet<SearchResult[]>(cache);
+  if (cached) {
+    logger.debug("Search cache hit", { query: params.query });
+    return cached;
+  }
+
+  const failures: string[] = [];
+  for (const provider of PROVIDERS) {
+    if ((providerCooldownUntil.get(provider.name) || 0) > Date.now()) continue;
+    try {
+      const results = (await provider.run(params)).filter((r) => /^https?:\/\//i.test(r.url));
+      if (results.length === 0) {
+        failures.push(`${provider.name}: no results`);
+        continue;
+      }
+      await redisSet(cache, results, 3600);
+      if (failures.length > 0) {
+        logger.warn("Search served by fallback provider", { provider: provider.name, failures });
+      }
+      logger.info("Search completed", { provider: provider.name, query: params.query, results: results.length });
+      return results;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      failures.push(`${provider.name}: ${message}`);
+      if (!/not configured/.test(message)) {
+        providerCooldownUntil.set(provider.name, Date.now() + PROVIDER_COOLDOWN_MS);
+      }
+    }
+  }
+
+  throw new Error(`All search providers failed. ${failures.join(" | ").slice(0, 300)}`);
 }
 
 export async function searchEntitySources(

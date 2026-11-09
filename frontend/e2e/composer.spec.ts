@@ -167,23 +167,32 @@ test.describe("SideBy Authenticated Result Interactive Evidence Panel E2E", () =
   test("should open the evidence panel drawer when clicking on matrix elements", async ({ page }) => {
     await page.goto(`/app/comparisons/${COMPARISON_ID}`);
 
+    // Wait for the workbench grid to render
+    await expect(page.locator('[role="tablist"], .wb-grid').filter({ visible: true }).first()).toBeVisible();
+
+    // If mobile tabs are present, switch to Intelligence Matrix where FeatureMatrixPanel lives
+    const intelligenceTab = page.locator("#comparison-tab-intelligence");
+    if (await intelligenceTab.isVisible()) {
+      await intelligenceTab.click();
+    }
+
     // Wait for the workbench to render
-    await expect(page.getByText("Supabase vs Firebase").first()).toBeVisible();
+    await expect(page.getByText("Supabase vs Firebase").filter({ visible: true }).first()).toBeVisible();
 
     // Click on a row in the Feature Matrix panel (Free tier card)
-    const pricingCard = page.locator('.hidden.md\\:block div[role="button"]').filter({ hasText: "Free tier" }).first();
+    const pricingCard = page.locator('div[role="button"]').filter({ hasText: "Free tier", visible: true }).first();
     await expect(pricingCard).toBeVisible();
     await pricingCard.click();
 
     // Radix Dialog / Vaul Drawer should open and display the evidence header and supporting facts
-    await expect(page.getByText("Source-Backed Decision Evidence").first()).toBeVisible();
-    await expect(page.locator("h2, h3, [role='heading'], .font-serif").filter({ hasText: "Pricing" }).first()).toBeVisible();
-    await expect(page.getByText("500 MB database, 2 GB egress").first()).toBeVisible();
-    await expect(page.getByText("1 GB database, 10 GB egress").first()).toBeVisible();
-    await expect(page.getByRole("link", { name: "Supabase Pricing" }).first()).toBeVisible();
+    await expect(page.getByText("Source-Backed Decision Evidence").filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator("h2, h3, [role='heading'], .font-serif").filter({ hasText: "Pricing", visible: true }).first()).toBeVisible();
+    await expect(page.getByText("500 MB database, 2 GB egress").filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByText("1 GB database, 10 GB egress").filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Supabase Pricing" }).filter({ visible: true }).first()).toBeVisible();
 
     // Close the panel
-    const closeBtn = page.getByRole("button", { name: "Close" }).or(page.locator("button:has-text('Close')")).first();
+    const closeBtn = page.getByRole("button", { name: "Close" }).or(page.locator("button:has-text('Close')")).filter({ visible: true }).first();
     if (await closeBtn.isVisible()) {
       await closeBtn.click();
     } else {
@@ -196,17 +205,26 @@ test.describe("SideBy Authenticated Result Interactive Evidence Panel E2E", () =
   test("should open decision evidence without interfering with the importance slider", async ({ page }) => {
     await page.goto(`/app/comparisons/${COMPARISON_ID}`);
 
-    const importanceSlider = page.getByRole("slider", { name: "Importance of Pricing" });
+    // Wait for the workbench grid to render
+    await expect(page.locator('[role="tablist"], .wb-grid').filter({ visible: true }).first()).toBeVisible();
+
+    // If mobile tabs are present, switch to Intelligence Matrix where DecisionMatrixPanel lives
+    const intelligenceTab = page.locator("#comparison-tab-intelligence");
+    if (await intelligenceTab.isVisible()) {
+      await intelligenceTab.click();
+    }
+
+    const importanceSlider = page.getByRole("slider", { name: "Importance of Pricing" }).filter({ visible: true }).first();
     await expect(importanceSlider).toBeVisible();
     await importanceSlider.focus();
     await page.keyboard.press("ArrowRight");
     await expect(importanceSlider).toHaveValue("4");
 
-    const evidenceButton = page.getByRole("button", { name: "View evidence for Pricing" });
+    const evidenceButton = page.getByRole("button", { name: "View evidence for Pricing" }).filter({ visible: true }).first();
     await expect(evidenceButton).toBeVisible();
     await evidenceButton.click();
 
-    await expect(page.getByText("Source-Backed Decision Evidence").first()).toBeVisible();
+    await expect(page.getByText("Source-Backed Decision Evidence").filter({ visible: true }).first()).toBeVisible();
   });
 });
 

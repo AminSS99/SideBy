@@ -38,6 +38,13 @@ vi.mock("../../../src/db/index.js", () => ({
   }),
 }));
 
+vi.mock("../db-auth.js", () => ({
+  canAccessComparison: vi.fn(async () => true),
+  canMutateComparison: vi.fn(async () => true),
+  canAccessWorkspace: vi.fn(async () => true),
+  canAccessProject: vi.fn(async () => true),
+}));
+
 vi.mock("../comparison-validator.js", () => ({
   validateComparisonQuery: vi.fn().mockResolvedValue({
     intent: {
@@ -352,5 +359,18 @@ describe("createComparisonJob - in-flight duplicate intent locking & scoping", (
         userId: "user_test_1",
       }),
     ).rejects.toThrow("connection reset");
+  });
+});
+
+describe("createComparisonJob workspace authorization", () => {
+  it("rejects a workspace the caller cannot access before any lock or insert", async () => {
+    vi.mocked(redisAcquireLockToken).mockClear();
+    const dbAuth = await import("../db-auth.js");
+    vi.mocked(dbAuth.canAccessWorkspace).mockResolvedValueOnce(false);
+    const { createComparisonJob } = await import("../sideby.js");
+    await expect(
+      createComparisonJob({ query: "React vs Vue", userId: "user_a", workspaceId: "11111111-1111-4111-8111-111111111111" }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    expect(vi.mocked(redisAcquireLockToken)).not.toHaveBeenCalled();
   });
 });

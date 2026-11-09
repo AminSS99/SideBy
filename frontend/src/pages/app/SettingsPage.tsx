@@ -1,4 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
+import { KeyboardSpacer } from "@/components/KeyboardSpacer";
+
+import { useSearchParams } from "react-router-dom";
 import { 
   Settings2, 
   Key, 
@@ -22,10 +25,27 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import type { WorkspaceRecord } from "@/contexts/WorkspaceContext";
 import { GlowCard } from "@/components/GlowCard";
 import { copyText } from "@/lib/clipboard";
+import { NotificationsSettings } from "@/components/settings/NotificationsSettings";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 
-type Tab = "general" | "preferences" | "providers" | "api-keys" | "webhooks";
+type Tab = "general" | "preferences" | "providers" | "api-keys" | "webhooks" | "notifications";
+
+const SETTINGS_TABS: Array<{
+  id: Tab;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { id: "general", label: "General", icon: Settings2 },
+  { id: "preferences", label: "Preferences", icon: SlidersHorizontal },
+  { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "providers", label: "AI Providers", icon: Bot },
+  { id: "api-keys", label: "Developer API", icon: Key },
+  { id: "webhooks", label: "Webhooks", icon: Webhook },
+];
+
+const isSettingsTab = (value: string | null): value is Tab =>
+  !!value && SETTINGS_TABS.some((tab) => tab.id === value);
 type PreferencesState = {
   emailDigest: boolean;
   jobAlerts: boolean;
@@ -54,8 +74,20 @@ const providerStyles = {
 
 const SettingsPage = () => {
   const { activeWorkspace } = useWorkspace();
-  const [activeTab, setActiveTab] = useState<Tab>("general");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const tabParam = new URLSearchParams(window.location.search).get("tab");
+    return isSettingsTab(tabParam) ? tabParam : "general";
+  });
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Keep the URL shareable when navigating directly to a tab (e.g. from a
+  // notification deep-link to /app/settings?tab=notifications).
+  useEffect(() => {
+    if (searchParams.get("tab") !== activeTab) {
+      window.history.replaceState(null, "", `/app/settings?tab=${activeTab}`);
+    }
+  }, [activeTab, searchParams]);
 
   useGSAP(() => {
     const tl = gsap.timeline();
@@ -81,67 +113,28 @@ const SettingsPage = () => {
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         {/* Settings Sidebar Nav */}
         <aside className="set-nav w-full lg:w-64 shrink-0 space-y-1">
-          <button
-            onClick={() => setActiveTab("general")}
-            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-widest rounded-sm transition-all ${
-              activeTab === "general" 
-                ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" 
-                : "text-[#fdfbf7]/50 hover:bg-[#111] hover:text-[#fdfbf7] border border-transparent"
-            }`}
-          >
-            <Settings2 className="h-4 w-4" />
-            General
-          </button>
-          <button
-            onClick={() => setActiveTab("preferences")}
-            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-widest rounded-sm transition-all ${
-              activeTab === "preferences" 
-                ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" 
-                : "text-[#fdfbf7]/50 hover:bg-[#111] hover:text-[#fdfbf7] border border-transparent"
-            }`}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            Preferences
-          </button>
-          <button
-            onClick={() => setActiveTab("providers")}
-            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-widest rounded-sm transition-all ${
-              activeTab === "providers" 
-                ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" 
-                : "text-[#fdfbf7]/50 hover:bg-[#111] hover:text-[#fdfbf7] border border-transparent"
-            }`}
-          >
-            <Bot className="h-4 w-4" />
-            AI Providers
-          </button>
-          <button
-            onClick={() => setActiveTab("api-keys")}
-            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-widest rounded-sm transition-all ${
-              activeTab === "api-keys" 
-                ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" 
-                : "text-[#fdfbf7]/50 hover:bg-[#111] hover:text-[#fdfbf7] border border-transparent"
-            }`}
-          >
-            <Key className="h-4 w-4" />
-            Developer API
-          </button>
-          <button
-            onClick={() => setActiveTab("webhooks")}
-            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-widest rounded-sm transition-all ${
-              activeTab === "webhooks" 
-                ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" 
-                : "text-[#fdfbf7]/50 hover:bg-[#111] hover:text-[#fdfbf7] border border-transparent"
-            }`}
-          >
-            <Webhook className="h-4 w-4" />
-            Webhooks
-          </button>
+          {SETTINGS_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              aria-current={activeTab === tab.id ? "page" : undefined}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-widest rounded-sm transition-all ${
+                activeTab === tab.id
+                  ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                  : "text-[#fdfbf7]/50 hover:bg-[#111] hover:text-[#fdfbf7] border border-transparent"
+              }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          ))}
         </aside>
 
         {/* Settings Content Area */}
         <div className="set-content flex-1 w-full min-w-0">
           {activeTab === "general" && <GeneralSettings workspace={activeWorkspace} />}
           {activeTab === "preferences" && <PreferenceSettings workspaceId={activeWorkspace?.id} />}
+          {activeTab === "notifications" && <NotificationsSettings />}
           {activeTab === "providers" && <ProviderSettings />}
           {activeTab === "api-keys" && <ApiKeysSettings workspaceId={activeWorkspace?.id} />}
           {activeTab === "webhooks" && <WebhooksSettings workspaceId={activeWorkspace?.id} />}
@@ -360,6 +353,11 @@ const PreferenceSettings = ({ workspaceId }: { workspaceId?: string }) => {
 
 const ProviderSettings = () => {
   const [customProvider, setCustomProvider] = useState<string | null>(() => localStorage.getItem("sideby.customProvider"));
+  const [keyPromptProvider, setKeyPromptProvider] = useState<string | null>(null);
+  const [providerKeyDraft, setProviderKeyDraft] = useState("");
+  const [keyError, setKeyError] = useState<string | null>(null);
+  const keyInputRef = useRef<HTMLInputElement>(null);
+
   const providers = [
     { name: "DeepSeek", model: "deepseek-v4-pro", desc: "Used for high-speed logic, extraction, and source normalization.", connected: true, color: "blue" },
     { name: "Gemini", model: "gemini-3.1-pro", desc: "Used for synthesis, tradeoff reasoning, and executive verdicts.", connected: true, color: "purple" },
@@ -367,6 +365,30 @@ const ProviderSettings = () => {
     { name: "Anthropic", model: "claude-3-5-haiku", desc: "Nuanced prose generation.", connected: false, color: "orange" },
     { name: "MiniMax", model: "abab6.5s-chat", desc: "Latency-optimized alternate route.", connected: false, color: "cyan" }
   ];
+
+  const openKeyForm = (providerName: string) => {
+    setKeyPromptProvider(providerName);
+    setProviderKeyDraft("");
+    setKeyError(null);
+    window.setTimeout(() => keyInputRef.current?.focus(), 0);
+  };
+
+  const confirmProviderKey = () => {
+    if (!keyPromptProvider) return;
+    const trimmed = providerKeyDraft.trim();
+    if (!trimmed) {
+      setKeyError("Enter an API key before saving.");
+      keyInputRef.current?.focus();
+      return;
+    }
+    setCustomProvider(keyPromptProvider);
+    localStorage.setItem("sideby.customProvider", keyPromptProvider);
+    setKeyPromptProvider(null);
+    setProviderKeyDraft("");
+    toast.success(`${keyPromptProvider} route saved.`, {
+      description: "The route is registered. Store the secret itself in Vercel before production traffic uses it.",
+    });
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -403,13 +425,8 @@ const ProviderSettings = () => {
                   </span>
                 ) : (
                   <button
-                    onClick={() => {
-                      setCustomProvider(p.name);
-                      localStorage.setItem("sideby.customProvider", p.name);
-                      toast.success(`${p.name} route saved.`, {
-                        description: "Add the provider secret in Vercel before production traffic uses this route.",
-                      });
-                    }}
+                    onClick={() => openKeyForm(p.name)}
+                    aria-expanded={keyPromptProvider === p.name}
                     className="rounded-sm border border-[#333] bg-[#111] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 hover:text-[#fdfbf7] hover:border-[#555] transition-colors"
                   >
                     {customProvider === p.name ? "Saved" : "Add Key"}
@@ -422,6 +439,58 @@ const ProviderSettings = () => {
                   <Settings2 className="h-4 w-4" />
                 </button>
               </div>
+              {keyPromptProvider === p.name && (
+                <form
+                  className="w-full border-t border-[#2a2a2a] pt-4"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    confirmProviderKey();
+                  }}
+                >
+                  <label htmlFor={`provider-key-${p.name}`} className="block text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
+                    {p.name} API key
+                  </label>
+                  <div className="mt-2 flex flex-col sm:flex-row gap-2">
+                    <input
+                      id={`provider-key-${p.name}`}
+                      ref={keyInputRef}
+                      type="password"
+                      autoComplete="off"
+                      value={providerKeyDraft}
+                      onChange={(event) => {
+                        setProviderKeyDraft(event.target.value);
+                        if (keyError) setKeyError(null);
+                      }}
+                      aria-invalid={!!keyError}
+                      aria-describedby={`provider-key-error-${p.name}`}
+                      placeholder="Paste your secret key"
+                      className="flex-1 rounded-sm border border-[#333] bg-black px-4 py-2.5 text-sm text-[#fdfbf7] outline-none transition-colors focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50"
+                    />
+                    <button type="submit" className="rounded-sm bg-orange-600 px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700">
+                      Confirm Key
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setKeyPromptProvider(null);
+                        setProviderKeyDraft("");
+                        setKeyError(null);
+                      }}
+                      className="rounded-sm border border-[#333] bg-[#0c0b0a] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:text-[#fdfbf7]"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {keyError && (
+                    <p id={`provider-key-error-${p.name}`} role="alert" className="mt-2 text-xs text-red-400">
+                      {keyError}
+                    </p>
+                  )}
+                  <p className="mt-2 text-xs text-[#fdfbf7]/35">
+                    The key is only registered for this session's routing preference. Store the real secret in Vercel environment variables.
+                  </p>
+                </form>
+              )}
             </div>
           ))}
         </div>
@@ -575,6 +644,30 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
   const [url, setUrl] = useState("");
   const [selectedEvents, setSelectedEvents] = useState<string[]>(["comparison.completed", "comparison.failed"]);
   const [isCreating, setIsCreating] = useState(false);
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const urlInputRef = useRef<HTMLInputElement>(null);
+
+  const validateUrl = (value: string): string | null => {
+    if (!value.trim()) return "Endpoint URL is required.";
+    try {
+      const parsed = new URL(value.trim());
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        return "Endpoint must start with https:// (or http:// for local testing).";
+      }
+    } catch {
+      return "Enter a valid absolute URL, e.g. https://yourdomain.com/webhooks/sideby.";
+    }
+    return null;
+  };
+
+  const openCreateForm = () => {
+    const next = !isCreating;
+    setIsCreating(next);
+    if (next) {
+      setUrlError(null);
+      window.setTimeout(() => urlInputRef.current?.focus(), 0);
+    }
+  };
 
   const loadSubs = async () => {
     const response = await apiFetch(buildApiUrl("/api/webhooks/subscriptions"));
@@ -592,8 +685,10 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
 
   const createSub = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url) {
-      toast.error("Please provide a webhook endpoint URL.");
+    const validationError = validateUrl(url);
+    if (validationError) {
+      setUrlError(validationError);
+      urlInputRef.current?.focus();
       return;
     }
     try {
@@ -601,7 +696,7 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          url,
+          url: url.trim(),
           workspaceId,
           eventTypes: selectedEvents,
         }),
@@ -612,6 +707,7 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
       }
       setSubs((current) => [data.subscription, ...current]);
       setUrl("");
+      setUrlError(null);
       setIsCreating(false);
       toast.success("Webhook subscription created successfully.");
     } catch (error) {
@@ -670,8 +766,9 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
             <h2 className="font-serif text-2xl text-[#fdfbf7] mb-1">Webhook Subscriptions</h2>
             <p className="text-sm text-[#fdfbf7]/50">Receive real-time notifications on comparison jobs directly in your server.</p>
           </div>
-          <button 
-            onClick={() => setIsCreating(!isCreating)} 
+          <button
+            onClick={openCreateForm}
+            aria-expanded={isCreating}
             className="flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] shrink-0"
           >
             {isCreating ? "Cancel" : <><Plus className="h-3.5 w-3.5" /> Add Endpoint</>}
@@ -679,19 +776,31 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
         </div>
 
         {isCreating && (
-          <form onSubmit={createSub} className="mb-8 rounded-sm border border-[#333] bg-[#0c0b0a] p-6 space-y-4 animate-in fade-in duration-300">
+          <form onSubmit={createSub} noValidate className="mb-8 rounded-sm border border-[#333] bg-[#0c0b0a] p-6 space-y-4 animate-in fade-in duration-300">
             <h3 className="text-xs font-bold uppercase tracking-widest text-orange-400">New Webhook Subscription</h3>
-            
+
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">Endpoint URL</label>
-              <input 
+              <label htmlFor="webhook-endpoint-url" className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">Endpoint URL</label>
+              <input
+                id="webhook-endpoint-url"
+                ref={urlInputRef}
                 type="url"
                 required
                 placeholder="https://yourdomain.com/webhooks/sideby"
                 value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="w-full rounded-sm border border-[#333] bg-black px-4 py-3 text-sm text-[#fdfbf7] outline-none transition-colors focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50"
+                onChange={(e) => {
+                  setUrl(e.target.value);
+                  if (urlError) setUrlError(validateUrl(e.target.value));
+                }}
+                aria-invalid={!!urlError}
+                aria-describedby={urlError ? "webhook-endpoint-url-error" : undefined}
+                className={`w-full rounded-sm border bg-black px-4 py-3 text-sm text-[#fdfbf7] outline-none transition-colors focus:ring-1 ${urlError ? "border-red-500 focus:border-red-500 focus:ring-red-500/50" : "border-[#333] focus:border-orange-500 focus:ring-orange-500/50"}`}
               />
+              {urlError && (
+                <p id="webhook-endpoint-url-error" role="alert" className="text-xs text-red-400">
+                  {urlError}
+                </p>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -795,6 +904,7 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
           )}
         </div>
       </GlowCard>
+      <KeyboardSpacer />
     </div>
   );
 };

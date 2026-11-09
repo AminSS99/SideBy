@@ -189,6 +189,14 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
   // so synchronizing the cache cannot trigger an authentication render loop.
   const user = isLoaded ? clerkAppUser : cachedUser;
 
+  // Consumers use session identity as an effect dependency. Cache synchronization
+  // and profile updates must not restart their requests for the same principal.
+  const sessionUserId = user?.id ?? null;
+  const session = useMemo<AppSession | null>(
+    () => (sessionUserId ? { userId: sessionUserId } : null),
+    [sessionUserId],
+  );
+
   // Sync user to cache whenever it changes
   useEffect(() => {
     if (isLoaded) {
@@ -244,7 +252,7 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      session: user ? { userId: user.id } : null,
+      session,
       user,
       // If we have a cached user, we can consider auth "loaded" even before Clerk finishes
       isLoading: !isLoaded && !cachedUser,
@@ -262,7 +270,7 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
         await handleSignOut();
       },
     }),
-    [cachedUser, handleSignOut, isLoaded, user],
+    [cachedUser, handleSignOut, isLoaded, session, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

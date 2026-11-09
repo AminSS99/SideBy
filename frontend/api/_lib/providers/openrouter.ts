@@ -4,7 +4,7 @@
  */
 import { z } from "zod";
 import type { AIProvider, GenerateOptions, GenerateResult } from "../ai-adapter.js";
-import { estimateCost, estimateTokens, validateWithRepair } from "../ai-adapter.js";
+import { estimateCost, estimateTokens, validateWithRepair, withOutputContract } from "../ai-adapter.js";
 
 const OPENROUTER_API_URL = process.env.OPENROUTER_API_URL || "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
@@ -27,7 +27,7 @@ export class OpenRouterAdapter implements AIProvider {
     options?: GenerateOptions,
   ): Promise<GenerateResult<T>> {
     this.assertConfigured();
-    const textResult = await this.generateText(messages, {
+    const textResult = await this.generateText(withOutputContract(messages, schema), {
       ...options,
       responseFormat: "json",
     });

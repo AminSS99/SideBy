@@ -4,6 +4,7 @@ import { brand } from "@/config/brand";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ArrowLeft } from "lucide-react";
+import { MarketingNav } from "@/components/brand/MarketingNav";
 
 const NotFound = () => {
   const location = useLocation();
@@ -24,7 +25,9 @@ const NotFound = () => {
   }, { scope: containerRef });
 
   return (
-    <div ref={containerRef} className="min-h-screen flex items-center justify-center bg-[#030303] text-white relative overflow-hidden">
+    <div ref={containerRef} className="relative min-h-[100dvh] bg-[#030303] text-white">
+      <MarketingNav />
+      <div className="relative flex min-h-[calc(100dvh-4.75rem)] items-center justify-center overflow-hidden">
       {/* Background Grid & Glow Effects */}
       <div className="pointer-events-none fixed inset-0 opacity-[0.03]">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px]" />
@@ -58,6 +61,7 @@ const NotFound = () => {
             {brand.operatedByLine}
           </a>
         </div>
+      </div>
       </div>
     </div>
   );

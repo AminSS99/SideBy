@@ -28,6 +28,8 @@ import {
   CategorySection,
   ComparisonHeader,
   DecisionIntelligencePanel,
+  DecisionReceiptPanel,
+  EvidenceGapPanel,
   FollowUpPanel,
   ResearchLoader,
   SourcesPanel,
@@ -45,6 +47,10 @@ import {
   StickyDecisionBar,
   TeamNotesPanel,
 } from "@/components/Comparison/ComparisonEngine";
+import { SafePanel } from "@/components/SafePanel";
+import { isAdaptiveCanvasEnabled, hasAdaptiveCanvasPreviewOptIn } from "@/lib/featureFlags";
+import { AdaptiveDecisionCanvas } from "@/components/AdaptiveCanvas/AdaptiveDecisionCanvas";
+import { Sparkles } from "lucide-react";
 
 type ComparisonJob = {
   id: string;
@@ -54,12 +60,14 @@ type ComparisonJob = {
   query: string;
   result: ComparisonData | null;
   visibility?: "private" | "team" | "public";
+  publishEligibility?: { eligible: boolean; classification?: string; reasons: string[] };
   error?: string | null;
   failedStep?: string | null;
   activity?: ComparisonActivityStep[];
   sourcesFound?: number;
   factsExtracted?: number;
   dimensionsScored?: number;
+  retryable?: boolean;
 };
 
 type VersionChangeSummary = {
@@ -89,8 +97,32 @@ const ComparisonDetailPage = () => {
   const [viewedHistoricalResult, setViewedHistoricalResult] = useState<ComparisonData | null>(null);
   const [viewedHistoricalVersionNumber, setViewedHistoricalVersionNumber] = useState<number | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<"overview" | "intelligence" | "metadata">("overview");
+  const [useAdaptiveCanvas, setUseAdaptiveCanvas] = useState(() => isAdaptiveCanvasEnabled());
+  const [canvasWeights, setCanvasWeights] = useState<Record<string, number>>({});
   const [isDecisionBarDismissed, setIsDecisionBarDismissed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const activeRecordKey = `${id}:${viewedHistoricalVersionNumber ?? "live"}`;
+  const prevActiveRecordKeyRef = useRef(activeRecordKey);
+
+  useEffect(() => {
+    if (prevActiveRecordKeyRef.current !== activeRecordKey) {
+      prevActiveRecordKeyRef.current = activeRecordKey;
+      setCanvasWeights({});
+    }
+  }, [activeRecordKey]);
+
+  const handleCanvasWeightChange = (subject: string, weight: number) => {
+    setCanvasWeights((prev) => ({ ...prev, [subject]: weight }));
+  };
+
+  const handleCanvasResetWeights = () => {
+    const reset: Record<string, number> = {};
+    if (result) {
+      for (const d of result.dimensions) reset[d.subject] = 3;
+    }
+    setCanvasWeights(reset);
+  };
 
   useEffect(() => {
     setIsDecisionBarDismissed(false);
@@ -113,11 +145,25 @@ const ComparisonDetailPage = () => {
     },
     enabled: Boolean(id),
     refetchInterval: (query) => (query.state.data?.status === "running" ? 2500 : false),
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: "always",
     staleTime: 1500,
   });
 
   const job = comparisonQuery.data;
+
+  // Reconcile status immediately when returning to foreground from suspension/background
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && job?.status === "running") {
+        void comparisonQuery.refetch();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [job?.status, comparisonQuery]);
   const result = viewedHistoricalResult || job?.result;
   const isFirstFlow = searchParams.get("first") === "1" || isStoredFirstComparison(user?.id, id);
   const showCompletionBridge = Boolean(isFirstFlow && job?.status === "completed" && result);
@@ -310,6 +356,26 @@ const ComparisonDetailPage = () => {
   const renderWorkbenchGrid = (resultData: ComparisonData, activityData?: ComparisonActivityStep[]) => {
     return (
       <div className="space-y-6 sm:space-y-8">
+        {hasAdaptiveCanvasPreviewOptIn() && !useAdaptiveCanvas && (
+          <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] p-3 px-4">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center rounded bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                Development Preview
+              </span>
+              <span className="text-xs text-white/50 hidden sm:inline">
+                Experience SideBy’s adaptive decision canvas
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setUseAdaptiveCanvas(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-300 hover:bg-orange-500/20 transition-colors"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Preview Adaptive Canvas
+            </button>
+          </div>
+        )}
         {/* Tab Selector on Mobile */}
         <div role="tablist" aria-label="Comparison result sections" className="sticky top-[72px] z-30 -mx-4 flex items-center gap-1 overflow-x-auto border-y border-white/[0.07] bg-[#0b0a09]/90 px-4 py-2.5 shadow-[0_12px_30px_rgba(0,0,0,.25)] backdrop-blur-2xl no-scrollbar lg:hidden">
           {[
@@ -343,16 +409,28 @@ const ComparisonDetailPage = () => {
               result={resultData}
               onRefresh={() => void refresh()}
               comparisonId={job!.id}
+              isPublic={job?.visibility === "public"}
+              publishReasons={job?.publishEligibility && !job.publishEligibility.eligible ? job.publishEligibility.reasons : undefined}
+              publishClassification={job?.publishEligibility?.classification ?? undefined}
             />
             <DecisionIntelligencePanel
               result={resultData}
               activity={activityData}
               comparisonId={job!.id}
             />
-            <RadarChartPanel result={resultData} />
-            <ConsensusPanel result={resultData} />
-            <FeatureMatrixPanel result={resultData} />
-            <DecisionMatrixPanel result={resultData} comparisonId={job!.id} />
+            <EvidenceGapPanel result={resultData} comparisonId={job!.id} />
+            <SafePanel panelName="Score chart" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+              <RadarChartPanel result={resultData} />
+            </SafePanel>
+            <SafePanel panelName="Consensus view" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+              <ConsensusPanel result={resultData} />
+            </SafePanel>
+            <SafePanel panelName="Feature matrix" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+              <FeatureMatrixPanel result={resultData} />
+            </SafePanel>
+            <SafePanel panelName="Decision matrix" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+              <DecisionMatrixPanel result={resultData} comparisonId={job!.id} />
+            </SafePanel>
             <div className="space-y-10">
               {resultData.categories.map((category, index) => (
                 <CategorySection
@@ -368,13 +446,28 @@ const ComparisonDetailPage = () => {
           <aside className="col-span-4 space-y-6 sticky top-28 self-start pb-8 h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar">
             <TableOfContents result={resultData} />
             <VerdictPanel result={resultData} />
-            <WatchlistPanel result={resultData} comparisonId={job!.id} />
-            <TeamNotesPanel comparisonId={job!.id} />
+            <DecisionReceiptPanel
+              result={resultData}
+              comparisonId={job!.id}
+              version={viewedHistoricalVersionNumber !== undefined ? (versionsQuery.data?.find((v) => v.versionNumber === viewedHistoricalVersionNumber) ?? null) : null}
+              versionNumber={viewedHistoricalVersionNumber}
+              isHistorical={viewedHistoricalVersionNumber !== undefined}
+            />
+            <SafePanel panelName="Watchlist" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+              <WatchlistPanel result={resultData} comparisonId={job!.id} />
+            </SafePanel>
+            <SafePanel panelName="Team notes" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+              <TeamNotesPanel comparisonId={job!.id} />
+            </SafePanel>
             <EntityFactPanel result={resultData} facts={entityFacts} />
             <SourcesPanel sources={resultData.sources} />
-            <RunTelemetryPanel result={resultData} />
+            <SafePanel panelName="Telemetry" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+              <RunTelemetryPanel result={resultData} />
+            </SafePanel>
             <FeedbackPanel />
-            <FollowUpPanel comparisonId={job!.id} />
+            <SafePanel panelName="Follow-up research" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+              <FollowUpPanel comparisonId={job!.id} />
+            </SafePanel>
           </aside>
         </div>
 
@@ -386,12 +479,30 @@ const ComparisonDetailPage = () => {
                 result={resultData}
                 onRefresh={() => void refresh()}
                 comparisonId={job!.id}
+                isPublic={job?.visibility === "public"}
+                publishReasons={job?.publishEligibility && !job.publishEligibility.eligible ? job.publishEligibility.reasons : undefined}
+                publishClassification={job?.publishEligibility?.classification ?? undefined}
               />
               <VerdictPanel result={resultData} />
-              <RadarChartPanel result={resultData} />
-              <ConsensusPanel result={resultData} />
-              <WatchlistPanel result={resultData} comparisonId={job!.id} />
-              <TeamNotesPanel comparisonId={job!.id} />
+              <DecisionReceiptPanel
+                result={resultData}
+                comparisonId={job!.id}
+                version={viewedHistoricalVersionNumber !== undefined ? (versionsQuery.data?.find((v) => v.versionNumber === viewedHistoricalVersionNumber) ?? null) : null}
+                versionNumber={viewedHistoricalVersionNumber}
+                isHistorical={viewedHistoricalVersionNumber !== undefined}
+              />
+              <SafePanel panelName="Score chart" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+                <RadarChartPanel result={resultData} />
+              </SafePanel>
+              <SafePanel panelName="Consensus view" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+                <ConsensusPanel result={resultData} />
+              </SafePanel>
+              <SafePanel panelName="Watchlist" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+                <WatchlistPanel result={resultData} comparisonId={job!.id} />
+              </SafePanel>
+              <SafePanel panelName="Team notes" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+                <TeamNotesPanel comparisonId={job!.id} />
+              </SafePanel>
             </div>
           )}
 
@@ -402,8 +513,13 @@ const ComparisonDetailPage = () => {
                 activity={activityData}
                 comparisonId={job!.id}
               />
-              <FeatureMatrixPanel result={resultData} />
-              <DecisionMatrixPanel result={resultData} comparisonId={job!.id} />
+              <EvidenceGapPanel result={resultData} comparisonId={job!.id} />
+              <SafePanel panelName="Feature matrix" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+                <FeatureMatrixPanel result={resultData} />
+              </SafePanel>
+              <SafePanel panelName="Decision matrix" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+                <DecisionMatrixPanel result={resultData} comparisonId={job!.id} />
+              </SafePanel>
               <div className="space-y-6">
                 {resultData.categories.map((category, index) => (
                   <CategorySection
@@ -421,9 +537,13 @@ const ComparisonDetailPage = () => {
             <div id="comparison-panel-metadata" role="tabpanel" aria-labelledby="comparison-tab-metadata" className="space-y-6 animate-fadeIn sm:space-y-8">
               <EntityFactPanel result={resultData} facts={entityFacts} />
               <SourcesPanel sources={resultData.sources} />
-              <RunTelemetryPanel result={resultData} />
+              <SafePanel panelName="Telemetry" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+                <RunTelemetryPanel result={resultData} />
+              </SafePanel>
               <FeedbackPanel />
-              <FollowUpPanel comparisonId={job!.id} />
+              <SafePanel panelName="Follow-up research" resetKey={`${job!.id}:${viewedHistoricalVersionNumber ?? "live"}`}>
+                <FollowUpPanel comparisonId={job!.id} />
+              </SafePanel>
             </div>
           )}
         </div>
@@ -635,6 +755,48 @@ const ComparisonDetailPage = () => {
           factsExtracted={job.factsExtracted}
           dimensionsScored={job.dimensionsScored}
         />
+      ) : useAdaptiveCanvas && result && job.status === "completed" ? (
+        <SafePanel
+          panelName="Adaptive Decision Canvas"
+          resetKey={activeRecordKey}
+          fallback={
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 text-center">
+              <p className="text-sm text-white/70">The adaptive canvas could not be rendered.</p>
+              <button
+                type="button"
+                onClick={() => setUseAdaptiveCanvas(false)}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/20"
+              >
+                Return to Classic Workbench
+              </button>
+            </div>
+          }
+        >
+          <AdaptiveDecisionCanvas
+            comparison={result}
+            comparisonId={job.id}
+            isPublic={job.visibility === "public"}
+            publishEligibility={job.publishEligibility}
+            onRefresh={() => void refresh()}
+            onToggleClassicMode={() => setUseAdaptiveCanvas(false)}
+            onNavigateToFollowUp={() => {
+              setUseAdaptiveCanvas(false);
+              setTimeout(() => {
+                document.getElementById("follow-up-section")?.scrollIntoView({ behavior: "smooth" });
+              }, 100);
+            }}
+            version={
+              viewedHistoricalVersionNumber !== undefined
+                ? versionsQuery.data?.find((v) => v.versionNumber === viewedHistoricalVersionNumber) ?? null
+                : null
+            }
+            versionNumber={viewedHistoricalVersionNumber}
+            isHistorical={viewedHistoricalVersionNumber !== undefined}
+            weights={canvasWeights}
+            onWeightChange={handleCanvasWeightChange}
+            onResetWeights={handleCanvasResetWeights}
+          />
+        </SafePanel>
       ) : (
         renderWorkbenchGrid(result, job.activity)
       )}

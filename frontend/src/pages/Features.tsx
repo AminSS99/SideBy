@@ -1,17 +1,15 @@
 import { useRef } from "react";
+import InkOrbitFeatures from "@/components/ui/ink-orbit-features";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
-  BookOpenCheck,
   Database,
-  FileCheck2,
   FileSearch,
   GitCompareArrows,
   LockKeyhole,
   MessageCircleQuestion,
   RefreshCw,
   Scale,
-  SearchCheck,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -28,13 +26,6 @@ const FEATURES = [
   { id: "refresh", icon: RefreshCw, eyebrow: "Maintain", title: "Refresh decisions as facts change", description: "Re-run source collection, preserve the prior result, and inspect how pricing, features, or recommendations changed.", proof: "Version history · change tracking" },
   { id: "followup", icon: MessageCircleQuestion, eyebrow: "Explore", title: "Ask follow-up questions", description: "Go deeper after the verdict with retrieval grounded in the comparison’s saved facts and source set.", proof: "Semantic retrieval · saved context" },
   { id: "team", icon: Users, eyebrow: "Collaborate", title: "Keep decisions reusable", description: "Organize research into workspaces and projects, add team notes, publish selected reports, and export the evidence trail.", proof: "Workspaces · notes · exports" },
-] as const;
-
-const PIPELINE = [
-  { id: "discover", icon: SearchCheck, label: "Discover", body: "Find credible sources" },
-  { id: "extract", icon: FileCheck2, label: "Extract", body: "Normalize cited facts" },
-  { id: "compare", icon: GitCompareArrows, label: "Compare", body: "Score decision dimensions" },
-  { id: "explain", icon: BookOpenCheck, label: "Explain", body: "Show the verdict path" },
 ] as const;
 
 const Features = () => {
@@ -71,17 +62,9 @@ const Features = () => {
           </div>
         </header>
 
-        <section className="feat-pipeline mx-auto mt-12 max-w-5xl overflow-hidden rounded-[28px] border border-white/[0.09] bg-white/[0.03] p-4 sm:mt-16 sm:p-6">
-          <div className="mb-4 flex items-center justify-between gap-4 px-1"><div><p className="text-[9px] font-bold uppercase tracking-[0.2em] text-orange-300">How one run works</p><p className="mt-1 text-xs text-white/35">Evidence stays attached at every step.</p></div><LockKeyhole className="h-5 w-5 text-emerald-300" /></div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-            {PIPELINE.map((step, index) => (
-              <div key={step.id} className="relative rounded-2xl border border-white/[0.07] bg-black/20 p-3.5 sm:p-4">
-                <div className="flex items-center justify-between"><step.icon className="h-4 w-4 text-orange-300" /><span className="font-mono text-[8px] text-white/20">0{index + 1}</span></div>
-                <p className="mt-4 text-sm font-semibold text-white">{step.label}</p><p className="mt-1 text-[10px] leading-4 text-white/35">{step.body}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        <div className="feat-pipeline mx-auto mt-12 max-w-5xl sm:mt-16">
+          <InkOrbitFeatures theme="dark" brand="SideBy" tag="How one run works" />
+        </div>
 
         <section className="mt-16 sm:mt-24">
           <div className="mb-7 max-w-2xl"><p className="text-[9px] font-bold uppercase tracking-[0.2em] text-orange-300">Built around the decision</p><h2 className="mt-3 font-serif text-4xl leading-tight text-white sm:text-5xl">Research tools that stay connected.</h2><p className="mt-4 text-sm leading-6 text-white/45">Each capability feeds the same source-backed record instead of creating another disconnected document.</p></div>

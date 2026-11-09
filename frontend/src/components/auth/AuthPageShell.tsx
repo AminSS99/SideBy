@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ArrowLeft, CheckCircle2, Lock, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, CheckCircle2, FolderLock, Sparkles } from "lucide-react";
 import { brand } from "@/config/brand";
 import InteractiveConstellation from "./InteractiveConstellation";
 
@@ -225,12 +225,12 @@ const AuthPageShell = ({
             {/* trust/security badges below card */}
             <div className="auth-footer-features mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[9px] font-medium uppercase tracking-wider text-white/30">
               <div className="flex items-center gap-1.5 hover:text-white/40 transition-colors duration-200 cursor-default">
-                <ShieldCheck className="h-3.5 w-3.5 stroke-[1.5]" />
-                <span>SOC 2 Ready</span>
+                <BookOpenCheck className="h-3.5 w-3.5 stroke-[1.5]" />
+                <span>Cited sources</span>
               </div>
               <div className="flex items-center gap-1.5 hover:text-white/40 transition-colors duration-200 cursor-default">
-                <Lock className="h-3.5 w-3.5 stroke-[1.5]" />
-                <span>256-bit Encrypted</span>
+                <FolderLock className="h-3.5 w-3.5 stroke-[1.5]" />
+                <span>Private workspaces</span>
               </div>
             </div>
           </div>

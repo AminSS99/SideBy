@@ -4,6 +4,8 @@
 
 <h1 align="center">SideBy</h1>
 
+**Launch execution plan:** [SideBy and Snap ecosystem readiness](ECOSYSTEM_LAUNCH_PLAN.md) — current product gates, shared workspace and billing proof, SnapPoints, and Product Hunt preparation.
+
 <p align="center">
   <strong>AI-Powered Research & Comparison Platform</strong><br/>
   Every claim cited. Every source verified.
@@ -29,7 +31,7 @@
 
 ## What is SideBy?
 
-SideBy is a production-grade, source-backed AI comparison platform. You enter a query like **"React vs Vue"** or **"Stripe vs Paddle for SaaS payments"**, and SideBy:
+SideBy is a source-backed AI comparison platform. You enter a query like **"React vs Vue"** or **"Stripe vs Dodo for SaaS payments"**, and SideBy:
 
 1. **Classifies** the query into a category (software, SaaS, AI tool, product, etc.)
 2. **Searches** the web for authoritative sources
@@ -386,7 +388,7 @@ See `frontend/src/db/schema.ts` for the full schema.
 
 ```bash
 # Type check
-pnpm exec tsc --noEmit
+pnpm run typecheck
 
 # Lint
 pnpm lint
@@ -423,7 +425,7 @@ git push origin feature/your-feature-name
 - [x] Public/private sharing
 - [x] Knowledge base
 - [x] Rate limiting & usage tracking
-- [ ] Paddle billing integration
+- [ ] Verify central SnapSolve/Dodo checkout, entitlement, and cancellation end to end
 - [ ] Pro plan features
 - [ ] Multi-entity comparisons (3+)
 - [ ] Team collaboration

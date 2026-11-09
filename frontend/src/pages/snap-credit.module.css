@@ -1,0 +1,55 @@
+.badge {
+  /* In flow, centered above the footer: always visible, never covers a CTA. */
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: fit-content;
+  margin: 0 auto 1.5rem;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: #141210;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 32%), inset 0 1px 0 rgb(255 255 255 / 6%);
+  color: #e5e0d8;
+  font: 500 0.875rem/1.2 system-ui, sans-serif;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.wordmark {
+  color: #fffaf1;
+  font: 600 1.2rem/1 "Snell Roundhand", "Segoe Script", "Apple Chancery", cursive;
+}
+
+.badge:hover {
+  background: #1e1b18;
+  border-color: rgba(253, 186, 116, 0.35);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.badge:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.badge:focus-visible {
+  outline: 2px solid #fb923c;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px #141210;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge {
+    transition: none;
+    transform: none;
+  }
+}
+

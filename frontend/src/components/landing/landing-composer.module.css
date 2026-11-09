@@ -1,0 +1,45 @@
+/* Scoped styling & subtle tactile interactions for the landing page Composer without layout shift */
+
+.composerShell :global(button[type="submit"]) {
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-position 450ms ease,
+    filter 200ms ease;
+}
+
+.composerShell :global(button[type="submit"]:not(:disabled):hover) {
+  transform: translateY(-1px);
+}
+
+.composerShell :global(button[type="submit"]:not(:disabled):active) {
+  transform: translateY(1px) scale(0.992);
+}
+
+/* Ensure all interactive chips, swap button, and context triggers meet >= 44px touch targets and have crisp focus & press feedback */
+.composerShell :global(button:not([type="submit"])) {
+  min-height: 44px;
+  transition:
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 200ms ease,
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+.composerShell :global(button:not([type="submit"]):not(:disabled):active) {
+  transform: scale(0.975);
+}
+
+.composerShell :global(input:focus-visible),
+.composerShell :global(button:focus-visible) {
+  outline: 2px solid rgba(251, 146, 60, 0.92);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composerShell :global(button),
+  .composerShell :global(button[type="submit"]) {
+    transition: none !important;
+    transform: none !important;
+  }
+}

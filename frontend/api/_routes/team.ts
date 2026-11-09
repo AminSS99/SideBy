@@ -281,7 +281,7 @@ export default async function handler(
       const [targetMembership] = await db
         .select({ userId: memberships.userId, role: memberships.role })
         .from(memberships)
-        .where(eq(memberships.id, body.membershipId))
+        .where(and(eq(memberships.id, body.membershipId), eq(memberships.organizationId, workspace.ownerId)))
         .limit(1);
 
       if (!targetMembership) {
@@ -301,7 +301,7 @@ export default async function handler(
       await db
         .update(memberships)
         .set({ role: body.role, updatedAt: new Date() })
-        .where(eq(memberships.id, body.membershipId));
+        .where(and(eq(memberships.id, body.membershipId), eq(memberships.organizationId, workspace.ownerId)));
 
       return sendJson(response, { success: true, role: body.role });
     }
@@ -314,7 +314,7 @@ export default async function handler(
       const [targetMembership] = await db
         .select({ userId: memberships.userId, role: memberships.role })
         .from(memberships)
-        .where(eq(memberships.id, body.membershipId))
+        .where(and(eq(memberships.id, body.membershipId), eq(memberships.organizationId, workspace.ownerId)))
         .limit(1);
 
       if (!targetMembership) {
@@ -332,7 +332,7 @@ export default async function handler(
 
       await db
         .delete(memberships)
-        .where(eq(memberships.id, body.membershipId));
+        .where(and(eq(memberships.id, body.membershipId), eq(memberships.organizationId, workspace.ownerId)));
 
       return sendJson(response, { success: true });
     }

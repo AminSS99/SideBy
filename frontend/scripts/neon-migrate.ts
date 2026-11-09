@@ -15,16 +15,12 @@ export type MigrationDb = Pick<NeonQueryFunction<false, false>, "query" | "trans
 loadEnv({ path: ".env" });
 loadEnv({ path: "../.env" });
 
-const databaseUrl =
+const resolveDatabaseUrl = () =>
   process.env.DATABASE_URL_UNPOOLED ||
   process.env.DATABASE_URL ||
   process.env.POSTGRES_URL ||
   process.env.POSTGRES_PRISMA_URL ||
   "";
-
-if (!databaseUrl) {
-  throw new Error("Set DATABASE_URL or POSTGRES_URL before running Neon migrations.");
-}
 
 const repoRoot = path.resolve(process.cwd(), "..");
 const migrationsDir = path.join(repoRoot, "neon", "migrations");
@@ -199,6 +195,10 @@ export const migrateDirectory = async (db: MigrationDb, dir: string): Promise<vo
 };
 
 const main = async () => {
+  const databaseUrl = resolveDatabaseUrl();
+  if (!databaseUrl) {
+    throw new Error("Set DATABASE_URL or POSTGRES_URL before running Neon migrations.");
+  }
   const db = neon(databaseUrl);
   await ensureLedger(db);
   await migrateDirectory(db, migrationsDir);

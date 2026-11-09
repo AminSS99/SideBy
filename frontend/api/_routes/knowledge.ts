@@ -18,6 +18,7 @@ import { createDbClient } from "../../src/db/index.js";
 import { knowledgeDocuments } from "../../src/db/schema.js";
 import { captureServerEvent } from "../_lib/analytics.js";
 import { requireAuth } from "../_lib/auth.js";
+import { withRateLimit } from "../_lib/route-guard.js";
 import { serverEnv } from "../_lib/env.js";
 import {
   KnowledgeApiError,
@@ -80,7 +81,7 @@ export default async function handler(
   }
 
   if (action === "upload" && request.method === "POST") {
-    return uploadDocument(request, response);
+    return withRateLimit(request, response, "contextImport", () => uploadDocument(request, response));
   }
 
   return sendJson(response, { error: "Method not allowed" }, 405);

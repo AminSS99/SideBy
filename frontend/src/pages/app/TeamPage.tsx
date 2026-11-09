@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { KeyboardSpacer } from "@/components/KeyboardSpacer";
+
 import { Users, Mail, Shield, ShieldAlert, ShieldCheck, User, Trash2, Edit2, GitCompareArrows, Database } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -37,6 +39,8 @@ const TeamPage = () => {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<TeamMember["role"]>("member");
   const [isInviting, setIsInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const inviteInputRef = useRef<HTMLInputElement>(null);
   const [editingMember, setEditingMember] = useState<string | null>(null);
   const [editRole, setEditRole] = useState<TeamMember["role"]>("member");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -97,17 +101,33 @@ const TeamPage = () => {
     return uniqueMembers;
   }, [activeWorkspace?.createdAt, invitations, members, user?.email, user?.fullName, user?.id]);
 
+  const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  const validateInviteEmail = (value: string): string | null => {
+    const trimmed = value.trim();
+    if (!trimmed) return "Email address is required.";
+    if (!EMAIL_PATTERN.test(trimmed)) return "Enter a valid email address, e.g. colleague@company.com.";
+    if (directoryMembers.some((member) => member.email.toLowerCase() === trimmed.toLowerCase())) {
+      return "That person already has access to this workspace.";
+    }
+    return null;
+  };
+
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail.trim()) return;
+
+    const validationError = validateInviteEmail(inviteEmail);
+    if (validationError) {
+      setInviteError(validationError);
+      inviteInputRef.current?.focus();
+      toast.error("Cannot send invite", { description: validationError });
+      return;
+    }
+    setInviteError(null);
 
     setIsInviting(true);
     try {
       const email = inviteEmail.trim().toLowerCase();
-      if (directoryMembers.some((member) => member.email.toLowerCase() === email)) {
-        toast.warning("That person already has access.");
-        return;
-      }
       if (!activeWorkspace?.id) return;
 
       const response = await apiFetch(buildApiUrl("/api/team"), {
@@ -141,9 +161,7 @@ const TeamPage = () => {
     } finally {
       setIsInviting(false);
     }
-  };
-
-  const handleRoleChange = async (memberId: string, newRole: TeamMember["role"]) => {
+  };  const handleRoleChange = async (memberId: string, newRole: TeamMember["role"]) => {
     if (!activeWorkspace?.id) return;
     try {
       const response = await apiFetch(buildApiUrl("/api/team"), {
@@ -228,18 +246,27 @@ const TeamPage = () => {
               <h2 className="font-serif text-xl text-[#fdfbf7]">Invite new members</h2>
             </div>
 
-            <form onSubmit={(event) => void handleInvite(event)} className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="flex-1 w-full relative">
+            <form onSubmit={(event) => void handleInvite(event)} noValidate className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex-1 w-full space-y-2">
                 <input
-                  type="text"
-                  inputMode="email"
-                  pattern="^[^@\s]+@[^@\s]+\.[^@\s]+$"
-                  required
+                  ref={inviteInputRef}
+                  type="email"
+                  autoComplete="email"
                   value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
+                  onChange={(e) => {
+                    setInviteEmail(e.target.value);
+                    if (inviteError) setInviteError(validateInviteEmail(e.target.value));
+                  }}
+                  aria-invalid={!!inviteError}
+                  aria-describedby={inviteError ? "invite-email-error" : undefined}
                   placeholder="colleague@company.com"
-                  className="h-12 w-full rounded-sm border border-[#333] bg-[#0c0b0a] px-4 text-sm text-[#fdfbf7] outline-none transition-colors placeholder:text-[#fdfbf7]/30 focus:border-orange-500"
+                  className={`h-12 w-full rounded-sm border bg-[#0c0b0a] px-4 text-sm text-[#fdfbf7] outline-none transition-colors placeholder:text-[#fdfbf7]/30 focus:border-orange-500 ${inviteError ? "border-red-500" : "border-[#333]"}`}
                 />
+                {inviteError && (
+                  <p id="invite-email-error" role="alert" className="text-xs text-red-400">
+                    {inviteError}
+                  </p>
+                )}
               </div>
 
               <select
@@ -254,8 +281,9 @@ const TeamPage = () => {
 
               <button
                 type="submit"
-                disabled={isInviting || !inviteEmail}
-                className="h-12 w-full sm:w-auto shrink-0 rounded-sm bg-[#fdfbf7] px-8 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] disabled:opacity-50"
+                disabled={isInviting || !EMAIL_PATTERN.test(inviteEmail.trim())}
+                title={!EMAIL_PATTERN.test(inviteEmail.trim()) ? "Enter a valid email address to enable" : undefined}
+                className="h-12 w-full sm:w-auto shrink-0 rounded-sm bg-[#fdfbf7] px-8 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isInviting ? "Sending..." : "Send Invite"}
               </button>
@@ -369,6 +397,7 @@ const TeamPage = () => {
           </div>
         </div>
       </div>
+  <KeyboardSpacer />
     </div>
   );
 };

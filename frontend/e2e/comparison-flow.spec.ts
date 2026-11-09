@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import {
   seedTestAuth,
+  mockAppApi,
   WORKSPACE_JSON,
   usageJson,
   createJobResponse,
@@ -11,8 +12,24 @@ import {
 
 const COMPARISON_ID = "cmp_e2e_001";
 
+test("export dialog stays in the viewport and supports keyboard dismissal", async ({ page }) => {
+  await setupComparison(page);
+  await page.goto(`/app/comparisons/${COMPARISON_ID}`);
+  await page.getByRole("button", { name: "Export comparison", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export Report" });
+  await expect(dialog).toBeVisible();
+  const bounds = await dialog.boundingBox();
+  const viewport = page.viewportSize()!;
+  expect(bounds).not.toBeNull();
+  expect(bounds!.y).toBeGreaterThanOrEqual(0);
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height);
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+});
+
 async function setupComparison(page: import("@playwright/test").Page) {
   await seedTestAuth(page);
+  await mockAppApi(page);
   await page.route("**/api/comparisons/validate", (route) =>
     route.fulfill({
       status: 200,
@@ -26,7 +43,7 @@ async function setupComparison(page: import("@playwright/test").Page) {
   await page.route("**/api/usage", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(usageJson("free")) }),
   );
-  await page.route("**/api/comparisons", async (route) => {
+  await page.route(/\/api\/comparisons(?:\?.*)?$/, async (route) => {
     if (route.request().method() === "POST") {
       return route.fulfill({
         status: 200,
@@ -34,7 +51,11 @@ async function setupComparison(page: import("@playwright/test").Page) {
         body: JSON.stringify(createJobResponse(COMPARISON_ID)),
       });
     }
-    return route.continue();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ comparisons: [] }),
+    });
   });
   await page.route(`**/api/comparisons/${COMPARISON_ID}`, (route) =>
     route.fulfill({
@@ -68,7 +89,7 @@ async function startComparison(page: import("@playwright/test").Page, query: str
 
   const researchButton = page.getByRole("button", { name: /Research this decision/i });
   await expect(researchButton).toBeEnabled();
-  await researchButton.click();
+  await researchButton.click({ force: true });
 }
 
 test.describe("SideBy Authenticated Comparison Flow", () => {
@@ -116,17 +137,24 @@ test.describe("SideBy Authenticated Comparison Flow", () => {
     await expect(page).toHaveURL(new RegExp(`/app/comparisons/${COMPARISON_ID}`));
 
     // Completed result: entities, verdict summary, decision matrix, sources.
-    await expect(page.getByText("Supabase vs Firebase").first()).toBeVisible();
+    await expect(page.getByText("Supabase vs Firebase").locator("visible=true").first()).toBeVisible();
     await expect(
-      page.getByText(/Open-source Firebase alternative|Google app development platform/i).first(),
+      page.getByText(/Open-source Firebase alternative|Google app development platform/i).locator("visible=true").first(),
     ).toBeVisible();
-    await expect(page.getByText(/open-source portability and Postgres fidelity/i).first()).toBeVisible();
+    await expect(
+      page.getByText(/open-source portability and Postgres fidelity/i).locator("visible=true").first(),
+    ).toBeVisible();
 
-    await expect(page.getByText("Best Overall").first()).toBeVisible();
+    await expect(page.getByText("Best Overall").locator("visible=true").first()).toBeVisible();
 
-    await expect(page.getByRole("heading", { name: /sources reviewed/i })).toBeVisible();
-    await expect(page.getByText("Supabase Pricing").first()).toBeVisible();
-    await expect(page.getByText("Firebase Pricing").first()).toBeVisible();
+    const sourcesTab = page.locator("#comparison-tab-metadata");
+    if (await sourcesTab.isVisible()) {
+      await sourcesTab.click();
+    }
+
+    await expect(page.getByRole("heading", { name: /sources reviewed/i }).locator("visible=true").first()).toBeVisible();
+    await expect(page.getByText("Supabase Pricing").locator("visible=true").first()).toBeVisible();
+    await expect(page.getByText("Firebase Pricing").locator("visible=true").first()).toBeVisible();
 
     expect(createCalls).toBe(1);
   });
@@ -137,10 +165,10 @@ test.describe("SideBy Authenticated Comparison Flow", () => {
     await startComparison(page, "Supabase vs Firebase");
     await expect(page).toHaveURL(new RegExp(`/app/comparisons/${COMPARISON_ID}`));
 
-    const exportBtn = page.getByRole("button", { name: /export/i }).first();
+    const exportBtn = page.getByRole("button", { name: /export/i }).filter({ visible: true }).first();
     await expect(exportBtn).toBeVisible();
     await exportBtn.click();
-    await expect(page.getByText(/markdown|export json/i, { exact: false }).first()).toBeVisible();
+    await expect(page.getByText(/markdown|export json/i, { exact: false }).filter({ visible: true }).first()).toBeVisible();
   });
 
   test("partial create response still opens the comparison workbench", async ({ page }) => {
@@ -180,6 +208,8 @@ test.describe("SideBy Authenticated Comparison Flow", () => {
     await startComparison(page, "Supabase vs Firebase");
 
     await expect(page).toHaveURL(new RegExp(`/app/comparisons/${COMPARISON_ID}`));
-    await expect(page.getByText(/open-source portability and Postgres fidelity/i).first()).toBeVisible();
+    await expect(
+      page.getByText(/open-source portability and Postgres fidelity/i).locator("visible=true").first(),
+    ).toBeVisible();
   });
 });

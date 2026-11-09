@@ -63,7 +63,7 @@ pnpm run build
 pnpm lint
 
 # Type check
-pnpm exec tsc --noEmit
+pnpm run typecheck
 ```
 
 ## Environment Variables
@@ -138,7 +138,7 @@ Jobs automatically retry on failure (max 2 retries) with exponential backoff (1s
 
 ## Next Steps / Phase 7
 
-- Paddle checkout integration
-- Subscriptions table + customer portal
-- Payment webhooks
+- Verify the SnapSolve Core entitlement bridge and central Dodo checkout/portal journey
+- Verify SideBy no longer grants paid access from its legacy local subscription fallback
+- Retire the legacy local Dodo webhook after SnapSolve Core owns all payment events
 - Pro plan features (unlimited comparisons, etc.)

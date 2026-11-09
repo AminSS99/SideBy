@@ -4,7 +4,7 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { authenticateRequest } from "./auth.js";
-import { checkRouteLimit, checkAndRecordUsage, formatLimitError } from "./rate-limit.js";
+import { checkRouteLimit, formatLimitError } from "./rate-limit.js";
 import type { RateLimitAction } from "./rate-limit.js";
 import { sendJson } from "./sideby.js";
 import { assertRedisAvailable } from "./redis.js";
@@ -34,6 +34,7 @@ export async function withRateLimit(
   const limitResult = await checkRouteLimit(auth.userId, ip, action, auth.orgId);
 
   if (!limitResult.allowed) {
+    response.setHeader("Retry-After", String(Math.max(1, Math.ceil((limitResult.resetAt - Date.now()) / 1000))));
     response.setHeader("X-RateLimit-Limit", String(limitResult.limit));
     response.setHeader("X-RateLimit-Remaining", "0");
     response.setHeader("X-RateLimit-Reset", String(Math.floor(limitResult.resetAt / 1000)));
@@ -49,15 +50,9 @@ export async function withRateLimit(
   response.setHeader("X-RateLimit-Remaining", String(limitResult.remaining));
   response.setHeader("X-RateLimit-Reset", String(Math.floor(limitResult.resetAt / 1000)));
 
-  const result = await handler();
-
-  // Record usage atomically after successful handler
-  if (auth.userId) {
-    await checkAndRecordUsage("user", auth.userId, action);
-  } else if (ip) {
-    await checkAndRecordUsage("ip", ip, action);
-  }
-  return result;
+  // Admission already reserves usage. Failed attempts retain their reservation
+  // because provider work may have started before the handler fails.
+  return handler();
 }
 
 export async function withApiKeyRateLimit(
@@ -73,6 +68,7 @@ export async function withApiKeyRateLimit(
   const limitResult = await checkRouteLimit(apiKey.userId, ip, action, apiKey.orgId);
 
   if (!limitResult.allowed) {
+    response.setHeader("Retry-After", String(Math.max(1, Math.ceil((limitResult.resetAt - Date.now()) / 1000))));
     response.setHeader("X-RateLimit-Limit", String(limitResult.limit));
     response.setHeader("X-RateLimit-Remaining", "0");
     response.setHeader("X-RateLimit-Reset", String(Math.floor(limitResult.resetAt / 1000)));
@@ -88,14 +84,6 @@ export async function withApiKeyRateLimit(
   response.setHeader("X-RateLimit-Remaining", String(limitResult.remaining));
   response.setHeader("X-RateLimit-Reset", String(Math.floor(limitResult.resetAt / 1000)));
 
-  const result = await handler();
-
-  // Record usage atomically after successful handler
-  if (apiKey.userId) {
-    await checkAndRecordUsage("user", apiKey.userId, action);
-  } else if (ip) {
-    await checkAndRecordUsage("ip", ip, action);
-  }
-  return result;
+  return handler();
 }
 

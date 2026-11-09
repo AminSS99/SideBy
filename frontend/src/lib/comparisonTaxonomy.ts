@@ -67,6 +67,7 @@ export type ComparisonTaxonomySummary = {
   disclaimer?: string;
   policyNote?: string;
   sourceRequirements: string[];
+  freshnessClass?: TaxonomyFreshnessClass;
 };
 
 export type ComparisonIntent = ComparisonTaxonomySummary & {
@@ -515,6 +516,29 @@ const wellKnownPeople = [
   "elon musk", "jeff bezos", "mark zuckerberg", "bill gates", "steve jobs",
   "taylor swift", "beyonce", "cristiano ronaldo", "lionel messi", "donald trump",
   "joe biden", "barack obama", "lebron james", "kendrick lamar", "drake",
+  "messi", "ronaldo", "neymar", "mbappe", "putin", "zelensky", "xi jinping",
+  "kamala harris", "sam altman", "satya nadella", "tim cook", "warren buffett",
+  "hitler", "stalin", "mussolini", "napoleon", "alexander the great", "genghis khan",
+  "churchill", "lenin", "mao", "kim jong un", "netanyahu", "modi", "macron",
+  "michael jordan", "kobe bryant", "tiger woods", "mike tyson", "muhammad ali",
+  "eminem", "rihanna", "kanye west", "mrbeast", "pewdiepie",
+];
+
+// Wars, armed conflicts, atrocities, and violent extremist groups are out of
+// scope: SideBy compares decision options, not geopolitics or violence.
+const warConflictTerms = [
+  "war", "wars", "warfare", "invasion", "genocide", "holocaust", "massacre",
+  "terrorism", "terrorist", "terrorists", "civil war", "world war", "ww1", "ww2",
+  "wwi", "wwii", "cold war", "armed conflict", "military conflict", "airstrike",
+  "bombing", "nuclear weapons", "isis", "al qaeda", "hamas", "hezbollah",
+  "taliban", "nazi", "nazis", "israel palestine", "russia ukraine",
+  "israel vs palestine", "russia vs ukraine", "india pakistan", "north korea",
+];
+
+// Titles and idioms that contain war vocabulary but are ordinary products.
+const warFalsePositives = [
+  "star wars", "warcraft", "war thunder", "warframe", "total war", "call of duty",
+  "war robots", "war games", "warp", "warpstream", "waroftheworlds",
 ];
 
 const religionTerms = [
@@ -734,7 +758,7 @@ const looksLikeNamedPersonPair = (entityA: string, entityB: string, rawQuery: st
     .map(normalize)
     .filter(Boolean);
 
-  if (includesAny(normalizedPair, wellKnownPeople)) return true;
+  if (includesWordAny(normalizedPair, wellKnownPeople)) return true;
   if (includesAny(normalizedPair, knownNonPersonHints)) return false;
   return hasCapitalizedPair(rawA) && hasCapitalizedPair(rawB);
 };
@@ -815,6 +839,19 @@ const detectPolicySignals = (query: string, entityA: string, entityB: string): P
       id: "political-subject",
       label: "Political subject",
       message: "SideBy does not process political subjects or political person-to-person comparisons.",
+      severity: "block",
+    });
+  }
+
+  const warScan = warFalsePositives.reduce(
+    (text, phrase) => text.split(normalize(phrase)).join(" "),
+    joined,
+  );
+  if (includesWordAny(warScan, warConflictTerms)) {
+    signals.push({
+      id: "war-conflict",
+      label: "War or armed conflict",
+      message: "SideBy does not compare wars, armed conflicts, atrocities, or violent groups. Compare products, tools, or services instead.",
       severity: "block",
     });
   }
@@ -921,6 +958,7 @@ export const summarizeComparisonTaxonomy = (intent: ComparisonIntent): Compariso
     disclaimer: intent.disclaimer,
     policyNote: intent.policyNote,
     sourceRequirements: definition.sourceRequirements,
+    freshnessClass: definition.freshnessClass,
   };
 };
 

@@ -3,6 +3,12 @@ import handler from "../[...path].js";
 import { Sentry } from "./sentry.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
+// Inject a fault inside the test; public health requests must never expose a
+// deliberate error trigger in production.
+vi.mock("../_routes/health.js", () => ({
+  default: async () => { throw new Error("private upstream connection details"); },
+}));
+
 vi.mock("./sentry.js", async (importOriginal) => {
   const original = await importOriginal<typeof import("./sentry.js")>();
   return {
@@ -23,7 +29,7 @@ describe("Sentry API Route Error Tracking", () => {
 
   it("should catch unhandled exceptions, report them to Sentry, flush the queue, and return a 500 response", async () => {
     const req = {
-      query: { path: "health", sentry_test: "true" },
+      query: { path: "health" },
       method: "GET",
     } as unknown as VercelRequest;
 
@@ -50,6 +56,6 @@ describe("Sentry API Route Error Tracking", () => {
     // Verify we returned 500
     expect(statusCode).toBe(500);
     expect(jsonPayload.error).toBe("Internal Server Error");
-    expect(jsonPayload.message).toContain("Sentry verification test error");
+    expect(jsonPayload).not.toHaveProperty("message");
   });
 });

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Download, FileSpreadsheet, FileText, Code, FileJson, X, CheckCircle2 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Download, FileSpreadsheet, FileText, Code, FileJson, CheckCircle2 } from "lucide-react";
 import type { ComparisonData } from "./types";
 
 interface ExportModalProps {
@@ -95,7 +95,7 @@ export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
   const handleExportCsv = () => {
     setDownloading("csv");
     window.setTimeout(() => {
-      const escape = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""').replaceAll(/\r?\n/g, " ")}"`;
+      const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""').replace(/\r?\n/g, " ")}"`;
       const rows = [["Category", "Criterion", result.entities.a.name, result.entities.b.name, "Sources"]];
       result.categories.forEach((category) => {
         const a = new Map<string, string>();
@@ -116,35 +116,16 @@ export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 print-hidden"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 12 }}
-            className="relative z-10 w-full max-w-md rounded-2xl border border-white/[0.08] bg-[#0d0d0d] p-6 shadow-2xl"
-          >
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="print-hidden w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border-white/[0.08] bg-[#0d0d0d] p-6 text-white motion-reduce:animate-none">
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <h2 className="font-serif text-xl text-white">Export Report</h2>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mt-1">
+                <DialogTitle className="font-serif text-xl text-white">Export Report</DialogTitle>
+                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-white/40 mt-1">
                   {result.entities.a.name} vs {result.entities.b.name}
-                </p>
+                </DialogDescription>
               </div>
-              <button
-                onClick={onClose}
-                className="rounded-lg p-1.5 text-white/30 transition-colors hover:bg-white/[0.05] hover:text-white/60"
-              >
-                <X className="h-4 w-4" />
-              </button>
+
             </div>
 
             <div className="space-y-3">
@@ -179,10 +160,8 @@ export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
                 badge="Pro"
               />
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      </DialogContent>
+    </Dialog>
   );
 };
 

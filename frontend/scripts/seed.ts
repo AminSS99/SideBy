@@ -612,12 +612,8 @@ async function seed() {
       .where(eq(comparisons.slug, slug))
       .limit(1);
 
-    if (existing.length > 0) {
-      console.log(`  ⏭️  Skipping ${slug} (already exists)`);
-      continue;
-    }
-
     const result = {
+      provenance: "illustrative" as const,
       slug,
       query: example.query,
       context: "",
@@ -641,7 +637,7 @@ async function seed() {
       contradictions: example.contradictions,
     };
 
-    await db.insert(comparisons).values({
+    const values = {
       query: example.query,
       slug,
       status: "completed",
@@ -651,7 +647,15 @@ async function seed() {
       sourceCount: example.sources.length,
       result,
       overallConfidence: "0.85",
-    });
+    };
+
+    if (existing.length > 0) {
+      await db.update(comparisons).set(values).where(eq(comparisons.id, existing[0].id));
+      console.log(`  ♻️  Updated ${slug}`);
+      continue;
+    }
+
+    await db.insert(comparisons).values(values);
 
     console.log(`  ✅ Created ${slug}`);
   }

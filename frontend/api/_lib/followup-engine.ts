@@ -59,7 +59,7 @@ function getExecuteRows<T>(result: unknown): T[] {
   return [];
 }
 
-function keywordTopFacts(facts: FactRow[], question: string): RetrievedFact[] {
+function keywordTopFacts(facts: RetrievedFact["fact"][], question: string): RetrievedFact[] {
   const questionWords = question.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
   const scoredFacts = facts.map((fact) => {
     const text = `${fact.entity || ""} ${fact.category || ""} ${fact.label || ""} ${fact.value || ""}`.toLowerCase();
@@ -153,10 +153,36 @@ export async function answerFollowUp(
   }
 
   // Step 1: Fetch all facts for this comparison
-  const facts = await db
+  const facts: RetrievedFact["fact"][] = await db
     .select()
     .from(comparisonFacts)
     .where(eq(comparisonFacts.comparisonId, comparisonId));
+
+  // Cached results carry their evidence in the saved report, while normalized
+  // facts belong to the original research run. Stay within the authorized report
+  // instead of following a reuse pointer into another tenant's comparison.
+  const snapshotSources = new Map<string, { title: string; url: string }>();
+  if (facts.length === 0) {
+    const snapshot = z.object({
+      provenance: z.string().optional(),
+      entities: z.object({ a: z.object({ name: z.string() }), b: z.object({ name: z.string() }) }).optional(),
+      categories: z.array(z.object({ name: z.string(), facts: z.array(z.object({
+        entity: z.enum(["a", "b"]), label: z.string().optional(), value: z.string().min(1),
+        confidence: z.number().min(0).max(1), sourceUrl: z.string().url(), sourceTitle: z.string().optional(),
+      })) })),
+    }).safeParse(comp[0].result);
+    if (snapshot.success && snapshot.data.provenance !== "illustrative") {
+      for (const category of snapshot.data.categories) {
+        for (const fact of category.facts) {
+          if (!/^https?:\/\//i.test(fact.sourceUrl)) continue;
+          const id = `snapshot:${facts.length}`;
+          snapshotSources.set(id, { title: fact.sourceTitle || "Saved report source", url: fact.sourceUrl });
+          facts.push({ id, sourceId: id, entity: snapshot.data.entities?.[fact.entity].name || fact.entity,
+            category: category.name, label: fact.label || category.name, value: fact.value, confidence: String(fact.confidence) });
+        }
+      }
+    }
+  }
 
   if (facts.length === 0) {
     return {
@@ -171,7 +197,7 @@ export async function answerFollowUp(
 
   // Step 2: Find top-K relevant facts with pgvector, falling back to keywords
   // for older comparisons that do not have stored fact embeddings yet.
-  const vectorFacts = await vectorTopFacts(db, comparisonId, question);
+  const vectorFacts = snapshotSources.size ? [] : await vectorTopFacts(db, comparisonId, question);
   const topFacts = vectorFacts.length > 0 ? vectorFacts : keywordTopFacts(facts, question);
 
   // Step 3: Fetch sources for citations
@@ -179,14 +205,16 @@ export async function answerFollowUp(
     .map((f) => f.fact.sourceId)
     .filter((id): id is string => id !== null);
 
-  const sources = sourceIds.length > 0
+  const sources = sourceIds.length > 0 && snapshotSources.size === 0
     ? await db
         .select()
         .from(comparisonSources)
         .where(inArray(comparisonSources.id, sourceIds))
     : [];
 
-  const sourceMap = new Map(sources.map((s) => [s.id, s]));
+  const sourceMap = new Map<string, { title: string; url: string }>([
+    ...sources.map((s) => [s.id, s] as const), ...snapshotSources,
+  ]);
 
   // Step 4: Build grounded prompt
   const factContext = topFacts

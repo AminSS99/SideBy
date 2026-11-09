@@ -58,7 +58,13 @@ backend/src/main/resources/application-*.properties
 
 # ===== FRONTEND - Ignore auto-generated/library code =====
 # Shadcn UI components (can be regenerated)
-frontend/src/components/ui/
+frontend/src/components/ui/*
+!frontend/src/components/ui/release-banner.tsx
+!frontend/src/components/ui/faq-drawer.tsx
+!frontend/src/components/ui/faq-drawer.css
+!frontend/src/components/ui/changelog-timeline.tsx
+!frontend/src/components/ui/ink-orbit-features.tsx
+!frontend/src/components/ui/ink-orbit-features.css
 
 # Local, unused hook experiments. Application hooks must be committed.
 frontend/src/hooks/useComparisonEngine.ts

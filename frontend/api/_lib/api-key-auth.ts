@@ -1,10 +1,13 @@
 import crypto from "crypto";
 import { and, eq, isNull } from "drizzle-orm";
-import type { VercelRequest } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createDbClient } from "../../src/db/index.js";
 import { apiKeys } from "../../src/db/schema.js";
+import { getClientIp } from "./route-guard.js";
+import { checkRateLimit } from "./rate-limit.js";
 
 const API_KEY_PREFIX = "sb_live";
+const FAILED_API_KEY_BURST_PER_MINUTE = 30;
 
 function keyPepper() {
   const pepper = process.env.API_KEY_PEPPER || process.env.CLERK_SECRET_KEY;
@@ -41,7 +44,7 @@ export function getApiKeyFromRequest(request: VercelRequest) {
   return bearer || directValue || null;
 }
 
-export async function requireApiKey(request: VercelRequest) {
+export async function requireApiKey(request: VercelRequest, response?: VercelResponse) {
   const key = getApiKeyFromRequest(request);
   if (!key) {
     throw Object.assign(new Error("API key required."), { statusCode: 401 });
@@ -55,6 +58,23 @@ export async function requireApiKey(request: VercelRequest) {
     .limit(1);
 
   if (!row) {
+    const ip = getClientIp(request) || "unknown";
+    const limit = await checkRateLimit("ip", ip, "failed-api-key", FAILED_API_KEY_BURST_PER_MINUTE);
+    if (!limit.allowed) {
+      const retryAfter = Math.max(1, Math.ceil((limit.resetAt - Date.now()) / 1000));
+      const res = response || (request as { res?: VercelResponse }).res;
+      if (res && typeof res.setHeader === "function") {
+        res.setHeader("Retry-After", String(retryAfter));
+      }
+      throw Object.assign(
+        new Error("Too many invalid API key attempts. Please slow down."),
+        {
+          statusCode: 429,
+          retryAfter,
+          code: "RATE_LIMITED",
+        },
+      );
+    }
     throw Object.assign(new Error("Invalid API key."), { statusCode: 401 });
   }
 

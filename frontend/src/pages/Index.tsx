@@ -1,3 +1,5 @@
+import snapCredit from './snap-credit.module.css';
+import composerStyles from '@/components/landing/landing-composer.module.css';
 import { useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import gsap from "gsap";
@@ -21,6 +23,7 @@ import { SUPPORTED_COMPARISON_CATEGORIES } from "@/lib/comparisonTaxonomy";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAuth } from "@/contexts/AuthContext";
 import { ComparisonComposer } from "@/components/ComparisonComposer";
+import { ResearchPreviewCard } from "@/components/landing/ResearchPreviewCard";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -55,20 +58,26 @@ const Index = () => {
     const mm = gsap.matchMedia();
 
     mm.add("(prefers-reduced-motion: no-preference)", () => {
-      const intro = gsap.timeline({ defaults: { ease: "power4.out" } });
+      // Transform-only entrance choreography: content stays visible before JS runs and never causes layout shift
+      const intro = gsap.timeline({ defaults: { ease: "power3.out", clearProps: "transform" } });
       intro
-        .from(".hero-kicker", { y: 18, opacity: 0, filter: "blur(8px)", duration: 0.65 })
-        .from(".hero-title > span", { yPercent: 110, rotate: 2, stagger: 0.08, duration: 0.95 }, "-=0.35")
-        .from(".hero-copy", { y: 18, opacity: 0, duration: 0.65 }, "-=0.5")
-        .from(".hero-proof", { y: 12, opacity: 0, stagger: 0.08, duration: 0.45 }, "-=0.35")
-        .from(".hero-composer", { y: 34, opacity: 0, scale: 0.97, filter: "blur(10px)", duration: 0.85 }, "-=0.6");
+        .from(".hero-kicker", { y: 12, duration: 0.5 })
+        .from(".hero-title > span > span", { yPercent: 28, stagger: 0.07, duration: 0.7 }, "-=0.35")
+        .from(".hero-copy", { y: 14, duration: 0.55 }, "-=0.45")
+        .from(".hero-proof", { y: 10, stagger: 0.06, duration: 0.4 }, "-=0.35")
+        .from(".hero-composer", { y: 20, scale: 0.99, duration: 0.65 }, "-=0.5");
 
       gsap.utils.toArray<HTMLElement>(".reveal-section").forEach((section) => {
         ScrollTrigger.create({
           trigger: section,
-          start: "top 86%",
+          start: "top 88%",
           once: true,
-          onEnter: () => gsap.fromTo(section, { y: 34 }, { y: 0, duration: 0.8, ease: "power3.out" }),
+          onEnter: () =>
+            gsap.fromTo(
+              section,
+              { y: 24 },
+              { y: 0, duration: 0.65, ease: "power3.out", clearProps: "transform" },
+            ),
         });
       });
 
@@ -103,57 +112,59 @@ const Index = () => {
       <MarketingNav />
 
       <main className="relative z-10">
-        <section ref={heroRef} className="relative mx-auto max-w-7xl px-4 pb-20 pt-10 sm:px-6 sm:pb-28 sm:pt-20 lg:pt-24">
+        <section ref={heroRef} className="relative mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 sm:pb-24 sm:pt-16 lg:pt-20">
           <div className="hero-pointer-glow pointer-events-none absolute left-1/2 top-1/3 -z-10 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(249,115,22,.15),rgba(244,63,94,.06)_38%,transparent_68%)] blur-2xl" />
-          <div className="grid items-center gap-8 sm:gap-12 lg:grid-cols-[minmax(0,.9fr)_minmax(520px,1.1fr)] lg:gap-14">
+          <div className="grid items-center gap-8 sm:gap-12 lg:grid-cols-[minmax(0,.92fr)_minmax(500px,1.08fr)] lg:gap-14">
             <div className="text-center lg:text-left">
               <div className="hero-kicker mb-5 inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-400/[0.08] px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-orange-200 shadow-[0_0_40px_rgba(249,115,22,.1)]">
-                <Sparkles className="h-3.5 w-3.5" /> Evidence before opinions
+                <Sparkles className="h-3.5 w-3.5" /> SideBy AI · Source-backed comparisons
               </div>
-              <h1 className="hero-title font-serif text-[clamp(3.15rem,12vw,5.6rem)] leading-[0.9] tracking-[-0.055em] text-[#fffaf1] lg:text-[5.8rem]">
-                <span className="block overflow-hidden pb-2"><span className="block">Compare less.</span></span>
-                <span className="block overflow-hidden pb-3"><span className="block bg-gradient-to-r from-orange-300 via-rose-400 to-fuchsia-400 bg-clip-text italic text-transparent">Know more.</span></span>
+              <h1 className="hero-title font-serif text-[clamp(2.9rem,11vw,5.5rem)] leading-[0.92] tracking-[-0.05em] text-[#fffaf1] lg:text-[5.6rem]">
+                <span className="block overflow-hidden pb-1.5"><span className="block">Compare less.</span></span>
+                <span className="block overflow-hidden pb-2.5"><span className="block bg-gradient-to-r from-orange-300 via-rose-400 to-fuchsia-400 bg-clip-text italic text-transparent">Know more.</span></span>
               </h1>
-              <p className="hero-copy mx-auto mt-5 max-w-xl text-base leading-7 text-white/60 sm:text-lg lg:mx-0">
+              <p className="hero-copy mx-auto mt-5 max-w-xl text-base leading-7 text-white/75 sm:text-lg lg:mx-0">
                 SideBy turns scattered research into a decision you can defend—with sourced facts, meaningful scores, and a verdict that shows its work.
               </p>
 
-              <div className="mt-7 hidden grid-cols-3 gap-2 sm:grid sm:max-w-lg sm:gap-3 lg:mx-0">
+              <div className="mt-7 grid grid-cols-3 gap-2 sm:max-w-lg sm:gap-3 lg:mx-0">
                 {proofPoints.map((point) => (
-                  <div key={point.label} className="hero-proof rounded-2xl border border-white/[0.08] bg-white/[0.035] px-2 py-3 text-center backdrop-blur-sm sm:px-3 lg:text-left">
+                  <div key={point.label} className="hero-proof rounded-2xl border border-white/[0.09] bg-white/[0.035] px-2.5 py-3 text-center backdrop-blur-sm sm:px-3.5 lg:text-left">
                     <p className="text-xs font-semibold text-white sm:text-sm">{point.value}</p>
-                    <p className="mt-1 text-[9px] leading-3 text-white/40 sm:text-[10px]">{point.label}</p>
+                    <p className="mt-1 text-[10px] leading-3.5 text-white/65 sm:text-[11px]">{point.label}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <ComparisonComposer onStart={beginComparison} className="hero-composer mx-auto lg:mx-0" />
+            <ComparisonComposer
+              onStart={beginComparison}
+              className={`hero-composer mx-auto lg:mx-0 ${composerStyles.composerShell}`}
+            />
           </div>
 
           <div className="reveal-section mt-14 border-t border-white/[0.08] pt-6 sm:mt-20 sm:pt-8">
             <div className="mb-4 flex items-end justify-between gap-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Start with a real question</p>
-                <p className="mt-1 text-sm text-white/65">Tap a comparison and we’ll fill the research brief.</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-300/90">Start with a real question</p>
+                <p className="mt-1 text-sm text-white/75">Tap a comparison and we’ll fill the research brief.</p>
               </div>
               <ArrowRight className="hidden h-5 w-5 text-orange-300 sm:block" />
             </div>
             <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-3 no-scrollbar sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3">
-              {featuredComparisons.map((comparison, index) => (
+              {featuredComparisons.map((comparison) => (
                 <button
                   key={comparison.label}
                   type="button"
                   onClick={() => beginComparison(comparison.label)}
-                  className="group relative min-h-[150px] w-[82vw] max-w-[330px] shrink-0 snap-center overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.035] p-5 text-left transition duration-300 hover:border-orange-300/25 hover:bg-orange-400/[0.06] hover:shadow-[0_18px_45px_rgba(0,0,0,.22)] sm:w-auto sm:max-w-none"
+                  className="group relative min-h-[148px] w-[82vw] max-w-[330px] shrink-0 snap-center overflow-hidden rounded-2xl border border-white/[0.1] bg-white/[0.035] p-5 text-left transition duration-200 hover:-translate-y-0.5 hover:border-orange-300/30 hover:bg-orange-400/[0.06] hover:shadow-[0_18px_45px_rgba(0,0,0,.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:translate-y-0 active:scale-[0.99] sm:w-auto sm:max-w-none"
                 >
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-300/40 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-300/45 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
                   <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-orange-300">{comparison.category}</span>
-                    <span className="font-mono text-[9px] text-white/25">0{index + 1}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-orange-300">{comparison.category}</span>
                   </div>
-                  <p className="mt-6 font-serif text-xl leading-tight text-[#fffaf1]">{comparison.label}</p>
-                  <div className="mt-4 flex items-center justify-between gap-3 text-[10px] text-white/40">
+                  <p className="mt-5 font-serif text-xl leading-snug text-[#fffaf1]">{comparison.label}</p>
+                  <div className="mt-4 flex items-center justify-between gap-3 text-xs text-white/65">
                     <span className="truncate">{comparison.sourceRequirement}</span>
                     <ArrowRight className="h-4 w-4 shrink-0 text-orange-300 transition-transform group-hover:translate-x-1" />
                   </div>
@@ -173,41 +184,50 @@ const Index = () => {
               const FeatureIcon = Icon as typeof ShieldCheck;
               return (
                 <div key={title as string} className="flex gap-4 border-white/[0.08] py-5 sm:border-r sm:px-6 sm:py-9 sm:last:border-r-0">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-orange-300/15 bg-orange-400/[0.07] text-orange-300"><FeatureIcon className="h-5 w-5" /></div>
-                  <div><h2 className="font-serif text-xl text-white">{title as string}</h2><p className="mt-1 text-sm leading-6 text-white/45">{body as string}</p></div>
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-orange-300/20 bg-orange-400/[0.08] text-orange-300"><FeatureIcon className="h-5 w-5" /></div>
+                  <div><h2 className="font-serif text-xl text-white">{title as string}</h2><p className="mt-1 text-sm leading-6 text-white/70">{body as string}</p></div>
                 </div>
               );
             })}
           </div>
         </section>
 
-        <section className="reveal-section mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32">
-          <div className="grid gap-12 lg:grid-cols-[.75fr_1.25fr] lg:gap-20">
+        <section className="reveal-section mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
+          <div className="grid gap-12 lg:grid-cols-[.82fr_1.18fr] lg:gap-16">
             <div className="lg:sticky lg:top-28 lg:self-start">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-300">How SideBy thinks</p>
-              <h2 className="mt-4 max-w-md font-serif text-4xl leading-[1.02] tracking-tight text-[#fffaf1] sm:text-5xl">A verdict is only useful when you can inspect the path.</h2>
-              <p className="mt-5 max-w-md text-base leading-7 text-white/50">The interface is designed around progressive disclosure: the answer first, then the facts, scores, and original sources whenever you want to go deeper.</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-300">How SideBy thinks</p>
+              <h2 className="mt-4 max-w-md font-serif text-4xl leading-[1.04] tracking-tight text-[#fffaf1] sm:text-5xl">A verdict is only useful when you can inspect the path.</h2>
+              <p className="mt-5 max-w-md text-base leading-7 text-white/70">The interface is designed around progressive disclosure: the answer first, then the facts, scores, and original sources whenever you want to go deeper.</p>
+
+              <div className="mt-8 space-y-3">
+                {methodSteps.map((step) => (
+                  <article key={step.number} className="group grid gap-4 rounded-2xl border border-white/[0.09] bg-gradient-to-br from-white/[0.045] to-transparent p-4 transition duration-200 hover:border-orange-300/25 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:p-5">
+                    <div className="grid h-12 w-12 place-items-center rounded-xl border border-white/[0.1] bg-black/35 text-orange-300"><step.icon className="h-5 w-5" /></div>
+                    <div><h3 className="font-serif text-xl text-white">{step.title}</h3><p className="mt-1.5 text-sm leading-6 text-white/70">{step.body}</p></div>
+                    <span className="font-mono text-xs text-white/50">{step.number}</span>
+                  </article>
+                ))}
+              </div>
             </div>
-            <div className="space-y-3">
-              {methodSteps.map((step) => (
-                <article key={step.number} className="group grid gap-5 rounded-[1.75rem] border border-white/[0.09] bg-gradient-to-br from-white/[0.05] to-transparent p-5 transition duration-300 hover:border-orange-300/20 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:p-7">
-                  <div className="grid h-14 w-14 place-items-center rounded-2xl border border-white/[0.1] bg-black/30 text-orange-300"><step.icon className="h-6 w-6" /></div>
-                  <div><h3 className="font-serif text-2xl text-white">{step.title}</h3><p className="mt-2 max-w-xl text-sm leading-6 text-white/45">{step.body}</p></div>
-                  <span className="font-mono text-xs text-white/25">{step.number}</span>
-                </article>
-              ))}
+
+            <div className="lg:pt-2">
+              <ResearchPreviewCard />
             </div>
           </div>
         </section>
 
-        <section className="reveal-section mx-4 mb-20 overflow-hidden rounded-[2rem] border border-orange-300/15 bg-[radial-gradient(circle_at_20%_20%,rgba(249,115,22,.18),transparent_38%),radial-gradient(circle_at_90%_80%,rgba(217,70,239,.13),transparent_42%),#100c0a] px-5 py-14 text-center shadow-[0_40px_120px_rgba(0,0,0,.45)] sm:mx-6 sm:py-20 lg:mx-auto lg:max-w-7xl">
+        <section className="reveal-section mx-4 mb-16 overflow-hidden rounded-[2rem] border border-orange-300/20 bg-[radial-gradient(circle_at_20%_20%,rgba(249,115,22,.18),transparent_38%),radial-gradient(circle_at_90%_80%,rgba(217,70,239,.13),transparent_42%),#100c0a] px-5 py-14 text-center shadow-[0_40px_120px_rgba(0,0,0,.45)] sm:mx-6 sm:py-20 lg:mx-auto lg:max-w-7xl">
           <CheckCircle2 className="mx-auto h-7 w-7 text-orange-300" />
           <h2 className="mx-auto mt-5 max-w-3xl font-serif text-4xl leading-none tracking-tight text-white sm:text-6xl">Your next decision deserves better than twenty open tabs.</h2>
-          <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-white/55">Bring the options. SideBy will organize the evidence and show you exactly why one fits better.</p>
-          <Link to="/app/comparisons" className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-[#130d09] transition hover:brightness-105 hover:shadow-xl">Start comparing <ArrowRight className="h-4 w-4" /></Link>
+          <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-white/75">Bring the options. SideBy will organize the evidence and show you exactly why one fits better.</p>
+          <Link to="/app/comparisons" className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-xl bg-white px-6 text-sm font-semibold text-[#130d09] transition duration-200 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:translate-y-0 active:scale-[0.99]">Start comparing <ArrowRight className="h-4 w-4" /></Link>
         </section>
       </main>
 
+      <a className={snapCredit.badge} href="https://www.snapsolve.ink/">
+        <span>Made by</span>
+        <span className={snapCredit.wordmark}>SnapSolve</span>
+      </a>
       <MarketingFooter />
     </div>
   );

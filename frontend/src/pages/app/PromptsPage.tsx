@@ -60,8 +60,11 @@ const PromptsPage = () => {
   useGSAP(() => {
     const tl = gsap.timeline();
     tl.from(".prompt-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
-      .from(".prompt-controls", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6")
-      .from(".prompt-card", { y: 20, opacity: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }, "-=0.4");
+      .from(".prompt-controls", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6");
+
+    if (containerRef.current?.querySelector(".prompt-card")) {
+      tl.from(".prompt-card", { y: 20, opacity: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }, "-=0.4");
+    }
   }, { scope: containerRef });
 
   useEffect(() => {
@@ -129,7 +132,10 @@ const PromptsPage = () => {
   };
 
   const handleDelete = async (id: string) => {
-    await apiFetch(buildApiUrl(`/api/prompts?id=${id}`), { method: "DELETE" });
+    const prompt = prompts.find((item) => item.id === id);
+    if (!window.confirm(`Delete the prompt “${prompt?.name ?? "Untitled"}”? This cannot be undone.`)) return;
+    const res = await apiFetch(buildApiUrl(`/api/prompts?id=${id}`), { method: "DELETE" });
+    if (!res.ok) throw new Error("The prompt could not be deleted. Try again.");
     setPrompts(prev => prev.filter(p => p.id !== id));
     toast.success("Prompt deleted");
   };

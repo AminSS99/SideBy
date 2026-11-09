@@ -19,6 +19,7 @@ import { buildApiUrl } from "@/config/env";
 import { toast } from "sonner";
 import { pwaUpdates } from "@/lib/pwa/register";
 import { useDraftScope } from "@/hooks/useDraftScope";
+import { KeyboardSpacer } from "@/components/KeyboardSpacer";
 
 interface ComparisonComposerProps {
   onStart: (query: string) => void | Promise<void>;
@@ -71,6 +72,11 @@ export function ComparisonComposer({
   const [showContextInput, setShowContextInput] = useState(Boolean(context));
   const [contextUrl, setContextUrl] = useState("");
   const [isImportingUrl, setIsImportingUrl] = useState(false);
+  // Optional decision constraints: kept separate from the required entity
+  // inputs so the initial screen stays light. They ride along in the brief
+  // (submitted query context + accountable draft) and never gate submission.
+  const [priorities, setPriorities] = useState("");
+  const [nonNegotiables, setNonNegotiables] = useState("");
 
   const importUrlContext = async () => {
     if (!contextUrl.trim()) return;
@@ -97,14 +103,14 @@ export function ComparisonComposer({
   // Register dirty state and draft saver with PWA update store to guard against accidental loss on refresh
   useEffect(() => {
     const unregisterChecker = pwaUpdates.registerDirtyChecker(() => {
-      return Boolean(entityA.trim() || entityB.trim());
+      return Boolean(entityA.trim() || entityB.trim() || priorities.trim() || nonNegotiables.trim());
     });
     const unregisterSaver = pwaUpdates.registerDraftSaver(() => {
       if (!entityA.trim() && !entityB.trim()) return null;
       if (!draftScope) return null;
       return {
         key: "composer",
-        data: { entityA, entityB, context },
+        data: { entityA, entityB, context, priorities, nonNegotiables },
         scope: draftScope,
       };
     });
@@ -112,7 +118,7 @@ export function ComparisonComposer({
       unregisterChecker();
       unregisterSaver();
     };
-  }, [entityA, entityB, context, draftScope]);
+  }, [entityA, entityB, context, priorities, nonNegotiables, draftScope]);
 
   // Restore a preserved draft only once identity and workspace resolution are
   // complete. Never treats transient loading as anonymous identity.
@@ -125,12 +131,22 @@ export function ComparisonComposer({
       entityA?: string;
       entityB?: string;
       context?: string;
+      priorities?: string;
+      nonNegotiables?: string;
     }>("composer", draftScope);
     if (draft && (draft.entityA || draft.entityB)) {
       if (draft.entityA) setEntityA(draft.entityA);
       if (draft.entityB) setEntityB(draft.entityB);
       if (draft.context) {
         setContext(draft.context);
+        setShowContextInput(true);
+      }
+      if (draft.priorities) {
+        setPriorities(draft.priorities);
+        setShowContextInput(true);
+      }
+      if (draft.nonNegotiables) {
+        setNonNegotiables(draft.nonNegotiables);
         setShowContextInput(true);
       }
       pwaUpdates.clearPreservedDraft("composer");
@@ -154,7 +170,16 @@ export function ComparisonComposer({
     isSubmittingRef.current = true;
     setLocalSubmitting(true);
     try {
-      await onStart(serializedQuery);
+      // Constraints stay inside the query's context segment so the brief the
+      // server parses carries them verbatim.
+      const constraints = [
+        priorities.trim() ? `Priorities: ${priorities.trim()}` : "",
+        nonNegotiables.trim() ? `Non-negotiables: ${nonNegotiables.trim()}` : "",
+      ].filter(Boolean).join("; ");
+      const finalQuery = constraints
+        ? `${serializedQuery}${serializedQuery.includes(" for ") ? "; " : " for "}${constraints}`
+        : serializedQuery;
+      await onStart(finalQuery);
     } finally {
       // Coalesce rapid double taps before releasing the lock
       setTimeout(() => {
@@ -255,6 +280,21 @@ export function ComparisonComposer({
               <button type="button" onClick={() => { setContext(""); setShowContextInput(false); }} aria-label="Remove comparison context" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white/40 transition-colors hover:bg-white/5 hover:text-white"><X className="h-4 w-4" /></button>
             </div>
             <Input aria-label="Comparison context" type="text" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Use case, budget, or top priority" className="h-12 rounded-xl border-white/[0.09] bg-black/50 text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="composer-priorities" className="mb-1.5 block text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">
+                  Priorities <span className="text-white/25">(optional)</span>
+                </label>
+                <Input id="composer-priorities" aria-label="What matters most" type="text" value={priorities} onChange={(e) => setPriorities(e.target.value)} placeholder="e.g. Cost, then ease of migration" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
+              </div>
+              <div>
+                <label htmlFor="composer-nonnegotiables" className="mb-1.5 block text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">
+                  Non-negotiables <span className="text-white/25">(optional)</span>
+                </label>
+                <Input id="composer-nonnegotiables" aria-label="Hard requirements" type="text" value={nonNegotiables} onChange={(e) => setNonNegotiables(e.target.value)} placeholder="e.g. Must offer SOC 2, self-hosting" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
+              </div>
+            </div>
+            <p className="text-[9px] leading-4 text-[#fdfbf7]/35">Priorities weight the scoring; non-negotiables are recorded verbatim in your brief. SideBy never invents requirements you didn't state.</p>
             <div>
               <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.18em] text-white/35">Quick templates</p>
               <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 no-scrollbar sm:flex-wrap">
@@ -372,6 +412,9 @@ export function ComparisonComposer({
           </button>
         </div>
       </form>
+
+      {/* Keyboard spacer: keeps the submit action reachable with the OS keyboard open */}
+      <KeyboardSpacer />
 
       {/* Suggested chips list */}
       <div className="relative mt-5 border-t border-white/[0.07] pt-4">

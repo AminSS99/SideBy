@@ -68,11 +68,14 @@ vercel --prod
 vercel
 ```
 
-## Step 4: Database Migration
+## Step 4: Database Migration (Migration-Before-Code Ordering)
+
+> **IMPORTANT**: Migration **020** (`020_comparison_publication_scope.sql`) is required and unapplied. It adds `comparisons.input_scope` and `comparisons.public_snapshot_source_id`. You MUST apply this migration **before** deploying new application code to avoid runtime query failures (`column "input_scope" does not exist`).
 
 ```bash
 cd frontend
 export DATABASE_URL="your-neon-url"
+export DATABASE_URL_UNPOOLED="your-unpooled-neon-url"
 pnpm db:neon:migrate
 pnpm db:neon:check
 ```
@@ -154,7 +157,7 @@ Or manually test these flows:
 ## Security Checklist
 
 - [ ] `vercel.json` includes CSP, HSTS, X-Frame-Options headers
-- [ ] CSP allows Clerk (`*.clerk.accounts.dev`), PostHog (`*.posthog.com`), and future Paddle (`*.paddle.com`, `cdn.paddle.com`)
+- [ ] CSP allows the configured Clerk and PostHog origins; billing navigates to SnapSolve Cockpit
 - [ ] Clerk webhook verifies Svix signatures (not just payload structure)
 - [ ] API keys are NOT exposed to frontend (only `VITE_*` vars are)
 

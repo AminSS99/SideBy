@@ -1,4 +1,5 @@
 import React, { useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -6,8 +7,14 @@ import { Layers3, Settings2, LoaderCircle, AlertCircle } from "lucide-react";
 import { GlowCard } from "@/components/GlowCard";
 
 const WorkspacesPage = () => {
-  const { workspaces, isLoading, error, refresh } = useWorkspace();
+  const { workspaces, isLoading, error, refresh, setActiveWorkspaceId, activeWorkspace } = useWorkspace();
+  const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const manageWorkspace = (workspaceId: string) => {
+    setActiveWorkspaceId(workspaceId);
+    navigate("/app/settings");
+  };
 
   useGSAP(() => {
     const tl = gsap.timeline();
@@ -92,9 +99,14 @@ const WorkspacesPage = () => {
               </div>
               
               <div className="mt-6 flex justify-end">
-                <button className="flex items-center gap-2 rounded-sm bg-[#1a1a1a] border border-[#333] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/70 transition-colors hover:border-[#555] hover:text-[#fdfbf7]">
+                <button
+                  type="button"
+                  onClick={() => manageWorkspace(workspace.id)}
+                  aria-label={`Manage ${workspace.name} workspace settings`}
+                  className="flex items-center gap-2 rounded-sm bg-[#1a1a1a] border border-[#333] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/70 transition-colors hover:border-[#555] hover:text-[#fdfbf7]"
+                >
                   <Settings2 className="h-3.5 w-3.5" />
-                  Manage
+                  {activeWorkspace?.id === workspace.id ? "Manage" : "Switch & Manage"}
                 </button>
               </div>
             </GlowCard>

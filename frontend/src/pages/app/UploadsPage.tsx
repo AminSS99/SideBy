@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { KeyboardSpacer } from "@/components/KeyboardSpacer";
+
 import {
   UploadCloud,
   Trash2,
@@ -188,6 +190,7 @@ const UploadsPage = () => {
 
   const deleteDocument = async (id: string) => {
     const document = documents.find((item) => item.id === id);
+    if (!window.confirm(`Delete “${document?.filename ?? "this document"}”? This cannot be undone.`)) return;
     if (document?.isLocal) {
       setDocuments((current) => current.filter((item) => item.id !== id));
       return;
@@ -195,9 +198,10 @@ const UploadsPage = () => {
 
     setDeletingId(id);
     try {
-      await apiFetch(buildApiUrl(`/api/knowledge/documents/${id}`), {
+      const res = await apiFetch(buildApiUrl(`/api/knowledge/documents/${id}`), {
         method: "DELETE",
       });
+      if (!res.ok) throw new Error("The document could not be deleted. Try again.");
       setDocuments((current) => current.filter((document) => document.id !== id));
       toast.success("Document removed.");
     } catch (error) {
@@ -297,6 +301,7 @@ const UploadsPage = () => {
           </div>
         )}
       </div>
+      <KeyboardSpacer />
     </div>
   );
 };

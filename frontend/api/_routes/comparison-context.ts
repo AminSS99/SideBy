@@ -6,6 +6,7 @@ import { extractPage } from "../_lib/firecrawl.js";
 import { assertSafeWebhookUrl } from "../_lib/webhook-url.js";
 import { captureServerEvent } from "../_lib/analytics.js";
 import { sendJson } from "../_lib/sideby.js";
+import { withRateLimit } from "../_lib/route-guard.js";
 
 const BodySchema = z.object({ url: z.string().url().max(2048) });
 
@@ -15,6 +16,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
     const auth = await requireAuth(request);
     const { url } = BodySchema.parse(request.body || {});
     assertSafeWebhookUrl(url);
+    return await withRateLimit(request, response, "contextImport", async () => {
     const page = await extractPage(url);
     if (!page?.markdown.trim()) return sendJson(response, { error: "We could not extract usable requirements from that URL." }, 422);
     const excerpt = page.markdown.replace(/\s+/g, " ").trim().slice(0, 1100);
@@ -22,6 +24,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
     return sendJson(response, {
       context: `Requirements from ${page.title || new URL(page.url).hostname}: ${excerpt}`,
       source: { title: page.title || new URL(page.url).hostname, url: page.url },
+    });
     });
   } catch (error) {
     const status = error instanceof z.ZodError ? 400 : error instanceof Error && "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 500;

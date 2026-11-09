@@ -1,81 +1,93 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ApiError, apiFetch, shouldReportApiError } from "../api";
 
-describe("apiFetch Request Collapsing", () => {
+/**
+ * In-flight GET collapsing was removed for the release candidate: identity,
+ * outcomes and errors are never resolved or stored on behalf of another
+ * caller. These tests hold the replacement contract.
+ */
+describe("apiFetch request ownership (no shared in-flight bucket)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
 
-  it("should collapse multiple identical GET requests into a single fetch call", async () => {
-    let fetchCallCount = 0;
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
-    // Mock global fetch
+  const okResponse = (url: string) =>
+    ({
+      ok: true,
+      status: 200,
+      url,
+      headers: { get: () => null },
+      clone() {
+        return { ...this };
+      },
+      json: async () => ({ message: "success", url }),
+    }) as unknown as Response;
+
+  it("dispatches every identical GET independently", async () => {
     const mockFetch = vi.fn().mockImplementation(async (url: string) => {
-      fetchCallCount++;
-
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      return {
-        ok: true,
-        status: 200,
-        url,
-        clone() {
-          return { ...this };
-        },
-        json: async () => ({ message: "success", url })
-      } as unknown as Response;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return okResponse(url);
     });
-
     vi.stubGlobal("fetch", mockFetch);
 
-    // Fire 5 requests concurrently
-    const promises = Array.from({ length: 5 }).map(() => apiFetch("/api/test-collapse"));
+    const responses = await Promise.all(
+      Array.from({ length: 5 }).map(() => apiFetch("/api/test-ownership")),
+    );
 
-    const responses = await Promise.all(promises);
-
-    // global.fetch should only be called once
-    expect(fetchCallCount).toBe(1);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-
-    // Check that we got 5 valid, separate responses
+    expect(mockFetch).toHaveBeenCalledTimes(5);
     expect(responses.length).toBe(5);
-
     for (const res of responses) {
       expect(res.ok).toBe(true);
-      const data = await res.json();
-      expect(data).toEqual({ message: "success", url: "/api/test-collapse" });
+      expect(await res.json()).toEqual({ message: "success", url: "/api/test-ownership" });
     }
   });
 
-  it("should not collapse POST requests", async () => {
-    let fetchCallCount = 0;
-
-    // Mock global fetch
+  it("keeps POST requests independent (hooks confirm no coalescing exists at all)", async () => {
     const mockFetch = vi.fn().mockImplementation(async (url: string) => {
-      fetchCallCount++;
-      await new Promise(resolve => setTimeout(resolve, 50));
-      return {
-        ok: true,
-        status: 200,
-        url,
-        clone() { return { ...this }; },
-        json: async () => ({ message: "success" })
-      } as unknown as Response;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      return okResponse(url);
     });
-
     vi.stubGlobal("fetch", mockFetch);
 
-    // Fire 3 POST requests concurrently
-    const promises = Array.from({ length: 3 }).map(() =>
-      apiFetch("/api/test-no-collapse", { method: "POST" })
+    await Promise.all(
+      Array.from({ length: 3 }).map(() => apiFetch("/api/test-post", { method: "POST" })),
     );
 
-    await Promise.all(promises);
-
-    // global.fetch should be called 3 times
-    expect(fetchCallCount).toBe(3);
     expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("separate retry policies never share an in-flight chain", async () => {
+    const errorResponse = (url: string) =>
+      ({
+        ok: false,
+        status: 500,
+        url,
+        headers: { get: () => null },
+        clone() {
+          return { ...this };
+        },
+        json: async () => ({ error: "server down" }),
+      }) as unknown as Response;
+    const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      return errorResponse(url);
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const [zeroRetry, defaultRetry] = await Promise.allSettled([
+      apiFetch("/api/retry-policy", {}, { retries: 0 }),
+      apiFetch("/api/retry-policy", {}, { retries: 2, retryDelay: 1 }),
+    ]);
+
+    // The default-retry call makes three attempts; the zero-retry call
+    // exactly one. A shared retry chain would have forced one count on both.
+    expect(zeroRetry.status).toBe("rejected");
+    expect(defaultRetry.status).toBe("rejected");
+    expect(mockFetch).toHaveBeenCalledTimes(4);
   });
 });
 

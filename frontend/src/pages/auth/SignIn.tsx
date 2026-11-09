@@ -14,14 +14,15 @@ const SignIn = () => {
   const redirectUrl = requestedRedirect.startsWith("/app") && !requestedRedirect.startsWith("//")
     ? requestedRedirect
     : "/app";
+  const signUpUrl = `/auth/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`;
   return (
     <AuthPageShell
-      eyebrow="Private beta"
+      eyebrow="Welcome back"
       title={`Sign in to ${brand.productName}`}
-      description={`${brand.productName} uses Clerk for beta access, workspace routing, and API authentication.`}
+      description="Continue your research, revisit saved comparisons, and export cited results."
       footerLabel="Need an account?"
       footerLinkLabel="Create one"
-      footerHref="/auth/sign-up"
+      footerHref={signUpUrl}
     >
       <div className="space-y-6">
         {envConfig.canUseTestAuth && (
@@ -58,16 +59,19 @@ const SignIn = () => {
             </div>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-sm">
+          <div className="clerk-auth-scope min-w-0 overflow-hidden rounded-sm">
             <ClerkSignIn
               routing="path"
               path="/auth/sign-in"
-              signUpUrl="/auth/sign-up"
+              signUpUrl={signUpUrl}
               fallbackRedirectUrl={redirectUrl}
               appearance={{
                 elements: {
-                  rootBox: "w-full",
-                  card: "bg-transparent shadow-none p-0 w-full max-w-full",
+                  rootBox: "w-full min-w-0 max-w-full",
+                  cardBox: "w-full min-w-0 max-w-full",
+                  card: "bg-transparent shadow-none p-0 w-full min-w-0 max-w-full",
+                  main: "w-full min-w-0 max-w-full",
+                  form: "w-full min-w-0 max-w-full",
                   headerTitle: "hidden",
                   headerSubtitle: "hidden",
                   dividerLine: "bg-white/5",

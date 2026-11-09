@@ -184,7 +184,7 @@ const Docs = () => {
             <p className="max-w-xl text-base leading-7 text-white/58">
               Practical answers for researching, checking evidence, organizing work, and understanding your SideBy account.
             </p>
-            <Link to="/dashboard" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-300">
+            <Link to="/app" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-300">
               Open your workspace <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

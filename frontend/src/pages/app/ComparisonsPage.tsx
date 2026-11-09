@@ -133,6 +133,11 @@ const ComparisonsPage = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [organizingId, setOrganizingId] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(12);
+
+  useEffect(() => {
+    setVisibleCount(12);
+  }, [filter, query]);
 
 
   const load = useCallback(async () => {
@@ -565,7 +570,7 @@ const ComparisonsPage = () => {
         />
       ) : (
         <div className="space-y-4">
-          {filteredItems.map((item) => (
+          {filteredItems.slice(0, visibleCount).map((item) => (
             <ComparisonRow
               key={item.id}
               item={item}
@@ -575,6 +580,17 @@ const ComparisonsPage = () => {
               onOrganize={(updates) => organize(item, updates)}
             />
           ))}
+          {filteredItems.length > visibleCount && (
+            <div className="flex justify-center pt-4">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => prev + 12)}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-6 text-xs font-bold uppercase tracking-wider text-white transition hover:border-white/20 hover:bg-white/[0.08]"
+              >
+                Show more comparisons ({filteredItems.length - visibleCount} remaining)
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -736,10 +752,11 @@ const ComparisonRow = ({
           <button
             type="button"
             onClick={() => setIsEditingOrganization((open) => !open)}
+            aria-expanded={isEditingOrganization}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/20 px-4 text-[10px] font-bold uppercase tracking-wider text-white/65 transition-colors hover:border-white/20"
           >
             <Folder className="h-3.5 w-3.5" />
-            Organize
+            {isEditingOrganization ? "Close" : "Organize"}
           </button>
           {item.visibility === "public" ? (
             <Link
@@ -776,9 +793,23 @@ const ComparisonRow = ({
             Tags
             <input value={tagsDraft} onChange={(event) => setTagsDraft(event.target.value)} placeholder="e.g. q3, migration (up to 8)" className="h-10 rounded-sm border border-[#333] bg-[#0c0b0a] px-3 text-sm font-normal normal-case tracking-normal text-[#fdfbf7] outline-none focus:border-orange-500" />
           </label>
-          <button type="button" onClick={() => void saveOrganization()} disabled={isOrganizing} className="h-10 rounded-sm bg-orange-500 px-4 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-400 disabled:opacity-50">
-            {isOrganizing ? "Saving" : "Save"}
-          </button>
+          <div className="flex gap-2 md:col-span-3 md:justify-end lg:col-span-1">
+            <button type="button" onClick={() => void saveOrganization()} disabled={isOrganizing} className="h-10 rounded-sm bg-orange-500 px-4 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-400 disabled:opacity-50">
+              {isOrganizing ? "Saving" : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFolderDraft(item.folder || "");
+                setTagsDraft(item.tags.join(", "));
+                setIsEditingOrganization(false);
+              }}
+              disabled={isOrganizing}
+              className="h-10 rounded-sm border border-[#333] bg-[#0c0b0a] px-4 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:text-[#fdfbf7] disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
     </GlowCard>

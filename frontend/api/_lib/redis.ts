@@ -310,9 +310,11 @@ export async function redisIncrement(
 ): Promise<number> {
   const redis = getRedis();
   if (!redis) {
-    if (!(await ensurePgStore())) return 0;
+    if (!(await ensurePgStore())) {
+      throw Object.assign(new Error("Shared request counters are unavailable. Please try again shortly."), { statusCode: 503 });
+    }
     const sql = getPgSql();
-    if (!sql) return 0;
+    if (!sql) throw Object.assign(new Error("Shared request counters are unavailable."), { statusCode: 503 });
     await sql`
       delete from sideby_runtime_kv
       where key = ${key}

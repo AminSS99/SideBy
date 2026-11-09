@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect, useMemo, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Sliders, Trophy, Save, Trash2, HelpCircle, Activity, Sparkles, FolderOpen, Lock } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -36,11 +37,48 @@ export const DecisionMatrixPanel = ({
 
   // Weights state: maps dimension subject -> slider value (1-5)
   const [weights, setWeights] = useState<Record<string, number>>({});
-  const [savedMatrices, setSavedMatrices] = useState<DecisionMatrixRecord[]>([]);
-  const [defaultProfiles, setDefaultProfiles] = useState<DecisionMatrixRecord[]>([]);
   const [matrixName, setMatrixName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoadingSaved, setIsLoadingSaved] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Shared cache with the decision receipt: one fetch per comparison, one
+  // canonical list for every mounted panel.
+  const savedQuery = useQuery({
+    queryKey: ["decision-matrices", comparisonId],
+    enabled: Boolean(session),
+    queryFn: async () => {
+      const res = await apiFetch(buildApiUrl(`/api/decision-matrices?comparisonId=${comparisonId}`));
+      if (!res.ok) throw new Error("Could not load decision templates.");
+      const data = (await res.json()) as { matrices: DecisionMatrixRecord[] };
+      return data.matrices;
+    },
+  });
+  const savedMatrices = savedQuery.data ?? [];
+  const isLoadingSaved = savedQuery.isPending && Boolean(session);
+
+  const profilesQuery = useQuery({
+    queryKey: ["decision-matrices", "all"],
+    enabled: Boolean(session),
+    queryFn: async () => {
+      const res = await apiFetch(buildApiUrl("/api/decision-matrices"));
+      if (!res.ok) throw new Error("Could not load default profiles.");
+      const data = (await res.json()) as { matrices: DecisionMatrixRecord[] };
+      return data.matrices.filter((matrix) => matrix.comparisonId === null);
+    },
+  });
+  const defaultProfiles = profilesQuery.data ?? [];
+
+  const refreshMatrices = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["decision-matrices"] });
+  }, [queryClient]);
+
+  const loadSavedMatrices = useCallback(async () => {
+    refreshMatrices();
+  }, [refreshMatrices]);
+
+  const loadDefaultProfiles = useCallback(async () => {
+    refreshMatrices();
+  }, [refreshMatrices]);
 
   // Initialize weights with 3 (default midpoint) for all subjects
   useEffect(() => {
@@ -52,34 +90,6 @@ export const DecisionMatrixPanel = ({
       setWeights(initial);
     }
   }, [result.dimensions]);
-
-  // Load saved matrices for this comparison
-  const loadSavedMatrices = useCallback(async () => {
-    if (!session) return;
-    try {
-      setIsLoadingSaved(true);
-      const res = await apiFetch(buildApiUrl(`/api/decision-matrices?comparisonId=${comparisonId}`));
-      if (!res.ok) throw new Error("Could not load decision templates.");
-      const data = (await res.json()) as { matrices: DecisionMatrixRecord[] };
-      setSavedMatrices(data.matrices);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoadingSaved(false);
-    }
-  }, [comparisonId, session]);
-
-  const loadDefaultProfiles = useCallback(async () => {
-    if (!session) return;
-    try {
-      const res = await apiFetch(buildApiUrl("/api/decision-matrices"));
-      if (!res.ok) throw new Error("Could not load default profiles.");
-      const data = (await res.json()) as { matrices: DecisionMatrixRecord[] };
-      setDefaultProfiles(data.matrices.filter((matrix) => matrix.comparisonId === null));
-    } catch (error) {
-      console.error(error);
-    }
-  }, [session]);
 
   useEffect(() => {
     if (session) {
@@ -219,7 +229,7 @@ export const DecisionMatrixPanel = ({
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete template.");
-      setSavedMatrices((prev) => prev.filter((m) => m.id !== id));
+      refreshMatrices();
       toast.success("Template deleted.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error deleting template.");

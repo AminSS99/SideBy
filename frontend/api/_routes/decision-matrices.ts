@@ -18,12 +18,30 @@ export const config = {
   },
 };
 
+const SupportedChoiceEntitiesSchema = z.object({
+  a: z.string().trim().min(1).max(200).optional(),
+  b: z.string().trim().min(1).max(200).optional(),
+}).strict();
+
+const MatrixResultSchema = z.object({
+  winner: z.enum(["a", "b", "tie"]).optional(),
+  recordedAs: z.enum(["user-choice", "scenario", "matrix"]).optional(),
+  rationale: z.string().trim().max(2000).optional(),
+  recordedAgainst: z.string().trim().max(100).optional(),
+  choiceEntities: SupportedChoiceEntitiesSchema.optional(),
+  scores: z.record(z.number()).optional(),
+  normalizedScores: z.record(z.number()).optional(),
+  categoryWinners: z.record(z.enum(["a", "b", "tie"])).optional(),
+  scoreA: z.number().optional(),
+  scoreB: z.number().optional(),
+}).strict();
+
 const MatrixSchema = z.object({
   comparisonId: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(160),
   weights: z.record(z.number()).default({}),
-  result: z.record(z.unknown()).default({}),
-});
+  result: MatrixResultSchema.default({}),
+}).strict();
 
 export default async function handler(
   request: VercelRequest,

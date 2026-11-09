@@ -18,6 +18,10 @@ const publicPages: Record<string, PageMetadata> = {
     description:
       "Explore SideBy's source-backed research, evidence extraction, adaptive scoring, refreshes, and comparison sharing.",
   },
+  "/changelog": {
+    title: "Changelog | SideBy",
+    description: "Verified release notes for the SideBy comparison workspace.",
+  },
   "/pricing": {
     title: "SnapSolve Ecosystem Pricing | SideBy",
     description:

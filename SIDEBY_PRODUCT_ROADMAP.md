@@ -38,7 +38,7 @@ The core metric is not comparisons generated. It is defensible decisions complet
 - `pnpm audit --audit-level high` fails: 22 known vulnerabilities, including 9 high severity.
 - Production bundles include several large chunks: observability ~479 kB, charts ~278 kB, analytics ~215 kB, and animation chunks ~179–194 kB before gzip.
 - Security review found credible authorization, tenant-boundary, SSRF, privacy, cache-isolation, quota, and legacy-service risks. Use the generated security report as the authoritative detail once implementing the security wave.
-- Product/deployment documentation has drift: Paddle, Dodo, and SnapSolve-managed billing are all described in different places; Neon/Drizzle and older Supabase/Java paths coexist.
+- Product/deployment documentation previously mixed local and central billing guidance; production authority is SnapSolve Core with Dodo Payments. Neon/Drizzle and older Supabase/Java paths also coexist.
 
 ## 3. Priority model
 
@@ -551,4 +551,3 @@ Additional gates:
 - Reuse existing components and features; do not duplicate the decision matrix, notes, watchlists, multi-option composer, webhooks, API keys, uploads, or billing modules.
 - Keep each batch reviewable and reversible.
 - Never claim completion from passing mocked desktop tests alone.
-

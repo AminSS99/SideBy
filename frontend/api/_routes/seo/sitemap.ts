@@ -1,8 +1,10 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { createDbClient } from "../../../src/db/index.js";
 import { comparisons } from "../../../src/db/schema.js";
 import { logger } from "../../_lib/log.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+// input_scope is the server-written publication scope; see
+// neon/migrations/020_comparison_publication_scope.sql and _lib/public-eligibility.ts.
 
 export const config = {
   runtime: "nodejs",
@@ -29,14 +31,24 @@ export default async function handler(
   try {
     const db = createDbClient();
     
-    // Fetch all public comparisons
+    // Fetch public comparisons. The sitemap advertises the same records the
+    // public read path can serve: publication is additionally gated by the
+    // server-written publication scope ('public' = generated as a dedicated
+    // public snapshot from entity-pair-only input). Legacy rows or reuse
+    // derivatives must not be advertised as public pages, matching the
+    // by-slug eligibility re-check that stops serving them.
     const rows = await db
       .select({
         slug: comparisons.slug,
         updatedAt: comparisons.updatedAt,
       })
       .from(comparisons)
-      .where(eq(comparisons.visibility, "public"))
+      .where(
+        and(
+          eq(comparisons.visibility, "public"),
+          sql`${comparisons.inputScope} = 'public'`,
+        ),
+      )
       .orderBy(desc(comparisons.updatedAt))
       .limit(2000);
 

@@ -188,6 +188,11 @@ const Compare = () => {
                 <span className="bg-gradient-to-b from-cyan-400 to-blue-600 bg-clip-text text-transparent">{result.entities.b.name}</span>
               </h1>
               <p className="compare-hero-desc mt-3 text-sm text-white/30">{brand.tagline} — {brand.domain}</p>
+              {result.provenance === "illustrative" && (
+                <div className="mt-6 max-w-3xl rounded-xl border border-amber-400/20 bg-amber-400/[0.07] px-4 py-3 text-sm leading-6 text-amber-100/70">
+                  This is illustrative sample data for exploring the interface, not a live research run. Create a new comparison for current, independently cited evidence.
+                </div>
+              )}
             </section>
 
             <div className="compare-content-grid grid gap-10 lg:grid-cols-12 relative items-start">

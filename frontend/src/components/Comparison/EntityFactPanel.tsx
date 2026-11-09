@@ -13,7 +13,6 @@ interface EntityFactPanelProps {
 
 export const EntityFactPanel = ({ result, facts }: EntityFactPanelProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const countRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
   useGSAP(() => {
     if (!containerRef.current) return;
@@ -31,25 +30,6 @@ export const EntityFactPanel = ({ result, facts }: EntityFactPanelProps) => {
       ease: "power3.out"
     });
 
-    // Count up animation for the numbers
-    countRefs.current.forEach((el, index) => {
-      if (!el) return;
-      const targetValue = parseInt(el.getAttribute("data-value") || "0", 10);
-      
-      gsap.fromTo(el, 
-        { innerHTML: 0 },
-        {
-          innerHTML: targetValue,
-          duration: 1.5,
-          ease: "power2.out",
-          snap: { innerHTML: 1 },
-          scrollTrigger: {
-            trigger: el,
-            start: "top 95%",
-          }
-        }
-      );
-    });
   }, { scope: containerRef });
 
   return (
@@ -59,18 +39,14 @@ export const EntityFactPanel = ({ result, facts }: EntityFactPanelProps) => {
     >
       <h3 className="mb-6 font-serif text-2xl text-[#fdfbf7] tracking-tight">Fact Coverage</h3>
       <div className="space-y-4">
-        {(["a", "b"] as const).map((key, i) => (
+        {(["a", "b"] as const).map((key) => (
           <div key={key} className="efp-item border border-[#2a2a2a] bg-[#111] p-5 rounded-sm">
             <div className="mb-4 flex items-center justify-between">
               <span className="text-base font-serif" style={{ color: result.entities[key].hex }}>
                 {result.entities[key].name}
               </span>
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 flex items-center gap-1">
-                <span 
-                  ref={(el) => { countRefs.current[i] = el; }} 
-                  data-value={facts[key].length}
-                  className="text-[#fdfbf7] text-xs"
-                >
+                <span className="text-[#fdfbf7] text-xs">
                   {facts[key].length}
                 </span>
                 facts

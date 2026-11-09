@@ -1,3 +1,4 @@
+import { FaqDrawer } from "@/components/ui/faq-drawer";
 import { useRef } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -116,9 +117,10 @@ const Pricing = () => {
 
         <section className="mx-auto mt-10 grid max-w-7xl gap-4 md:grid-cols-2 lg:mt-14 xl:grid-cols-4 xl:items-stretch">
           {TIERS.map((tier) => {
-            const ctaClass = `group mt-7 flex min-h-[52px] items-center justify-center gap-2 rounded-2xl px-5 text-center text-[10px] font-bold uppercase tracking-[0.16em] transition hover:brightness-110 ${tier.featured ? "bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 text-white" : "border border-white/10 bg-white/[0.04] text-white/70"}`;
+            const isFeatured = "featured" in tier && Boolean(tier.featured);
+            const ctaClass = `group mt-7 flex min-h-[52px] items-center justify-center gap-2 rounded-2xl px-5 text-center text-[10px] font-bold uppercase tracking-[0.16em] transition hover:brightness-110 ${isFeatured ? "bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 text-white" : "border border-white/10 bg-white/[0.04] text-white/70"}`;
             return (
-              <article key={tier.id} className={`pricing-card relative flex flex-col overflow-hidden rounded-[28px] border p-5 sm:p-7 ${tier.featured ? "border-orange-300/25 bg-gradient-to-br from-orange-500/[0.13] via-rose-500/[0.06] to-fuchsia-500/[0.07] shadow-[0_28px_80px_-40px_rgba(244,63,94,.75)]" : "border-white/[0.09] bg-white/[0.035]"}`}>
+              <article key={tier.id} className={`pricing-card relative flex flex-col overflow-hidden rounded-[28px] border p-5 sm:p-7 ${isFeatured ? "border-orange-300/25 bg-gradient-to-br from-orange-500/[0.13] via-rose-500/[0.06] to-fuchsia-500/[0.07] shadow-[0_28px_80px_-40px_rgba(244,63,94,.75)]" : "border-white/[0.09] bg-white/[0.035]"}`}>
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-300/60 to-transparent" />
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/25 text-orange-300"><tier.icon className="h-5 w-5" /></div>
@@ -159,12 +161,16 @@ const Pricing = () => {
           })}
         </section>
 
-        <section className="mx-auto mt-20 max-w-3xl sm:mt-28">
-          <div className="text-center"><p className="text-[9px] font-bold uppercase tracking-[0.2em] text-orange-300">Straight answers</p><h2 className="mt-3 font-serif text-4xl text-white sm:text-5xl">Before you choose.</h2></div>
-          <div className="mt-8 space-y-3">
-            {FAQS.map((faq) => <details key={faq.question} className="group rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5"><summary className="cursor-pointer list-none text-sm font-semibold text-white marker:hidden">{faq.question}<span className="float-right text-orange-300 transition-transform group-open:rotate-45">+</span></summary><p className="mt-3 pr-6 text-sm leading-6 text-white/45">{faq.answer}</p></details>)}
-          </div>
-        </section>
+        <div className="mx-auto mt-16 max-w-5xl rounded-3xl border border-white/10 sm:mt-24">
+          <FaqDrawer
+            items={FAQS.map((item, index) => ({ ...item, topic: ["Billing", "Free plan", "Paid plans", "Usage"][index] }))}
+            label="Straight answers"
+            title="Before you choose."
+            lead="How SideBy plans, billing, and comparison runs fit together."
+            drawer="SideBy"
+            action={{ href: "/contact", label: "Contact SideBy", note: "Have another question?" }}
+          />
+        </div>
       </main>
 
       <MarketingFooter />

@@ -9,6 +9,7 @@ const footerGroups = [
     title: "Product",
     links: [
       { label: "Features", to: "/features" },
+      { label: "Changelog", to: "/changelog" },
       { label: "Pricing", to: "/pricing" },
       { label: "Documentation", to: "/docs" },
       { label: "Research notes", to: "/blog" },

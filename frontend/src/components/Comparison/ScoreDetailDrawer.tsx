@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { ComparisonData, ComparisonFact } from "./types";
 import { cn } from "@/lib/utils";
+import { safeHref } from "@/lib/safe-url";
 
 interface ScoreDetailDrawerProps {
   isOpen: boolean;
@@ -111,7 +112,7 @@ export function ScoreDetailDrawer({
             <div className="flex flex-wrap gap-2">
               {fact.sourceUrl ? (
                 <a
-                  href={fact.sourceUrl}
+                  href={safeHref(fact.sourceUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 border border-[#2a2a2a] bg-black px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 hover:text-orange-400 hover:border-orange-500/20 transition-all"

@@ -98,9 +98,15 @@ export function isValidDraftPayload(kind: string, data: unknown): boolean {
   if (!isRecord(data)) return false;
 
   if (kind === "composer") {
-    const { entityA, entityB, context, ...rest } = data;
+    const { entityA, entityB, context, priorities, nonNegotiables, ...rest } = data;
     if (Object.keys(rest).length > 0) return false;
-    return isValidOptionalString(entityA) && isValidOptionalString(entityB) && isValidOptionalString(context);
+    return (
+      isValidOptionalString(entityA) &&
+      isValidOptionalString(entityB) &&
+      isValidOptionalString(context) &&
+      isValidOptionalString(priorities) &&
+      isValidOptionalString(nonNegotiables)
+    );
   }
 
   if (kind === "bracket_composer") {

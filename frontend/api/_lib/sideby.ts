@@ -1,14 +1,75 @@
 import type { VercelResponse } from "@vercel/node";
 import { z } from "zod";
-import { eq, desc, and, asc, or, sql, gt, isNull } from "drizzle-orm";
+import { eq, desc, and, asc, or, sql, gt, isNull, inArray } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
-import { comparisons, aiRuns, aiRunSteps, queryAnalytics } from "../../src/db/schema.js";
+import { comparisons, aiRuns, aiRunSteps, comparisonEntities, comparisonFacts, comparisonSources, queryAnalytics } from "../../src/db/schema.js";
 import { runComparisonJob } from "./job-engine.js";
 import { getPrimaryProvider } from "./providers/index.js";
 import { logger } from "./log.js";
 import { normalizeQuery } from "./query-normalizer.js";
 import { isFreshEnough, isStaleButUsable, getFreshnessClass, freshnessLabel } from "./reuse-engine.js";
 import { comparisonCache, trackCacheHit } from "./cache-layer.js";
+import {
+  assessPublishEligibility,
+  isRetrievableCitation,
+  AUTHORIZED_INPUT_SCOPE,
+  type ServerEvidence,
+} from "./public-eligibility.js";
+
+/**
+ * Load the server-written evidence used to classify a record's publish
+ * eligibility: the generation-time input scope, completed pipeline runs,
+ * per-fact citation quality from the normalized extraction tables, and the
+ * pipeline's own source inventory. Never derived from the stored JSON and
+ * never taken from the request.
+ */
+export const loadPublishEvidence = async (
+  db: ReturnType<typeof createDbClient>,
+  comparisonId: string,
+): Promise<ServerEvidence> => {
+  const [comparisonRow, runs, facts, sources] = await Promise.all([
+    db
+      .select({ inputScope: comparisons.inputScope })
+      .from(comparisons)
+      .where(eq(comparisons.id, comparisonId))
+      .limit(1),
+    db
+      .select({ status: aiRuns.status })
+      .from(aiRuns)
+      .where(eq(aiRuns.comparisonId, comparisonId)),
+    db
+      .select({ sourceUrl: comparisonFacts.sourceUrl })
+      .from(comparisonFacts)
+      .where(eq(comparisonFacts.comparisonId, comparisonId)),
+    db
+      .select({ url: comparisonSources.url, canonicalUrl: comparisonSources.canonicalUrl })
+      .from(comparisonSources)
+      .where(eq(comparisonSources.comparisonId, comparisonId)),
+  ]);
+
+  let citedFactCount = 0;
+  let uncitedFactCount = 0;
+  for (const fact of facts) {
+    if (isRetrievableCitation(fact.sourceUrl)) citedFactCount += 1;
+    else uncitedFactCount += 1;
+  }
+
+  const sourceInventory = new Set<string>();
+  for (const source of sources) {
+    if (typeof source.url === "string" && source.url) sourceInventory.add(source.url);
+    if (typeof source.canonicalUrl === "string" && source.canonicalUrl) {
+      sourceInventory.add(source.canonicalUrl);
+    }
+  }
+
+  return {
+    inputScope: comparisonRow[0]?.inputScope ?? null,
+    pipelineRunPresent: runs.some((run) => run.status === "completed"),
+    citedFactCount,
+    uncitedFactCount,
+    sourceInventory: Array.from(sourceInventory),
+  };
+};
 import {
   redisAcquireLockToken,
   redisReleaseLock,
@@ -18,6 +79,8 @@ import {
 } from "./redis.js";
 import {
   canAccessComparison as canAccessComparisonRecord,
+  canAccessProject,
+  canAccessWorkspace,
   canMutateComparison,
 } from "./db-auth.js";
 import {
@@ -162,11 +225,25 @@ type ComparisonSource = {
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
+// Server errors must never leak SQL, parameters, hostnames, or stack text.
+const INTERNAL_ERROR_PATTERN =
+  /failed query|params:|\b(select|insert|update|delete)\b[\s\S]*\b(from|into|set)\b|relation ".+" does not exist|column ".+"|\becon\w+|password|postgres|neon\.tech|at\s+\S+\s+\(.*:\d+:\d+\)/i;
+
+export const sanitizeErrorPayload = (payload: unknown, status: number): unknown => {
+  if (status < 500 || !payload || typeof payload !== "object") return payload;
+  const record = payload as Record<string, unknown>;
+  const message = record.error;
+  if (typeof message !== "string") return payload;
+  if (message.length <= 300 && !INTERNAL_ERROR_PATTERN.test(message)) return payload;
+  console.error("Suppressed internal error detail from API response", message.slice(0, 2000));
+  return { ...record, error: "Something went wrong on our side. Please try again in a moment." };
+};
+
 export const sendJson = (response: VercelResponse, payload: unknown, status = 200) => {
   if (!response.hasHeader("Cache-Control")) {
     response.setHeader("Cache-Control", "no-store");
   }
-  return response.status(status).json(payload);
+  return response.status(status).json(sanitizeErrorPayload(payload, status));
 };
 
 /**
@@ -430,6 +507,18 @@ export const createComparisonJob = async (
   input: CreateComparisonInput,
   scheduleResearch?: ResearchScheduler,
 ): Promise<ComparisonJob> => {
+  // The workspace and project ids come from the caller; never trust them
+  // without checking the caller can write there (blocks cross-tenant inserts).
+  if (input.workspaceId || input.projectId) {
+    const accessDb = createDbClient();
+    if (input.workspaceId && !(await canAccessWorkspace(accessDb, input.userId, input.workspaceId))) {
+      throw Object.assign(new Error("Workspace not found."), { statusCode: 404 });
+    }
+    if (input.projectId && !(await canAccessProject(accessDb, input.userId, input.projectId))) {
+      throw Object.assign(new Error("Project not found."), { statusCode: 404 });
+    }
+  }
+
   const { intent } = await validateComparisonQuery(input.query);
   if (!intent.canStart) {
     throw Object.assign(new Error(intent.message), {
@@ -1119,6 +1208,19 @@ export const publishComparison = async (
 
   const job = await getComparisonJob(id, clerkUserId);
 
+  // Server-authoritative privacy: classification comes from pipeline-written
+  // evidence (runs + normalized fact citations), never the stored JSON.
+  const eligibility = assessPublishEligibility(
+    job.result,
+    await loadPublishEvidence(db, id),
+  );
+  if (!eligibility.eligible) {
+    throw Object.assign(new Error(eligibility.reasons.join(" ")), {
+      statusCode: 422,
+      reasons: eligibility.reasons,
+    });
+  }
+
   await db
     .update(comparisons)
     .set({ visibility: "public", updatedAt: new Date() })
@@ -1144,6 +1246,261 @@ export const unpublishComparison = async (
     .where(eq(comparisons.id, id));
 
   return { ...job, visibility: "private" };
+};
+
+export type PublicSnapshotResult = {
+  id: string;
+  slug: string;
+  query: string;
+  status: "queued" | "running" | "completed" | "failed";
+  existing: boolean;
+  sourceId: string;
+};
+
+/**
+ * Generate a dedicated PUBLIC SNAPSHOT of an existing completed comparison.
+ *
+ * The snapshot is generated from authorized public inputs only: the server
+ * itself constructs the research query from the source record's frozen
+ * entity names ("A vs B"). No user-written context, brief, priorities,
+ * uploads or notes ever enter the pipeline for this record — no field
+ * stripping or text scanning pretended otherwise — and the row is stamped
+ * `input_scope = 'public'` by the server at creation. The full pipeline runs
+ * fresh (cache/reuse materialization must not inherit another record's
+ * content into a publishable record).
+ *
+ * Private-context comparisons cannot be made public directly. This is the
+ * deliberately small enforceable path between "support the workspace" and
+ * "publish to everyone".
+ */
+export const createPublicSnapshotComparison = async (
+  sourceId: string,
+  clerkUserId: string | null = null,
+  scheduleResearch?: ResearchScheduler,
+): Promise<PublicSnapshotResult> => {
+  const db = createDbClient();
+  if (!clerkUserId || !(await canMutateComparison(db, clerkUserId, sourceId))) {
+    throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
+  }
+
+  const [sourceRow] = await db
+    .select({
+      id: comparisons.id,
+      status: comparisons.status,
+      result: comparisons.result,
+      clerkUserId: comparisons.clerkUserId,
+      clerkOrgId: comparisons.clerkOrgId,
+      workspaceId: comparisons.workspaceId,
+      projectId: comparisons.projectId,
+    })
+    .from(comparisons)
+    .where(and(eq(comparisons.id, sourceId), eq(comparisons.clerkUserId, clerkUserId)))
+    .limit(1);
+
+  if (!sourceRow || sourceRow.status !== "completed" || !sourceRow.result) {
+    throw Object.assign(
+      new Error("The comparison must finish researching before a public snapshot can be generated."),
+      { statusCode: 422, code: "SNAPSHOT_NOT_READY" },
+    );
+  }
+
+  // Frozen entity names are the snapshot's entire input. They come from the
+  // pipeline-written comparison_entities rows (or the result's entity block
+  // as a fallback) — never re-parsed from user text.
+  const entityRows = await db
+    .select({ name: comparisonEntities.name, position: comparisonEntities.position })
+    .from(comparisonEntities)
+    .where(eq(comparisonEntities.comparisonId, sourceId))
+    .orderBy(asc(comparisonEntities.position))
+    .limit(2);
+
+  let nameA = entityRows[0]?.name ?? "";
+  let nameB = entityRows[1]?.name ?? "";
+
+  if (!nameA || !nameB) {
+    const resultEntities = (sourceRow.result as { entities?: { a?: { name?: unknown }; b?: { name?: unknown } } } | null)
+      ?.entities;
+    const fromResultA = typeof resultEntities?.a?.name === "string" ? resultEntities.a.name : "";
+    const fromResultB = typeof resultEntities?.b?.name === "string" ? resultEntities.b.name : "";
+    nameA = nameA || fromResultA;
+    nameB = nameB || fromResultB;
+  }
+
+  nameA = nameA.trim().slice(0, 120);
+  nameB = nameB.trim().slice(0, 120);
+
+  if (!nameA || !nameB || nameA.toLowerCase() === nameB.toLowerCase()) {
+    throw Object.assign(
+      new Error("This record can't produce a public snapshot: it needs two distinct recorded options."),
+      { statusCode: 422, code: "SNAPSHOT_NO_ENTITIES" },
+    );
+  }
+
+  // Idempotency: never stack duplicate paid runs for the same source record.
+  // A completed snapshot is returned as-is; regenerating deliberately starts
+  // from a failed attempt instead of duplicating a live one.
+  const [existingSnapshot] = await db
+    .select({
+      id: comparisons.id,
+      slug: comparisons.slug,
+      query: comparisons.query,
+      status: comparisons.status,
+    })
+    .from(comparisons)
+    .where(
+      and(
+        eq(comparisons.publicSnapshotSourceId, sourceId),
+        inArray(comparisons.status, ["queued", "running", "completed"]),
+        eq(comparisons.inputScope, AUTHORIZED_INPUT_SCOPE),
+      ),
+    )
+    .orderBy(desc(comparisons.createdAt))
+    .limit(1);
+
+  if (existingSnapshot) {
+    return {
+      id: existingSnapshot.id,
+      slug: existingSnapshot.slug,
+      query: existingSnapshot.query,
+      status: existingSnapshot.status as PublicSnapshotResult["status"],
+      existing: true,
+      sourceId,
+    };
+  }
+
+  // The snapshot's entire input: frozen entity names, server-constructed.
+  const snapshotQuery = `${nameA} vs ${nameB}`;
+  const normalized = normalizeQuery(snapshotQuery, {
+    entityA: nameA,
+    entityB: nameB,
+  });
+  const snapshotId = crypto.randomUUID();
+  const snapshotSlug = uniqueSlug(slug(nameA, nameB));
+  // Distinct intent scope: a snapshot never adopts (or collides with) the
+  // user's regular in-flight intents; it has its own atomic uniqueness.
+  const snapshotIntentKey = buildComparisonIntentKey(
+    clerkUserId,
+    sourceRow.workspaceId,
+    sourceRow.projectId,
+    `public-snapshot:${normalized.canonicalSlug}`,
+  );
+
+  let insertConflictWinner: { id: string; slug: string; query: string; status: string } | undefined;
+  try {
+    await db.insert(comparisons).values({
+      id: snapshotId,
+      query: snapshotQuery,
+      slug: snapshotSlug,
+      intentKey: snapshotIntentKey,
+      taxonomyCategory: normalized.category,
+      taxonomyStatus: normalized.taxonomyStatus,
+      taxonomyConfidence: String(normalized.confidence),
+      safetyLevel: normalized.safetyLevel,
+      policyNote: normalized.policyNote || null,
+      status: "queued",
+      visibility: "private",
+      inputScope: AUTHORIZED_INPUT_SCOPE,
+      publicSnapshotSourceId: sourceId,
+      clerkUserId: clerkUserId,
+      clerkOrgId: sourceRow.clerkOrgId ?? null,
+      workspaceId: sourceRow.workspaceId ?? null,
+      projectId: sourceRow.projectId ?? null,
+      progress: 0,
+      activeStep: 0,
+      freshnessClass: getFreshnessClass(normalized.category),
+    });
+  } catch (error) {
+    if (!isUniqueViolationError(error)) throw error;
+    logger.warn("Public snapshot insert hit in-flight uniqueness; adopting the existing snapshot", {
+      comparisonId: sourceId,
+      canonicalSlug: normalized.canonicalSlug,
+    });
+    const [winnerRow] = await db
+      .select({ id: comparisons.id, slug: comparisons.slug, query: comparisons.query, status: comparisons.status })
+      .from(comparisons)
+      .where(eq(comparisons.intentKey, snapshotIntentKey))
+      .limit(1);
+    insertConflictWinner = winnerRow;
+    if (!insertConflictWinner) {
+      throw Object.assign(
+        new Error("A public snapshot for this comparison is starting. Try again in a moment."),
+        { statusCode: 409, code: "SNAPSHOT_IN_PROGRESS", retryAfter: 2 },
+      );
+    }
+  }
+
+  if (insertConflictWinner) {
+    return {
+      id: insertConflictWinner.id,
+      slug: insertConflictWinner.slug,
+      query: insertConflictWinner.query,
+      status: insertConflictWinner.status as PublicSnapshotResult["status"],
+      existing: true,
+      sourceId,
+    };
+  }
+
+  await db.insert(queryAnalytics).values({
+    comparisonId: snapshotId,
+    // rawQuery is the server-constructed entity pair, not user text.
+    rawQuery: snapshotQuery,
+    normalizedQuery: normalized.normalizedQuery,
+    canonicalSlug: normalized.canonicalSlug,
+    detectedEntities: JSON.stringify([
+      { name: nameA, type: null },
+      { name: nameB, type: null },
+    ]),
+    queryCategory: normalized.category,
+    taxonomyStatus: normalized.taxonomyStatus,
+    safetyLevel: normalized.safetyLevel,
+    taxonomyConfidence: String(normalized.confidence),
+    policyNote: normalized.policyNote || null,
+    policySignals: null,
+    sourceStrategy: {
+      requirements: normalized.sourceRequirements,
+      disclaimer: normalized.disclaimer,
+    },
+    isVague: normalized.isVague,
+    reusedFromId: sourceId,
+  });
+
+  logger.info("Public snapshot job queued (entity-pair input, server-constructed)", {
+    comparisonId: snapshotId,
+    sourceId,
+    canonicalSlug: normalized.canonicalSlug,
+  });
+
+  // Always a fresh full pipeline run: no reuse, no cache materialization.
+  if (process.env.DISABLE_IN_PROCESS_JOBS === "true") {
+    logger.info(`[DISABLE_IN_PROCESS_JOBS] Public snapshot job ${snapshotId} queued for external worker.`);
+  } else {
+    const worker = runComparisonJob(
+      snapshotId,
+      clerkUserId,
+      snapshotQuery,
+      sourceRow.clerkOrgId ?? undefined,
+    ).catch((e) => {
+      logger.error(
+        `Public snapshot job ${snapshotId} failed`,
+        e instanceof Error ? e : undefined,
+        { comparisonId: snapshotId },
+      );
+    });
+    if (scheduleResearch) {
+      scheduleResearch(worker);
+    } else {
+      worker.catch(() => {});
+    }
+  }
+
+  return {
+    id: snapshotId,
+    slug: snapshotSlug,
+    query: snapshotQuery,
+    status: "queued",
+    existing: false,
+    sourceId,
+  };
 };
 
 export const listComparisonHistory = async (

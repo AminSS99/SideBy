@@ -1,3 +1,6 @@
+import { AnimatedCircularProgressBar } from "@/components/ui/animated-circular-progress-bar";
+import { BorderBeam } from "@/components/ui/border-beam";
+import { AnimatedList } from "@/components/ui/animated-list";
 import React, { useRef, useState, useEffect, useMemo } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -30,20 +33,6 @@ const NumberTicker = ({ value, reducedMotion }: { value: number; reducedMotion: 
   return reducedMotion ? <span>{value}</span> : <motion.span>{rounded}</motion.span>;
 };
 
-const TERMINAL_LOGS = [
-  "Initializing deep extraction subroutines...",
-  "Routing query to optimal LLM provider...",
-  "Acquiring official documentation targets...",
-  "Bypassing generic marketing language...",
-  "Parsing DOM tree for technical specifications...",
-  "Cross-referencing GitHub activity and issues...",
-  "Evaluating pricing vectors against limits...",
-  "Synthesizing consensus data points...",
-  "Resolving conflicting claims via source weighting...",
-  "Drafting executive verdict...",
-  "Finalizing data matrix..."
-];
-
 export const ResearchLoader = ({
   query,
   progress,
@@ -55,13 +44,30 @@ export const ResearchLoader = ({
   dimensionsScored = 0,
 }: ResearchLoaderProps) => {
   const prefersReducedMotion = useReducedMotion() ?? false;
+
+  // Honest elapsed time: a real clock from mount, never an invented ETA.
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  useEffect(() => {
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const elapsedLabel =
+    elapsedSeconds < 60
+      ? `${elapsedSeconds}s`
+      : `${Math.floor(elapsedSeconds / 60)}m ${String(elapsedSeconds % 60).padStart(2, "0")}s`;
+
+  // A failed pipeline step does not erase the evidence gathered so far; say so.
+  const failedStep = activity.find((step) => step.status === "failed");
+  const currentStep = activity.find((step) => step.status === "running");
   const containerRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   const scanLineRef = useRef<HTMLDivElement>(null);
-  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const terminalScrollRef = useRef<HTMLDivElement>(null);
   
-  const [activeLogs, setActiveLogs] = useState<string[]>([]);
   const liveLogs = useMemo(() => {
     return activity.map((step) => {
       const timestamp = step.startedAt || step.completedAt || new Date().toISOString();
@@ -75,20 +81,18 @@ export const ResearchLoader = ({
     });
   }, [activity]);
 
-  // Simulate terminal logs trickling in based on progress
+  // Keep auto-scrolling contained inside the terminal. scrollIntoView() also
+  // scrolls ancestor containers and was pulling the loader header under the
+  // top edge of the workbench while research was running.
   useEffect(() => {
-    const targetLogCount = Math.max(1, Math.floor((progress / 100) * TERMINAL_LOGS.length));
-    
-    if (activeLogs.length < targetLogCount) {
-      const newLogs = TERMINAL_LOGS.slice(0, targetLogCount);
-      setActiveLogs(newLogs);
-    }
-  }, [progress, activeLogs.length]);
+    const terminal = terminalScrollRef.current;
+    if (!terminal) return;
 
-  // Auto-scroll terminal
-  useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth" });
-  }, [activeLogs, liveLogs, prefersReducedMotion]);
+    terminal.scrollTo({
+      top: terminal.scrollHeight,
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  }, [liveLogs, prefersReducedMotion]);
 
   const scanLineTweenRef = useRef<gsap.core.Tween | null>(null);
 
@@ -194,10 +198,11 @@ export const ResearchLoader = ({
       });
     }
 
-  }, [progress, activeStep, prefersReducedMotion]);
+  }, { dependencies: [progress, activeStep, prefersReducedMotion], scope: containerRef, revertOnUpdate: true });
 
   return (
     <div ref={containerRef} role="status" aria-live="polite" aria-label={`Researching ${query}, ${progress}% complete`} className={cn(panelClass, "relative flex min-h-[560px] flex-col overflow-hidden rounded-[28px] shadow-2xl")}>
+      <BorderBeam colorFrom="#f97316" colorTo="#fb7185" duration={8} />
       {/* Ambient moving glow inside the loader */}
       <div 
         ref={glowRef}
@@ -222,8 +227,8 @@ export const ResearchLoader = ({
       />
 
       <div className="relative z-10 flex-none p-4 sm:p-8 lg:p-12">
-        <div className="mb-7 flex items-end justify-between gap-4 border-b border-white/[0.08] pb-6 sm:mb-10 sm:pb-8">
-          <div>
+        <div className="mb-7 flex flex-col gap-6 border-b border-white/[0.08] pb-6 sm:mb-10 sm:flex-row sm:items-start sm:justify-between sm:gap-8 sm:pb-8">
+          <div className="min-w-0 flex-1">
             <p className="mb-3 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-orange-300 sm:mb-4 sm:text-[10px]">
               <span className="relative flex h-2 w-2">
                 <span className={cn("absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75", !prefersReducedMotion && "animate-ping")} />
@@ -231,15 +236,48 @@ export const ResearchLoader = ({
               </span>
               Research in progress
             </p>
-            <h2 className="max-w-2xl font-serif text-2xl leading-tight tracking-tight text-[#fdfbf7] sm:text-3xl lg:text-5xl">
+            <h2 className="max-w-3xl break-words font-serif text-2xl leading-[1.08] tracking-tight text-[#fdfbf7] sm:text-3xl lg:text-4xl xl:text-5xl">
               {query}
             </h2>
+            {(() => {
+              const parts = query.split(/\s+(?:vs\.?|versus)\s+/i);
+              if (parts.length === 2 && parts[0].trim() && parts[1].trim()) {
+                return (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 text-xs font-semibold text-orange-300">
+                      Option A: {parts[0].trim()}
+                    </span>
+                    <span className="text-xs font-medium text-white/40">vs</span>
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-300">
+                      Option B: {parts[1].trim()}
+                    </span>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+            <p className="mt-3 text-xs leading-relaxed text-[#fdfbf7]/45">
+              Elapsed {elapsedLabel}
+              {currentStep ? ` · Now: ${currentStep.task} — ${currentStep.stepName}` : ""}
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-[#fdfbf7]/35">
+              Research runs on SideBy's servers. You can leave this page and come back — this view reconciles
+              with the job's recorded progress when you return. If a deployment or restart interrupts the run,
+              recovery is attempted; if recovery cannot complete, you'll be offered a retry with your gathered evidence preserved.
+            </p>
+            {failedStep && (
+              <p role="note" className="mt-3 inline-flex items-start gap-2 rounded-lg border border-red-400/25 bg-red-400/[0.06] px-3 py-2 text-xs leading-relaxed text-red-200/85">
+                A step hit a problem ({failedStep.task} — {failedStep.stepName}). Evidence gathered so far is
+                kept; if the job can't recover, you'll get a retry option with your sources preserved.
+              </p>
+            )}
           </div>
-          <div className="flex items-end gap-1">
-            <span className="font-serif text-4xl font-light leading-none tracking-tighter text-orange-400 tabular-nums sm:text-6xl lg:text-7xl">
-              {progress}
+          <div className="flex shrink-0 items-center justify-between gap-5 self-stretch rounded-2xl border border-orange-400/15 bg-orange-500/[0.06] px-4 py-3 sm:min-w-36 sm:self-start sm:flex-col sm:items-end sm:gap-1 sm:px-5 sm:py-4">
+            <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-orange-200/50">
+              Progress
             </span>
-            <span className="mb-2 text-lg text-orange-500/40">%</span>
+            <AnimatedCircularProgressBar value={progress} label="Research progress"
+              gaugePrimaryColor="#fb923c" className="h-24 w-24 text-orange-300" />
           </div>
         </div>
 
@@ -338,14 +376,10 @@ export const ResearchLoader = ({
           </span>
         </div>
         
-        <div className="flex-1 overflow-y-auto no-scrollbar font-mono text-[10px] sm:text-xs text-emerald-500/70 space-y-2">
-          {(liveLogs.length > 0 ? liveLogs : activeLogs.map((message, i) => ({
-            id: `synthetic-${i}`,
-            time: new Date().toISOString().split('T')[1].slice(0, -1),
-            status: "running",
-            message,
-          }))).map((log) => (
-            <div key={log.id} className="flex gap-3 items-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div ref={terminalScrollRef} className="flex-1 overflow-y-auto no-scrollbar font-mono text-[10px] sm:text-xs text-emerald-500/70 space-y-2">
+          <AnimatedList delay={65}>
+          {liveLogs.map((log) => (
+            <div key={log.id} className="flex gap-2 items-start sm:gap-3">
               <span className="text-emerald-500/30 opacity-50 select-none">
                 {log.time}
               </span>
@@ -358,39 +392,18 @@ export const ResearchLoader = ({
               )}>
                 {log.status}
               </span>
-              <TypewriterText text={log.message} reducedMotion={prefersReducedMotion} />
+              <span className="min-w-0 break-words">{log.message}</span>
             </div>
           ))}
-          <div ref={terminalEndRef} className="h-2 flex items-center gap-2">
+          </AnimatedList>
+          {liveLogs.length === 0 && (
+            <p className="text-[#fdfbf7]/60">Waiting for the next recorded research update. Your comparison is still being processed.</p>
+          )}
+          <div className="h-2 flex items-center gap-2">
             <span className={cn("text-emerald-500", !prefersReducedMotion && "animate-pulse")}>_</span>
           </div>
         </div>
       </div>
     </div>
   );
-};
-
-const TypewriterText = ({ text, speed = 10, reducedMotion = false }: { text: string; speed?: number; reducedMotion?: boolean }) => {
-  const [displayedText, setDisplayedText] = useState("");
-
-  useEffect(() => {
-    if (reducedMotion) {
-      setDisplayedText(text);
-      return;
-    }
-
-    setDisplayedText("");
-    let index = 0;
-    const interval = setInterval(() => {
-      setDisplayedText((prev) => prev + text.charAt(index));
-      index++;
-      if (index >= text.length) {
-        clearInterval(interval);
-      }
-    }, speed);
-
-    return () => clearInterval(interval);
-  }, [text, speed, reducedMotion]);
-
-  return <span>{reducedMotion ? text : displayedText}</span>;
 };

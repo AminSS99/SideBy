@@ -17,6 +17,15 @@
       "source": "/",
       "headers": [
         {
+          "key": "Link",
+          "value": "<https://sideby.ink/>; rel=\"canonical\""
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        {
           "key": "Cache-Control",
           "value": "no-store, no-cache, must-revalidate"
         }
@@ -121,7 +130,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://clerk.sideby.ink https://*.clerk.accounts.dev https://*.clerk.dev https://*.clerk.com https://cdn.jsdelivr.net/npm/@clerk/ https://challenges.cloudflare.com https://*.posthog.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: https://img.clerk.com; connect-src 'self' https: wss: https://clerk.sideby.ink https://*.clerk.accounts.dev https://*.clerk.dev https://*.clerk.com; frame-src 'self' https://clerk.sideby.ink https://*.clerk.accounts.dev https://*.clerk.dev https://*.clerk.com https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+          "value": "default-src 'self'; script-src 'self' blob: https://accounts.google.com/gsi/client https://clerk.sideby.ink https://*.clerk.accounts.dev https://*.clerk.dev https://*.clerk.com https://cdn.jsdelivr.net/npm/@clerk/ https://challenges.cloudflare.com https://*.posthog.com; script-src-attr 'none'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; manifest-src 'self'; connect-src 'self' https://clerk.sideby.ink https://*.clerk.accounts.dev https://*.clerk.dev https://*.clerk.com https://clerk-telemetry.com https://*.posthog.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://challenges.cloudflare.com; frame-src 'self' https://accounts.google.com/gsi/ https://clerk.sideby.ink https://*.clerk.accounts.dev https://*.clerk.dev https://*.clerk.com https://challenges.cloudflare.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
         }
       ]
     }
@@ -132,7 +141,7 @@
       "destination": "/api/[...path]"
     },
     {
-      "source": "/((?!api(?:/|$)|src(?:/|$)|node_modules(?:/|$)|@vite(?:/|$)|@fs(?:/|$)|@react-refresh|assets(?:/|$)|favicon\\.ico$|favicon-48x48\\.png$|icon\\.svg$|icon-192\\.png$|icon-512\\.png$|apple-touch-icon\\.png$|manifest\\.json$|sideby\\.ico$|robots\\.txt$|sitemap\\.xml$).*)",
+      "source": "/((?!api(?:/|$)|src(?:/|$)|node_modules(?:/|$)|@vite(?:/|$)|@fs(?:/|$)|@react-refresh|assets(?:/|$)|favicon\\.ico$|favicon-48x48\\.png$|icon\\.svg$|icon-192\\.png$|icon-512\\.png$|icon-maskable-192\\.png$|icon-maskable-512\\.png$|apple-touch-icon\\.png$|manifest\\.json$|manifest\\.webmanifest$|sideby\\.ico$|sw\\.js$|registerSW\\.js$|workbox-.*\\.js$|robots\\.txt$|sitemap\\.xml$).*)",
       "destination": "/index.html"
     }
   ]

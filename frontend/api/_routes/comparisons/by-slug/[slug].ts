@@ -5,16 +5,65 @@
 import { eq, and, desc } from "drizzle-orm";
 import { createDbClient } from "../../../../src/db/index.js";
 import { comparisons } from "../../../../src/db/schema.js";
-import { sendJson } from "../../../_lib/sideby.js";
+import { sendJson, loadPublishEvidence } from "../../../_lib/sideby.js";
+import {
+  assessPublishEligibility,
+  isRetrievableCitation,
+} from "../../../_lib/public-eligibility.js";
 import { authenticateRequest } from "../../../_lib/auth.js";
 import { logger } from "../../../_lib/log.js";
 import { analyzeComparisonQuery, summarizeComparisonTaxonomy } from "../../../../src/lib/comparisonTaxonomy.js";
+import { projectPublicResult } from "../../../../src/lib/publicComparison.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
   runtime: "nodejs",
   maxDuration: 10,
 };
+
+const LEGACY_SAMPLE_HASHES = new Set([
+  "abc123",
+  "def456",
+  "neon123",
+  "vercel123",
+  "apple123",
+  "numbeo123",
+  "tesla123",
+]);
+
+/**
+ * Trusted fixture classification: a stored record is a legacy sample only
+ * when a source content-hash matches the known fixture set (server-side
+ * data), never because the stored JSON claims a provenance.
+ */
+function isLegacySampleResult(rawResult: Record<string, unknown>): boolean {
+  const sources = Array.isArray(rawResult.sources) ? rawResult.sources : [];
+  return sources.some((source) => {
+    if (!source || typeof source !== "object") return false;
+    const hash = (source as { contentHash?: unknown }).contentHash;
+    return typeof hash === "string" && LEGACY_SAMPLE_HASHES.has(hash);
+  });
+}
+
+/**
+ * Even fixtures stay public only while every claim they show carries a
+ * retrievable citation; otherwise the whole record fails closed.
+ */
+function fixtureClaimsCited(rawResult: Record<string, unknown>): boolean {
+  const categories = Array.isArray(rawResult.categories) ? rawResult.categories : [];
+  let sawFact = false;
+  for (const category of categories) {
+    if (!category || typeof category !== "object") continue;
+    const facts = (category as { facts?: unknown }).facts;
+    if (!Array.isArray(facts)) continue;
+    for (const fact of facts) {
+      if (!fact || typeof fact !== "object") continue;
+      sawFact = true;
+      if (!isRetrievableCitation((fact as { sourceUrl?: unknown }).sourceUrl)) return false;
+    }
+  }
+  return sawFact;
+}
 
 export default async function handler(
   request: VercelRequest,
@@ -60,15 +109,49 @@ export default async function handler(
 
     if (publicRows[0]?.result) {
       const d = publicRows[0];
+      const rawResult = d.result as Record<string, unknown>;
+      // Public payload is an explicit allowlist projection, never the stored
+      // record. An unprojectable record fails safe as not-found, never as a
+      // partial public payload.
+      const projected = projectPublicResult({ ...rawResult, slug: d.slug });
+      if (!projected) {
+        return sendJson(response, { error: "Comparison not found." }, 404);
+      }
+
+      // Privacy is re-established on every read from server-written evidence
+      // (pipeline runs + normalized citations), so records that were
+      // published before this gate — or whose claims can't be attributed —
+      // stop being public instead of silently remaining so.
+      let provenance: "researched" | "illustrative";
+      if (isLegacySampleResult(rawResult)) {
+        if (!fixtureClaimsCited(rawResult)) {
+          return sendJson(response, { error: "Comparison not found." }, 404);
+        }
+        provenance = "illustrative";
+      } else {
+        const eligibility = assessPublishEligibility(
+          rawResult,
+          await loadPublishEvidence(db, d.id),
+        );
+        if (!eligibility.eligible) {
+          return sendJson(response, { error: "Comparison not found." }, 404);
+        }
+        provenance = "researched";
+      }
+
       const result = {
-        ...(d.result as Record<string, unknown>),
-        slug: d.slug,
-        taxonomy: (d.result as { taxonomy?: unknown }).taxonomy ||
-          summarizeComparisonTaxonomy(analyzeComparisonQuery(d.query)),
+        ...projected,
+        // Server-set classification; any stored claim is overridden.
+        provenance,
+        taxonomy:
+          projected.taxonomy || summarizeComparisonTaxonomy(analyzeComparisonQuery(d.query)),
       };
+      // Noncached authoritative reads: unpublishing stops new reads on the
+      // very next request. Copies already downloaded or re-shared outside
+      // SideBy can't be recalled, and the UI must say exactly that.
       response.setHeader(
         "Cache-Control",
-        "public, s-maxage=3600, stale-while-revalidate=86400",
+        "private, no-store, max-age=0, must-revalidate",
       );
       return sendJson(response, {
         id: d.id,

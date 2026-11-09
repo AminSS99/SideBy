@@ -5,19 +5,22 @@ This document details the exact configuration, environment variables, third-part
 ---
 
 ## 📦 1. Pre-Deployment Build & Lint Verification
-Ensure the build outputs, types, and lints are 100% clean prior to deploying:
+Ensure the build outputs, types, and lints are 100% clean prior to deploying (enter `frontend/` once):
 ```bash
+# Enter the application workspace directory
+cd frontend
+
 # 1. Install all dependencies
 pnpm install
 
-# 2. Run TypeScript compilation check
-pnpm exec tsc --noEmit
+# 2. Run TypeScript compilation check (covers both Vite web app and api/ serverless functions)
+pnpm run typecheck
 
 # 3. Verify ESLint rules
 pnpm lint
 
-# 4. Verify dependency audit threshold
-pnpm audit --audit-level high
+# 4. Run targeted unit test suites (once testing is authorized)
+pnpm test
 
 # 5. Compile the optimized production bundles
 pnpm run build
@@ -25,7 +28,24 @@ pnpm run build
 
 ---
 
-## 🔑 2. Environment Variables Configuration (Vercel)
+## 🗄️ 2. Database Migration 020 (Required & Unapplied — Strict Ordering)
+
+> **CRITICAL DEPLOYMENT ORDERING**: Migration **020** must be applied to Neon Postgres **BEFORE** deploying the new application code.
+
+- **Migration File**: `neon/migrations/020_comparison_publication_scope.sql`
+- **Schema Columns**:
+  - `input_scope text NOT NULL DEFAULT 'unknown'`
+  - `public_snapshot_source_id uuid`
+  - Index `comparisons_public_scope_idx` on `(input_scope, visibility) WHERE input_scope = 'public'`
+- **Failure Risk if Inverted**: The backend code in `sideby.ts`, `loadPublishEvidence()`, and `comparisons` insert selects and writes `input_scope`. If application code is deployed before migration 020 is executed, all comparison reads, status checks, and snapshot jobs will fail with PostgreSQL `column "input_scope" does not exist`.
+- **Execution Command** (from `frontend/` directory):
+  ```bash
+  DATABASE_URL_UNPOOLED="<direct-neon-connection-url>" pnpm run db:neon:migrate
+  ```
+
+---
+
+## 🔑 3. Environment Variables Configuration (Vercel)
 Add the following keys to your project in the Vercel Dashboard under **Project Settings > Environment Variables**:
 
 ### Frontend & Core Authentication
@@ -50,12 +70,7 @@ Add the following keys to your project in the Vercel Dashboard under **Project S
 * `OPENAI_API_KEY`: OpenAI API key (for generating `text-embedding-3-small` vector spaces).
 
 ### Billing & Subscription Infrastructure
-* `PADDLE_API_KEY`: Paddle server API key for checkout and customer portal sessions.
-* `PADDLE_WEBHOOK_SECRET`: Signature verification token for subscription sync (`/api/webhooks/paddle`).
-* `PADDLE_ENVIRONMENT`: Set to `production` for live billing, `sandbox` for testing.
-* `PADDLE_PRO_PRICE_ID`: Paddle price id for the Pro plan.
-* `PADDLE_TEAM_PRICE_ID`: Paddle price id for the Team plan.
-* `PADDLE_ENTERPRISE_PRICE_ID`: Paddle price id for enterprise checkout, if enabled.
+The intended subscription authority is SnapSolve Core, with Dodo Payments configured there. SideBy checkout and portal actions redirect to Cockpit. A legacy SideBy Dodo webhook and related local subscription fallback still exist in code; disable the old webhook delivery and retire that fallback before claiming the bridge is the sole authority. Do not configure new payment credentials in SideBy.
 
 ### SnapSolve Ecosystem Bridge
 * `SNAPSOLVE_CORE_URL`: SnapSolve Core base URL for workspace and entitlement resolution.
@@ -75,18 +90,12 @@ Add the following keys to your project in the Vercel Dashboard under **Project S
 
 ---
 
-## 💰 3. Paddle (Subscriptions) Live Migration Checklist
-To transition billing from sandbox mode to live payments:
-1. Log in to your **Paddle Merchant Dashboard** (production).
-2. Set up the subscription price models and copy the **Product IDs** and **Price IDs**.
-3. Set `PADDLE_PRO_PRICE_ID`, `PADDLE_TEAM_PRICE_ID`, and optionally `PADDLE_ENTERPRISE_PRICE_ID` in Vercel.
-4. Add the live webhook endpoint URL in Paddle: `https://yourdomain.com/api/webhooks/paddle`.
-5. Select the following event subscriptions in Paddle:
-   * `subscription.created`
-   * `subscription.updated`
-   * `subscription.canceled`
-6. Copy the newly generated **Webhook Secret Key** from Paddle and set it as `PADDLE_WEBHOOK_SECRET` in Vercel.
-7. Change `PADDLE_ENVIRONMENT` to `production` in your Vercel project configuration.
+## 💰 3. Shared Dodo billing verification
+1. Configure Dodo product IDs, API key, and verified webhook **only in SnapSolve Core**. Check SnapSolve's billing runbook for the current variable names and plan matrix.
+2. Verify a Flow account can use SideBy without checkout and that a paid SideBy action is denied without the matching signed SnapSolve entitlement.
+3. Complete a test checkout from SideBy through Cockpit; confirm a single SnapSolve subscription and that SideBy receives the updated workspace entitlement.
+4. Test change, cancellation, payment failure, duplicate webhook, and revoked product access. SideBy must follow the central state within its documented cache window; no local billing record can grant access.
+5. Verify the billing portal link returns to Cockpit and pricing copy matches the actual enabled plan.
 
 ---
 
@@ -107,7 +116,7 @@ Verify the following parameters before final launch:
 * **SSL/TLS**: HTTPS is enforced globally via HSTS settings inside `vercel.json`.
 * **CORS Policy**: CORS headers are configured for public-facing assets like `sideby-widget.js`.
 * **Rate Limits**: IP-based rate limiting is enabled for the `/api/v1` routes and AI job creation routes.
-* **Webhook Audits**: All `/api/webhooks/*` endpoints require header validation checks (Clerk/Paddle signature validation).
+* **Webhook Audits**: SideBy-owned webhook endpoints validate their signatures. Confirm Dodo lifecycle webhooks terminate only at SnapSolve Core and remove the legacy SideBy webhook subscription.
 * **API Keys**: All API key validations use standard SHA-256 hash comparison. Never log raw API keys.
 
 ---

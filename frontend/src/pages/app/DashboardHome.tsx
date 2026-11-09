@@ -26,6 +26,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { GlowCard } from "@/components/GlowCard";
+import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { captureEvent } from "@/lib/posthog";
 
 type ComparisonHistoryItem = {
@@ -155,19 +156,22 @@ const DashboardHome = () => {
         </div>
         
         {/* Activity Summary */}
-        <div className="flex shrink-0 items-center gap-4 rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur-sm">
-          <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">Total Runs</p>
-            <div className="flex items-center gap-2">
-              <Activity className="h-3.5 w-3.5 text-emerald-400" />
-              {comparisonsLoading ? (
-                <span className="text-xs text-[#fdfbf7]/50">Loading...</span>
-              ) : (
-                <>
-                  <span className="font-serif text-xl text-[#fdfbf7]">{comparisons.length}</span>
-                  <span className="text-xs text-[#fdfbf7]/50">comparisons</span>
-                </>
-              )}
+        <div className="flex shrink-0 flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+          <InstallAppButton />
+          <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur-sm">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">Total Runs</p>
+              <div className="flex items-center gap-2">
+                <Activity className="h-3.5 w-3.5 text-emerald-400" />
+                {comparisonsLoading ? (
+                  <span className="text-xs text-[#fdfbf7]/50">Loading...</span>
+                ) : (
+                  <>
+                    <span className="font-serif text-xl text-[#fdfbf7]">{comparisons.length}</span>
+                    <span className="text-xs text-[#fdfbf7]/50">comparisons</span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -296,18 +300,18 @@ const DashboardHome = () => {
             <div className="grid gap-4 sm:grid-cols-3 max-w-2xl mx-auto">
               <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 text-center">
                 <Scale className="h-5 w-5 text-[#fdfbf7]/30 mx-auto mb-3" />
-                <p className="text-xs font-bold text-[#fdfbf7] mb-1">Unbiased</p>
-                <p className="text-[10px] text-[#fdfbf7]/40">Facts from official docs</p>
+                <p className="text-xs font-bold text-[#fdfbf7] mb-1">How evidence works</p>
+                <p className="text-[10px] leading-relaxed text-[#fdfbf7]/40">Claims are extracted from sources and cited, so you can inspect any line before trusting it.</p>
               </div>
               <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 text-center">
                 <Zap className="h-5 w-5 text-orange-400 mx-auto mb-3" />
-                <p className="text-xs font-bold text-[#fdfbf7] mb-1">Instant</p>
-                <p className="text-[10px] text-[#fdfbf7]/40">Full matrix in 30s</p>
+                <p className="text-xs font-bold text-[#fdfbf7] mb-1">Reading uncertainty</p>
+                <p className="text-[10px] leading-relaxed text-[#fdfbf7]/40">Confidence and evidence gaps are shown, not hidden — a close call stays visibly close.</p>
               </div>
               <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 text-center">
                 <ShieldCheck className="h-5 w-5 text-emerald-400 mx-auto mb-3" />
-                <p className="text-xs font-bold text-[#fdfbf7] mb-1">Source-backed</p>
-                <p className="text-[10px] text-[#fdfbf7]/40">Every claim cited</p>
+                <p className="text-xs font-bold text-[#fdfbf7] mb-1">Your decision, saved</p>
+                <p className="text-[10px] leading-relaxed text-[#fdfbf7]/40">Record your own call alongside the recommendation and reopen the receipt any time.</p>
               </div>
             </div>
 

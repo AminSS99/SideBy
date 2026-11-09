@@ -1,8 +1,9 @@
 import React from "react";
-import { AuthenticateWithRedirectCallback } from "@clerk/clerk-react";
+import { AuthenticateWithRedirectCallback, GoogleOneTap } from "@clerk/clerk-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { envConfig } from "@/config/env";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProjectsProvider } from "@/contexts/ProjectsContext";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
@@ -14,6 +15,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import { RouteMetaUpdater } from "@/components/RouteMetaUpdater";
 import CookieConsent from "@/components/privacy/CookieConsent";
 import { UpdatePrompt } from "@/components/pwa/UpdatePrompt";
+import { BottomNoticeStack } from "@/components/layout/BottomNoticeStack";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
@@ -22,6 +24,7 @@ import Index from "./pages/Index";
 // Lazy-load non-landing pages to reduce initial bundle and memory pressure
 const Compare = lazy(() => import("./pages/Compare"));
 const Pricing = lazy(() => import("./pages/Pricing"));
+const Changelog = lazy(() => import("./pages/Changelog"));
 const Features = lazy(() => import("./pages/Features"));
 const Contact = lazy(() => import("./pages/Contact"));
 const About = lazy(() => import("./pages/About"));
@@ -77,9 +80,10 @@ const queryClient = new QueryClient({
       refetchOnReconnect: "always",
     },
     mutations: {
-      // Retry mutations once for network errors
-      retry: 1,
-      retryDelay: 1000,
+      // Mutations are never retried automatically: replays can duplicate
+      // non-idempotent work. A mutation may opt back in only with a verified
+      // idempotency contract for that endpoint; none exists today.
+      retry: false,
     },
   },
 });
@@ -91,6 +95,10 @@ const LazyFallback = () => (
 );
 
 const App = ({ clerkUnavailable = false }: { clerkUnavailable?: boolean }) => {
+  const showGoogleOneTap = import.meta.env.VITE_ENABLE_GOOGLE_ONE_TAP === "true"
+    && envConfig.hasClerkConfig
+    && !clerkUnavailable;
+
   return (
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -102,14 +110,27 @@ const App = ({ clerkUnavailable = false }: { clerkUnavailable?: boolean }) => {
                 <Sonner />
                 <ScrollToTop />
                 <RouteMetaUpdater />
-                <CookieConsent />
-                <UpdatePrompt />
+                <BottomNoticeStack>
+                  <UpdatePrompt />
+                  <CookieConsent />
+                </BottomNoticeStack>
                   <Suspense fallback={<LazyFallback />}>
                     <Routes>
                     {/* Public marketing pages */}
-                    <Route path="/" element={<Index />} />
+                    <Route
+                      path="/"
+                      element={
+                        <>
+                          {showGoogleOneTap && (
+                            <GoogleOneTap signInForceRedirectUrl="/app" signUpForceRedirectUrl="/app" />
+                          )}
+                          <Index />
+                        </>
+                      }
+                    />
                     <Route path="/pricing" element={<Pricing />} />
                     <Route path="/features" element={<Features />} />
+                    <Route path="/changelog" element={<Changelog />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/about" element={<About />} />
                     <Route path="/blog" element={<Blog />} />

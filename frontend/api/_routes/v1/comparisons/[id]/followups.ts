@@ -29,7 +29,7 @@ export default async function handler(
   }
 
   try {
-    const apiKey = await requireApiKey(request);
+    const apiKey = await requireApiKey(request, response);
     assertApiKeyScope(apiKey, "comparisons:followups");
     if (!apiKey.userId) return sendJson(response, { error: "API key is not linked to a user." }, 403);
     const userId = apiKey.userId;
@@ -47,6 +47,13 @@ export default async function handler(
         : error instanceof Error && "statusCode" in error
           ? (error as Error & { statusCode: number }).statusCode
           : 500;
+    const retryAfter =
+      error instanceof Error && "retryAfter" in error
+        ? (error as Error & { retryAfter: unknown }).retryAfter
+        : undefined;
+    if (typeof retryAfter === "number" && Number.isFinite(retryAfter) && retryAfter > 0) {
+      response.setHeader("Retry-After", String(Math.ceil(retryAfter)));
+    }
     return sendJson(
       response,
       {

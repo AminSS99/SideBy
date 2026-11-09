@@ -4,13 +4,13 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { requireAuth } from "../_lib/auth.js";
 import { canAccessWorkspace, getAccessibleWorkspaces } from "../_lib/db-auth.js";
 import { createOrLinkSnapSolveWorkspace } from "../_lib/snapsolve-core.js";
 import { logger } from "../_lib/log.js";
 import { createDbClient } from "../../src/db/index.js";
-import { projects, users, workspaces } from "../../src/db/schema.js";
+import { memberships, projects, users, workspaces } from "../../src/db/schema.js";
 
 export const config = {
   runtime: "nodejs",
@@ -187,13 +187,25 @@ async function handleWorkspaces(
 
       const slug = `${slugBase}-${Date.now().toString(36)}`;
       const ownerType = body.ownerType || "user";
-      const ownerId = body.ownerId || auth.userId;
+      let ownerId: string;
 
-      if (ownerType === "org" && ownerId !== auth.userId) {
-        const hasAccess = await canAccessWorkspace(db, auth.userId, ownerId);
-        if (!hasAccess) {
+      if (ownerType === "user") {
+        ownerId = auth.userId;
+      } else {
+        const targetOrgId = body.ownerId || auth.orgId;
+        if (!targetOrgId) {
+          return response.status(400).json({ error: "ownerId is required for organization workspaces." });
+        }
+        const [membership] = await db
+          .select({ id: memberships.id })
+          .from(memberships)
+          .where(and(eq(memberships.userId, auth.userId), eq(memberships.organizationId, targetOrgId)))
+          .limit(1);
+
+        if (!membership && auth.orgId !== targetOrgId) {
           return response.status(403).json({ error: "Not authorized to create workspace for this organization." });
         }
+        ownerId = targetOrgId;
       }
 
       const inserted = await db
@@ -268,9 +280,31 @@ async function handleWorkspaces(
     if (request.method === "PATCH") {
       const body = UpdateWorkspaceSchema.parse(request.body || {});
 
-      const hasAccess = await canAccessWorkspace(db, auth.userId, body.workspaceId);
-      if (!hasAccess) {
-        return response.status(403).json({ error: "Not authorized to update this workspace." });
+      const [existingWorkspace] = await db
+        .select()
+        .from(workspaces)
+        .where(eq(workspaces.id, body.workspaceId))
+        .limit(1);
+
+      if (!existingWorkspace) {
+        return response.status(404).json({ error: "Workspace not found." });
+      }
+
+      if (existingWorkspace.ownerType === "user") {
+        if (existingWorkspace.ownerId !== auth.userId) {
+          return response.status(403).json({ error: "Not authorized to update this workspace." });
+        }
+      } else {
+        const [mem] = await db
+          .select({ role: memberships.role })
+          .from(memberships)
+          .where(and(eq(memberships.userId, auth.userId), eq(memberships.organizationId, existingWorkspace.ownerId)))
+          .limit(1);
+        const tokenIsAdminOfThisOrg = auth.orgId === existingWorkspace.ownerId && (auth.orgRole === "admin" || auth.orgRole === "org:admin");
+        const isAdmin = mem?.role === "admin" || mem?.role === "owner" || tokenIsAdminOfThisOrg;
+        if (!isAdmin) {
+          return response.status(403).json({ error: "Only organization admins can update workspace settings." });
+        }
       }
 
       const name = body.name?.trim();

@@ -1,7 +1,5 @@
 import crypto from "crypto";
 import { waitUntil } from "@vercel/functions";
-import { createDbClient } from "../../../src/db/index.js";
-import { users } from "../../../src/db/schema.js";
 import { createComparisonJob, sendJson } from "../../_lib/sideby.js";
 import { logger } from "../../_lib/log.js";
 import { checkRateLimit } from "../../_lib/rate-limit.js";
@@ -113,16 +111,29 @@ export default async function handler(
     });
   }
 
-  // 3. Obtain a fallback user from DB to assign job ownership
-  const db = createDbClient();
-  const [fallbackUser] = await db.select({ id: users.id }).from(users).limit(1);
-  const userId = fallbackUser?.id;
-
+  // 3. Jobs run as one explicitly configured owner. Never fall back to an
+  // arbitrary user: any Slack workspace could otherwise write into that
+  // person's account history and spend their quota.
+  const userId = process.env.SLACK_JOB_OWNER_USER_ID;
   if (!userId) {
     return sendJson(response, {
       response_type: "ephemeral",
-      text: "❌ Server configuration error: No registered users found to run comparisons."
+      text: "❌ The Slack integration is not fully configured."
     });
+  }
+
+  // Slack signs response_url, but only post back to Slack-owned hosts.
+  let safeResponseUrl: string | null = null;
+  try {
+    const parsedResponseUrl = new URL(responseUrl || "");
+    if (parsedResponseUrl.protocol === "https:" && parsedResponseUrl.hostname === "hooks.slack.com") {
+      safeResponseUrl = parsedResponseUrl.toString();
+    }
+  } catch {
+    safeResponseUrl = null;
+  }
+  if (!safeResponseUrl) {
+    return sendJson(response, { response_type: "ephemeral", text: "❌ Invalid Slack response URL." });
   }
 
   // 4. Immediately return a processing status to Slack to bypass the 3s timeout
@@ -212,7 +223,7 @@ export default async function handler(
       });
 
       // Post final results back to Slack
-      await fetch(responseUrl, {
+      await fetch(safeResponseUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -226,12 +237,12 @@ export default async function handler(
       logger.error("Slack background runner failed", undefined, { error: String(err) });
       
       // Post error back to Slack responseUrl
-      await fetch(responseUrl, {
+      await fetch(safeResponseUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           response_type: "ephemeral",
-          text: `❌ *SideBy error:* Failed to complete comparison for \`${query}\`. Reason: ${err instanceof Error ? err.message : String(err)}`
+          text: `❌ *SideBy error:* Failed to complete comparison for \`${query}\`. Please try again later.`
         })
       });
     }

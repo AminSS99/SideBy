@@ -28,7 +28,7 @@ export default async function handler(
   response: VercelResponse,
 ) {
   try {
-    const apiKey = await requireApiKey(request);
+    const apiKey = await requireApiKey(request, response);
     if (!apiKey.userId) {
       return sendJson(response, { error: "API key is not linked to a user." }, 403);
     }

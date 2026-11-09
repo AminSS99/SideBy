@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { useProjects } from "@/contexts/ProjectsContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { KeyboardSpacer } from "@/components/KeyboardSpacer";
 
 interface Message {
   id: string;
@@ -371,6 +372,7 @@ const ChatPage = () => {
                 AI responses can be inaccurate. Verify important facts.
               </p>
             </div>
+            <KeyboardSpacer />
           </div>
         </div>
 

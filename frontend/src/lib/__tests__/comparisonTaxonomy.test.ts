@@ -57,3 +57,31 @@ describe("comparison taxonomy eligibility", () => {
     expect(analyzeComparisonQuery("Sage vs Stripe").status).not.toBe("sensitive");
   });
 });
+
+describe("people and war scope policy", () => {
+  const blocked = [
+    "Ukraine war vs Vietnam war",
+    "World War 1 vs World War 2",
+    "Israel vs Palestine conflict",
+    "Hitler vs Stalin",
+    "Messi vs Ronaldo",
+    "Napoleon vs Alexander the Great",
+    "ISIS vs Al Qaeda",
+    "Nuclear weapons vs conventional weapons",
+    "Elon Musk vs Jeff Bezos",
+  ];
+  const allowed = [
+    "Next.js vs Remix",
+    "Star Wars Battlefront vs Call of Duty",
+    "Warp vs iTerm2",
+    "Total War Warhammer vs Civilization VI",
+    "Modify vs Mercurial",
+    "iPhone vs Pixel",
+  ];
+  it.each(blocked)("blocks %s", (query) => {
+    expect(analyzeComparisonQuery(query).canStart).toBe(false);
+  });
+  it.each(allowed)("allows %s", (query) => {
+    expect(analyzeComparisonQuery(query).canStart).toBe(true);
+  });
+});

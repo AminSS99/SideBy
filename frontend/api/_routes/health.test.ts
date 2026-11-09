@@ -46,4 +46,10 @@ describe("GET /api/health", () => {
 
     expect(result.getStatusCode()).toBe(405);
   });
+
+  it("does not allow public query parameters to generate error-monitoring events", async () => {
+    const result = createResponse();
+    await handler({ method: "GET", query: { sentry_test: "true" } } as unknown as VercelRequest, result.response);
+    expect(result.getStatusCode()).toBe(200);
+  });
 });

@@ -220,6 +220,12 @@ export const comparisons = pgTable(
     searchesUsed: integer("searches_used").default(0),
     freshnessClass: text("freshness_class").default("medium"),
     reuseSourceId: uuid("reuse_source_id"),
+    // Publication authorization, written by server-controlled creation paths
+    // (never by users or the stored JSON): 'public' marks a dedicated public
+    // snapshot generated from entity-pair-only input; 'unknown' fails closed
+    // and is unpublishable. See neon/migrations/020_comparison_publication_scope.sql.
+    inputScope: text("input_scope").default("unknown").notNull(),
+    publicSnapshotSourceId: uuid("public_snapshot_source_id"),
     // Deduplication claim for in-flight jobs: user + workspace + project +
     // canonical intent. Enforced by a partial unique index covering only
     // queued/running rows, so the INSERT itself is the atomic arbiter when a

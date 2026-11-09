@@ -11,6 +11,9 @@ interface ComparisonHeaderProps {
   result: ComparisonData;
   onRefresh: () => void;
   comparisonId?: string | null;
+  isPublic?: boolean;
+  publishReasons?: string[];
+  publishClassification?: string | null;
 }
 
 const SplitTextChars = ({ text, className }: { text: string; className?: string }) => {
@@ -36,10 +39,23 @@ const fallbackSlug = (a: string, b: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "") || "comparison";
 
+const formatUpdatedAt = (value: string) => {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "Update date unavailable";
+  return `Updated ${new Intl.DateTimeFormat("en", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(date)}`;
+};
+
 export const ComparisonHeader = ({
   result,
   onRefresh,
   comparisonId,
+  isPublic = false,
+  publishReasons,
+  publishClassification,
 }: ComparisonHeaderProps) => {
   const container = useRef<HTMLDivElement>(null);
   const [exportOpen, setExportOpen] = useState(false);
@@ -121,10 +137,10 @@ export const ComparisonHeader = ({
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            Fresh {result.updatedAt}
+            {result.provenance === "illustrative" ? "Illustrative sample" : formatUpdatedAt(result.updatedAt)}
           </span>
           <span className="ch-top-item text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
-            {result.sourceCount} verified sources
+            {result.sources.length} {result.provenance === "illustrative" ? "reference" : "verified"} sources
           </span>
           {result.taxonomy && (
             <span className="ch-top-item inline-flex items-center gap-1.5 rounded-sm border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-orange-300">
@@ -150,6 +166,10 @@ export const ComparisonHeader = ({
               entityB={result.entities.b.name}
               slug={shareSlug}
               comparisonId={comparisonId}
+              isPublic={isPublic}
+              eligibilityReasons={publishReasons}
+              eligibilityClassification={publishClassification}
+              result={result}
               className="min-h-11 rounded-xl border border-white/10 bg-white/[0.035] text-white/70 hover:border-orange-300/20 hover:bg-white/[0.06]"
             />
           </div>

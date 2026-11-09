@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { seedTestAuth, validateReadyResponse } from "./fixtures";
+import { mockAppApi, seedTestAuth, validateReadyResponse } from "./fixtures";
 
 test.describe("SideBy Mobile & PWA Specifications", () => {
   test("1. Viewport has viewport-fit=cover and preserves user zoom", async ({ page }) => {
@@ -51,6 +51,7 @@ test.describe("SideBy Mobile & PWA Specifications", () => {
   test("5. Mobile drawer has accessible dialog attributes and closes cleanly", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await seedTestAuth(page);
+
     await page.goto("/app/comparisons");
     await page.waitForLoadState("domcontentloaded");
 
@@ -75,9 +76,19 @@ test.describe("SideBy Mobile & PWA Specifications", () => {
     await expect(drawer).not.toBeVisible();
   });
 
-  test("6. Comparison Composer double-tap submit lock prevents duplicate requests", async ({ page }) => {
+  test("6. Comparison Composer double-tap submit lock prevents duplicate requests", async ({ page, context }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await seedTestAuth(page);
+    await page.addInitScript(() => {
+      if (window.navigator?.serviceWorker) {
+        window.navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            void reg.unregister();
+          }
+        });
+      }
+    });
+    await mockAppApi(page);
 
     // Settle the validation gate deterministically: without this mock the
     // composer validates against the dead dev-proxy backend and the submit
@@ -91,7 +102,7 @@ test.describe("SideBy Mobile & PWA Specifications", () => {
     );
 
     let comparisonPostRequests = 0;
-    await page.route("**/api/comparisons", (route) => {
+    await page.route(/\/api\/comparisons(?:\?.*)?$/, (route) => {
       if (route.request().method() === "POST") {
         comparisonPostRequests++;
         return route.fulfill({
@@ -107,8 +118,27 @@ test.describe("SideBy Mobile & PWA Specifications", () => {
           }),
         });
       }
-      return route.continue();
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ comparisons: [] }),
+      });
     });
+
+    await context.route("**/api/comparisons/comp_mock_double_tap**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "comp_mock_double_tap",
+          status: "running",
+          progress: 10,
+          activeStep: 1,
+          query: "Next.js vs Remix",
+          result: null,
+        }),
+      }),
+    );
 
     await page.goto("/app/comparisons");
     await page.waitForLoadState("domcontentloaded");

@@ -15,6 +15,7 @@ import comparisonsIdManage from "./_routes/comparisons/[id]/manage.js";
 import comparisonsIdNotes from "./_routes/comparisons/[id]/notes.js";
 import comparisonsIdVersions from "./_routes/comparisons/[id]/versions.js";
 import comparisonsIdVisibility from "./_routes/comparisons/[id]/visibility.js";
+import comparisonsIdPublicSnapshot from "./_routes/comparisons/[id]/public-snapshot.js";
 import comparisonsValidate from "./_routes/comparisons/validate.js";
 
 // V1 routes
@@ -48,7 +49,12 @@ import integrationsSlack from "./_routes/integrations/slack.js";
 import jobsDrain from "./_routes/jobs/drain.js";
 import openapiHandler from "./_routes/openapi.js";
 import promptsHandler from "./_routes/prompts.js";
+import pushSubscribe from "./_routes/push/subscribe.js";
+import pushUnsubscribe from "./_routes/push/unsubscribe.js";
+import pushStatus from "./_routes/push/status.js";
+import pushTestSend from "./_routes/push/test-send.js";
 import searchHandler from "./_routes/search.js";
+import webSearchHandler from "./_routes/web-search.js";
 import seoSitemap from "./_routes/seo/sitemap.js";
 import settingsHandler from "./_routes/settings.js";
 import sourceFeedbackHandler from "./_routes/source-feedback.js";
@@ -60,7 +66,10 @@ import workspaceHandler from "./_routes/workspace.js";
 
 export const config = {
   runtime: "nodejs",
-  maxDuration: 120,
+  // This catch-all owns the lifetime of waitUntil research jobs as well as
+  // requests. Match the pipeline's five-minute budget; child route configs
+  // do not override the deployed catch-all function's duration.
+  maxDuration: 300,
   api: {
     bodyParser: {
       sizeLimit: "1mb",
@@ -89,7 +98,6 @@ export default async function handler(
 
     return response.status(500).json({
       error: "Internal Server Error",
-      message: error instanceof Error ? error.message : String(error),
     });
   } finally {
     await flushBetterStackLogs();
@@ -136,6 +144,7 @@ async function routeRequest(
       if (segment2 === "diff") return comparisonsIdDiff(request, response);
       if (segment2 === "manage") return comparisonsIdManage(request, response);
       if (segment2 === "notes") return comparisonsIdNotes(request, response);
+      if (segment2 === "public-snapshot") return comparisonsIdPublicSnapshot(request, response);
       if (segment2 === "versions") return comparisonsIdVersions(request, response);
       if (segment2 === "visibility") return comparisonsIdVisibility(request, response);
       return comparisonsId(request, response);
@@ -233,6 +242,7 @@ async function routeRequest(
     team: teamHandler,
     usage: usageHandler,
     watchlists: watchlistsHandler,
+    "web-search": webSearchHandler,
     "watchlists-run": watchlistsRunHandler,
     workspace: workspaceHandler,
   };
@@ -247,6 +257,21 @@ async function routeRequest(
   }
   if (segment0 === "integrations" && segment1 === "slack") {
     return integrationsSlack(request, response);
+  }
+  // Web Push
+  if (segment0 === "push") {
+    if (segment1 === "subscribe" && segment2 === undefined) {
+      return pushSubscribe(request, response);
+    }
+    if (segment1 === "unsubscribe" && segment2 === undefined) {
+      return pushUnsubscribe(request, response);
+    }
+    if (segment1 === "status" && segment2 === undefined) {
+      return pushStatus(request, response);
+    }
+    if (segment1 === "test" && segment2 === undefined) {
+      return pushTestSend(request, response);
+    }
   }
   if (segment0 === "jobs" && segment1 === "drain") {
     return jobsDrain(request, response);

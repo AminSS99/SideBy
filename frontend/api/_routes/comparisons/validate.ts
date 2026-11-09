@@ -35,7 +35,11 @@ export default async function handler(request: VercelRequest, response: VercelRe
     }
 
     const { query } = BodySchema.parse(request.body || {});
-    const validation = await validateComparisonQuery(query);
+    // Global spend breaker: unauthenticated validation fans out to Tavily +
+    // the LLM, so cap total AI-backed validations per minute across all IPs.
+    const globalCap = Number(process.env.VALIDATION_AI_GLOBAL_PER_MIN || "60");
+    const global = await checkRateLimit("ip", "global", "comparison-validation-ai", globalCap);
+    const validation = await validateComparisonQuery(query, { allowAi: global.allowed });
     return sendJson(response, validation);
   } catch (error) {
     const status = error instanceof z.ZodError ? 400 : 500;

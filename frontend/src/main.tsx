@@ -7,7 +7,6 @@ import {
 } from "@clerk/clerk-react";
 import { BrowserRouter } from "react-router-dom";
 import { envConfig } from "@/config/env";
-import { initSentry } from "@/lib/sentry";
 import { initServiceWorker } from "@/lib/pwa/register";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -21,7 +20,10 @@ ScrollTrigger.config({
   autoRefreshEvents: "visibilitychange,DOMContentLoaded,load"
 });
 
-initSentry();
+// Optional reporting must not block the app shell when its chunk is unavailable offline.
+void import("@/lib/sentry")
+  .then(({ initSentry }) => initSentry())
+  .catch(() => { /* Offline or blocked reporting never prevents rendering. */ });
 initServiceWorker();
 
 const clerkOptions = {

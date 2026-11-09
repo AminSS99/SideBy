@@ -1,45 +1,56 @@
-# SideBy brand, footer, and cookie QA
+**Source visual truth**
 
-- Source visual truth: `/var/folders/8_/k1yb778j725_723whnplrxw80000gn/T/TemporaryItems/NSIRD_screencaptureui_xU3s6v/Screenshot 2026-07-20 at 12.25.14.png`
-- Supporting issue capture: `/var/folders/8_/k1yb778j725_723whnplrxw80000gn/T/TemporaryItems/NSIRD_screencaptureui_2aHclc/Screenshot 2026-07-20 at 12.24.32.png`
-- Desktop implementation: `/tmp/sideby-brand-footer-final.png`
-- Mobile implementation: `/tmp/sideby-brand-mobile-final.png`
-- Mobile cookie dialog: `/tmp/sideby-cookie-dialog-mobile.png`
-- Focused comparison: `/tmp/sideby-footer-reference-vs-final.png`
-- Viewports: desktop 1440 × 1000; mobile 390 × 844
-- State: public landing page; cookie banner, cookie settings dialog, and accepted-cookie footer state
+- Placement/current-state reference: `/var/folders/8_/k1yb778j725_723whnplrxw80000gn/T/TemporaryItems/NSIRD_screencaptureui_Iqqbkn/Screenshot 2026-09-03 at 14.47.26.png`
+- Desired treatment specification: `/Users/aminsobor/.codex/attachments/a7e1436f-550a-423f-9b77-fb4e66166a00/pasted-text.txt` (`GlassButton` recipe)
+- Combined visual comparison: `/Users/aminsobor/Dev/SideBy/audit-screenshots/sign-in-button-comparison.png`
 
-## Full-view comparison evidence
+**Implementation evidence**
 
-The existing SideBy dark palette, serif display typography, spacing rhythm, and CTA treatment remain unchanged. The implementation now uses the supplied SideBy icon in the navigation and footer, with the supplied SnapSolve image in a centered attribution badge. The desktop footer keeps the SideBy identity and legal navigation balanced around a centered attribution row. The mobile landing page has no horizontal overflow, and the cookie banner spans the available width with equal 12 px side margins.
+- Desktop hover state: `/Users/aminsobor/Dev/SideBy/audit-screenshots/sign-in-glass-button-hover.png`
+- Mobile default state: `/Users/aminsobor/Dev/SideBy/audit-screenshots/sign-in-glass-button-mobile.png`
+- Desktop viewport: 1280 × 720 CSS px, implementation capture 1280 × 720 px at 1×.
+- Mobile viewport: 390 × 844 CSS px, implementation capture 390 × 844 px at 1×.
+- Source capture: 2940 × 1912 px with browser chrome. It is used as the unchanged layout/placement baseline rather than a pixel-identical target because the requested change replaces the source button treatment.
+- State: signed-out Clerk sign-in form, Continue control visible; desktop capture is hover state, mobile capture is default state.
 
-## Focused region comparison evidence
+**Full-view comparison evidence**
 
-The combined comparison at `/tmp/sideby-footer-reference-vs-final.png` places the reference footer treatment and the final SideBy footer together. Both use a centered pill-shaped SnapSolve attribution with the correct circular SS mark. SideBy intentionally retains its own dark footer tokens instead of copying the reference site's brown palette. The cookie-settings control is centered 20 px above the attribution and does not overlap it.
+- The comparison image places the supplied page reference and the updated browser-rendered page in one artifact. The form hierarchy, width, placement, copy, and surrounding dark editorial treatment remain intact.
+- The bright rectangular orange-to-pink submit surface has been replaced by the requested rounded glass language: full pill radius, translucent smoke surface, top highlight, inset depth, restrained warm reflection, and lifted hover state.
 
-## Required fidelity surfaces
+**Focused-region evidence**
 
-- Fonts and typography: unchanged from the existing SideBy system; hierarchy, wrapping, weight, and line height remain stable.
-- Spacing and layout rhythm: footer attribution and cookie surfaces are horizontally centered; final desktop gap between cookie control and attribution is 20 px.
-- Colors and visual tokens: existing SideBy dark/orange tokens preserved; reference brown palette intentionally not copied.
-- Image quality and asset fidelity: all visible SideBy marks now load `/sideby.ico` (256 × 256); attribution loads the exact supplied `/snapsolve.png` (1024 × 1024). No generated SVG substitute remains in use.
-- Copy and content: attribution remains “Made with love by SnapSolve” and now links to `https://snapsolve.ink`.
-- Responsiveness: desktop and 390 × 844 mobile states render without horizontal overflow.
-- Accessibility: cookie settings control has an explicit accessible label; settings dialog is centered at viewport coordinates 195 × 422 on mobile.
+- A separate crop was not needed because the submit control is clearly readable in both halves of the combined comparison. Computed desktop dimensions were 400 × 52 CSS px; the mobile capture confirms a full-width 52 px touch target without clipping.
 
-## Comparison history
+**Findings**
 
-1. P1 — false SideBy SVG and false footer mark. Fixed every `/icon.svg` consumer to use `/sideby.ico`, and replaced the footer mark with the supplied SnapSolve PNG.
-2. P1 — footer attribution was edge-aligned and linked back to SideBy. Fixed marketing/legal footers to center the attribution and link to `https://snapsolve.ink`.
-3. P2 — cookie control overlapped the centered footer attribution. Raised the fixed cookie control and verified a 20 px final gap with no overlap.
-4. Post-fix evidence — desktop centers measure 720 px in a 1440 px viewport; mobile banner and dialog centers measure 195 px in a 390 px viewport. Browser console contains no application errors; the only warning is Clerk's expected development-key notice.
+- No actionable P0/P1/P2 visual differences remain within the requested button scope.
+- Fonts and typography: existing 14 px semibold Clerk label is preserved; contrast and text shadow remain legible on glass.
+- Spacing and layout rhythm: form spacing is unchanged; the control remains full-width and gains a consistent 52 px target with pill geometry.
+- Colors and visual tokens: neutral smoke glass and warm orange reflection fit the existing black, copper, and cream palette.
+- Image quality and asset fidelity: no raster, logo, or icon assets were introduced or replaced; the effect is an interactive UI surface.
+- Copy and content: `Continue` and the existing directional affordance are preserved.
+- Interaction/accessibility: hover, active, focus-visible, disabled, and reduced-motion states are defined. The real Clerk submit element remains in use, preserving its form behavior.
 
-## Findings
+**Comparison history**
 
-No actionable P0, P1, or P2 differences remain for the requested branding, footer, and cookie-placement scope.
+- Pass 1: desktop and mobile browser captures found no P0/P1/P2 mismatch in the requested scope, so no corrective visual iteration was required.
 
-## Follow-up polish
+**Verification notes**
 
-No P3 work is required for this scope.
+- TypeScript and targeted ESLint checks passed.
+- Browser console had no application errors; Clerk emitted only its expected development-key warning.
+- The full production script is independently blocked by pre-existing PWA worktree issues: `public/manifest.json` is deleted and `workbox-window` is unresolved.
+
+**Implementation checklist**
+
+- [x] Replace gradient submit styling with glass pill styling.
+- [x] Preserve Clerk behavior and full-width layout.
+- [x] Verify desktop hover and mobile default states.
+- [x] Verify focus, disabled, and reduced-motion CSS states are present.
+
+**Follow-up polish**
+
+- None required for this scoped change.
 
 final result: passed

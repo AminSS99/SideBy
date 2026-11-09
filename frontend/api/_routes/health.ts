@@ -19,10 +19,6 @@ export default async function handler(
     return response.status(405).json({ error: "Method not allowed" });
   }
 
-  if (request.query.sentry_test === "true") {
-    throw new Error("Sentry verification test error: checking integration status");
-  }
-
   return response.status(200).json({
     status: "ok",
     timestamp: new Date().toISOString(),

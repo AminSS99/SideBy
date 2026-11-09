@@ -1,6 +1,7 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../_lib/auth.js";
+import { checkRateLimit } from "../_lib/rate-limit.js";
 import { embedText, toVectorLiteral } from "../_lib/embeddings.js";
 import { sendJson } from "../_lib/sideby.js";
 import { createDbClient } from "../../src/db/index.js";
@@ -47,6 +48,12 @@ export default async function handler(
   try {
     const auth = await requireAuth(request);
     const parsed = SearchQuerySchema.parse(request.query);
+    // Each search embeds the query with a paid provider, so cap it per user.
+    const burst = await checkRateLimit("user", auth.userId, "library-search", 20);
+    if (!burst.allowed) {
+      response.setHeader("Retry-After", String(Math.max(1, Math.ceil((burst.resetAt - Date.now()) / 1000))));
+      return sendJson(response, { error: "Too many searches. Please wait a moment." }, 429);
+    }
     const db = createDbClient();
 
     try {

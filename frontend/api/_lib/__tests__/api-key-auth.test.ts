@@ -77,4 +77,156 @@ describe('api-key-auth', () => {
       }
     });
   });
+
+  describe('requireApiKey', () => {
+    it('throws 401 when no API key is provided, without checking rate limit', async () => {
+      vi.stubEnv('API_KEY_PEPPER', 'test-pepper');
+      const checkRateLimit = vi.fn();
+      vi.doMock('../rate-limit.js', () => ({ checkRateLimit }));
+
+      const { requireApiKey } = await import('../api-key-auth.js');
+
+      const req = { headers: {} } as never;
+      await expect(requireApiKey(req)).rejects.toMatchObject({
+        statusCode: 401,
+        message: 'API key required.',
+      });
+
+      expect(checkRateLimit).not.toHaveBeenCalled();
+    });
+
+    it('returns key info and costs no rate-limit check on valid key', async () => {
+      vi.stubEnv('API_KEY_PEPPER', 'test-pepper');
+      const checkRateLimit = vi.fn();
+      vi.doMock('../rate-limit.js', () => ({ checkRateLimit }));
+
+      const mockRow = {
+        id: 'key_123',
+        userId: 'user_abc',
+        organizationId: 'org_xyz',
+        workspaceId: 'ws_789',
+        scopes: ['comparisons:read'],
+      };
+
+      const mockUpdateWhere = vi.fn().mockResolvedValue([]);
+      const mockUpdateSet = vi.fn().mockReturnValue({ where: mockUpdateWhere });
+      const mockUpdate = vi.fn().mockReturnValue({ set: mockUpdateSet });
+
+      const mockSelectLimit = vi.fn().mockResolvedValue([mockRow]);
+      const mockSelectWhere = vi.fn().mockReturnValue({ limit: mockSelectLimit });
+      const mockSelectFrom = vi.fn().mockReturnValue({ where: mockSelectWhere });
+      const mockSelect = vi.fn().mockReturnValue({ from: mockSelectFrom });
+
+      vi.doMock('../../../src/db/index.js', () => ({
+        createDbClient: () => ({
+          select: mockSelect,
+          update: mockUpdate,
+        }),
+      }));
+
+      const { requireApiKey } = await import('../api-key-auth.js');
+
+      const req = {
+        headers: { authorization: 'Bearer sb_live_valid_key' },
+      } as never;
+
+      const result = await requireApiKey(req);
+      expect(result).toEqual({
+        apiKeyId: 'key_123',
+        userId: 'user_abc',
+        orgId: 'org_xyz',
+        workspaceId: 'ws_789',
+        scopes: ['comparisons:read'],
+      });
+
+      expect(checkRateLimit).not.toHaveBeenCalled();
+      expect(mockUpdate).toHaveBeenCalled();
+    });
+
+    it('calls checkRateLimit on failed lookup and throws 401 when under limit', async () => {
+      vi.stubEnv('API_KEY_PEPPER', 'test-pepper');
+      const checkRateLimit = vi.fn().mockResolvedValue({
+        allowed: true,
+        limit: 30,
+        remaining: 29,
+        resetAt: Date.now() + 60000,
+        window: '1m',
+      });
+      vi.doMock('../rate-limit.js', () => ({ checkRateLimit }));
+
+      const mockSelectLimit = vi.fn().mockResolvedValue([]);
+      const mockSelectWhere = vi.fn().mockReturnValue({ limit: mockSelectLimit });
+      const mockSelectFrom = vi.fn().mockReturnValue({ where: mockSelectWhere });
+      const mockSelect = vi.fn().mockReturnValue({ from: mockSelectFrom });
+
+      vi.doMock('../../../src/db/index.js', () => ({
+        createDbClient: () => ({
+          select: mockSelect,
+        }),
+      }));
+
+      const { requireApiKey } = await import('../api-key-auth.js');
+
+      const req = {
+        headers: {
+          authorization: 'Bearer sb_live_invalid_key',
+          'x-forwarded-for': '198.51.100.42',
+        },
+      } as never;
+
+      await expect(requireApiKey(req)).rejects.toMatchObject({
+        statusCode: 401,
+        message: 'Invalid API key.',
+      });
+
+      expect(checkRateLimit).toHaveBeenCalledWith('ip', '198.51.100.42', 'failed-api-key', 30);
+    });
+
+    it('throws 429 with Retry-After when failed attempts exceed rate limit', async () => {
+      vi.stubEnv('API_KEY_PEPPER', 'test-pepper');
+      const resetAt = Date.now() + 45000;
+      const checkRateLimit = vi.fn().mockResolvedValue({
+        allowed: false,
+        limit: 30,
+        remaining: 0,
+        resetAt,
+        window: '1m',
+      });
+      vi.doMock('../rate-limit.js', () => ({ checkRateLimit }));
+
+      const mockSelectLimit = vi.fn().mockResolvedValue([]);
+      const mockSelectWhere = vi.fn().mockReturnValue({ limit: mockSelectLimit });
+      const mockSelectFrom = vi.fn().mockReturnValue({ where: mockSelectWhere });
+      const mockSelect = vi.fn().mockReturnValue({ from: mockSelectFrom });
+
+      vi.doMock('../../../src/db/index.js', () => ({
+        createDbClient: () => ({
+          select: mockSelect,
+        }),
+      }));
+
+      const { requireApiKey } = await import('../api-key-auth.js');
+
+      const headers: Record<string, string> = {};
+      const res = {
+        setHeader: vi.fn((k: string, v: string) => { headers[k] = v; }),
+      };
+
+      const req = {
+        headers: {
+          authorization: 'Bearer sb_live_invalid_key',
+          'x-forwarded-for': '198.51.100.42',
+        },
+      } as never;
+
+      await expect(requireApiKey(req, res as never)).rejects.toMatchObject({
+        statusCode: 429,
+        code: 'RATE_LIMITED',
+        message: 'Too many invalid API key attempts. Please slow down.',
+      });
+
+      expect(res.setHeader).toHaveBeenCalledWith('Retry-After', expect.any(String));
+      expect(Number(headers['Retry-After'])).toBeGreaterThan(0);
+    });
+  });
 });

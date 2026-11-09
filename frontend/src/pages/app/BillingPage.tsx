@@ -1,4 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
+import { KeyboardSpacer } from "@/components/KeyboardSpacer";
+
 import { AlertCircle, CheckCircle2, Zap, GitCompareArrows, MessageSquare, RefreshCw, Download, ExternalLink } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -131,6 +133,8 @@ const BillingPage = () => {
         </h1>
         <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[#fdfbf7]/60">
           SideBy uses the same Flow, Pulse, Core, or Orbit subscription as the rest of your SnapSolve workspace.
+          Plans and payment are managed centrally in SnapSolve — SideBy reads your entitlement and never grants
+          paid access on its own.
         </p>
       </div>
 
@@ -159,8 +163,19 @@ const BillingPage = () => {
                 ))}
               </div>
             ) : error ? (
-              <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-400">
-                {error}
+              <div role="alert" className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200/90">
+                <p className="font-semibold">Plan status unavailable</p>
+                <p className="mt-1 text-amber-200/70">
+                  We couldn't confirm your SnapSolve entitlement, so no plan level is shown and nothing was
+                  upgraded or downgraded. The rest of SideBy keeps working.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void loadUsage()}
+                  className="mt-3 inline-flex min-h-10 items-center rounded-sm border border-amber-400/30 px-3.5 text-[10px] font-bold uppercase tracking-widest text-amber-200 transition-colors hover:bg-amber-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                >
+                  Retry
+                </button>
               </div>
             ) : usage ? (
               <div className="space-y-4">
@@ -168,10 +183,25 @@ const BillingPage = () => {
                   const data = usage.usage[item.key];
                   if (!data) return null;
 
+                  const fallbackLimits: Record<string, number | undefined> = {
+                    comparison: usage.limits?.comparisonsPerDay,
+                    followUp: usage.limits?.followUpsPerDay,
+                    refresh: usage.limits?.refreshesPerDay,
+                    export: usage.limits?.exportsPerDay,
+                  };
                   const isUnlimited = usage.plan !== "free";
-                  const limitVal = isUnlimited ? "Unlimited" : data.limit;
-                  const pct = isUnlimited ? 0 : Math.min(100, (data.used / data.limit) * 100);
-                  const isNearLimit = !isUnlimited && pct >= 80;
+                  const resolvedLimit = data.limit ?? fallbackLimits[item.key];
+                  const limitVal = isUnlimited
+                    ? "Unlimited"
+                    : typeof resolvedLimit === "number" && Number.isFinite(resolvedLimit)
+                      ? resolvedLimit
+                      : "—";
+                  const numericLimit =
+                    typeof resolvedLimit === "number" && Number.isFinite(resolvedLimit) && resolvedLimit > 0
+                      ? resolvedLimit
+                      : null;
+                  const pct = numericLimit ? Math.min(100, (data.used / numericLimit) * 100) : 0;
+                  const isNearLimit = !isUnlimited && numericLimit !== null && pct >= 80;
                   const isAtLimit = !isUnlimited && data.remaining === 0;
 
                   return (
@@ -316,6 +346,7 @@ const BillingPage = () => {
           Made by SnapSolve Ink
         </a>
       </div>
+  <KeyboardSpacer />
     </div>
   );
 };

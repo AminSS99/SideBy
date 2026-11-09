@@ -5,6 +5,7 @@ import { useGSAP } from "@gsap/react";
 import { Copy, Check } from "lucide-react";
 import type { ComparisonFact, Entity } from "./types";
 import { copyText } from "@/lib/clipboard";
+import { safeHref } from "@/lib/safe-url";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -117,7 +118,7 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
       <div className="relative z-10 flex flex-wrap gap-2 pt-2">
         {fact.sourceUrl ? (
           <a
-            href={fact.sourceUrl}
+            href={safeHref(fact.sourceUrl)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 hover:text-orange-400 hover:border-orange-500/30 transition-colors"

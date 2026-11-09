@@ -5,6 +5,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { panelClass } from "./constants";
 import type { ComparisonSource } from "./types";
+import { safeHref } from "@/lib/safe-url";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -74,7 +75,7 @@ export const SourcesPanel = ({ sources }: { sources: ComparisonSource[] }) => {
           return (
             <li key={`${source.url}-${source.title}`} className="sp-item">
               <a
-                href={source.url}
+                href={safeHref(source.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group flex min-h-24 flex-col gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.025] p-4 transition-all hover:border-orange-500/25 hover:bg-orange-500/[0.035]"
@@ -99,6 +100,11 @@ export const SourcesPanel = ({ sources }: { sources: ComparisonSource[] }) => {
                   {source.confidence !== undefined && (
                     <span className="ml-auto text-[9px] text-[#fdfbf7]/30 uppercase tracking-widest">
                       {Math.round((source.confidence || 0) * 100)}% confidence
+                    </span>
+                  )}
+                  {source.fetchedAt && Number.isFinite(new Date(source.fetchedAt).getTime()) && (
+                    <span className="text-[9px] text-[#fdfbf7]/30 uppercase tracking-widest">
+                      Retrieved {new Date(source.fetchedAt).toLocaleDateString()}
                     </span>
                   )}
                 </div>

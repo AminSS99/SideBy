@@ -48,11 +48,17 @@ export default async function handler(
         : error instanceof Error && "statusCode" in error
         ? (error as Error & { statusCode: number }).statusCode
         : 500;
+    const reasons =
+      error instanceof Error && "reasons" in error
+        ? (error as Error & { reasons?: unknown }).reasons
+        : undefined;
     return sendJson(
       response,
-      { error: error instanceof z.ZodError
-        ? error.errors[0]?.message || "Invalid request body."
-        : error instanceof Error ? error.message : "Unable to update visibility."
+      {
+        error: error instanceof z.ZodError
+          ? error.errors[0]?.message || "Invalid request body."
+          : error instanceof Error ? error.message : "Unable to update visibility.",
+        ...(Array.isArray(reasons) && reasons.length > 0 ? { reasons } : {}),
       },
       status,
     );

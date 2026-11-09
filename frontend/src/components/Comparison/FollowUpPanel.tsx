@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Send, Sparkles, Bot, User, Loader2, ArrowRight, AlertCircle } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { toast } from "sonner";
+import { KeyboardSpacer } from "@/components/KeyboardSpacer";
 import type { FollowUpEvidence } from "./types";
+import { safeHref } from "@/lib/safe-url";
 
 interface Message {
   id: string;
@@ -32,8 +35,29 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Synchronous duplicate lock: state alone can't stop a fast double submit.
+  const typingRef = useRef(false);
+
+  // Remaining allowance comes from the live usage contract (shared cache),
+  // never a hardcoded plan number. Failure keeps the generic allowance note.
+  const quotaQuery = useQuery({
+    queryKey: ["usage-followup"],
+    queryFn: async () => {
+      const res = await apiFetch(buildApiUrl("/api/usage"));
+      if (!res.ok) return null;
+      const data = (await res.json()) as {
+        usage?: { followUp?: { remaining?: number; limit?: number } };
+      };
+      const followUp = data.usage?.followUp;
+      return typeof followUp?.remaining === "number" && typeof followUp?.limit === "number"
+        ? { remaining: followUp.remaining, limit: followUp.limit }
+        : null;
+    },
+  });
+  const quota = quotaQuery.data ?? null;
 
   useGSAP(() => {
     const tl = gsap.timeline();
@@ -51,7 +75,8 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
   }, [messages, isTyping]);
 
   const handleAsk = async (question: string) => {
-    if (!question.trim() || isTyping) return;
+    if (!question.trim() || typingRef.current) return;
+    typingRef.current = true;
     setError(null);
 
     const userMessage: Message = {
@@ -71,22 +96,36 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
         body: JSON.stringify({ action: "follow-up", question }),
       });
 
-      const data = await res.json() as {
+      const data: unknown = await res.json();
+      if (
+        typeof data !== "object" ||
+        data === null ||
+        typeof (data as Record<string, unknown>).answer !== "string" ||
+        ((data as Record<string, unknown>).answer as string).length === 0
+      ) {
+        throw new Error("The follow-up came back in an unexpected shape. Please try again.");
+      }
+      const answer = data as {
         answer: string;
-        citations?: string[];
-        confidence?: number;
-        type?: "grounded" | "inference" | "insufficient";
-        evidence?: FollowUpEvidence[];
+        citations?: unknown;
+        confidence?: unknown;
+        type?: unknown;
+        evidence?: unknown;
       };
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: data.answer,
-        citations: data.citations,
-        confidence: data.confidence,
-        type: data.type,
-        evidence: data.evidence,
+        content: answer.answer,
+        citations: Array.isArray(answer.citations)
+          ? answer.citations.filter((item): item is string => typeof item === "string")
+          : undefined,
+        confidence: typeof answer.confidence === "number" ? answer.confidence : undefined,
+        type:
+          answer.type === "grounded" || answer.type === "inference" || answer.type === "insufficient"
+            ? answer.type
+            : undefined,
+        evidence: Array.isArray(answer.evidence) ? (answer.evidence as FollowUpEvidence[]) : undefined,
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
@@ -94,6 +133,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
       setError(msg);
       toast.error("Follow-up failed", { description: msg });
     } finally {
+      typingRef.current = false;
       setIsTyping(false);
     }
   };
@@ -217,7 +257,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
                             </p>
                             {item.sourceUrl && (
                               <a
-                                href={item.sourceUrl}
+                                href={safeHref(item.sourceUrl)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="mt-2 inline-flex text-[10px] uppercase tracking-widest text-orange-300/70 hover:text-orange-300"
@@ -259,6 +299,8 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
         </div>
       )}
 
+      <KeyboardSpacer />
+
       <form onSubmit={handleSubmit} className="fu-input relative">
         <div className="flex items-end gap-3 rounded-sm border border-[#333] bg-[#0c0b0a] p-2 transition-colors focus-within:border-orange-500/50 focus-within:ring-1 focus-within:ring-orange-500/50">
           <textarea
@@ -285,6 +327,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
         </div>
         <p className="mt-3 text-center text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
           AI responses are grounded in comparison facts. Cross-reference with official documentation.
+          {quota ? ` ${quota.remaining} of ${quota.limit} daily follow-ups left.` : ""}
         </p>
       </form>
     </div>

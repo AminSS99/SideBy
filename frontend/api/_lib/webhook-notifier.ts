@@ -3,6 +3,7 @@ import { and, eq, isNull, or } from "drizzle-orm";
 import { webhookSubscriptions, comparisons } from "../../src/db/schema.js";
 import { createDbClient } from "../../src/db/index.js";
 import { logger } from "./log.js";
+import { deliverWebhook } from "./webhook-delivery.js";
 
 export function signPayload(payloadString: string, secret: string): string {
   const timestamp = Math.floor(Date.now() / 1000);
@@ -109,20 +110,12 @@ export async function triggerWebhooks(
 
       try {
         logger.info("Dispatching webhook", { url, eventType, comparisonId });
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-SideBy-Signature": signature,
-            "User-Agent": "SideBy-Webhook/1.0",
-          },
-          body: payloadString,
-        });
+        const status = await deliverWebhook(url, payloadString, signature);
 
-        if (!res.ok) {
+        if (status < 200 || status >= 300) {
           logger.warn("Webhook endpoint returned error status", {
             url,
-            status: res.status,
+            status,
             comparisonId,
           });
         } else {

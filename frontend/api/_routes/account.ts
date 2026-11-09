@@ -29,6 +29,29 @@ const DeleteSchema = z.object({
   confirm: z.literal("DELETE"),
 });
 
+const TEN_MINUTES_IN_SECONDS = 10 * 60;
+
+async function deleteClerkUser(userId: string) {
+  const secret = process.env.CLERK_SECRET_KEY;
+  if (!secret) {
+    throw Object.assign(new Error("Clerk secret key is required."), { statusCode: 503 });
+  }
+
+  const response = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${secret}`,
+    },
+  });
+
+  if (!response.ok && response.status !== 404) {
+    throw Object.assign(
+      new Error(`Clerk user deletion failed: ${response.status} ${await response.text()}`),
+      { statusCode: 502 },
+    );
+  }
+}
+
 export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
@@ -74,8 +97,19 @@ export default async function handler(
 
     if (request.method === "DELETE") {
       DeleteSchema.parse(request.body || {});
+
+      const now = Math.floor(Date.now() / 1000);
+      if (!auth.iat || now - auth.iat > TEN_MINUTES_IN_SECONDS || auth.iat > now + 60) {
+        return sendJson(
+          response,
+          { error: "Recent authentication required to delete account. Please sign in again." },
+          403,
+        );
+      }
+
       await db.delete(workspaces).where(eq(workspaces.ownerId, auth.userId));
       await db.delete(users).where(eq(users.id, auth.userId));
+      await deleteClerkUser(auth.userId);
       return sendJson(response, { success: true });
     }
 
