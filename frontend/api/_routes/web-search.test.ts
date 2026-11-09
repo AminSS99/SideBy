@@ -4,6 +4,8 @@ const requireAuth = vi.fn();
 const checkRouteLimit = vi.fn();
 const searchTavily = vi.fn();
 const refundUsage = vi.fn();
+const checkGlobalDailyBudget = vi.fn();
+const getGlobalWebSearchesDailyCap = vi.fn(() => 1000);
 
 vi.mock("../_lib/auth.js", () => ({ requireAuth }));
 vi.mock("../_lib/redis.js", () => ({ assertRedisAvailable: vi.fn(async () => undefined) }));
@@ -11,6 +13,8 @@ vi.mock("../_lib/rate-limit.js", () => ({
   checkRouteLimit,
   formatLimitError: () => "Daily limit reached.",
   refundUsage,
+  checkGlobalDailyBudget,
+  getGlobalWebSearchesDailyCap,
 }));
 vi.mock("../_lib/search.js", () => ({ searchTavily }));
 
@@ -39,6 +43,8 @@ describe("POST /api/web-search", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireAuth.mockResolvedValue({ userId: "user_1", orgId: null });
+    checkGlobalDailyBudget.mockResolvedValue({ allowed: true, resetAt: Date.now() + 86400000 });
+    getGlobalWebSearchesDailyCap.mockReturnValue(1000);
   });
 
   it("rejects anonymous callers before touching quota or providers", async () => {
@@ -57,7 +63,23 @@ describe("POST /api/web-search", () => {
     expect(searchTavily).not.toHaveBeenCalled();
   });
 
-  it("returns trimmed http(s) results and the remaining quota", async () => {
+  it("blocks at cap with 503 + Retry-After, refunds user quota, and skips provider call", async () => {
+    checkRouteLimit.mockResolvedValue({ allowed: true, limit: 2, remaining: 1, resetAt: Date.now() + 5000, window: "daily" });
+    const resetAt = Date.now() + 3600 * 1000;
+    checkGlobalDailyBudget.mockResolvedValue({ allowed: false, resetAt });
+
+    const res = await call({ query: "neon pricing" });
+    expect(res.statusCode).toBe(503);
+    expect(Number(res.headers["Retry-After"])).toBeGreaterThan(0);
+    expect(res.body).toEqual({
+      error: "SideBy is at capacity right now. Please try again later.",
+      code: "AT_CAPACITY",
+    });
+    expect(refundUsage).toHaveBeenCalledWith("user", "user_1", "webSearch");
+    expect(searchTavily).not.toHaveBeenCalled();
+  });
+
+  it("returns trimmed http(s) results and the remaining quota when under cap", async () => {
     checkRouteLimit.mockResolvedValue({ allowed: true, limit: 2, remaining: 1, resetAt: Date.now() + 5000, window: "daily" });
     searchTavily.mockResolvedValue([
       { title: "Neon pricing", url: "https://neon.tech/pricing", content: "x".repeat(900), score: 1 },

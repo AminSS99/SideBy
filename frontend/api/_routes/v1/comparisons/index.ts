@@ -5,7 +5,8 @@ import { createComparisonJob, listComparisonHistory, sendJobError, sendJson } fr
 import { assertNoLikelySecrets } from "../../../_lib/secret-scan.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-import { withApiKeyRateLimit } from "../../../_lib/route-guard.js";
+import { sendAtCapacityResponse, withApiKeyRateLimit } from "../../../_lib/route-guard.js";
+import { checkGlobalDailyBudget, getGlobalComparisonsDailyCap, refundUsage } from "../../../_lib/rate-limit.js";
 
 export const config = {
   runtime: "nodejs",
@@ -46,6 +47,16 @@ export default async function handler(
       return withApiKeyRateLimit(request, response, "comparison", apiKey, async () => {
         const body = CreateBodySchema.parse(request.body || {});
         assertNoLikelySecrets(body.query);
+
+        const globalCap = getGlobalComparisonsDailyCap();
+        const globalBudget = await checkGlobalDailyBudget("comparisons", globalCap);
+        if (!globalBudget.allowed) {
+          if (userId) {
+            await refundUsage("user", userId, "comparison");
+          }
+          return sendAtCapacityResponse(response, globalBudget.resetAt);
+        }
+
         const job = await createComparisonJob({
           query: body.query,
           userId,

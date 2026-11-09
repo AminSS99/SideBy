@@ -4,7 +4,8 @@
  */
 import { createComparisonJob, listComparisonHistory, sendJobError, sendJson } from "../../_lib/sideby.js";
 import { requireAuth } from "../../_lib/auth.js";
-import { withRateLimit } from "../../_lib/route-guard.js";
+import { sendAtCapacityResponse, withRateLimit } from "../../_lib/route-guard.js";
+import { checkGlobalDailyBudget, getGlobalComparisonsDailyCap, refundUsage } from "../../_lib/rate-limit.js";
 import { captureServerEvent } from "../../_lib/analytics.js";
 import {
   SUPPORTED_COMPARISON_CATEGORIES,
@@ -138,6 +139,13 @@ export default async function handler(
       }
 
       return await withRateLimit(request, response, "comparison", async () => {
+        const globalCap = getGlobalComparisonsDailyCap();
+        const globalBudget = await checkGlobalDailyBudget("comparisons", globalCap);
+        if (!globalBudget.allowed) {
+          await refundUsage("user", auth.userId, "comparison");
+          return sendAtCapacityResponse(response, globalBudget.resetAt);
+        }
+
         const result = await createComparisonJob({
           query,
           userId: auth.userId,

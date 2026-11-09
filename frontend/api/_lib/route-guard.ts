@@ -87,3 +87,22 @@ export async function withApiKeyRateLimit(
   return handler();
 }
 
+export const AT_CAPACITY_MESSAGE = "SideBy is at capacity right now. Please try again later.";
+export const AT_CAPACITY_CODE = "AT_CAPACITY";
+
+export function sendAtCapacityResponse(
+  response: VercelResponse,
+  resetAt: number,
+): unknown {
+  const retryAfter = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000));
+  response.setHeader("Retry-After", String(retryAfter));
+  return sendJson(
+    response,
+    {
+      error: AT_CAPACITY_MESSAGE,
+      code: AT_CAPACITY_CODE,
+    },
+    503,
+  );
+}
+

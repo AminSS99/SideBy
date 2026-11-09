@@ -7,10 +7,17 @@ import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { requireAuth } from "../_lib/auth.js";
 import { assertRedisAvailable } from "../_lib/redis.js";
-import { checkRouteLimit, formatLimitError, refundUsage } from "../_lib/rate-limit.js";
+import {
+  checkGlobalDailyBudget,
+  checkRouteLimit,
+  formatLimitError,
+  getGlobalWebSearchesDailyCap,
+  refundUsage,
+} from "../_lib/rate-limit.js";
 import { searchTavily } from "../_lib/search.js";
 import { logger } from "../_lib/log.js";
 import { sendJson } from "../_lib/sideby.js";
+import { sendAtCapacityResponse } from "../_lib/route-guard.js";
 
 export const config = {
   runtime: "nodejs",
@@ -47,6 +54,13 @@ export default async function handler(request: VercelRequest, response: VercelRe
       response.setHeader("Retry-After", String(Math.max(1, Math.ceil((limit.resetAt - Date.now()) / 1000))));
       response.setHeader("X-RateLimit-Remaining", "0");
       return sendJson(response, { error: formatLimitError(limit), code: "RATE_LIMITED", limit: limit.limit, remaining: 0 }, 429);
+    }
+
+    const globalCap = getGlobalWebSearchesDailyCap();
+    const globalBudget = await checkGlobalDailyBudget("web-searches", globalCap);
+    if (!globalBudget.allowed) {
+      await refundUsage("user", auth.userId, "webSearch");
+      return sendAtCapacityResponse(response, globalBudget.resetAt);
     }
 
     const unlimited = limit.limit >= Number.MAX_SAFE_INTEGER;

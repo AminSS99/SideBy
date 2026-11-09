@@ -17,9 +17,17 @@ if (runtimeStore === "none") {
 
 // ─── Free Plan Limits (env-overridable) ─────────────────────────────────────
 
-function configuredQuota(name: string, fallback: number) {
+export function configuredQuota(name: string, fallback: number): number {
   const value = Number(process.env[name] ?? fallback);
   return Number.isSafeInteger(value) && value >= 0 ? value : fallback;
+}
+
+export function getGlobalComparisonsDailyCap(): number {
+  return configuredQuota("GLOBAL_COMPARISONS_PER_DAY", 1500);
+}
+
+export function getGlobalWebSearchesDailyCap(): number {
+  return configuredQuota("GLOBAL_WEB_SEARCHES_PER_DAY", 1000);
 }
 
 const FREE_LIMITS = {
@@ -323,4 +331,45 @@ export function formatLimitError(result: RateLimitResult): string {
     return `Daily limit reached (${result.limit}/${result.limit}). Resets in ${hours}h (${resetDate.toLocaleTimeString()}).`;
   }
   return "";
+}
+
+// ─── Global Circuit Breakers (per UTC day spend bounds) ─────────────────────
+
+export interface GlobalDailyBudgetResult {
+  allowed: boolean;
+  resetAt: number;
+}
+
+export async function checkGlobalDailyBudget(
+  name: string,
+  cap: number,
+): Promise<GlobalDailyBudgetResult> {
+  const tomorrow = new Date();
+  tomorrow.setUTCHours(24, 0, 0, 0);
+  const resetAt = tomorrow.getTime();
+
+  if (cap <= 0) {
+    logger.warn("Global daily budget exhausted (cap <= 0)", { name, cap });
+    return { allowed: false, resetAt };
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const key = `usage:global:${name}:${today}`;
+  const ttl = Math.max(1, getSecondsUntilMidnightUTC());
+
+  try {
+    const current = await redisIncrement(key, 1, ttl);
+    if (current > cap) {
+      logger.warn("Global daily budget exceeded", { name, current, cap });
+      return { allowed: false, resetAt };
+    }
+    return { allowed: true, resetAt };
+  } catch (error) {
+    logger.warn("Global daily budget check failed open", {
+      name,
+      cap,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { allowed: true, resetAt };
+  }
 }

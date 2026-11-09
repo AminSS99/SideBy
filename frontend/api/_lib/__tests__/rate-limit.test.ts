@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ counts: new Map<string, number>(), plan: "free" }));
+const state = vi.hoisted(() => ({ counts: new Map<string, number>(), plan: "free", throwOnIncr: false }));
 vi.mock("../redis.js", () => ({
   getRuntimeStoreKind: () => "redis",
   redisGet: async (key: string) => state.counts.get(key) ?? null,
   redisIncrement: async (key: string, amount = 1) => {
+    if (state.throwOnIncr) {
+      throw new Error("Redis connection timed out");
+    }
     const next = (state.counts.get(key) ?? 0) + amount;
     state.counts.set(key, next);
     return next;
@@ -15,10 +18,19 @@ vi.mock("../subscription.js", () => ({
 }));
 vi.mock("../log.js", () => ({ logger: { warn: vi.fn() } }));
 
-import { checkAndRecordUsage, checkRateLimit, checkRouteLimit, getUsageStatus } from "../rate-limit.js";
+import {
+  checkAndRecordUsage,
+  checkGlobalDailyBudget,
+  checkRateLimit,
+  checkRouteLimit,
+  getGlobalComparisonsDailyCap,
+  getGlobalWebSearchesDailyCap,
+  getUsageStatus,
+  refundUsage,
+} from "../rate-limit.js";
 
 describe("request admission limits", () => {
-  beforeEach(() => { state.counts.clear(); state.plan = "free"; });
+  beforeEach(() => { state.counts.clear(); state.plan = "free"; state.throwOnIncr = false; });
 
   it.each([["refresh", 3], ["chat", 50]] as const)("enforces the %s quota", async (action, limit) => {
     for (let i = 0; i < limit; i++) {
@@ -64,5 +76,63 @@ describe("request admission limits", () => {
       for (let i = 0; i < 5; i++) await limiter.checkAndRecordUsage("user", "config-user", "comparison");
       expect(await limiter.checkAndRecordUsage("user", "config-user", "comparison")).toMatchObject({ allowed: false, limit: 5 });
     } finally { vi.unstubAllEnvs(); }
+  });
+
+  describe("checkGlobalDailyBudget", () => {
+    it("allows requests under the global cap and blocks once the cap is exceeded", async () => {
+      const cap = 3;
+      for (let i = 0; i < cap; i++) {
+        const result = await checkGlobalDailyBudget("test-budget", cap);
+        expect(result.allowed).toBe(true);
+        expect(result.resetAt).toBeGreaterThan(Date.now());
+      }
+
+      // Next request exceeds cap
+      const blocked = await checkGlobalDailyBudget("test-budget", cap);
+      expect(blocked.allowed).toBe(false);
+      expect(blocked.resetAt).toBeGreaterThan(Date.now());
+    });
+
+    it("blocks immediately if cap is zero or negative", async () => {
+      const zero = await checkGlobalDailyBudget("zero-cap", 0);
+      expect(zero.allowed).toBe(false);
+      expect(zero.resetAt).toBeGreaterThan(Date.now());
+
+      const negative = await checkGlobalDailyBudget("neg-cap", -10);
+      expect(negative.allowed).toBe(false);
+      expect(negative.resetAt).toBeGreaterThan(Date.now());
+    });
+
+    it("fails open (allowed: true) and logs a warning when the counter store throws", async () => {
+      state.throwOnIncr = true;
+      const result = await checkGlobalDailyBudget("failing-store", 100);
+      expect(result.allowed).toBe(true);
+      expect(result.resetAt).toBeGreaterThan(Date.now());
+    });
+
+    it("defaults to 1500 for comparisons and 1000 for web searches, respecting env overrides", () => {
+      expect(getGlobalComparisonsDailyCap()).toBe(1500);
+      expect(getGlobalWebSearchesDailyCap()).toBe(1000);
+
+      vi.stubEnv("GLOBAL_COMPARISONS_PER_DAY", "2500");
+      vi.stubEnv("GLOBAL_WEB_SEARCHES_PER_DAY", "500");
+      try {
+        expect(getGlobalComparisonsDailyCap()).toBe(2500);
+        expect(getGlobalWebSearchesDailyCap()).toBe(500);
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
+
+    it("refunds reserved user quota when global breaker rejects", async () => {
+      // User reserves 1 daily slot
+      const initial = await checkAndRecordUsage("user", "u-refund-test", "comparison");
+      expect(initial.allowed).toBe(true);
+      expect((await getUsageStatus("user", "u-refund-test")).comparison.used).toBe(1);
+
+      // Global breaker blocks and refunds
+      await refundUsage("user", "u-refund-test", "comparison");
+      expect((await getUsageStatus("user", "u-refund-test")).comparison.used).toBe(0);
+    });
   });
 });
