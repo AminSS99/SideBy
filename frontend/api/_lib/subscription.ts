@@ -10,6 +10,7 @@ export type SubscriptionSource =
   | "snapsolve_workspace"
   | "local_org"
   | "local_subscription"
+  | "comped_override"
   | "free_fallback";
 
 export type SubscriptionFeature =
@@ -260,6 +261,28 @@ async function resolveLocalState(userId: string, orgId: string | null): Promise<
   return buildState({ plan: "free", source: "free_fallback", status: "unknown" });
 }
 
+/**
+ * Operator-granted top tier for specific accounts (e.g. the owner's tester
+ * account). The allow-list lives only in the server environment variable
+ * SIDEBY_COMPED_BUSINESS_USER_IDS (comma-separated Clerk user ids, never in
+ * the repository) and matches the verified Clerk `sub` exactly: no emails, no
+ * patterns, no client-supplied values. Malformed entries are ignored.
+ */
+const CLERK_USER_ID_PATTERN = /^user_[A-Za-z0-9]{20,40}$/;
+const MAX_COMPED_USERS = 5;
+
+export function isCompedBusinessUser(userId: string | null | undefined): boolean {
+  if (!userId || !CLERK_USER_ID_PATTERN.test(userId)) return false;
+  const raw = process.env.SIDEBY_COMPED_BUSINESS_USER_IDS;
+  if (!raw) return false;
+  const allowed = raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => CLERK_USER_ID_PATTERN.test(entry))
+    .slice(0, MAX_COMPED_USERS);
+  return allowed.includes(userId);
+}
+
 export async function resolveSubscriptionState(args: {
   userId: string | null;
   orgId?: string | null;
@@ -267,6 +290,10 @@ export async function resolveSubscriptionState(args: {
 }): Promise<SubscriptionState> {
   if (!args.userId) {
     return buildState({ plan: "free", source: "free_fallback", status: "unknown" });
+  }
+
+  if (isCompedBusinessUser(args.userId)) {
+    return buildState({ plan: "business", source: "comped_override", status: "active" });
   }
 
   const email = await getUserEmail(args.userId);
