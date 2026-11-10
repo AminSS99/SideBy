@@ -386,7 +386,7 @@ const ComparisonDetailPage = () => {
           </div>
         )}
         {/* Tab Selector on Mobile */}
-        <div role="tablist" aria-label="Comparison result sections" className="sticky top-[72px] z-30 -mx-4 flex items-center gap-1 overflow-x-auto border-y border-white/[0.07] bg-[#0b0a09]/90 px-4 py-2.5 shadow-[0_12px_30px_rgba(0,0,0,.25)] backdrop-blur-2xl no-scrollbar lg:hidden">
+        <div role="tablist" aria-label="Comparison result sections" className="sticky top-[calc(72px+env(safe-area-inset-top,0px))] z-30 -mx-4 flex items-center gap-1 overflow-x-auto border-y border-white/[0.07] bg-[#0b0a09]/90 px-4 py-2.5 shadow-[0_12px_30px_rgba(0,0,0,.25)] backdrop-blur-2xl no-scrollbar lg:hidden">
           {[
             { id: "overview", label: "Overview" },
             { id: "intelligence", label: "Intelligence Matrix" },

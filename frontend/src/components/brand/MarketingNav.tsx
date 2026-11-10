@@ -15,7 +15,7 @@ export const MarketingNav = () => {
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#050403]/75 pt-[env(safe-area-inset-top,0px)] backdrop-blur-2xl">
-        <div className="mx-auto flex h-[4.75rem] w-full max-w-7xl items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex h-16 sm:h-[4.75rem] w-full max-w-7xl items-center justify-between px-4 sm:px-6">
           <Link
             to="/"
             aria-label="SideBy home"

@@ -188,7 +188,7 @@ export const ComparisonHeader = ({
       </div>
 
       <div className="mb-7 overflow-hidden py-2 perspective-1000 sm:mb-10 sm:py-4">
-        <h2 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-serif text-[clamp(2.35rem,12vw,5rem)] leading-[0.95] tracking-[-0.045em] text-[#fffaf1] sm:gap-x-5">
+        <h2 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-serif text-[clamp(2.15rem,10vw,5rem)] leading-[1.04] tracking-[-0.04em] text-[#fffaf1] sm:leading-[0.95] sm:tracking-[-0.045em] sm:gap-x-5">
           <SplitTextChars 
             text={result.entities.a.name} 
             className="ch-entity-a break-words"

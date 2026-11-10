@@ -36,7 +36,7 @@ export function ProductDemo() {
     return () => observer.disconnect();
   }, [autoPlay, portrait]);
 
-  return <figure className="mx-auto w-full max-w-[360px] sm:max-w-none" aria-labelledby="product-demo-title">
+  return <figure className="mx-auto w-full max-w-md sm:max-w-none" aria-labelledby="product-demo-title">
     <div className="mb-3 flex items-center justify-between gap-3 px-1">
       <h2 id="product-demo-title" className="text-sm font-medium text-[#fffaf1]">See a decision come together</h2>
       <span className="shrink-0 text-xs text-white/60">30-second tour</span>

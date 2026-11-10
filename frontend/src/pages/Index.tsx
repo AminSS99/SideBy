@@ -120,9 +120,9 @@ const Index = () => {
               <div className="hero-kicker mb-5 inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-400/[0.08] px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-orange-200 shadow-[0_0_40px_rgba(249,115,22,.1)]">
                 <Sparkles className="h-3.5 w-3.5" /> SideBy AI · Source-backed comparisons
               </div>
-              <h1 className="hero-title font-serif text-[clamp(2.9rem,11vw,5.5rem)] leading-[0.92] tracking-[-0.05em] text-[#fffaf1] lg:text-[5.6rem]">
-                <span className="block overflow-hidden pb-1.5"><span className="block">Compare your options.</span></span>
-                <span className="block overflow-hidden pb-5"><span className="block bg-gradient-to-r from-orange-300 via-rose-400 to-fuchsia-400 bg-clip-text italic text-transparent">Find your fit.</span></span>
+              <h1 className="hero-title font-serif text-[clamp(2.35rem,8.5vw,5.5rem)] leading-[1.0] tracking-[-0.04em] text-[#fffaf1] sm:leading-[0.92] sm:tracking-[-0.05em] lg:text-[5.6rem]">
+                <span className="block overflow-hidden pb-2 sm:pb-1.5"><span className="block">Compare your options.</span></span>
+                <span className="block overflow-hidden pb-3 sm:pb-5 pr-2"><span className="block bg-gradient-to-r from-orange-300 via-rose-400 to-fuchsia-400 bg-clip-text italic text-transparent">Find your fit.</span></span>
               </h1>
               <p className="hero-copy mx-auto mt-5 max-w-xl text-base leading-7 text-white/75 sm:text-lg lg:mx-0">
                 Phones, TVs, cars, countries, software, courses, and more. Choose two options, tell us what matters, and get a side-by-side comparison with sources you can check.
@@ -161,7 +161,7 @@ const Index = () => {
               </div>
               <ArrowRight className="hidden h-5 w-5 text-orange-300 sm:block" />
             </div>
-            <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-3 no-scrollbar sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3">
+            <div className="-mx-4 flex snap-x snap-mandatory overscroll-x-contain gap-3 overflow-x-auto px-4 pb-3 no-scrollbar sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3">
               {featuredComparisons.map((comparison) => (
                 <button
                   key={comparison.label}
@@ -197,7 +197,7 @@ const Index = () => {
             ].map(([Icon, title, body]) => {
               const FeatureIcon = Icon as typeof ShieldCheck;
               return (
-                <div key={title as string} className="flex gap-4 border-white/[0.08] py-5 sm:border-r sm:px-6 sm:py-9 sm:last:border-r-0">
+                <div key={title as string} className="flex gap-4 border-b border-white/[0.06] py-5 last:border-b-0 sm:border-b-0 sm:border-r sm:border-white/[0.08] sm:px-6 sm:py-9 sm:last:border-r-0">
                   <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-orange-300/20 bg-orange-400/[0.08] text-orange-300"><FeatureIcon className="h-5 w-5" /></div>
                   <div><h2 className="font-serif text-xl text-white">{title as string}</h2><p className="mt-1 text-sm leading-6 text-white/70">{body as string}</p></div>
                 </div>
@@ -206,11 +206,11 @@ const Index = () => {
           </div>
         </section>
 
-        <section className="reveal-section mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
+        <section className="reveal-section mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:py-28">
           <div className="grid gap-12 lg:grid-cols-[.82fr_1.18fr] lg:gap-16">
             <div className="lg:sticky lg:top-28 lg:self-start">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-300">How SideBy thinks</p>
-              <h2 className="mt-4 max-w-md font-serif text-4xl leading-[1.04] tracking-tight text-[#fffaf1] sm:text-5xl">A verdict is only useful when you can inspect the path.</h2>
+              <h2 className="mt-4 max-w-md font-serif text-3xl leading-[1.08] tracking-tight text-[#fffaf1] sm:text-4xl lg:text-5xl">A verdict is only useful when you can inspect the path.</h2>
               <p className="mt-5 max-w-md text-base leading-7 text-white/70">The interface is designed around progressive disclosure: the answer first, then the facts, scores, and original sources whenever you want to go deeper.</p>
 
               <div className="mt-8 space-y-3">
@@ -232,7 +232,7 @@ const Index = () => {
 
         <section className="reveal-section mx-4 mb-16 overflow-hidden rounded-[2rem] border border-orange-300/20 bg-[radial-gradient(circle_at_20%_20%,rgba(249,115,22,.18),transparent_38%),radial-gradient(circle_at_90%_80%,rgba(217,70,239,.13),transparent_42%),#100c0a] px-5 py-14 text-center shadow-[0_40px_120px_rgba(0,0,0,.45)] sm:mx-6 sm:py-20 lg:mx-auto lg:max-w-7xl">
           <CheckCircle2 className="mx-auto h-7 w-7 text-orange-300" />
-          <h2 className="mx-auto mt-5 max-w-3xl font-serif text-4xl leading-none tracking-tight text-white sm:text-6xl">Your next decision deserves better than twenty open tabs.</h2>
+          <h2 className="mx-auto mt-5 max-w-3xl font-serif text-3xl leading-[1.12] tracking-tight text-white sm:text-5xl sm:leading-none lg:text-6xl">Your next decision deserves better than twenty open tabs.</h2>
           <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-white/75">Bring the options. SideBy will organize the evidence and show you exactly why one fits better.</p>
           <Link to="/app/comparisons" className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-xl bg-white px-6 text-sm font-semibold text-[#130d09] transition duration-200 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:translate-y-0 active:scale-[0.99]">Start comparing <ArrowRight className="h-4 w-4" /></Link>
         </section>

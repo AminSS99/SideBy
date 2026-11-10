@@ -224,48 +224,90 @@ export function ComparisonComposer({
       </div>
 
       <form onSubmit={handleSubmit} className="relative space-y-4">
-        {/* Entity Inputs Row */}
-        <div className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-2.5 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
-          <div className="relative col-span-2 w-full sm:col-span-1">
+        {/* Entity Inputs Row: on mobile, two full-width balanced inputs with a centered swap divider; on desktop, 3 columns */}
+        <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-end sm:gap-x-2">
+          <div className="relative w-full">
             <label htmlFor="hero-comparison-input" className="mb-2 block px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/65">
               First option
             </label>
-            <Input
-              id="hero-comparison-input"
-              aria-label="First option"
-              type="text"
-              value={entityA}
-              onChange={(e) => setEntityA(e.target.value)}
-              placeholder="e.g. iPhone 16"
-              autoComplete="off"
-              className="h-14 rounded-xl border-white/[0.09] bg-black/50 px-4 text-base font-medium text-white shadow-inner placeholder:text-white/25 focus-visible:border-orange-400/40 focus-visible:ring-orange-500/25"
-            />
+            <div className="relative">
+              <Input
+                id="hero-comparison-input"
+                aria-label="First option"
+                type="text"
+                value={entityA}
+                onChange={(e) => setEntityA(e.target.value)}
+                placeholder="e.g. iPhone 16"
+                autoComplete="off"
+                className="h-14 rounded-xl border-white/[0.09] bg-black/50 pl-4 pr-11 text-base font-medium text-white shadow-inner placeholder:text-white/25 focus-visible:border-orange-400/40 focus-visible:ring-orange-500/25"
+              />
+              {entityA.trim().length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setEntityA("")}
+                  aria-label="Clear first option"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 grid h-10 w-10 place-items-center rounded-lg text-white/40 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
+          {/* Mobile centered swap divider */}
+          <div className="relative -my-1 flex items-center justify-center sm:hidden">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <div className="w-full border-t border-white/[0.08]" />
+            </div>
+            <button
+              type="button"
+              onClick={swapEntities}
+              aria-label="Swap comparison options"
+              disabled={!entityA.trim() && !entityB.trim()}
+              className="relative inline-flex min-h-[38px] items-center gap-1.5 rounded-full border border-white/[0.12] bg-[#141210] px-3.5 py-1.5 text-[11px] font-semibold text-white/80 shadow-[0_4px_18px_rgba(0,0,0,.5)] backdrop-blur-md transition-all active:scale-95 hover:border-orange-300/30 hover:bg-[#1a1714] hover:text-orange-300 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5 rotate-90 text-orange-400" />
+              <span>Swap</span>
+            </button>
+          </div>
+
+          {/* Desktop swap button */}
           <button
             type="button"
             onClick={swapEntities}
             aria-label="Swap comparison options"
             disabled={!entityA.trim() && !entityB.trim()}
-            className="order-3 grid h-12 w-12 place-items-center self-end rounded-xl border border-white/[0.08] bg-white/[0.035] text-white/65 transition-colors hover:border-orange-300/25 hover:text-orange-300 disabled:cursor-not-allowed disabled:opacity-25 sm:order-none sm:mb-1 sm:h-10 sm:w-10 sm:rounded-full"
+            className="hidden sm:grid sm:mb-1 sm:h-10 sm:w-10 sm:place-items-center sm:rounded-full sm:border sm:border-white/[0.08] sm:bg-white/[0.035] sm:text-white/65 sm:transition-colors hover:sm:border-orange-300/25 hover:sm:text-orange-300 disabled:sm:cursor-not-allowed disabled:sm:opacity-25"
           >
-            <ArrowLeftRight className="h-4 w-4 rotate-90 sm:rotate-0" />
+            <ArrowLeftRight className="h-4 w-4" />
           </button>
 
-          <div className="relative order-2 w-full sm:order-none">
+          <div className="relative w-full">
             <label htmlFor="hero-comparison-input-b" className="mb-2 block px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/65">
               Compare against
             </label>
-            <Input
-              id="hero-comparison-input-b"
-              type="text"
-              aria-label="Second option"
-              value={entityB}
-              onChange={(e) => setEntityB(e.target.value)}
-              placeholder="e.g. Google Pixel 9"
-              autoComplete="off"
-              className="h-14 rounded-xl border-white/[0.09] bg-black/50 px-4 text-base font-medium text-white shadow-inner placeholder:text-white/25 focus-visible:border-orange-400/40 focus-visible:ring-orange-500/25"
-            />
+            <div className="relative">
+              <Input
+                id="hero-comparison-input-b"
+                type="text"
+                aria-label="Second option"
+                value={entityB}
+                onChange={(e) => setEntityB(e.target.value)}
+                placeholder="e.g. Google Pixel 9"
+                autoComplete="off"
+                className="h-14 rounded-xl border-white/[0.09] bg-black/50 pl-4 pr-11 text-base font-medium text-white shadow-inner placeholder:text-white/25 focus-visible:border-orange-400/40 focus-visible:ring-orange-500/25"
+              />
+              {entityB.trim().length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setEntityB("")}
+                  aria-label="Clear second option"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 grid h-10 w-10 place-items-center rounded-lg text-white/40 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -279,19 +321,19 @@ export function ComparisonComposer({
               </div>
               <button type="button" onClick={() => { setContext(""); setShowContextInput(false); }} aria-label="Remove comparison context" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white/40 transition-colors hover:bg-white/5 hover:text-white"><X className="h-4 w-4" /></button>
             </div>
-            <Input aria-label="Comparison context" type="text" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Use case, budget, or top priority" className="h-12 rounded-xl border-white/[0.09] bg-black/50 text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
+            <Input aria-label="Comparison context" type="text" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Use case, budget, or top priority" className="h-12 rounded-xl border-white/[0.09] bg-black/50 text-base sm:text-sm text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label htmlFor="composer-priorities" className="mb-1.5 block text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">
                   Priorities <span className="text-white/25">(optional)</span>
                 </label>
-                <Input id="composer-priorities" aria-label="What matters most" type="text" value={priorities} onChange={(e) => setPriorities(e.target.value)} placeholder="e.g. Price, then battery life" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
+                <Input id="composer-priorities" aria-label="What matters most" type="text" value={priorities} onChange={(e) => setPriorities(e.target.value)} placeholder="e.g. Price, then battery life" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-base sm:text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
               </div>
               <div>
                 <label htmlFor="composer-nonnegotiables" className="mb-1.5 block text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">
                   Non-negotiables <span className="text-white/25">(optional)</span>
                 </label>
-                <Input id="composer-nonnegotiables" aria-label="Hard requirements" type="text" value={nonNegotiables} onChange={(e) => setNonNegotiables(e.target.value)} placeholder="e.g. Under $800, available in my country" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
+                <Input id="composer-nonnegotiables" aria-label="Hard requirements" type="text" value={nonNegotiables} onChange={(e) => setNonNegotiables(e.target.value)} placeholder="e.g. Under $800, available in my country" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-base sm:text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
               </div>
             </div>
             <p className="text-[9px] leading-4 text-[#fdfbf7]/35">Priorities weight the scoring; non-negotiables are recorded verbatim in your brief. SideBy never invents requirements you didn't state.</p>
@@ -301,12 +343,12 @@ export function ComparisonComposer({
                 {COMPARISON_TEMPLATES.map((template) => {
                   const isSelected = context.trim().toLowerCase() === template.context.toLowerCase();
                   return (
-                    <button key={template.label} type="button" onClick={() => setContext(template.context)} className={cn("min-h-11 shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors", isSelected ? "border-orange-500/50 bg-orange-500/10 text-orange-300" : "border-white/[0.08] bg-black/30 text-white/70 hover:border-orange-500/30 hover:text-orange-300")}>{template.label}</button>
+                    <button key={template.label} type="button" onClick={() => setContext(template.context)} className={cn("min-h-10 shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all active:scale-95", isSelected ? "border-orange-500/50 bg-orange-500/10 text-orange-300 shadow-[0_0_12px_rgba(249,115,22,.15)]" : "border-white/[0.08] bg-black/30 text-white/70 hover:border-orange-500/30 hover:text-orange-300")}>{template.label}</button>
                   );
                 })}
               </div>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Requirements URL" type="url" value={contextUrl} onChange={(event) => setContextUrl(event.target.value)} placeholder="Import requirements from a public URL" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-xs text-white placeholder:text-white/25" /><button type="button" onClick={() => void importUrlContext()} disabled={!contextUrl.trim() || isImportingUrl} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-orange-500/30 px-4 text-[9px] font-bold uppercase tracking-widest text-orange-300 disabled:opacity-40"><Link2 className="h-3 w-3" />{isImportingUrl ? "Importing" : "Import URL"}</button></div>
+            <div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Requirements URL" type="url" value={contextUrl} onChange={(event) => setContextUrl(event.target.value)} placeholder="Import requirements from a public URL" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-base sm:text-xs text-white placeholder:text-white/25" /><button type="button" onClick={() => void importUrlContext()} disabled={!contextUrl.trim() || isImportingUrl} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-orange-500/30 px-4 text-xs font-semibold text-orange-300 disabled:opacity-40 transition-colors hover:bg-orange-500/10"><Link2 className="h-3.5 w-3.5" />{isImportingUrl ? "Importing" : "Import URL"}</button></div>
             <p className="text-[9px] leading-4 text-[#fdfbf7]/35">Public URLs are imported and source-attributed automatically.</p>
           </div>
         ) : (
@@ -427,7 +469,7 @@ export function ComparisonComposer({
               key={suggestion}
               type="button"
               onClick={() => handleSuggestionClick(suggestion)}
-              className="min-h-11 shrink-0 rounded-full border border-white/[0.08] bg-black/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/70 transition-all hover:border-orange-500/30 hover:bg-orange-500/5 hover:text-orange-300"
+              className="min-h-10 shrink-0 rounded-full border border-white/[0.08] bg-black/30 px-3.5 py-1.5 text-xs font-medium text-white/80 transition-all active:scale-95 hover:border-orange-500/30 hover:bg-orange-500/5 hover:text-orange-300"
             >
               {suggestion}
             </button>

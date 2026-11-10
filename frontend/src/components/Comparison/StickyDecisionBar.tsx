@@ -38,7 +38,7 @@ export function StickyDecisionBar({
   }, [result]);
 
   return (
-    <aside aria-label="Decision summary" className="fixed bottom-[calc(var(--sideby-toast-offset,calc(env(safe-area-inset-bottom,0px)+1rem))+0.5rem)] left-3 right-3 z-40 flex items-center justify-between gap-2 rounded-2xl border border-orange-300/15 bg-[#0b0908]/92 p-2.5 shadow-[0_20px_55px_rgba(0,0,0,.7)] backdrop-blur-2xl animate-in slide-in-from-bottom-5 duration-300 sm:bottom-6 sm:left-1/2 sm:right-auto sm:min-w-[700px] sm:max-w-3xl sm:-translate-x-1/2 sm:p-3.5 sm:px-5 md:z-[60]">
+    <aside aria-label="Decision summary" className="fixed bottom-[calc(var(--bottom-overlay-clearance,calc(env(safe-area-inset-bottom,0px)+1rem))+var(--sideby-toast-offset,0px)+0.5rem)] left-3 right-3 z-40 flex items-center justify-between gap-2 rounded-2xl border border-orange-300/15 bg-[#0b0908]/92 p-2.5 shadow-[0_20px_55px_rgba(0,0,0,.7)] backdrop-blur-2xl animate-in slide-in-from-bottom-5 duration-300 lg:bottom-6 sm:left-1/2 sm:right-auto sm:min-w-[700px] sm:max-w-3xl sm:-translate-x-1/2 sm:p-3.5 sm:px-5 md:z-[60]">
       {/* Metrics Section */}
       <div className="flex min-w-0 items-center gap-x-4 text-left">
         {/* Winner HUD */}
