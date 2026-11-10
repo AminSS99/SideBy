@@ -5,7 +5,7 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { requireAuth } from "../_lib/auth.js";
-import { getUsageStatus } from "../_lib/rate-limit.js";
+import { getMonthlyUsageStatus, getUsageStatus } from "../_lib/rate-limit.js";
 import { sendJson } from "../_lib/sideby.js";
 import { resolveSubscriptionState } from "../_lib/subscription.js";
 import { createDbClient } from "../../src/db/index.js";
@@ -289,12 +289,14 @@ export default async function handler(
       orgId: auth.orgId,
       feature: "comparison",
     });
-    const status = await getUsageStatus("user", auth.userId);
+    const status = await getUsageStatus("user", auth.userId, subscription.plan);
+    const monthly = await getMonthlyUsageStatus(auth.userId, subscription.plan);
 
     return sendJson(response, {
       plan: subscription.plan,
       limits: subscription.limits,
       usage: status,
+      monthly,
       billingConfigured: subscription.billingConfigured,
       subscription: {
         source: subscription.source,

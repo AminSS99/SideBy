@@ -57,10 +57,44 @@ describe("request admission limits", () => {
     expect(results.filter((result) => result.allowed)).toHaveLength(2);
   });
 
-  it("keeps paid requests burst-limited without applying the free daily cap", async () => {
+  it.each([
+    ["pro", 10],
+    ["team", 25],
+    ["business", 60],
+  ] as const)("caps the %s tier at %i comparisons per day", async (plan, cap) => {
+    state.plan = plan;
+    let allowed = 0;
+    for (let i = 0; i < cap + 5; i++) {
+      // Fresh minute-window per call keeps this test about the daily cap, not the burst guard.
+      state.counts.forEach((_v, key) => { if (key.startsWith("rate:")) state.counts.delete(key); });
+      if ((await checkRouteLimit("paid-user", null, "comparison")).allowed) allowed++;
+    }
+    expect(allowed).toBe(cap);
+  });
+
+  it("every paid tier is finite and strictly ordered Pulse < Core < Orbit for each action", async () => {
+    const { dailyLimitsFor } = await import("../plan-limits.js");
+    for (const action of Object.keys(dailyLimitsFor("pro")) as Array<keyof ReturnType<typeof dailyLimitsFor>>) {
+      const [free, pro, team, business] = (["free", "pro", "team", "business"] as const).map((p) => dailyLimitsFor(p)[action]);
+      expect(Number.isFinite(business)).toBe(true);
+      expect(pro).toBeGreaterThan(free);
+      expect(team).toBeGreaterThan(pro);
+      expect(business).toBeGreaterThan(team);
+    }
+  });
+
+  it("enforces the monthly comparison cap and gives the daily slot back when it trips", async () => {
     state.plan = "pro";
-    const results = await Promise.all(Array.from({ length: 65 }, () => checkRouteLimit("paid-user", null, "comparison")));
-    expect(results.filter((result) => result.allowed)).toHaveLength(60);
+    const { monthlyLimitFor } = await import("../plan-limits.js");
+    expect(monthlyLimitFor("pro", "comparison")).toBe(100);
+    const month = new Date().toISOString().slice(0, 7);
+    state.counts.set(`usage:user:capped:comparison:month:${month}`, 100);
+    const result = await checkRouteLimit("capped", null, "comparison");
+    expect(result).toMatchObject({ allowed: false, window: "monthly", limit: 100 });
+    const today = new Date().toISOString().slice(0, 10);
+    expect(state.counts.get(`usage:user:capped:comparison:${today}`)).toBe(0);
+    const { formatLimitError } = await import("../rate-limit.js");
+    expect(formatLimitError(result)).toMatch(/Monthly limit reached/);
   });
 
   it("explains burst exhaustion as a short wait", async () => {

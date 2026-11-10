@@ -8,6 +8,7 @@ import { checkRouteLimit, formatLimitError } from "./rate-limit.js";
 import type { RateLimitAction } from "./rate-limit.js";
 import { sendJson } from "./sideby.js";
 import { assertRedisAvailable } from "./redis.js";
+import { captureServerEvent } from "./analytics.js";
 
 export function getClientIp(request: VercelRequest): string | null {
   const forwarded = request.headers["x-forwarded-for"];
@@ -34,6 +35,13 @@ export async function withRateLimit(
   const limitResult = await checkRouteLimit(auth.userId, ip, action, auth.orgId);
 
   if (!limitResult.allowed) {
+    // Safety signal: who hits which limit, and how often (abuse and pricing insight).
+    captureServerEvent(auth.userId ?? `ip:${ip ?? "unknown"}`, "rate_limited", {
+      action,
+      window: limitResult.window,
+      limit: limitResult.limit,
+      authenticated: Boolean(auth.userId),
+    });
     response.setHeader("Retry-After", String(Math.max(1, Math.ceil((limitResult.resetAt - Date.now()) / 1000))));
     response.setHeader("X-RateLimit-Limit", String(limitResult.limit));
     response.setHeader("X-RateLimit-Remaining", "0");

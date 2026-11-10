@@ -242,10 +242,8 @@ const ClerkAuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (user) {
-      identifyUser(user.id, {
-        email: user.email,
-        name: user.fullName,
-      });
+      // Data minimization: the Clerk id plus email (abuse investigations); no display name.
+      identifyUser(user.id, { email: user.email });
     } else if (isLoaded && !isSignedIn) {
       resetPostHog();
     }

@@ -17,6 +17,7 @@ import {
 import { searchTavily } from "../_lib/search.js";
 import { logger } from "../_lib/log.js";
 import { sendJson } from "../_lib/sideby.js";
+import { captureServerEvent } from "../_lib/analytics.js";
 import { sendAtCapacityResponse } from "../_lib/route-guard.js";
 
 export const config = {
@@ -53,6 +54,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
     if (!limit.allowed) {
       response.setHeader("Retry-After", String(Math.max(1, Math.ceil((limit.resetAt - Date.now()) / 1000))));
       response.setHeader("X-RateLimit-Remaining", "0");
+      captureServerEvent(auth.userId, "rate_limited", { action: "webSearch", window: limit.window, limit: limit.limit, authenticated: true });
       return sendJson(response, { error: formatLimitError(limit), code: "RATE_LIMITED", limit: limit.limit, remaining: 0 }, 429);
     }
 
@@ -63,6 +65,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
       return sendAtCapacityResponse(response, globalBudget.resetAt);
     }
 
+    captureServerEvent(auth.userId, "web_search_performed", { remaining: limit.remaining });
     const unlimited = limit.limit >= Number.MAX_SAFE_INTEGER;
     const remaining = unlimited ? null : limit.remaining;
     response.setHeader("Cache-Control", "private, no-store");

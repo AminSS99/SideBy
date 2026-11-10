@@ -7,6 +7,17 @@ import { redisGet, redisIncrement, getRuntimeStoreKind } from "./redis.js";
 import { logger } from "./log.js";
 import { resolveSubscriptionState } from "./subscription.js";
 import type { BillingPlan } from "./subscription.js";
+import { configuredQuota, dailyLimitFor, monthlyLimitFor } from "./plan-limits.js";
+
+export { configuredQuota };
+
+export function getGlobalComparisonsDailyCap(): number {
+  return configuredQuota("GLOBAL_COMPARISONS_PER_DAY", 1500);
+}
+
+export function getGlobalWebSearchesDailyCap(): number {
+  return configuredQuota("GLOBAL_WEB_SEARCHES_PER_DAY", 1000);
+}
 
 const runtimeStore = getRuntimeStoreKind();
 if (runtimeStore === "none") {
@@ -17,20 +28,7 @@ if (runtimeStore === "none") {
 
 // ─── Free Plan Limits (env-overridable) ─────────────────────────────────────
 
-export function configuredQuota(name: string, fallback: number): number {
-  const value = Number(process.env[name] ?? fallback);
-  return Number.isSafeInteger(value) && value >= 0 ? value : fallback;
-}
-
-export function getGlobalComparisonsDailyCap(): number {
-  return configuredQuota("GLOBAL_COMPARISONS_PER_DAY", 1500);
-}
-
-export function getGlobalWebSearchesDailyCap(): number {
-  return configuredQuota("GLOBAL_WEB_SEARCHES_PER_DAY", 1000);
-}
-
-const FREE_LIMITS = {
+export const FREE_LIMITS = {
   comparisonsPerDay: configuredQuota("FREE_COMPARISONS_PER_DAY", 5),
   followUpsPerDay: configuredQuota("FREE_FOLLOWUPS_PER_DAY", 10),
   refreshesPerDay: configuredQuota("FREE_REFRESHES_PER_DAY", 3),
@@ -203,18 +201,59 @@ export async function refundUsage(
 export async function getUsageStatus(
   keyType: "user" | "ip" | "org",
   keyValue: string,
+  plan: BillingPlan = "free",
 ): Promise<Record<RateLimitAction, { used: number; limit: number; remaining: number }>> {
   const actions: RateLimitAction[] = ["comparison", "followUp", "refresh", "export", "watchlist", "chat", "contextImport", "webSearch"];
   const status = {} as Record<RateLimitAction, { used: number; limit: number; remaining: number }>;
 
   for (const action of actions) {
-    const limit = ACTION_LIMITS[action];
+    const limit = dailyLimitFor(plan, action);
     const key = dailyKey(keyType, keyValue, action);
     const used = (await redisGet<number>(key)) || 0;
     status[action] = { used, limit, remaining: Math.max(0, limit - used) };
   }
 
   return status;
+}
+
+// ─── Monthly caps (expensive actions on paid tiers) ──────────────────────────
+
+function monthKey(userId: string, action: RateLimitAction): string {
+  return `usage:user:${userId}:${action}:month:${new Date().toISOString().slice(0, 7)}`;
+}
+
+function nextMonthStartUTC(): number {
+  const now = new Date();
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
+}
+
+export async function checkAndRecordMonthlyUsage(
+  userId: string,
+  action: RateLimitAction,
+  limit: number,
+): Promise<RateLimitResult> {
+  const resetAt = nextMonthStartUTC();
+  const ttl = Math.max(60, Math.ceil((resetAt - Date.now()) / 1000));
+  const count = await redisIncrement(monthKey(userId, action), 1, ttl);
+  if (count > limit) {
+    logger.warn("Monthly usage limit exceeded", { userId, action, current: count, limit });
+    return { allowed: false, limit, remaining: 0, resetAt, window: "monthly" };
+  }
+  return { allowed: true, limit, remaining: limit - count, resetAt, window: "monthly" };
+}
+
+export async function getMonthlyUsageStatus(
+  userId: string,
+  plan: BillingPlan,
+): Promise<Partial<Record<"comparison" | "webSearch", { used: number; limit: number; remaining: number }>>> {
+  const out: Partial<Record<"comparison" | "webSearch", { used: number; limit: number; remaining: number }>> = {};
+  for (const action of ["comparison", "webSearch"] as const) {
+    const limit = monthlyLimitFor(plan, action);
+    if (limit === null) continue;
+    const used = (await redisGet<number>(monthKey(userId, action))) || 0;
+    out[action] = { used, limit, remaining: Math.max(0, limit - used) };
+  }
+  return out;
 }
 
 // ─── Fixed Window Rate Limits (per-minute burst protection) ─────────────────
@@ -261,15 +300,24 @@ export async function checkRouteLimit(
 ): Promise<RateLimitResult> {
   const plan = await getEffectiveBillingPlan(userId, orgId, action);
   if (plan !== "free") {
-    const burst = userId
-      ? await checkRateLimit("user", userId, action, 60)
-      : ip
-        ? await checkRateLimit("ip", ip, action, 30)
-        : null;
-    if (burst && !burst.allowed) return burst;
-    if (!burst) return { allowed: false, limit: 0, remaining: 0, resetAt: Date.now() + 60000, window: "1m" };
-    await recordUsage(userId, ip, action);
-    return unlimitedResult();
+    // Paid tiers are finite too: burst guard, then a per-tier daily cap and,
+    // for expensive actions, a monthly cap. Slots are reserved up front.
+    if (!userId) return { allowed: false, limit: 0, remaining: 0, resetAt: Date.now() + 60000, window: "1m" };
+    const burst = await checkRateLimit("user", userId, action, 60);
+    if (!burst.allowed) return burst;
+
+    const daily = await checkAndRecordUsage("user", userId, action, dailyLimitFor(plan, action));
+    if (!daily.allowed) return daily;
+
+    const monthlyCap = monthlyLimitFor(plan, action);
+    if (monthlyCap !== null) {
+      const monthly = await checkAndRecordMonthlyUsage(userId, action, monthlyCap);
+      if (!monthly.allowed) {
+        await incrementUsage("user", userId, action, -1);
+        return monthly;
+      }
+    }
+    return daily;
   }
 
   // Check user limit first (if authenticated)
@@ -325,6 +373,10 @@ export function formatLimitError(result: RateLimitResult): string {
     if (result.window === "1m") {
       const seconds = Math.max(1, Math.ceil((result.resetAt - Date.now()) / 1000));
       return `Too many requests. Try again in ${seconds} seconds.`;
+    }
+    if (result.window === "monthly") {
+      const days = Math.max(1, Math.ceil((result.resetAt - Date.now()) / 86400000));
+      return `Monthly limit reached (${result.limit}/${result.limit}). Resets in ${days} day${days === 1 ? "" : "s"}.`;
     }
     const resetDate = new Date(result.resetAt);
     const hours = Math.ceil((result.resetAt - Date.now()) / 3600000);

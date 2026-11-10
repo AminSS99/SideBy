@@ -35,16 +35,23 @@ export function usageJson(plan: "free" | "pro" = "free") {
           exportsPerDay: 10,
         }
       : {
-          comparisonsPerDay: 999,
-          followUpsPerDay: 999,
-          refreshesPerDay: 999,
-          exportsPerDay: 999,
+          comparisonsPerDay: 10,
+          followUpsPerDay: 30,
+          refreshesPerDay: 10,
+          exportsPerDay: 20,
         };
   const message = plan === "free" ? "You are on the free SideBy plan." : "Active subscription.";
   return {
     plan,
     limits,
     usage: {},
+    monthly:
+      plan === "free"
+        ? {}
+        : {
+            comparison: { used: 0, limit: 100, remaining: 100 },
+            webSearch: { used: 0, limit: 100, remaining: 100 },
+          },
     billingConfigured: true,
     subscription: {
       source: plan === "free" ? "free_fallback" : "local_subscription",

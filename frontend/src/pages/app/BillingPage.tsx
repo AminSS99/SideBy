@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { KeyboardSpacer } from "@/components/KeyboardSpacer";
 
-import { AlertCircle, CheckCircle2, Zap, GitCompareArrows, MessageSquare, RefreshCw, Download, ExternalLink } from "lucide-react";
+import { AlertCircle, CheckCircle2, Zap, GitCompareArrows, MessageSquare, RefreshCw, Download, ExternalLink, Globe } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { apiFetch } from "@/lib/api";
@@ -17,8 +17,12 @@ type UsageStatus = {
     refreshesPerDay: number;
     exportsPerDay: number;
     watchlistsPerDay?: number;
+    chatsPerDay?: number;
+    contextImportsPerDay?: number;
+    webSearchesPerDay?: number;
   };
   usage: Record<string, { used: number; limit: number; remaining: number }>;
+  monthly?: Partial<Record<"comparison" | "webSearch", { used: number; limit: number; remaining: number }>>;
   billingConfigured: boolean;
   subscription?: {
     source: string;
@@ -51,6 +55,52 @@ const SNAP_SOLVE_PLAN_NAMES: Record<string, string> = {
   pulse: "Pulse",
   core: "Core",
   orbit: "Orbit",
+};
+
+const getPlanInclusions = (plan?: string) => {
+  const p = (plan ?? "free").toLowerCase();
+  switch (p) {
+    case "pulse":
+    case "pro":
+      return [
+        "10 comparisons per day (up to 100 per month)",
+        "30 follow-ups per day",
+        "10 refreshes per day",
+        "20 exports per day",
+        "10 live web searches per day (up to 100 per month)",
+        "Priority background queue execution",
+      ];
+    case "core":
+    case "team":
+      return [
+        "25 comparisons per day (up to 300 per month)",
+        "80 follow-ups per day",
+        "25 refreshes per day",
+        "50 exports per day",
+        "25 live web searches per day (up to 300 per month)",
+        "Priority background queue execution",
+      ];
+    case "orbit":
+    case "business":
+      return [
+        "60 comparisons per day (up to 800 per month)",
+        "200 follow-ups per day",
+        "60 refreshes per day",
+        "120 exports per day",
+        "60 live web searches per day (up to 800 per month)",
+        "Priority background queue execution",
+      ];
+    default:
+      return [
+        "5 comparisons per day",
+        "10 follow-ups per day",
+        "3 refreshes per day",
+        "10 exports per day",
+        "2 live web searches per day",
+        "Source-backed citations",
+        "Public share links",
+      ];
+  }
 };
 
 const BillingPage = () => {
@@ -90,6 +140,12 @@ const BillingPage = () => {
     { key: "followUp", label: "Follow-ups", icon: MessageSquare, color: "text-blue-400" },
     { key: "refresh", label: "Refreshes", icon: RefreshCw, color: "text-purple-400" },
     { key: "export", label: "Exports", icon: Download, color: "text-emerald-400" },
+    { key: "webSearch", label: "Live web searches", icon: Globe, color: "text-sky-400" },
+  ];
+
+  const monthlyItems = [
+    { key: "comparison" as const, label: "Monthly comparisons", icon: GitCompareArrows, color: "text-orange-400" },
+    { key: "webSearch" as const, label: "Monthly live web searches", icon: Globe, color: "text-sky-400" },
   ];
 
   const manageSubscription = async () => {
@@ -188,21 +244,23 @@ const BillingPage = () => {
                     followUp: usage.limits?.followUpsPerDay,
                     refresh: usage.limits?.refreshesPerDay,
                     export: usage.limits?.exportsPerDay,
+                    watchlists: usage.limits?.watchlistsPerDay,
+                    webSearch: usage.limits?.webSearchesPerDay,
                   };
-                  const isUnlimited = usage.plan !== "free";
                   const resolvedLimit = data.limit ?? fallbackLimits[item.key];
-                  const limitVal = isUnlimited
-                    ? "Unlimited"
-                    : typeof resolvedLimit === "number" && Number.isFinite(resolvedLimit)
-                      ? resolvedLimit
-                      : "—";
                   const numericLimit =
                     typeof resolvedLimit === "number" && Number.isFinite(resolvedLimit) && resolvedLimit > 0
                       ? resolvedLimit
                       : null;
+                  const limitVal =
+                    numericLimit !== null
+                      ? numericLimit
+                      : typeof resolvedLimit === "number" && Number.isFinite(resolvedLimit)
+                        ? resolvedLimit
+                        : "—";
                   const pct = numericLimit ? Math.min(100, (data.used / numericLimit) * 100) : 0;
-                  const isNearLimit = !isUnlimited && numericLimit !== null && pct >= 80;
-                  const isAtLimit = !isUnlimited && data.remaining === 0;
+                  const isAtLimit = data.remaining === 0;
+                  const isNearLimit = !isAtLimit && numericLimit !== null && pct >= 80;
 
                   return (
                     <div key={item.key} className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
@@ -215,14 +273,12 @@ const BillingPage = () => {
                           {data.used} / {limitVal}
                         </span>
                       </div>
-                      {!isUnlimited && (
-                        <div className="h-1.5 w-full rounded-full bg-[#222] overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${isAtLimit ? "bg-red-500" : isNearLimit ? "bg-amber-500" : "bg-emerald-500"}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      )}
+                      <div className="h-1.5 w-full rounded-full bg-[#222] overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${isAtLimit ? "bg-red-500" : isNearLimit ? "bg-amber-500" : "bg-emerald-500"}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
                       {isAtLimit && (
                         <p className="mt-2 text-[10px] text-red-400 uppercase tracking-widest font-bold">
                           Daily limit reached — resets at midnight UTC
@@ -231,6 +287,53 @@ const BillingPage = () => {
                     </div>
                   );
                 })}
+
+                {usage.monthly && Object.keys(usage.monthly).length > 0 && (
+                  <div className="pt-2 space-y-4">
+                    {monthlyItems.map((item) => {
+                      const data = usage.monthly?.[item.key];
+                      if (!data || typeof data.limit !== "number" || !Number.isFinite(data.limit)) return null;
+
+                      const pct = data.limit > 0 ? Math.min(100, (data.used / data.limit) * 100) : 0;
+                      const isAtLimit = data.remaining === 0;
+                      const isNearLimit = !isAtLimit && pct >= 80;
+
+                      return (
+                        <div key={`monthly-${item.key}`} className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <item.icon className={`h-4 w-4 ${item.color}`} />
+                              <span className="text-sm text-[#fdfbf7]">{item.label}</span>
+                              <span className="rounded-sm border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[#fdfbf7]/50">
+                                Monthly
+                              </span>
+                            </div>
+                            <span
+                              className={`text-xs font-bold uppercase tracking-widest ${isAtLimit ? "text-red-400" : isNearLimit ? "text-amber-400" : "text-[#fdfbf7]/50"}`}
+                            >
+                              {data.used} / {data.limit}
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-[#222] overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${isAtLimit ? "bg-red-500" : isNearLimit ? "bg-amber-500" : "bg-emerald-500"}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          {isAtLimit && (
+                            <p className="mt-2 text-[10px] text-red-400 uppercase tracking-widest font-bold">
+                              Monthly limit reached, resets on the 1st (UTC)
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <p className="mt-4 text-xs text-[#fdfbf7]/50 leading-relaxed">
+                  One SnapSolve plan covers all your SnapSolve products, so SideBy limits are shared fairly.
+                </p>
               </div>
             ) : null}
           </div>
@@ -307,35 +410,14 @@ const BillingPage = () => {
               {usage?.plan && usage.plan !== "free" ? "Your Plan Inclusions" : "Flow Includes"}
             </h3>
             <ul className="space-y-4">
-              {usage?.plan && usage.plan !== "free" ? (
-                [
-                  "Unlimited comparisons per day",
-                  "Unlimited follow-ups per day",
-                  "Unlimited refreshes per day",
-                  "Unlimited exports per day",
-                  "Priority background queue execution",
-                  "Webhook subscription dispatchers",
-                ].map((feature) => (
-                  <li key={feature} className="flex items-start gap-3 text-sm text-[#fdfbf7]/70">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
-                    <span>{feature}</span>
-                  </li>
-                ))
-              ) : (
-                [
-                  "5 comparisons per day",
-                  "10 follow-ups per day",
-                  "3 refreshes per day",
-                  "10 exports per day",
-                  "Source-backed citations",
-                  "Public share links",
-                ].map((feature) => (
-                  <li key={feature} className="flex items-start gap-3 text-sm text-[#fdfbf7]/70">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                    <span>{feature}</span>
-                  </li>
-                ))
-              )}
+              {getPlanInclusions(usage?.plan).map((feature) => (
+                <li key={feature} className="flex items-start gap-3 text-sm text-[#fdfbf7]/70">
+                  <CheckCircle2
+                    className={`mt-0.5 h-4 w-4 shrink-0 ${usage?.plan && usage.plan !== "free" ? "text-orange-500" : "text-emerald-500"}`}
+                  />
+                  <span>{feature}</span>
+                </li>
+              ))}
             </ul>
           </div>
         </div>

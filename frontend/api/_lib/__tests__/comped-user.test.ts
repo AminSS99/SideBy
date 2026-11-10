@@ -46,7 +46,7 @@ describe("comped business override", () => {
     process.env.SIDEBY_COMPED_BUSINESS_USER_IDS = OWNER;
     const { resolveSubscriptionState } = await import("../subscription.js");
     const owner = await resolveSubscriptionState({ userId: OWNER });
-    expect(owner).toMatchObject({ plan: "business", source: "comped_override", isUnlimited: true });
+    expect(owner).toMatchObject({ plan: "business", source: "comped_override", isUnlimited: false });
     await expect(resolveSubscriptionState({ userId: OTHER })).rejects.toThrow(); // falls through to the DB (mocked to throw), i.e. no override
     const anon = await resolveSubscriptionState({ userId: null });
     expect(anon.plan).toBe("free");

@@ -3,6 +3,7 @@ import { createDbClient } from "../../src/db/index.js";
 import { organizations, subscriptions, users } from "../../src/db/schema.js";
 import { checkSnapSolveEntitlement, resolveSnapSolveWorkspaceSession } from "./snapsolve-core.js";
 import { logger } from "./log.js";
+import { dailyLimitsFor } from "./plan-limits.js";
 
 export type BillingPlan = "free" | "pro" | "team" | "business";
 export type SubscriptionSource =
@@ -56,30 +57,19 @@ export type SubscriptionLimits = {
   watchlistsPerDay: number;
 };
 
-const UNLIMITED = Number.MAX_SAFE_INTEGER;
-
 export function getFreeLimits(): SubscriptionLimits {
-  return {
-    comparisonsPerDay: Number(process.env.FREE_COMPARISONS_PER_DAY || "5"),
-    followUpsPerDay: Number(process.env.FREE_FOLLOWUPS_PER_DAY || "10"),
-    refreshesPerDay: Number(process.env.FREE_REFRESHES_PER_DAY || "3"),
-    exportsPerDay: Number(process.env.FREE_EXPORTS_PER_DAY || "10"),
-    watchlistsPerDay: Number(process.env.FREE_WATCHLISTS_PER_DAY || "5"),
-  };
+  return getPlanLimits("free");
 }
 
 export function getPlanLimits(plan: BillingPlan): SubscriptionLimits {
-  if (plan !== "free") {
-    return {
-      comparisonsPerDay: UNLIMITED,
-      followUpsPerDay: UNLIMITED,
-      refreshesPerDay: UNLIMITED,
-      exportsPerDay: UNLIMITED,
-      watchlistsPerDay: UNLIMITED,
-    };
-  }
-
-  return getFreeLimits();
+  const daily = dailyLimitsFor(plan);
+  return {
+    comparisonsPerDay: daily.comparison,
+    followUpsPerDay: daily.followUp,
+    refreshesPerDay: daily.refresh,
+    exportsPerDay: daily.export,
+    watchlistsPerDay: daily.watchlist,
+  };
 }
 
 export function normalizePlan(productId?: string | null): BillingPlan {
@@ -129,19 +119,19 @@ function buildState(args: {
 }): SubscriptionState {
   const billing = isBillingConfigured();
   const limits = getPlanLimits(args.plan);
-  const isUnlimited = args.plan !== "free";
+  const isPaid = args.plan !== "free";
 
   return {
     plan: args.plan,
     source: args.source,
-    status: args.status ?? (isUnlimited ? "active" : "unknown"),
-    isUnlimited,
+    status: args.status ?? (isPaid ? "active" : "unknown"),
+    isUnlimited: false,
     ...billing,
     entitlement: args.entitlement ?? null,
     snapsolveWorkspace: args.snapsolveWorkspace ?? null,
     limits,
-    message: isUnlimited
-      ? "Your paid SnapSolve workspace limits are active."
+    message: isPaid
+      ? "Your SnapSolve plan limits are active."
       : "You are on the free SideBy plan.",
   };
 }

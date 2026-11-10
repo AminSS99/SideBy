@@ -51,14 +51,14 @@ describe('subscription', () => {
       });
     });
 
-    it('handles non-integer values or garbage in env vars using Number()', () => {
+    it('falls back to safe defaults for non-integer or garbage env values', () => {
        process.env.FREE_COMPARISONS_PER_DAY = '10.5';
        process.env.FREE_FOLLOWUPS_PER_DAY = 'garbage'; // Number('garbage') is NaN
 
        const limits = getFreeLimits();
 
-       expect(limits.comparisonsPerDay).toBe(10.5);
-       expect(limits.followUpsPerDay).toBeNaN();
+       expect(limits.comparisonsPerDay).toBe(5);
+       expect(limits.followUpsPerDay).toBe(10);
     });
   });
 
