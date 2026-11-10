@@ -66,6 +66,10 @@ frontend/src/components/ui/*
 !frontend/src/components/ui/changelog-timeline.tsx
 !frontend/src/components/ui/ink-orbit-features.tsx
 !frontend/src/components/ui/ink-orbit-features.css
+!frontend/src/components/ui/animated-circular-progress-bar.tsx
+!frontend/src/components/ui/animated-list.tsx
+!frontend/src/components/ui/bell-toggle.tsx
+!frontend/src/components/ui/border-beam.tsx
 
 # Local, unused hook experiments. Application hooks must be committed.
 frontend/src/hooks/useComparisonEngine.ts
