@@ -48,7 +48,7 @@ const Contact = () => {
     if (Object.keys(nextErrors).length > 0) return;
 
     const selectedIntent = intents.find((item) => item.id === intent)?.label ?? "Product question";
-    const recipient = intent === "beta" ? "sales@sideby.ink" : "support@sideby.ink";
+    const recipient = "snapsolvework@gmail.com";
     const subject = encodeURIComponent(`[SideBy ${selectedIntent}] ${form.name.trim()}`);
     const body = encodeURIComponent(`${form.message.trim()}\n\nFrom: ${form.name.trim()} <${form.email.trim()}>`);
     window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
@@ -76,19 +76,19 @@ const Contact = () => {
 
         <div className="grid gap-6 lg:grid-cols-[0.8fr_1.35fr] lg:items-start">
           <aside className="contact-reveal space-y-4 lg:sticky lg:top-24">
-            <a href="mailto:support@sideby.ink" className="group flex min-h-[108px] items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-orange-300/25 hover:bg-white/[0.055] focus:outline-none focus:ring-2 focus:ring-orange-300">
+            <a href="mailto:snapsolvework@gmail.com" className="group flex min-h-[108px] items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-orange-300/25 hover:bg-white/[0.055] focus:outline-none focus:ring-2 focus:ring-orange-300">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-orange-300/20 bg-orange-400/10 text-orange-200"><LifeBuoy className="h-5 w-5" /></span>
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold text-white">Product & support</span>
-                <span className="mt-1 block break-all text-sm text-white/48">support@sideby.ink</span>
+                <span className="mt-1 block break-all text-sm text-white/48">snapsolvework@gmail.com</span>
                 <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-orange-200">Open email <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></span>
               </span>
             </a>
-            <a href="mailto:sales@sideby.ink" className="group flex min-h-[108px] items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-violet-300/25 hover:bg-white/[0.055] focus:outline-none focus:ring-2 focus:ring-violet-300">
+            <a href="mailto:snapsolvework@gmail.com" className="group flex min-h-[108px] items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-violet-300/25 hover:bg-white/[0.055] focus:outline-none focus:ring-2 focus:ring-violet-300">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-violet-300/20 bg-violet-400/10 text-violet-200"><Sparkles className="h-5 w-5" /></span>
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold text-white">Beta & teams</span>
-                <span className="mt-1 block break-all text-sm text-white/48">sales@sideby.ink</span>
+                <span className="mt-1 block break-all text-sm text-white/48">snapsolvework@gmail.com</span>
                 <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-200">Open email <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></span>
               </span>
             </a>

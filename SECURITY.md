@@ -11,7 +11,7 @@
 If you discover a security vulnerability in SideBy, please report it responsibly:
 
 1. **Do not** open a public issue
-2. Report privately via GitHub's "Report a vulnerability" button on this repository (Security tab), or email support@sideby.ink with "SECURITY" in the subject
+2. Report privately via GitHub's "Report a vulnerability" button on this repository (Security tab), or email snapsolvework@gmail.com with "SECURITY" in the subject
 3. Include a detailed description of the vulnerability
 4. Provide steps to reproduce if possible
 5. Allow reasonable time for remediation before public disclosure

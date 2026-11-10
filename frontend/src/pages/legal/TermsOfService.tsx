@@ -50,7 +50,7 @@ const TermsOfService = () => {
       </p>
       
       <p>
-        Contact us at <a href="mailto:legal@sideby.ink">legal@sideby.ink</a> for any legal inquiries.
+        Contact us at <a href="mailto:snapsolvework@gmail.com">snapsolvework@gmail.com</a> for any legal inquiries.
       </p>
     </LegalPageShell>
   );

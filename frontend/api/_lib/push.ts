@@ -15,7 +15,7 @@ import { logger } from "./log.js";
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:support@sideby.ink";
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:snapsolvework@gmail.com";
 
 const APP_URL = (process.env.VITE_APP_URL || "https://sideby.ink").replace(/\/+$/, "");
 

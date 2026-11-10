@@ -30,7 +30,7 @@ const RefundPolicy = () => {
       </p>
 
       <h2>5. How to Request Review</h2>
-      <p>Contact <a href="mailto:aminsoborr@gmail.com">aminsoborr@gmail.com</a> and include:</p>
+      <p>Contact <a href="mailto:snapsolvework@gmail.com">snapsolvework@gmail.com</a> and include:</p>
       <ul>
         <li>The email used for your SnapSolve account.</li>
         <li>The transaction receipt or invoice number.</li>
