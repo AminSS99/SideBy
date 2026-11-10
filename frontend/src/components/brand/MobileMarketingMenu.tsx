@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import type { TubelightNavItem } from "@/components/ui/tubelight-navbar";
 import { cn } from "@/lib/utils";
 
@@ -21,13 +22,15 @@ export function MobileMarketingMenu({ items }: { items: TubelightNavItem[] }) {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button
+        <motion.button
+          whileTap={{ scale: 0.92 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
           type="button"
           aria-label="Open site navigation"
-          className="grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-[#fffaf1] transition duration-200 hover:bg-white/[0.08] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 md:hidden motion-reduce:transition-none"
+          className="grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-[#fffaf1] transition duration-200 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 md:hidden"
         >
           <Menu className="h-5 w-5" aria-hidden="true" />
-        </button>
+        </motion.button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 motion-reduce:animate-none" />
@@ -40,34 +43,44 @@ export function MobileMarketingMenu({ items }: { items: TubelightNavItem[] }) {
             </Dialog.Description>
           </div>
           <Dialog.Close asChild>
-            <button type="button" aria-label="Close site navigation" className="absolute right-4 top-5 grid h-11 w-11 place-items-center rounded-full border border-white/10 text-white/70 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400">
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              type="button"
+              aria-label="Close site navigation"
+              className="absolute right-4 top-5 grid h-11 w-11 place-items-center rounded-full border border-white/10 text-white/70 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+            >
               <X className="h-5 w-5" aria-hidden="true" />
-            </button>
+            </motion.button>
           </Dialog.Close>
           <nav aria-label="Site navigation" className="space-y-1">
             {items.map(({ name, url, icon: Icon }) => {
               const active = pathname === url;
               return (
                 <Dialog.Close key={url} asChild>
-                  <Link to={url} aria-current={active ? "page" : undefined} className={cn(
-                    "group flex min-h-14 items-center gap-3.5 rounded-2xl border px-4 py-3 text-base font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400",
-                    active ? "border-orange-300/15 bg-orange-400/[0.08] text-orange-200" : "border-transparent text-white/75 hover:border-white/[0.06] hover:bg-white/[0.04]",
-                  )}>
-                    <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                    <span>{name}</span>
-                    {active ? <span className="ml-auto text-[10px] font-semibold uppercase tracking-widest">Current</span> : <ArrowUpRight className="ml-auto h-4 w-4 text-white/30" aria-hidden="true" />}
-                  </Link>
+                  <motion.div whileTap={{ scale: 0.98 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
+                    <Link to={url} aria-current={active ? "page" : undefined} className={cn(
+                      "group flex min-h-14 items-center gap-3.5 rounded-2xl border px-4 py-3 text-base font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400",
+                      active ? "border-orange-300/15 bg-orange-400/[0.08] text-orange-200" : "border-transparent text-white/75 hover:border-white/[0.06] hover:bg-white/[0.04]",
+                    )}>
+                      <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                      <span>{name}</span>
+                      {active ? <span className="ml-auto text-[10px] font-semibold uppercase tracking-widest">Current</span> : <ArrowUpRight className="ml-auto h-4 w-4 text-white/30" aria-hidden="true" />}
+                    </Link>
+                  </motion.div>
                 </Dialog.Close>
               );
             })}
           </nav>
           <Dialog.Close asChild>
-            <Link to="/app" className="mt-6 flex min-h-12 items-center justify-between rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(249,115,22,.15)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200">
-              Open workbench <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
+            <motion.div whileTap={{ scale: 0.98 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
+              <Link to="/app" className="mt-6 flex min-h-12 items-center justify-between rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(249,115,22,.15)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200">
+                Open workbench <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </motion.div>
           </Dialog.Close>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
   );
 }
+
