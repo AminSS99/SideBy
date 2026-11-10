@@ -65,7 +65,7 @@ export const ComparisonHeader = ({
     const mm = gsap.matchMedia();
 
     mm.add("(prefers-reduced-motion: no-preference)", () => {
-      const tl = gsap.timeline();
+      const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
 
       tl.from(".ch-top-item", {
         y: -14,

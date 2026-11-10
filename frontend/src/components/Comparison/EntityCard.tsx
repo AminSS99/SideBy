@@ -17,9 +17,12 @@ export const EntityCard = ({ entity, side }: EntityCardProps) => {
   const accentColor = side === "a" ? colors.entityA : colors.entityB;
   const logo = resolveLogo(entity.name);
 
-  // 3D Tilt Effect on Mouse Move
+  // 3D Tilt Effect on Mouse Move (fine pointers only, respecting reduced motion)
   useGSAP(() => {
     if (!cardRef.current) return;
+    if (!window.matchMedia("(pointer: fine)").matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
     
     const card = cardRef.current;
     const xTo = gsap.quickTo(card, "rotationY", { ease: "power3", duration: 0.5 });

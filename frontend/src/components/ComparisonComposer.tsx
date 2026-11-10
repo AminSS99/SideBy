@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import { BorderBeam } from "@/components/ui/border-beam";
 import { pwaUpdates } from "@/lib/pwa/register";
 import { useDraftScope } from "@/hooks/useDraftScope";
 import { KeyboardSpacer } from "@/components/KeyboardSpacer";
@@ -194,7 +196,10 @@ export function ComparisonComposer({
     setShowContextInput(suggestion.toLowerCase().includes(" for "));
   };
 
+  const [swapRotation, setSwapRotation] = useState(0);
+
   const swapEntities = () => {
+    setSwapRotation((prev) => prev + 180);
     const previousEntityA = entityA;
     setEntityA(entityB);
     setEntityB(previousEntityA);
@@ -211,6 +216,7 @@ export function ComparisonComposer({
 
   return (
     <div className={cn("relative w-full max-w-3xl overflow-hidden rounded-[1.75rem] border border-white/[0.12] bg-[#0d0b0a]/92 p-4 shadow-[0_30px_100px_rgba(0,0,0,.55),0_0_80px_rgba(249,115,22,.08)] backdrop-blur-2xl sm:p-6", className)}>
+      <BorderBeam size={150} duration={12} colorFrom="#f97316" colorTo="#f43f5e" />
       <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-orange-500/[0.12] blur-[90px]" />
       <div className="pointer-events-none absolute -bottom-28 -left-20 h-64 w-64 rounded-full bg-fuchsia-500/[0.07] blur-[100px]" />
       <div className="relative mb-5 flex items-center justify-between gap-4 px-1">
@@ -259,28 +265,43 @@ export function ComparisonComposer({
             <div className="absolute inset-0 flex items-center" aria-hidden="true">
               <div className="w-full border-t border-white/[0.08]" />
             </div>
-            <button
+            <motion.button
               type="button"
               onClick={swapEntities}
               aria-label="Swap comparison options"
               disabled={!entityA.trim() && !entityB.trim()}
-              className="relative inline-flex min-h-[38px] items-center gap-1.5 rounded-full border border-white/[0.12] bg-[#141210] px-3.5 py-1.5 text-[11px] font-semibold text-white/80 shadow-[0_4px_18px_rgba(0,0,0,.5)] backdrop-blur-md transition-all active:scale-95 hover:border-orange-300/30 hover:bg-[#1a1714] hover:text-orange-300 disabled:cursor-not-allowed disabled:opacity-30"
+              whileTap={{ scale: 0.93 }}
+              className="relative inline-flex min-h-[38px] items-center gap-1.5 rounded-full border border-white/[0.12] bg-[#141210] px-3.5 py-1.5 text-[11px] font-semibold text-white/80 shadow-[0_4px_18px_rgba(0,0,0,.5)] backdrop-blur-md transition-all hover:border-orange-300/30 hover:bg-[#1a1714] hover:text-orange-300 disabled:cursor-not-allowed disabled:opacity-30"
             >
-              <ArrowLeftRight className="h-3.5 w-3.5 rotate-90 text-orange-400" />
+              <motion.span
+                animate={{ rotate: swapRotation }}
+                transition={{ type: "spring", stiffness: 350, damping: 20 }}
+                className="inline-grid place-items-center"
+              >
+                <ArrowLeftRight className="h-3.5 w-3.5 rotate-90 text-orange-400" />
+              </motion.span>
               <span>Swap</span>
-            </button>
+            </motion.button>
           </div>
 
           {/* Desktop swap button */}
-          <button
+          <motion.button
             type="button"
             onClick={swapEntities}
             aria-label="Swap comparison options"
             disabled={!entityA.trim() && !entityB.trim()}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
             className="hidden sm:grid sm:mb-1 sm:h-10 sm:w-10 sm:place-items-center sm:rounded-full sm:border sm:border-white/[0.08] sm:bg-white/[0.035] sm:text-white/65 sm:transition-colors hover:sm:border-orange-300/25 hover:sm:text-orange-300 disabled:sm:cursor-not-allowed disabled:sm:opacity-25"
           >
-            <ArrowLeftRight className="h-4 w-4" />
-          </button>
+            <motion.span
+              animate={{ rotate: swapRotation }}
+              transition={{ type: "spring", stiffness: 350, damping: 20 }}
+              className="inline-grid place-items-center"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+            </motion.span>
+          </motion.button>
 
           <div className="relative w-full">
             <label htmlFor="hero-comparison-input-b" className="mb-2 block px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/65">
@@ -435,10 +456,13 @@ export function ComparisonComposer({
 
         {/* Submit Action Button */}
         <div className="pt-1">
-          <button
+          <motion.button
             type="submit"
             disabled={!canSubmit || isCreating || localSubmitting}
-            className="group inline-flex h-14 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 bg-[length:200%_100%] text-xs font-bold uppercase tracking-widest text-white shadow-[0_16px_42px_rgba(244,63,94,.2)] transition-all duration-500 hover:bg-[position:100%_0] hover:shadow-[0_18px_50px_rgba(249,115,22,.3)] active:scale-[0.99] disabled:cursor-not-allowed disabled:grayscale disabled:opacity-30"
+            whileHover={!canSubmit || isCreating || localSubmitting ? undefined : { scale: 1.012, y: -1 }}
+            whileTap={!canSubmit || isCreating || localSubmitting ? undefined : { scale: 0.985, y: 1 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="group inline-flex h-14 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 bg-[length:200%_100%] text-xs font-bold uppercase tracking-widest text-white shadow-[0_16px_42px_rgba(244,63,94,.2)] transition-all duration-500 hover:bg-[position:100%_0] hover:shadow-[0_18px_50px_rgba(249,115,22,.3)] disabled:cursor-not-allowed disabled:grayscale disabled:opacity-30"
           >
             {isCreating || localSubmitting ? (
               <>
@@ -448,10 +472,10 @@ export function ComparisonComposer({
             ) : (
               <>
                 Research this decision
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </>
             )}
-          </button>
+          </motion.button>
         </div>
       </form>
 
@@ -465,14 +489,17 @@ export function ComparisonComposer({
         </p>
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 no-scrollbar sm:flex-wrap">
           {SUGGESTIONS.map((suggestion) => (
-            <button
+            <motion.button
               key={suggestion}
               type="button"
+              whileHover={{ scale: 1.03, y: -1 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 450, damping: 25 }}
               onClick={() => handleSuggestionClick(suggestion)}
-              className="min-h-10 shrink-0 rounded-full border border-white/[0.08] bg-black/30 px-3.5 py-1.5 text-xs font-medium text-white/80 transition-all active:scale-95 hover:border-orange-500/30 hover:bg-orange-500/5 hover:text-orange-300"
+              className="min-h-10 shrink-0 rounded-full border border-white/[0.08] bg-black/30 px-3.5 py-1.5 text-xs font-medium text-white/80 transition-colors hover:border-orange-500/30 hover:bg-orange-500/5 hover:text-orange-300"
             >
               {suggestion}
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>

@@ -19,45 +19,52 @@ export const CategorySection = ({ category, entities, index }: CategorySectionPr
 
   useGSAP(() => {
     if (!containerRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const el = containerRef.current;
 
-    // The entire category block slides up and fades in
+    // The entire category block slides up and fades in once smoothly
     gsap.from(el, {
       scrollTrigger: {
         trigger: el,
-        start: "top 85%", // Trigger when top of element hits 85% down the viewport
-        toggleActions: "play none none reverse",
+        start: "top 88%",
+        once: true,
       },
-      y: 50,
+      y: 35,
       opacity: 0,
-      duration: 1,
-      ease: "expo.out",
+      duration: 0.8,
+      ease: "power3.out",
+      clearProps: "transform,opacity",
     });
 
     // Animate the header elements
     gsap.from(el.querySelectorAll('.cat-header-item'), {
       scrollTrigger: {
         trigger: el,
-        start: "top 80%",
+        start: "top 84%",
+        once: true,
       },
-      y: 20,
+      y: 16,
       opacity: 0,
-      stagger: 0.1,
-      duration: 0.8,
-      ease: "power3.out"
+      stagger: 0.08,
+      duration: 0.7,
+      ease: "power3.out",
+      clearProps: "transform,opacity",
     });
 
     // Takeaway block sweep in
-    if (el.querySelector('.cat-takeaway')) {
-      gsap.from(el.querySelector('.cat-takeaway'), {
+    const takeaway = el.querySelector('.cat-takeaway');
+    if (takeaway) {
+      gsap.from(takeaway, {
         scrollTrigger: {
-          trigger: el.querySelector('.cat-takeaway'),
-          start: "top 90%",
+          trigger: takeaway,
+          start: "top 92%",
+          once: true,
         },
-        x: -30,
+        x: -24,
         opacity: 0,
-        duration: 0.8,
-        ease: "power3.out"
+        duration: 0.7,
+        ease: "power3.out",
+        clearProps: "transform,opacity",
       });
     }
 

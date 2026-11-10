@@ -193,18 +193,29 @@ export function ResearchPreviewCard() {
           const isCompleted = idx < activeIndex;
           const StageIcon = stage.icon;
           return (
-            <button
+            <motion.button
               key={stage.id}
               type="button"
               role="tab"
               aria-selected={isActive}
               onClick={() => setActiveIndex(idx)}
-              className={`group flex min-h-12 flex-col justify-between rounded-xl border p-3 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-[0.99] ${
+              whileHover={{ y: -1, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              className={`group relative flex min-h-12 flex-col justify-between rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
                 isActive
-                  ? "border-orange-300/35 bg-gradient-to-br from-orange-400/[0.13] to-rose-500/[0.05] shadow-[inset_2px_0_0_0_#fb923c]"
+                  ? "border-orange-300/40 text-[#fffaf1]"
                   : "border-white/[0.08] bg-white/[0.025] hover:border-white/[0.18] hover:bg-white/[0.045]"
               }`}
             >
+              {isActive && (
+                <motion.div
+                  layoutId="research-stage-active"
+                  className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-br from-orange-400/[0.14] to-rose-500/[0.06] shadow-[inset_2px_0_0_0_#fb923c,0_4px_20px_rgba(249,115,22,.12)]"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                />
+              )}
               <div className="flex w-full items-center justify-between gap-2">
                 <span className="font-mono text-[10px] font-semibold text-white/60">
                   {stage.number}
@@ -229,7 +240,7 @@ export function ResearchPreviewCard() {
                 {stage.label}
               </p>
               <p className="mt-1 text-[11px] leading-4 text-white/60">{stage.detail}</p>
-            </button>
+            </motion.button>
           );
         })}
       </div>

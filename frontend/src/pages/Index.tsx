@@ -76,8 +76,8 @@ const Index = () => {
           onEnter: () =>
             gsap.fromTo(
               section,
-              { y: 24 },
-              { y: 0, duration: 0.65, ease: "power3.out", clearProps: "transform" },
+              { y: 24, opacity: 0 },
+              { y: 0, opacity: 1, duration: 0.65, ease: "power3.out", clearProps: "transform,opacity" },
             ),
         });
       });
@@ -167,16 +167,16 @@ const Index = () => {
                   key={comparison.label}
                   type="button"
                   onClick={() => beginComparison(comparison.label)}
-                  className="group relative min-h-[148px] w-[82vw] max-w-[330px] shrink-0 snap-center overflow-hidden rounded-2xl border border-white/[0.1] bg-white/[0.035] p-5 text-left transition duration-200 hover:-translate-y-0.5 hover:border-orange-300/30 hover:bg-orange-400/[0.06] hover:shadow-[0_18px_45px_rgba(0,0,0,.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:translate-y-0 active:scale-[0.99] sm:w-auto sm:max-w-none"
+                  className="group relative min-h-[148px] w-[82vw] max-w-[330px] shrink-0 snap-center overflow-hidden rounded-2xl border border-white/[0.1] bg-white/[0.035] p-5 text-left transition-all duration-300 hover:-translate-y-1 hover:border-orange-300/40 hover:bg-orange-400/[0.07] hover:shadow-[0_22px_55px_rgba(249,115,22,.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:translate-y-0 active:scale-[0.985] sm:w-auto sm:max-w-none"
                 >
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-300/45 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                  <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-orange-400/60 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-orange-300">{comparison.category}</span>
                   </div>
-                  <p className="mt-5 font-serif text-xl leading-snug text-[#fffaf1]">{comparison.label}</p>
+                  <p className="mt-5 font-serif text-xl leading-snug text-[#fffaf1] transition-colors group-hover:text-white">{comparison.label}</p>
                   <div className="mt-4 flex items-center justify-between gap-3 text-xs text-white/65">
                     <span className="truncate">{comparison.sourceRequirement}</span>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-orange-300 transition-transform group-hover:translate-x-1" />
+                    <ArrowRight className="h-4 w-4 shrink-0 text-orange-300 transition-transform duration-300 group-hover:translate-x-1.5" />
                   </div>
                 </button>
               ))}

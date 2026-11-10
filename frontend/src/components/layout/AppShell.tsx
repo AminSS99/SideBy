@@ -420,56 +420,104 @@ const AppShell = () => {
         <NavLink
           to="/app/comparisons"
           className={({ isActive }) =>
-            `flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
-              isActive ? "text-orange-300" : "text-white/70 hover:text-white"
+            `relative flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 rounded-xl px-2.5 py-1 text-[10px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
+              isActive ? "text-orange-300" : "text-white/60 hover:text-white"
             }`
           }
         >
-          <GitCompareArrows className="h-5 w-5" />
-          <span>Compare</span>
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <motion.div
+                  layoutId="mobile-bottom-nav-active"
+                  className="absolute inset-0.5 -z-10 rounded-xl border border-orange-400/25 bg-gradient-to-b from-orange-400/[0.14] to-rose-400/[0.05] shadow-[0_2px_12px_rgba(249,115,22,.18)]"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                />
+              )}
+              <GitCompareArrows className="h-5 w-5" />
+              <span>Compare</span>
+            </>
+          )}
         </NavLink>
 
         <NavLink
           to="/app"
           end
           className={({ isActive }) =>
-            `flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
-              isActive ? "text-orange-300" : "text-white/70 hover:text-white"
+            `relative flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 rounded-xl px-2.5 py-1 text-[10px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
+              isActive ? "text-orange-300" : "text-white/60 hover:text-white"
             }`
           }
         >
-          <Clock3 className="h-5 w-5" />
-          <span>History</span>
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <motion.div
+                  layoutId="mobile-bottom-nav-active"
+                  className="absolute inset-0.5 -z-10 rounded-xl border border-orange-400/25 bg-gradient-to-b from-orange-400/[0.14] to-rose-400/[0.05] shadow-[0_2px_12px_rgba(249,115,22,.18)]"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                />
+              )}
+              <Clock3 className="h-5 w-5" />
+              <span>History</span>
+            </>
+          )}
         </NavLink>
 
         <NavLink
           to="/app/uploads"
           className={({ isActive }) =>
-            `flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
-              isActive ? "text-orange-300" : "text-white/70 hover:text-white"
+            `relative flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 rounded-xl px-2.5 py-1 text-[10px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
+              isActive ? "text-orange-300" : "text-white/60 hover:text-white"
             }`
           }
         >
-          <Database className="h-5 w-5" />
-          <span>Sources</span>
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <motion.div
+                  layoutId="mobile-bottom-nav-active"
+                  className="absolute inset-0.5 -z-10 rounded-xl border border-orange-400/25 bg-gradient-to-b from-orange-400/[0.14] to-rose-400/[0.05] shadow-[0_2px_12px_rgba(249,115,22,.18)]"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                />
+              )}
+              <Database className="h-5 w-5" />
+              <span>Sources</span>
+            </>
+          )}
         </NavLink>
 
         <NavLink
           to="/app/team"
           className={({ isActive }) =>
-            `flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
-              isActive ? "text-orange-300" : "text-white/70 hover:text-white"
+            `relative flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 rounded-xl px-2.5 py-1 text-[10px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
+              isActive ? "text-orange-300" : "text-white/60 hover:text-white"
             }`
           }
         >
-          <Users className="h-5 w-5" />
-          <span>Team</span>
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <motion.div
+                  layoutId="mobile-bottom-nav-active"
+                  className="absolute inset-0.5 -z-10 rounded-xl border border-orange-400/25 bg-gradient-to-b from-orange-400/[0.14] to-rose-400/[0.05] shadow-[0_2px_12px_rgba(249,115,22,.18)]"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                />
+              )}
+              <Users className="h-5 w-5" />
+              <span>Team</span>
+            </>
+          )}
         </NavLink>
 
         <button
           onClick={() => setMobileMenuOpen(true)}
           aria-label="More navigation"
-          className="flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold text-white/70 transition-all hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+          className="flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold text-white/60 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-95"
         >
           <Menu className="h-5 w-5" />
           <span>More</span>

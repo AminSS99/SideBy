@@ -13,6 +13,7 @@ export const ConsensusPanel = ({ result }: { result: ComparisonData }) => {
 
   useGSAP(() => {
     if (!containerRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     
     gsap.from(".cons-box", {
       scrollTrigger: {
@@ -23,7 +24,8 @@ export const ConsensusPanel = ({ result }: { result: ComparisonData }) => {
       opacity: 0,
       stagger: 0.15,
       duration: 0.8,
-      ease: "power2.out"
+      ease: "power3.out",
+      clearProps: "transform,opacity",
     });
   }, { scope: containerRef });
 

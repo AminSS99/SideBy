@@ -1,6 +1,7 @@
 import React, { useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Sliders, Trophy, Save, Trash2, HelpCircle, Activity, Sparkles, FolderOpen, Lock } from "lucide-react";
+import { motion } from "framer-motion";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { cn } from "@/lib/utils";
@@ -395,25 +396,36 @@ export const DecisionMatrixPanel = ({
           {/* Save Form */}
           <form onSubmit={handleSaveMatrix} className="mt-8 border-t border-[#1f1f1f] pt-6 space-y-3">
             <label className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">Save Current Weights Template</label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input 
                 type="text"
                 placeholder="e.g. Developer Heavy"
                 value={matrixName}
                 onChange={(e) => setMatrixName(e.target.value)}
-                className="h-9 flex-1 rounded-sm border border-[#333] bg-black px-3 text-xs text-[#fdfbf7] outline-none transition-colors placeholder:text-[#fdfbf7]/30 focus:border-orange-500"
+                className="h-9 flex-1 rounded-sm border border-[#333] bg-black px-3 text-base sm:text-xs text-[#fdfbf7] outline-none transition-colors placeholder:text-[#fdfbf7]/30 focus:border-orange-500"
               />
-              <button 
-                type="submit" 
-                disabled={isSaving}
-                className="h-9 px-4 flex items-center gap-1.5 rounded-sm bg-orange-600 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700 disabled:opacity-50 shrink-0"
-              >
-                <Save className="h-3.5 w-3.5" />
-                {isSaving ? "Saving" : "Save"}
-              </button>
-              <button type="button" onClick={() => void handleSaveDefaultProfile()} disabled={isSaving} className="h-9 rounded-sm border border-orange-500/40 px-3 text-[9px] font-bold uppercase tracking-widest text-orange-300 transition-colors hover:bg-orange-500/10 disabled:opacity-50">
-                Default
-              </button>
+              <div className="flex gap-2">
+                <motion.button 
+                  whileHover={!isSaving ? { scale: 1.02 } : undefined}
+                  whileTap={!isSaving ? { scale: 0.96 } : undefined}
+                  type="submit" 
+                  disabled={isSaving}
+                  className="h-9 px-4 flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-sm bg-orange-600 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700 disabled:opacity-50 shrink-0"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  {isSaving ? "Saving" : "Save"}
+                </motion.button>
+                <motion.button 
+                  whileHover={!isSaving ? { scale: 1.02 } : undefined}
+                  whileTap={!isSaving ? { scale: 0.96 } : undefined}
+                  type="button" 
+                  onClick={() => void handleSaveDefaultProfile()} 
+                  disabled={isSaving} 
+                  className="h-9 rounded-sm border border-orange-500/40 px-3 text-[9px] font-bold uppercase tracking-widest text-orange-300 transition-colors hover:bg-orange-500/10 disabled:opacity-50"
+                >
+                  Default
+                </motion.button>
+              </div>
             </div>
           </form>
         </div>
