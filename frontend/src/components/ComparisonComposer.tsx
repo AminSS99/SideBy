@@ -29,16 +29,16 @@ interface ComparisonComposerProps {
 }
 
 const SUGGESTIONS = [
-  "Supabase vs Firebase for real-time applications",
+  "iPhone 16 vs Google Pixel 9 for photography",
   "React vs Vue for SaaS products",
-  "Cursor vs Windsurf for AI coding",
-  "Vercel vs Render for deployment",
-  "Notion vs Linear for project management",
+  "LG C4 vs Samsung S90D for a bright living room",
+  "Tesla Model 3 vs BMW i4 for daily commuting",
+  "Portugal vs Spain for remote work",
 ];
 
 const COMPARISON_TEMPLATES = [
-  { label: "BaaS", context: "a production BaaS" },
-  { label: "Hosting", context: "hosting a web application" },
+  { label: "Phones", context: "photography and daily use" },
+  { label: "Cars", context: "daily commuting" },
   { label: "AI tools", context: "an AI workflow" },
   { label: "Laptops", context: "software development" },
   { label: "Cities", context: "remote work" },
@@ -236,7 +236,7 @@ export function ComparisonComposer({
               type="text"
               value={entityA}
               onChange={(e) => setEntityA(e.target.value)}
-              placeholder="e.g. Supabase"
+              placeholder="e.g. iPhone 16"
               autoComplete="off"
               className="h-14 rounded-xl border-white/[0.09] bg-black/50 px-4 text-base font-medium text-white shadow-inner placeholder:text-white/25 focus-visible:border-orange-400/40 focus-visible:ring-orange-500/25"
             />
@@ -262,7 +262,7 @@ export function ComparisonComposer({
               aria-label="Second option"
               value={entityB}
               onChange={(e) => setEntityB(e.target.value)}
-              placeholder="e.g. Firebase"
+              placeholder="e.g. Google Pixel 9"
               autoComplete="off"
               className="h-14 rounded-xl border-white/[0.09] bg-black/50 px-4 text-base font-medium text-white shadow-inner placeholder:text-white/25 focus-visible:border-orange-400/40 focus-visible:ring-orange-500/25"
             />
@@ -285,13 +285,13 @@ export function ComparisonComposer({
                 <label htmlFor="composer-priorities" className="mb-1.5 block text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">
                   Priorities <span className="text-white/25">(optional)</span>
                 </label>
-                <Input id="composer-priorities" aria-label="What matters most" type="text" value={priorities} onChange={(e) => setPriorities(e.target.value)} placeholder="e.g. Cost, then ease of migration" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
+                <Input id="composer-priorities" aria-label="What matters most" type="text" value={priorities} onChange={(e) => setPriorities(e.target.value)} placeholder="e.g. Price, then battery life" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
               </div>
               <div>
                 <label htmlFor="composer-nonnegotiables" className="mb-1.5 block text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">
                   Non-negotiables <span className="text-white/25">(optional)</span>
                 </label>
-                <Input id="composer-nonnegotiables" aria-label="Hard requirements" type="text" value={nonNegotiables} onChange={(e) => setNonNegotiables(e.target.value)} placeholder="e.g. Must offer SOC 2, self-hosting" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
+                <Input id="composer-nonnegotiables" aria-label="Hard requirements" type="text" value={nonNegotiables} onChange={(e) => setNonNegotiables(e.target.value)} placeholder="e.g. Under $800, available in my country" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
               </div>
             </div>
             <p className="text-[9px] leading-4 text-[#fdfbf7]/35">Priorities weight the scoring; non-negotiables are recorded verbatim in your brief. SideBy never invents requirements you didn't state.</p>
@@ -419,7 +419,7 @@ export function ComparisonComposer({
       {/* Suggested chips list */}
       <div className="relative mt-5 border-t border-white/[0.07] pt-4">
         <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#fdfbf7]/60 mb-3 text-left">
-          Try a proven question
+          Try an example
         </p>
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 no-scrollbar sm:flex-wrap">
           {SUGGESTIONS.map((suggestion) => (

@@ -137,10 +137,10 @@
   },
   {
     "query": "apple vs orange nutrition",
-    "expectedRelation": "comparable",
-    "expectedCanStart": true,
-    "category": "general_research",
-    "reason": "Valid food comparison with context",
+    "expectedRelation": "unsafe",
+    "expectedCanStart": false,
+    "category": "sensitive",
+    "reason": "Food comparisons are outside product scope",
     "layer": "rules"
   },
   {

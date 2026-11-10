@@ -13,6 +13,8 @@ import {
 const COMPARISON_ID = "cmp_composer_e2e";
 
 test.describe("SideBy Comparison Composer E2E", () => {
+  // Keep the PWA worker from bypassing the request mocks in these UI tests.
+  test.use({ serviceWorkers: "block" });
   test.beforeEach(async ({ page }) => {
     await mockAppApi(page);
   });
@@ -29,8 +31,8 @@ test.describe("SideBy Comparison Composer E2E", () => {
     await page.goto("/");
 
     // Enter entities A and B
-    const inputA = page.getByPlaceholder("e.g. Supabase");
-    const inputB = page.getByPlaceholder("e.g. Firebase");
+    const inputA = page.getByRole("textbox", { name: "First option", exact: true });
+    const inputB = page.getByRole("textbox", { name: "Second option", exact: true });
     await inputA.fill("React");
     await inputB.fill("Vue");
 
@@ -65,8 +67,8 @@ test.describe("SideBy Comparison Composer E2E", () => {
     await suggestionChip.click();
 
     // Verify inputs populated automatically
-    const inputA = page.getByPlaceholder("e.g. Supabase");
-    const inputB = page.getByPlaceholder("e.g. Firebase");
+    const inputA = page.getByRole("textbox", { name: "First option", exact: true });
+    const inputB = page.getByRole("textbox", { name: "Second option", exact: true });
     await expect(inputA).toHaveValue("React");
     await expect(inputB).toHaveValue("Vue");
 
@@ -85,8 +87,8 @@ test.describe("SideBy Comparison Composer E2E", () => {
 
     await page.goto("/");
 
-    const inputA = page.getByPlaceholder("e.g. Supabase");
-    const inputB = page.getByPlaceholder("e.g. Firebase");
+    const inputA = page.getByRole("textbox", { name: "First option", exact: true });
+    const inputB = page.getByRole("textbox", { name: "Second option", exact: true });
     await inputA.fill("Donald Trump");
     await inputB.fill("Joe Biden");
 
@@ -101,7 +103,7 @@ test.describe("SideBy Comparison Composer E2E", () => {
   test("should guide incomplete pairs without treating them as blocked", async ({ page }) => {
     await page.goto("/");
 
-    const inputA = page.getByPlaceholder("e.g. Supabase");
+    const inputA = page.getByRole("textbox", { name: "First option", exact: true });
     await inputA.fill("React");
 
     await expect(page.getByText("One more option")).toBeVisible();
@@ -120,8 +122,8 @@ test.describe("SideBy Comparison Composer E2E", () => {
 
     await page.goto("/");
 
-    const inputA = page.getByPlaceholder("e.g. Supabase");
-    const inputB = page.getByPlaceholder("e.g. Firebase");
+    const inputA = page.getByRole("textbox", { name: "First option", exact: true });
+    const inputB = page.getByRole("textbox", { name: "Second option", exact: true });
     await inputA.fill("React");
     await inputB.fill("Vue");
 
@@ -237,6 +239,6 @@ test.describe("SideBy Accessibility Prefers Reduced Motion E2E", () => {
     const heading = page.locator("h1").first();
     await expect(heading).toBeVisible();
     // Verify landing page does not crash and displays content correctly
-    await expect(page.getByPlaceholder("e.g. Supabase")).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "First option", exact: true })).toBeVisible();
   });
 });

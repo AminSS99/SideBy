@@ -19,21 +19,22 @@ import {
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { AmbientOrbs } from "@/components/AmbientOrbs";
-import { SUPPORTED_COMPARISON_CATEGORIES } from "@/lib/comparisonTaxonomy";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAuth } from "@/contexts/AuthContext";
 import { ComparisonComposer } from "@/components/ComparisonComposer";
+import { ProductDemo } from "@/components/landing/ProductDemo";
 import { ResearchPreviewCard } from "@/components/landing/ResearchPreviewCard";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const featuredComparisons = SUPPORTED_COMPARISON_CATEGORIES.flatMap((category) =>
-  category.examples.slice(0, 1).map((label) => ({
-    label,
-    category: category.shortLabel,
-    sourceRequirement: category.sourceRequirements[0] || "Source-backed",
-  })),
-).slice(0, 6);
+const featuredComparisons = [
+  { label: "iPhone 16 vs Google Pixel 9 for photography", category: "Phones", sourceRequirement: "Manufacturer specs and independent reviews" },
+  { label: "LG C4 vs Samsung S90D for a bright living room", category: "TVs", sourceRequirement: "Display specifications and testing" },
+  { label: "Tesla Model 3 vs BMW i4 for daily commuting", category: "Cars", sourceRequirement: "Range, running costs, and safety data" },
+  { label: "Portugal vs Spain for remote work", category: "Countries", sourceRequirement: "Official costs, infrastructure, and travel guidance" },
+  { label: "Notion vs Obsidian for personal notes", category: "Software", sourceRequirement: "Official features and pricing" },
+  { label: "MIT vs Stanford for computer science", category: "Education", sourceRequirement: "Course catalogs and published costs" },
+];
 
 const proofPoints = [
   { value: "Primary", label: "sources prioritized" },
@@ -114,17 +115,31 @@ const Index = () => {
       <main className="relative z-10">
         <section ref={heroRef} className="relative mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 sm:pb-24 sm:pt-16 lg:pt-20">
           <div className="hero-pointer-glow pointer-events-none absolute left-1/2 top-1/3 -z-10 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(249,115,22,.15),rgba(244,63,94,.06)_38%,transparent_68%)] blur-2xl" />
-          <div className="grid items-center gap-8 sm:gap-12 lg:grid-cols-[minmax(0,.92fr)_minmax(500px,1.08fr)] lg:gap-14">
-            <div className="text-center lg:text-left">
+          <div className="grid items-center gap-8 sm:gap-12 lg:grid-cols-[minmax(0,.92fr)_minmax(500px,1.08fr)] lg:gap-x-14 lg:gap-y-0">
+            <div className="text-center lg:col-start-1 lg:row-start-1 lg:text-left">
               <div className="hero-kicker mb-5 inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-400/[0.08] px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-orange-200 shadow-[0_0_40px_rgba(249,115,22,.1)]">
                 <Sparkles className="h-3.5 w-3.5" /> SideBy AI · Source-backed comparisons
               </div>
               <h1 className="hero-title font-serif text-[clamp(2.9rem,11vw,5.5rem)] leading-[0.92] tracking-[-0.05em] text-[#fffaf1] lg:text-[5.6rem]">
-                <span className="block overflow-hidden pb-1.5"><span className="block">Compare less.</span></span>
-                <span className="block overflow-hidden pb-2.5"><span className="block bg-gradient-to-r from-orange-300 via-rose-400 to-fuchsia-400 bg-clip-text italic text-transparent">Know more.</span></span>
+                <span className="block overflow-hidden pb-1.5"><span className="block">Compare your options.</span></span>
+                <span className="block overflow-hidden pb-5"><span className="block bg-gradient-to-r from-orange-300 via-rose-400 to-fuchsia-400 bg-clip-text italic text-transparent">Find your fit.</span></span>
               </h1>
               <p className="hero-copy mx-auto mt-5 max-w-xl text-base leading-7 text-white/75 sm:text-lg lg:mx-0">
-                SideBy turns scattered research into a decision you can defend—with sourced facts, meaningful scores, and a verdict that shows its work.
+                Phones, TVs, cars, countries, software, courses, and more. Choose two options, tell us what matters, and get a side-by-side comparison with sources you can check.
+              </p>
+
+            </div>
+
+            <div id="start-comparing" className="min-w-0 scroll-mt-28 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+              <ComparisonComposer
+                onStart={beginComparison}
+                className={`hero-composer mx-auto lg:mx-0 ${composerStyles.composerShell}`}
+              />
+            </div>
+
+            <div className="text-center lg:col-start-1 lg:row-start-2 lg:text-left">
+              <p className="mx-auto max-w-xl text-sm leading-6 text-white/65 lg:mx-0 lg:mt-3">
+                Food, drinks, and people comparisons are excluded. Political rankings and personalized medical or financial advice are also outside our scope.
               </p>
 
               <div className="mt-7 grid grid-cols-3 gap-2 sm:max-w-lg sm:gap-3 lg:mx-0">
@@ -136,18 +151,13 @@ const Index = () => {
                 ))}
               </div>
             </div>
-
-            <ComparisonComposer
-              onStart={beginComparison}
-              className={`hero-composer mx-auto lg:mx-0 ${composerStyles.composerShell}`}
-            />
           </div>
 
           <div className="reveal-section mt-14 border-t border-white/[0.08] pt-6 sm:mt-20 sm:pt-8">
             <div className="mb-4 flex items-end justify-between gap-4">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-300/90">Start with a real question</p>
-                <p className="mt-1 text-sm text-white/75">Tap a comparison and we’ll fill the research brief.</p>
+                <p className="mt-1 text-sm text-white/75">Choose an example to start a comparison.</p>
               </div>
               <ArrowRight className="hidden h-5 w-5 text-orange-300 sm:block" />
             </div>
@@ -171,6 +181,10 @@ const Index = () => {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="reveal-section mx-auto mt-14 max-w-4xl sm:mt-20">
+            <ProductDemo />
           </div>
         </section>
 

@@ -160,12 +160,13 @@ describe("Global Circuit Breaker for Comparisons", () => {
       expect(state.counts.get(`usage:user:user_1:comparison:${today}`)).toBe(0);
     });
 
-    it("fails open when the counter store throws in the global breaker check", async () => {
+    it("blocks and refunds quota when the global counter store throws", async () => {
       state.throwOnGlobalIncr = true;
 
       const res = await callComparison({ query: "linear vs jira" });
-      expect(res.statusCode).toBe(200);
-      expect(deps.createComparisonJob).toHaveBeenCalledTimes(1);
+      expect(res.statusCode).toBe(503);
+      expect(Number(res.headers["Retry-After"])).toBeLessThanOrEqual(60);
+      expect(deps.createComparisonJob).not.toHaveBeenCalled();
     });
   });
 
@@ -198,12 +199,13 @@ describe("Global Circuit Breaker for Comparisons", () => {
       expect(state.counts.get(`usage:user:api_user_2:comparison:${today}`)).toBe(0);
     });
 
-    it("fails open when the counter store throws in v1 route", async () => {
+    it("blocks v1 work when the global counter store throws", async () => {
       state.throwOnGlobalIncr = true;
 
       const res = await callV1Comparison({ query: "linear vs jira" });
-      expect(res.statusCode).toBe(202);
-      expect(deps.createComparisonJob).toHaveBeenCalledTimes(1);
+      expect(res.statusCode).toBe(503);
+      expect(Number(res.headers["Retry-After"])).toBeLessThanOrEqual(60);
+      expect(deps.createComparisonJob).not.toHaveBeenCalled();
     });
   });
 });

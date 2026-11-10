@@ -85,3 +85,29 @@ describe("people and war scope policy", () => {
     expect(analyzeComparisonQuery(query).canStart).toBe(true);
   });
 });
+
+
+describe("launch category coverage", () => {
+  it.each([
+    "LG C4 vs Samsung S90D for a bright living room",
+    "iPhone 16 vs Google Pixel 9 for photography",
+    "Tesla Model 3 vs BMW i4 for daily commuting",
+    "Portugal vs Spain for remote work",
+    "MIT vs Stanford for computer science",
+    "Rice University vs MIT for engineering",
+    "Notion vs Obsidian for personal notes",
+    "Next.js vs Remix for an ecommerce site",
+    "Apple Watch vs Samsung Galaxy Watch for running",
+    "Apple vs Samsung for smartphones",
+  ])("allows a concrete decision: %s", (query) => {
+    expect(analyzeComparisonQuery(query).canStart).toBe(true);
+  });
+  it.each([
+    "Pizza vs sushi", "apple vs orange nutrition", "Coffee vs tea",
+    "Chicken vs beef for dinner", "Pasta vs rice", "Salmon vs tuna",
+  ])("excludes food and drink: %s", (query) => {
+    const intent = analyzeComparisonQuery(query);
+    expect(intent.canStart).toBe(false);
+    expect(intent.message).toMatch(/food|drink/i);
+  });
+});

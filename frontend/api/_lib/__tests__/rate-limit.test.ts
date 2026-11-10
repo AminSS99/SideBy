@@ -103,10 +103,11 @@ describe("request admission limits", () => {
       expect(negative.resetAt).toBeGreaterThan(Date.now());
     });
 
-    it("fails open (allowed: true) and logs a warning when the counter store throws", async () => {
+    it("blocks new paid work when the counter store throws", async () => {
       state.throwOnIncr = true;
       const result = await checkGlobalDailyBudget("failing-store", 100);
-      expect(result.allowed).toBe(true);
+      expect(result.allowed).toBe(false);
+      expect(result.resetAt).toBeLessThanOrEqual(Date.now() + 60000);
       expect(result.resetAt).toBeGreaterThan(Date.now());
     });
 

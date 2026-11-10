@@ -834,6 +834,21 @@ const detectPolicySignals = (query: string, entityA: string, entityB: string): P
   const joined = `${normalize(entityA)} ${normalize(entityB)} ${q}`;
   const signals: PolicySignal[] = [];
 
+  // Common food terms give immediate feedback; the server AI gate handles
+  // unfamiliar dishes and ambiguous names without treating Apple as a fruit.
+  if (includesWordAny(joined.replace(/\brice university\b/g, ""), [
+    "food", "drink", "nutrition", "pizza", "sushi", "coffee", "tea",
+    "chicken", "beef", "pasta", "rice", "salmon", "tuna", "burger",
+    "bread", "milk", "cheese", "wine", "beer", "recipe", "recipes",
+  ])) {
+    signals.push({
+      id: "food-drink",
+      label: "Food and drink",
+      message: "SideBy does not compare food or drinks. Try phones, TVs, cars, countries, software, or courses instead.",
+      severity: "block",
+    });
+  }
+
   if (includesWordAny(joined, politicalSubjectTerms)) {
     signals.push({
       id: "political-subject",
@@ -887,7 +902,7 @@ const detectPolicySignals = (query: string, entityA: string, entityB: string): P
   }
 
   if (
-    includesAny(joined, personRoleTerms) ||
+    includesWordAny(joined, personRoleTerms) ||
     looksLikeNamedPersonPair(entityA, entityB, query)
   ) {
     signals.push({

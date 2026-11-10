@@ -67,8 +67,8 @@ async function setupComparison(page: import("@playwright/test").Page) {
 }
 
 async function startComparison(page: import("@playwright/test").Page, query: string) {
-  const inputA = page.getByPlaceholder("e.g. Supabase");
-  const inputB = page.getByPlaceholder("e.g. Firebase");
+  const inputA = page.getByRole("textbox", { name: "First option", exact: true });
+  const inputB = page.getByRole("textbox", { name: "Second option", exact: true });
   await expect(inputA).toBeVisible();
 
   const parts = query.split(/\s+vs\.?\s+/i);

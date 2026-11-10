@@ -365,11 +365,11 @@ export async function checkGlobalDailyBudget(
     }
     return { allowed: true, resetAt };
   } catch (error) {
-    logger.warn("Global daily budget check failed open", {
+    logger.warn("Global daily budget store unavailable; blocking new work", {
       name,
       cap,
       error: error instanceof Error ? error.message : String(error),
     });
-    return { allowed: true, resetAt };
+    return { allowed: false, resetAt: Date.now() + 60000 };
   }
 }

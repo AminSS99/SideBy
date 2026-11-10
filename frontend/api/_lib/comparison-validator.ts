@@ -66,7 +66,7 @@ function normalizeQuery(query: string): string {
 
 function cacheKey(normalized: string): string {
   const hash = createHash("sha256").update(normalized).digest("hex").slice(0, 16);
-  return `validation:v5:${hash}`;
+  return `validation:v6:${hash}`;
 }
 
 type EntityEvidence = Pick<SearchResult, "title" | "url" | "content">;
@@ -267,6 +267,8 @@ export async function validateComparisonQuery(
             "Sharing a name, topic, or superficial similarity is not enough.",
             "Software projects, frameworks, products, services, methods, standards, places, courses, and roles can be comparable when they serve a shared choice.",
             "Reject unrelated concepts, merely similar terms, political subjects, people, protected groups, and personal attributes or human qualities.",
+            "Food and drink comparisons are outside product scope, including ingredients, dishes, beverages, and nutrition comparisons. Reject with comparable=false, relation=unrelated, category=unsupported and explain the food exclusion. Do not confuse technology brands such as Apple with food.",
+            "Countries and cities may be compared for neutral practical choices such as travel or remote work, using costs, infrastructure, transport, and climate. Do not rank their people, nationalities, or political worth.",
             "First resolve identity using the supplied search evidence. Set sameEntity=true only when both inputs refer to the exact same real option, including spelling variants, repeated letters, alternate casing, or a common brand alias.",
             "When sameEntity=true, canonicalEntity must be the common official product or project name; otherwise set canonicalEntity to null.",
             "Do not set sameEntity for distinct projects that merely have similar names (for example Astra and Astro), or when the evidence is insufficient to establish identity.",
