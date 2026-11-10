@@ -45,7 +45,7 @@ for (const entry of urls) {
   }
 }
 
-if (!indexHtml.includes('rel="icon" type="image/x-icon" href="/sideby.ico?v=20260728-real"')) {
+if (!indexHtml.includes('rel="icon" type="image/x-icon" href="/favicon.ico?v=20261110-mark"')) {
   fail("index.html does not reference the versioned SideBy logo as the primary icon");
 }
 if (!manifest.icons.some((icon) => icon.src === "/icon-192.png")) {
