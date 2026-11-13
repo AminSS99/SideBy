@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Trophy, ArrowDown, X, ShieldCheck, Globe, Clock } from "lucide-react";
+import { Trophy, ArrowDown, X, ShieldCheck, Globe, Clock } from "@/components/icons";
 import { motion } from "framer-motion";
 import type { ComparisonData } from "./types";
 

@@ -1,4 +1,4 @@
-import { Download, LoaderCircle, Smartphone } from "lucide-react";
+import { Download, LoaderCircle, Smartphone } from "@/components/icons";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 import { IosInstallGuideModal } from "@/components/pwa/IosInstallGuideModal";
 

@@ -13,7 +13,7 @@ import {
   SearchCheck,
   Sparkles,
   Unlink2,
-} from "lucide-react";
+} from "@/components/icons";
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { usePageTitle } from "@/hooks/usePageTitle";

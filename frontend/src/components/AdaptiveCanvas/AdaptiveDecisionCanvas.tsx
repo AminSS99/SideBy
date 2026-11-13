@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Trophy } from "lucide-react";
+import { Trophy } from "@/components/icons";
 import { SafePanel } from "@/components/SafePanel";
 import {
   planAdaptivePresentation,

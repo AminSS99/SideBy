@@ -1,4 +1,5 @@
 import React from "react";
+import { MotionConfig } from "framer-motion";
 import { AuthenticateWithRedirectCallback, GoogleOneTap } from "@clerk/clerk-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -100,6 +101,7 @@ const App = ({ clerkUnavailable = false }: { clerkUnavailable?: boolean }) => {
     && !clerkUnavailable;
 
   return (
+    <MotionConfig reducedMotion="user">
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider clerkUnavailable={clerkUnavailable}>
@@ -238,6 +240,7 @@ const App = ({ clerkUnavailable = false }: { clerkUnavailable?: boolean }) => {
         </AuthProvider>
       </QueryClientProvider>
     </GlobalErrorBoundary>
+    </MotionConfig>
   );
 };
 

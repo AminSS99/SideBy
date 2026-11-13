@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { authDestination } from "@/lib/authDestination";
 import { brand } from "@/config/brand";
 
 /**
@@ -29,11 +30,8 @@ const ReverseProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     // Redirect to the page they came from (if any) or the app dashboard
     const stateFrom = (location.state as { from?: { pathname?: string; search?: string } })?.from;
     const requestedRedirect = new URLSearchParams(location.search).get("redirect_url");
-    const safeRedirect = requestedRedirect?.startsWith("/app") && !requestedRedirect.startsWith("//")
-      ? requestedRedirect
-      : null;
     const from = stateFrom?.pathname ? `${stateFrom.pathname}${stateFrom.search || ""}` : null;
-    return <Navigate to={safeRedirect || from || "/app"} replace />;
+    return <Navigate to={authDestination(requestedRedirect || from)} replace />;
   }
 
   return <>{children}</>;

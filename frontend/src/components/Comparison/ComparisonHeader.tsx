@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { Download, Info, ShieldCheck } from "lucide-react";
+import { Download, Info, ShieldCheck } from "@/components/icons";
 import { ShareButton } from "@/components/ShareModal";
 import { ExportModal } from "./ExportModal";
 import { EntityCard } from "./EntityCard";

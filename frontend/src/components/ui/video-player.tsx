@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { Maximize, Minimize, Pause, Play, RotateCcw, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react";
+import { Maximize, Minimize, Pause, Play, RotateCcw, SkipBack, SkipForward, Volume2, VolumeX } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 const videoPlayerVariants = cva("group relative w-full overflow-hidden rounded-2xl bg-black", {

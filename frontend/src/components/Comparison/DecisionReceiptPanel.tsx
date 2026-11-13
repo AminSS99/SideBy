@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Copy, ReceiptText } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, ReceiptText } from "@/components/icons";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { copyText } from "@/lib/clipboard";

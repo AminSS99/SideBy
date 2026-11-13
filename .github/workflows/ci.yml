@@ -29,11 +29,7 @@ jobs:
 
       - name: Type check
         working-directory: frontend
-        run: pnpm exec tsc --noEmit
-
-      - name: API type check
-        working-directory: frontend
-        run: pnpm typecheck:api
+        run: pnpm run typecheck
 
       - name: Lint
         working-directory: frontend
@@ -47,9 +43,9 @@ jobs:
         working-directory: frontend
         run: pnpm build
 
-      - name: Install Playwright browser
+      - name: Install Playwright browsers
         working-directory: frontend
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium webkit
 
       - name: Browser smoke tests
         working-directory: frontend

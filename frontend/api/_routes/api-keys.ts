@@ -18,6 +18,8 @@ export const config = {
   },
 };
 
+const MAX_ACTIVE_API_KEYS = 20;
+
 const CreateApiKeySchema = z.object({
   name: z.string().trim().min(1).max(120),
   workspaceId: z.string().uuid().optional(),
@@ -84,6 +86,28 @@ export default async function handler(
           .where(eq(workspaces.id, body.workspaceId))
           .limit(1);
         orgId = workspace?.ownerType === "org" ? workspace.ownerId : auth.orgId || null;
+      }
+
+      const activeKeys = await db
+        .select({ id: apiKeys.id })
+        .from(apiKeys)
+        .where(
+          and(
+            isNull(apiKeys.revokedAt),
+            or(
+              eq(apiKeys.userId, auth.userId),
+              orgId ? eq(apiKeys.organizationId, orgId) : eq(apiKeys.userId, auth.userId),
+            ),
+          ),
+        )
+        .limit(MAX_ACTIVE_API_KEYS);
+
+      if (activeKeys.length >= MAX_ACTIVE_API_KEYS) {
+        return sendJson(
+          response,
+          { error: `Maximum of ${MAX_ACTIVE_API_KEYS} active API keys reached. Revoke an unused key first.` },
+          400,
+        );
       }
 
       const generated = createApiKeySecret();

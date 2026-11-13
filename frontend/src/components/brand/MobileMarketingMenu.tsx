@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowUpRight, Menu, X } from "lucide-react";
+import { ArrowUpRight, Menu, X } from "@/components/icons";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import type { TubelightNavItem } from "@/components/ui/tubelight-navbar";

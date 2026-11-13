@@ -16,7 +16,7 @@ import {
   ShieldCheck,
   Scale,
   GitCompareArrows
-} from "lucide-react";
+} from "@/components/icons";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { brand } from "@/config/brand";

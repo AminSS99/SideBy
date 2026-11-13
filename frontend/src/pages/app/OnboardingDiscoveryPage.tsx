@@ -12,7 +12,7 @@ import {
   Search,
   Sparkles,
   Users,
-} from "lucide-react";
+} from "@/components/icons";
 import { brand } from "@/config/brand";
 import { useAuth } from "@/contexts/AuthContext";
 import { captureEvent } from "@/lib/posthog";

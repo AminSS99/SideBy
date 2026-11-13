@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { useRef } from 'react';
-import { BookOpen, ExternalLink, Shield, FileText, Newspaper, Globe } from 'lucide-react';
+import { BookOpen, ExternalLink, Shield, FileText, Newspaper, Globe } from "@/components/icons";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";

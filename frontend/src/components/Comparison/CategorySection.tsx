@@ -1,5 +1,5 @@
 import React, { useRef, useMemo } from 'react';
-import { Trophy } from 'lucide-react';
+import { Trophy } from "@/components/icons";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";

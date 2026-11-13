@@ -11,7 +11,7 @@ import {
   Sparkles,
   Users,
   WandSparkles,
-} from "lucide-react";
+} from "@/components/icons";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useAuth } from "@/contexts/AuthContext";

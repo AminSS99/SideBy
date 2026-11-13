@@ -4,20 +4,27 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import type { ComparisonData } from './types';
 import { panelClass } from './constants';
-import { Layers } from 'lucide-react';
+import { Layers } from "@/components/icons";
 
 export const RadarChartPanel = ({ result }: { result: ComparisonData }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
     if (!containerRef.current) return;
-    gsap.from(containerRef.current, {
-      opacity: 0,
-      scale: 0.95,
-      y: 20,
-      duration: 1,
-      ease: "expo.out"
+    const mm = gsap.matchMedia();
+
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.from(containerRef.current, {
+        opacity: 0,
+        scale: 0.97,
+        y: 18,
+        duration: 0.75,
+        ease: "expo.out",
+        clearProps: "transform,opacity",
+      });
     });
+
+    return () => mm.revert();
   }, { scope: containerRef });
 
   if (!result.dimensions || result.dimensions.length === 0) return null;

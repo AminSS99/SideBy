@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 
 interface Particle {
   x: number;
@@ -10,6 +11,16 @@ interface Particle {
 }
 
 const InteractiveConstellation: React.FC = () => {
+  const prefersReducedMotion = useReducedMotion();
+  const [desktop, setDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const update = () => setDesktop(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef<{ x: number; y: number; active: boolean }>({
     x: 0,
@@ -19,12 +30,12 @@ const InteractiveConstellation: React.FC = () => {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !desktop || prefersReducedMotion) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let animationFrameId: number;
+    let animationFrameId = 0;
     let particles: Particle[] = [];
     
     // Dynamic cap for mobile performance optimization
@@ -35,9 +46,10 @@ const InteractiveConstellation: React.FC = () => {
 
     const resizeCanvas = () => {
       const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * window.devicePixelRatio;
-      canvas.height = rect.height * window.devicePixelRatio;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = rect.width * ratio;
+      canvas.height = rect.height * ratio;
+      ctx.scale(ratio, ratio);
     };
 
     const initParticles = () => {
@@ -86,6 +98,7 @@ const InteractiveConstellation: React.FC = () => {
     }
 
     const draw = () => {
+      if (document.hidden) return;
       const rect = canvas.getBoundingClientRect();
       ctx.clearRect(0, 0, rect.width, rect.height);
 
@@ -164,9 +177,15 @@ const InteractiveConstellation: React.FC = () => {
       animationFrameId = requestAnimationFrame(draw);
     };
 
+    const onVisibility = () => {
+      cancelAnimationFrame(animationFrameId);
+      if (!document.hidden) draw();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     draw();
 
     return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener("resize", handleResize);
       if (parent) {
@@ -174,11 +193,12 @@ const InteractiveConstellation: React.FC = () => {
         parent.removeEventListener("mouseleave", handleMouseLeave);
       }
     };
-  }, []);
+  }, [desktop, prefersReducedMotion]);
 
   return (
     <canvas
       ref={canvasRef}
+      aria-hidden="true"
       className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-60"
     />
   );

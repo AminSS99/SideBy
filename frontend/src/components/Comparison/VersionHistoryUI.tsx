@@ -9,7 +9,7 @@ import {
   Plus,
   Minus,
   TrendingUp,
-} from "lucide-react";
+} from "@/components/icons";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { toast } from "sonner";

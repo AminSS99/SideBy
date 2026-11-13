@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from "react";
-import { Eye, EyeOff, Calendar, AlertTriangle, Play, Pause, Trash2, Sparkles, Lock } from "lucide-react";
+import { Eye, EyeOff, Calendar, AlertTriangle, Play, Pause, Trash2, Sparkles, Lock } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";

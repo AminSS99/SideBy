@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { Layers3, Settings2, LoaderCircle, AlertCircle } from "lucide-react";
+import { Layers3, Settings2, LoaderCircle, AlertCircle } from "@/components/icons";
 import { GlowCard } from "@/components/GlowCard";
 
 const WorkspacesPage = () => {

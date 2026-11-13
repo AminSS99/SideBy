@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Activity, Cpu, CircleDollarSign, Zap } from 'lucide-react';
+import { Activity, Cpu, CircleDollarSign, Zap } from "@/components/icons";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -13,18 +13,25 @@ export const RunTelemetryPanel = ({ result }: { result: ComparisonData }) => {
 
   useGSAP(() => {
     if (!containerRef.current) return;
-    
-    gsap.from(".telemetry-item", {
-      scrollTrigger: {
-        trigger: containerRef.current,
-        start: "top 95%",
-      },
-      x: -20,
-      opacity: 0,
-      stagger: 0.1,
-      duration: 0.6,
-      ease: "power2.out"
+    const mm = gsap.matchMedia();
+
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.from(".telemetry-item", {
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: "top 95%",
+          once: true,
+        },
+        x: -20,
+        opacity: 0,
+        stagger: 0.08,
+        duration: 0.55,
+        ease: "power2.out",
+        clearProps: "transform,opacity",
+      });
     });
+
+    return () => mm.revert();
   }, { scope: containerRef });
 
   if (!result.telemetry) return null;

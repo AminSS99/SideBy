@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MessageSquarePlus, Scale, Send, Trash2 } from "lucide-react";
+import { MessageSquarePlus, Scale, Send, Trash2 } from "@/components/icons";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";

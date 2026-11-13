@@ -41,15 +41,14 @@ export default async function handler(
   }
 
   try {
+    const auth = await requireAuth(request);
     PublicSnapshotBodySchema.parse(request.body || {});
+    const id = Array.isArray(request.query.id) ? request.query.id[0] : request.query.id;
+    if (!id) {
+      return sendJson(response, { error: "Comparison id is required." }, 400);
+    }
 
     return await withRateLimit(request, response, "comparison", async () => {
-      const auth = await requireAuth(request);
-      const id = Array.isArray(request.query.id) ? request.query.id[0] : request.query.id;
-      if (!id) {
-        return sendJson(response, { error: "Comparison id is required." }, 400);
-      }
-
       // Keep serverless execution alive past response using Vercel waitUntil,
       // matching comparison creation.
       const snapshot = await createPublicSnapshotComparison(id, auth.userId, waitUntil);

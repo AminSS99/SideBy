@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import { AlertTriangle, RotateCcw } from "@/components/icons";
 
 /**
  * Feature-scoped failure containment for optional panels (charts, evidence

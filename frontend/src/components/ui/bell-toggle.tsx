@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell } from "lucide-react";
+import { Bell } from "@/components/icons";
 import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 

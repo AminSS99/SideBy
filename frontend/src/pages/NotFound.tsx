@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { brand } from "@/config/brand";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "@/components/icons";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 
 const NotFound = () => {

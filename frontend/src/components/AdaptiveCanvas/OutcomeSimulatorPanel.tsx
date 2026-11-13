@@ -8,7 +8,7 @@ import {
   Search,
   Scale,
   CheckCircle2,
-} from "lucide-react";
+} from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
   simulateOutcomeFlips,

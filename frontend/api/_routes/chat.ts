@@ -65,9 +65,25 @@ export default async function handler(
     return sendJson(response, { error: "Method not allowed" }, 405);
   }
 
+  let auth: Awaited<ReturnType<typeof requireAuth>> | null = null;
+  if (isAuthEnabled()) {
+    try {
+      auth = await requireAuth(request);
+    } catch (error) {
+      const status =
+        error instanceof Error && "statusCode" in error
+          ? (error as Error & { statusCode: number }).statusCode
+          : 401;
+      return sendJson(
+        response,
+        { error: error instanceof Error ? error.message : "Authentication required." },
+        status,
+      );
+    }
+  }
+
   return withRateLimit(request, response, "chat", async () => {
     try {
-      const auth = isAuthEnabled() ? await requireAuth(request) : null;
       const body = ChatBodySchema.parse(request.body || {});
 
       const selectedDocumentIds = Array.isArray(body.documentIds)

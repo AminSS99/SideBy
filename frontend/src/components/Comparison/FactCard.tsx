@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check } from "@/components/icons";
 import type { ComparisonFact, Entity } from "./types";
 import { copyText } from "@/lib/clipboard";
 import { safeHref } from "@/lib/safe-url";
@@ -24,36 +24,46 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
   useGSAP(() => {
     if (!cardRef.current) return;
     const card = cardRef.current;
+    const mm = gsap.matchMedia();
 
-    // Alternate slide direction based on entity side (a comes from left, b from right)
-    const xOffset = fact.entity === 'a' ? -30 : 30;
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      // Alternate slide direction based on entity side (a comes from left, b from right)
+      const xOffset = fact.entity === "a" ? -30 : 30;
 
-    gsap.from(card, {
-      scrollTrigger: {
-        trigger: card,
-        start: "top 90%",
-      },
-      x: xOffset,
-      y: 20,
-      opacity: 0,
-      duration: 0.8,
-      ease: "power3.out",
-      delay: index * 0.1, // Stagger facts if multiple exist
-    });
-
-    // Animate the confidence gauge filling up with a premium springy overshoot
-    if (gaugeRef.current) {
-      gsap.from(gaugeRef.current, {
+      gsap.from(card, {
         scrollTrigger: {
           trigger: card,
-          start: "top 85%",
+          start: "top 90%",
+          once: true,
         },
-        width: "0%",
-        duration: 1.6,
-        ease: "back.out(1.5)",
-        delay: (index * 0.1) + 0.3,
+        x: xOffset,
+        y: 20,
+        opacity: 0,
+        duration: 0.7,
+        ease: "power3.out",
+        delay: Math.min(index * 0.08, 0.32),
+        clearProps: "transform,opacity",
       });
-    }
+
+      // Animate confidence gauge with GPU-composited scaleX instead of layout width
+      if (gaugeRef.current) {
+        gsap.from(gaugeRef.current, {
+          scrollTrigger: {
+            trigger: card,
+            start: "top 85%",
+            once: true,
+          },
+          scaleX: 0,
+          transformOrigin: "left center",
+          duration: 1.1,
+          ease: "power3.out",
+          delay: Math.min(index * 0.08, 0.32) + 0.2,
+          clearProps: "transform",
+        });
+      }
+    });
+
+    return () => mm.revert();
   }, { scope: cardRef });
 
   const handleCopy = async () => {
@@ -76,10 +86,12 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform [transition-duration:1500ms] ease-out z-0 pointer-events-none" />
 
       {/* Copy Button */}
-      <button 
+      <button
+        type="button"
         onClick={handleCopy}
         title="Copy Fact"
-        className="absolute top-4 right-4 p-1.5 rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7]/50 opacity-0 group-hover:opacity-100 transition-opacity hover:text-[#fdfbf7] z-20"
+        aria-label={`Copy ${fact.label} for ${entity.name}`}
+        className="absolute top-4 right-4 p-1.5 rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7]/65 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 transition-opacity hover:text-[#fdfbf7] z-20"
       >
         {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
       </button>

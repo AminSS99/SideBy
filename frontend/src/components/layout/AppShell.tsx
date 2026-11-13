@@ -7,7 +7,7 @@ import {
   GitCompareArrows, Layers3, FolderKanban, Settings,
   LogOut, MessageSquare, Microscope, Database, Activity, CreditCard,
   Search, Terminal, Users, Menu, X, ChevronDown, Clock3, Orbit
-} from "lucide-react";
+} from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
 import { useAuth } from "@/contexts/AuthContext";

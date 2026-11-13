@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRight, BookOpenText, CircleDollarSign, House, Sparkles, UsersRound } from "lucide-react";
+import { ArrowUpRight, BookOpenText, CircleDollarSign, House, Sparkles, UsersRound } from "@/components/icons";
 import { TubelightNavbar, type TubelightNavItem } from "@/components/ui/tubelight-navbar";
 import { MobileMarketingMenu } from "@/components/brand/MobileMarketingMenu";
 

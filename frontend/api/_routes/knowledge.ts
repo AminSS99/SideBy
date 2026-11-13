@@ -19,6 +19,8 @@ import { knowledgeDocuments } from "../../src/db/schema.js";
 import { captureServerEvent } from "../_lib/analytics.js";
 import { requireAuth } from "../_lib/auth.js";
 import { withRateLimit } from "../_lib/route-guard.js";
+import { checkRateLimit } from "../_lib/rate-limit.js";
+import { configuredQuota } from "../_lib/plan-limits.js";
 import { serverEnv } from "../_lib/env.js";
 import {
   KnowledgeApiError,
@@ -81,7 +83,18 @@ export default async function handler(
   }
 
   if (action === "upload" && request.method === "POST") {
-    return withRateLimit(request, response, "contextImport", () => uploadDocument(request, response));
+    try {
+      await requireAuth(request);
+      return await withRateLimit(request, response, "contextImport", () =>
+        uploadDocument(request, response),
+      );
+    } catch (error) {
+      return sendJson(
+        response,
+        { error: error instanceof Error ? error.message : "Authentication required." },
+        getErrorStatus(error),
+      );
+    }
   }
 
   return sendJson(response, { error: "Method not allowed" }, 405);
@@ -124,6 +137,20 @@ async function searchDocuments(
   try {
     const auth = await requireAuth(request);
     const body = SearchBodySchema.parse(request.body || {});
+    const burst = await checkRateLimit(
+      "user",
+      auth.userId,
+      "knowledge-search",
+      configuredQuota("KNOWLEDGE_SEARCH_RPM", 30),
+    );
+    if (!burst.allowed) {
+      response.setHeader("Retry-After", String(Math.max(1, Math.ceil((burst.resetAt - Date.now()) / 1000))));
+      return sendJson(
+        response,
+        { error: "Knowledge search rate limit reached. Please wait a moment and try again.", code: "RATE_LIMITED" },
+        429,
+      );
+    }
 
     const db = createDbClient();
     const chunks = await searchKnowledgeChunks(db, {

@@ -2,6 +2,8 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../_lib/auth.js";
 import { canAccessWorkspace } from "../_lib/db-auth.js";
+import { configuredQuota } from "../_lib/plan-limits.js";
+import { checkRateLimit } from "../_lib/rate-limit.js";
 import { sendJson } from "../_lib/sideby.js";
 import { createDbClient } from "../../src/db/index.js";
 import { memberships, teamInvitations, users, workspaces } from "../../src/db/schema.js";
@@ -241,6 +243,21 @@ export default async function handler(
       const body = InviteBodySchema.parse(request.body || {});
       const workspace = await resolveOrgWorkspace(db, auth.userId, body.workspaceId);
       await assertOrgAdmin(db, auth.userId, workspace.ownerId);
+
+      const inviteLimit = await checkRateLimit(
+        "user",
+        `org:${workspace.ownerId}`,
+        "team-invite",
+        configuredQuota("TEAM_INVITE_PER_MIN", 20),
+      );
+      if (!inviteLimit.allowed) {
+        response.setHeader("Retry-After", String(Math.max(1, Math.ceil((inviteLimit.resetAt - Date.now()) / 1000))));
+        return sendJson(
+          response,
+          { error: "Too many team invitations sent. Please wait before inviting more members.", code: "RATE_LIMITED" },
+          429,
+        );
+      }
 
       const clerkInvite = await createClerkInvitation({
         organizationId: workspace.ownerId,

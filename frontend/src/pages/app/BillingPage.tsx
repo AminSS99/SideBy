@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { KeyboardSpacer } from "@/components/KeyboardSpacer";
 
-import { AlertCircle, CheckCircle2, Zap, GitCompareArrows, MessageSquare, RefreshCw, Download, ExternalLink, Globe } from "lucide-react";
+import { AlertCircle, CheckCircle2, Zap, GitCompareArrows, MessageSquare, RefreshCw, Download, ExternalLink, Globe } from "@/components/icons";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { apiFetch } from "@/lib/api";

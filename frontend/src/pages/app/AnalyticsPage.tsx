@@ -7,7 +7,7 @@ import {
   Loader2,
   RefreshCw,
   ShieldCheck,
-} from "lucide-react";
+} from "@/components/icons";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { GlowCard } from "@/components/GlowCard";

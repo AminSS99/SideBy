@@ -1,6 +1,6 @@
 import React, { Component, type ReactNode, type ErrorInfo } from "react";
 import { brand } from "@/config/brand";
-import { AlertTriangle, RotateCcw, Home, WifiOff, RefreshCw } from "lucide-react";
+import { AlertTriangle, RotateCcw, Home, WifiOff, RefreshCw } from "@/components/icons";
 import { Link } from "react-router-dom";
 import { pwaUpdates } from "@/lib/pwa/register";
 import {

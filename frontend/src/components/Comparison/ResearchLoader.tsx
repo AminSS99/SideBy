@@ -6,7 +6,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { cn } from "@/lib/utils";
 import { panelClass } from "./constants";
-import { Terminal, Check } from "lucide-react";
+import { Terminal, Check } from "@/components/icons";
 import type { ComparisonActivityStep, ResearchStep } from "./types";
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "framer-motion";
 

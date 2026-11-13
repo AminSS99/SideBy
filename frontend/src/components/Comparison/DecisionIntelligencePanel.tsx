@@ -17,7 +17,7 @@ import {
   Network,
   SlidersHorizontal,
   Trophy,
-} from "lucide-react";
+} from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { copyText } from "@/lib/clipboard";
 import { panelClass } from "./constants";
@@ -694,34 +694,47 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
 
   useGSAP(() => {
     if (!containerRef.current) return;
+    const mm = gsap.matchMedia();
 
-    // Staggered node entrance animation when scrolled into view
-    gsap.from(".graph-node-btn", {
-      scrollTrigger: {
-        trigger: containerRef.current,
-        start: "top 85%",
-      },
-      scale: 0.8,
-      opacity: 0,
-      y: 15,
-      stagger: 0.04,
-      duration: 0.8,
-      ease: "back.out(1.5)",
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      // Staggered node entrance animation when scrolled into view
+      gsap.from(".graph-node-btn", {
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: "top 85%",
+          once: true,
+        },
+        scale: 0.85,
+        opacity: 0,
+        y: 14,
+        stagger: 0.035,
+        duration: 0.65,
+        ease: "power3.out",
+        clearProps: "transform,opacity",
+      });
     });
+
+    return () => mm.revert();
   }, { scope: containerRef });
 
   useGSAP(() => {
-    if (selectedId) {
+    if (!containerRef.current || !selectedId) return;
+    const mm = gsap.matchMedia();
+
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
       // Flow animation on the active dash array paths
       const activeLines = gsap.utils.toArray(".graph-active-line");
       if (activeLines.length) {
-        gsap.fromTo(activeLines,
+        gsap.fromTo(
+          activeLines,
           { strokeDashoffset: 10 },
-          { strokeDashoffset: 0, duration: 0.8, repeat: -1, ease: "none" }
+          { strokeDashoffset: 0, duration: 0.8, repeat: -1, ease: "none" },
         );
       }
-    }
-  }, [selectedId]);
+    });
+
+    return () => mm.revert();
+  }, { scope: containerRef, dependencies: [selectedId] });
 
   return (
     <section ref={containerRef} id="evidence-graph" className={cn(panelClass, "overflow-hidden scroll-mt-28")}>

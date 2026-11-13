@@ -28,19 +28,25 @@ export const EntityFactPanel = ({ result, facts }: EntityFactPanelProps) => {
 
   useGSAP(() => {
     if (!containerRef.current) return;
+    const mm = gsap.matchMedia();
 
-    // Slide in the panel items
-    gsap.from(".efp-item", {
-      scrollTrigger: {
-        trigger: containerRef.current,
-        start: "top 90%",
-      },
-      y: 20,
-      opacity: 0,
-      stagger: 0.15,
-      duration: 0.8,
-      ease: "power3.out"
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.from(".efp-item", {
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: "top 90%",
+          once: true,
+        },
+        y: 20,
+        opacity: 0,
+        stagger: 0.12,
+        duration: 0.7,
+        ease: "power3.out",
+        clearProps: "transform,opacity",
+      });
     });
+
+    return () => mm.revert();
   }, { scope: containerRef });
 
   return (

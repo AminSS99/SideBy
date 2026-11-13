@@ -33,7 +33,17 @@ export const AmbientOrbs = () => {
       ease: "sine.inOut"
     });
 
+    const syncVisibility = () => {
+      const paused = document.hidden;
+      tween1.paused(paused);
+      tween2.paused(paused);
+    };
+
+    syncVisibility();
+    document.addEventListener("visibilitychange", syncVisibility);
+
     return () => {
+      document.removeEventListener("visibilitychange", syncVisibility);
       tween1.kill();
       tween2.kill();
     };

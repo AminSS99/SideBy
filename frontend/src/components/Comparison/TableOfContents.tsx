@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { List } from 'lucide-react';
+import { List } from "@/components/icons";
 import { panelClass } from './constants';
 import type { ComparisonData } from './types';
 

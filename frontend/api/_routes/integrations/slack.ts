@@ -3,6 +3,7 @@ import { waitUntil } from "@vercel/functions";
 import { createComparisonJob, sendJson } from "../../_lib/sideby.js";
 import { logger } from "../../_lib/log.js";
 import { checkRateLimit } from "../../_lib/rate-limit.js";
+import { getClientIp } from "../../_lib/route-guard.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
@@ -88,8 +89,7 @@ export default async function handler(
   }
 
   // 2. Rate limit by IP to prevent abuse
-  const forwarded = request.headers["x-forwarded-for"];
-  const ip = (typeof forwarded === "string" ? forwarded.split(",")[0]?.trim() : null) || request.socket?.remoteAddress || "unknown";
+  const ip = getClientIp(request) || "unknown";
   const rateLimitKey = `slack:${ip}`;
   const limit = await checkRateLimit("ip", rateLimitKey, "comparison", 5);
   if (!limit.allowed) {

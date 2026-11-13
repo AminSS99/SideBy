@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Download, FileSpreadsheet, FileText, Code, FileJson, CheckCircle2 } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Code, FileJson, CheckCircle2 } from "@/components/icons";
 import type { ComparisonData } from "./types";
 
 interface ExportModalProps {

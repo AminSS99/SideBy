@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { X } from "@/components/icons";
 
 const changeEvent = 'release-banner-dismissed';
 function subscribe(onChange: () => void) {

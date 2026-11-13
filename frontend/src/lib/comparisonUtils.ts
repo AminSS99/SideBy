@@ -5,7 +5,7 @@ import {
   BookOpenText,
   FileSearch,
   Boxes,
-} from "lucide-react";
+} from "@/components/icons";
 import type { ResearchStep } from "@/components/Comparison/types";
 
 export const researchSteps: ResearchStep[] = [

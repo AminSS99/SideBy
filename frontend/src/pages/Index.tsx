@@ -15,7 +15,7 @@ import {
   ShieldCheck,
   Sparkles,
   Zap,
-} from "lucide-react";
+} from "@/components/icons";
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { AmbientOrbs } from "@/components/AmbientOrbs";
@@ -122,7 +122,7 @@ const Index = () => {
               </div>
               <h1 className="hero-title font-serif text-[clamp(2.35rem,8.5vw,5.5rem)] leading-[1.0] tracking-[-0.04em] text-[#fffaf1] sm:leading-[0.92] sm:tracking-[-0.05em] lg:text-[5.6rem]">
                 <span className="block overflow-hidden pb-2 sm:pb-1.5"><span className="block">Compare your options.</span></span>
-                <span className="block overflow-hidden pb-3 sm:pb-5 pr-2"><span className="block bg-gradient-to-r from-orange-300 via-rose-400 to-fuchsia-400 bg-clip-text italic text-transparent">Find your fit.</span></span>
+                <span className="block overflow-hidden pb-3 sm:pb-5 pr-2"><span className="block bg-gradient-to-r from-orange-300 via-rose-400 to-fuchsia-400 bg-clip-text pb-[0.14em] italic text-transparent">Find your fit.</span></span>
               </h1>
               <p className="hero-copy mx-auto mt-5 max-w-xl text-base leading-7 text-white/75 sm:text-lg lg:mx-0">
                 Phones, TVs, cars, countries, software, courses, and more. Choose two options, tell us what matters, and get a side-by-side comparison with sources you can check.
@@ -207,7 +207,7 @@ const Index = () => {
         </section>
 
         <section className="reveal-section mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:py-28">
-          <div className="grid gap-12 lg:grid-cols-[.82fr_1.18fr] lg:gap-16">
+          <div className="grid grid-cols-1 gap-12 lg:grid-cols-[.82fr_1.18fr] lg:gap-16">
             <div className="lg:sticky lg:top-28 lg:self-start">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-300">How SideBy thinks</p>
               <h2 className="mt-4 max-w-md font-serif text-3xl leading-[1.08] tracking-tight text-[#fffaf1] sm:text-4xl lg:text-5xl">A verdict is only useful when you can inspect the path.</h2>

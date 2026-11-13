@@ -7,7 +7,7 @@ import {
   ChevronUp,
   Sparkles,
   Layers,
-} from "lucide-react";
+} from "@/components/icons";
 import type { Category, ComparisonFact, Entity } from "@/components/Comparison/types";
 
 interface CategoryDeepDivePanelProps {

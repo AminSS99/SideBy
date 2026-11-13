@@ -10,7 +10,7 @@ import {
   Layers,
   ArrowRight,
   ExternalLink,
-} from "lucide-react";
+} from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import type { ComparisonData } from "@/components/Comparison/types";
 import type { AdaptivePresentationSpec } from "@/lib/adaptive-canvas/presentation-spec";

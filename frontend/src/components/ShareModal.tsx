@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Copy, Eye, ExternalLink, LockKeyhole, Share2, X } from "lucide-react";
+import { Check, Copy, Eye, ExternalLink, LockKeyhole, Share2, X } from "@/components/icons";
 import { buildShareUrl } from "@/config/brand";
 import { buildApiUrl } from "@/config/env";
 import { apiFetch } from "@/lib/api";

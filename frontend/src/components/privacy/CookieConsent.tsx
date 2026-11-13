@@ -4,7 +4,7 @@ import { allowsAnalytics, COOKIE_SETTINGS_EVENT, isGlobalPrivacyControlEnabled, 
 import { disablePostHog, initPostHog } from "@/lib/posthog";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
-import { Cookie } from "lucide-react";
+import { Cookie } from "@/components/icons";
 import * as Dialog from "@radix-ui/react-dialog";
 
 export default function CookieConsent() {

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ArrowRight, BookOpen, Check, ChevronDown, Clock3, Compass, Search } from "lucide-react";
+import { ArrowRight, BookOpen, Check, ChevronDown, Clock3, Compass, Search } from "@/components/icons";
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { usePageTitle } from "@/hooks/usePageTitle";

@@ -1,10 +1,10 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { LucideIcon } from "lucide-react";
+import { SideByIcon } from "@/components/icons";
 
 interface EmptyStateProps {
-  icon: LucideIcon;
+  icon: SideByIcon;
   title: string;
   description: string;
   action?: React.ReactNode;

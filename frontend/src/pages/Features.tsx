@@ -12,7 +12,7 @@ import {
   Scale,
   Sparkles,
   Users,
-} from "lucide-react";
+} from "@/components/icons";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { MarketingFooter } from "@/components/brand/MarketingFooter";

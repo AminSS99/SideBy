@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { GitCompareArrows, Loader2 } from "lucide-react";
+import { GitCompareArrows, Loader2 } from "@/components/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { pwaUpdates } from "@/lib/pwa/register";

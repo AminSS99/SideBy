@@ -13,7 +13,7 @@ import {
   Users,
   Terminal,
   Activity,
-} from "lucide-react";
+} from "@/components/icons";
 import {
   CommandDialog,
   CommandEmpty,

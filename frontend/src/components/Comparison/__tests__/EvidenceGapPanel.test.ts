@@ -13,7 +13,7 @@
  * - "contradiction": conflicting claims recorded in result.contradictions
  */
 import { describe, it, expect } from "vitest";
-import { deriveEvidenceGaps } from "../EvidenceGapPanel";
+import { deriveEvidenceGaps } from "../evidenceGaps";
 import type { ComparisonData } from "../types";
 
 const baseComparison: ComparisonData = {

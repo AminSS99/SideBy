@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { FolderKanban, LoaderCircle, Plus } from "lucide-react";
+import { FolderKanban, LoaderCircle, Plus } from "@/components/icons";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import type { SideByIcon } from "@/components/icons";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 export interface TubelightNavItem {
   name: string;
   url: string;
-  icon: LucideIcon;
+  icon: SideByIcon;
 }
 
 interface TubelightNavbarProps {

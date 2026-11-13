@@ -73,10 +73,11 @@ export default async function handler(
       });
 
       if (format === "markdown" && "markdown" in result) {
+        const safeFilenameId = id.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64) || "export";
         response.setHeader("Content-Type", "text/markdown");
         response.setHeader(
           "Content-Disposition",
-          `attachment; filename="sideby-comparison-${id}.md"`,
+          `attachment; filename="sideby-comparison-${safeFilenameId}.md"`,
         );
         return response.status(200).send(result.markdown);
       }

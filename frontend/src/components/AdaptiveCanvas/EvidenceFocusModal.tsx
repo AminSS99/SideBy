@@ -7,7 +7,7 @@ import {
   Sparkles,
   FileText,
   AlertCircle,
-} from "lucide-react";
+} from "@/components/icons";
 import {
   Dialog,
   DialogContent,

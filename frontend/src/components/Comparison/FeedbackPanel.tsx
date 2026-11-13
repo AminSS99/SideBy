@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ThumbsUp, ThumbsDown, CheckCircle2 } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, CheckCircle2 } from "@/components/icons";
 import { panelClass } from './constants';
 
 export const FeedbackPanel = () => {

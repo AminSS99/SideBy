@@ -7,7 +7,7 @@ import {
   Globe,
   SearchCheck,
   ShieldCheck,
-} from "lucide-react";
+} from "@/components/icons";
 
 interface PipelineStage {
   id: string;
@@ -85,7 +85,9 @@ export function ResearchPreviewCard() {
   useEffect(() => {
     if (prefersReducedMotion) return;
     const timer = window.setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % STAGES.length);
+      if (!document.hidden) {
+        setActiveIndex((prev) => (prev + 1) % STAGES.length);
+      }
     }, 3600);
     return () => window.clearInterval(timer);
   }, [prefersReducedMotion]);
@@ -125,8 +127,7 @@ export function ResearchPreviewCard() {
         </div>
 
         <div
-          role="status"
-          aria-live="polite"
+          aria-live="off"
           className="flex items-center gap-2 font-mono text-xs text-white/75"
         >
           <span>Step {activeStage.number}/03</span>

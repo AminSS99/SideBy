@@ -10,15 +10,28 @@ import { sendJson } from "./sideby.js";
 import { assertRedisAvailable } from "./redis.js";
 import { captureServerEvent } from "./analytics.js";
 
+function readFirstHeaderValue(
+  header: string | string[] | undefined,
+): string | null {
+  if (typeof header === "string") {
+    return header.split(",")[0]?.trim() || null;
+  }
+  if (Array.isArray(header)) {
+    return header[0]?.split(",")[0]?.trim() || null;
+  }
+  return null;
+}
+
 export function getClientIp(request: VercelRequest): string | null {
-  const forwarded = request.headers["x-forwarded-for"];
-  if (typeof forwarded === "string") {
-    return forwarded.split(",")[0]?.trim() || null;
-  }
-  if (Array.isArray(forwarded)) {
-    return forwarded[0]?.trim() || null;
-  }
-  return request.socket?.remoteAddress || null;
+  // Prefer platform-set edge headers before caller-controllable x-forwarded-for.
+  return (
+    readFirstHeaderValue(request.headers["x-vercel-forwarded-for"]) ||
+    readFirstHeaderValue(request.headers["x-real-ip"]) ||
+    readFirstHeaderValue(request.headers["cf-connecting-ip"]) ||
+    readFirstHeaderValue(request.headers["x-forwarded-for"]) ||
+    request.socket?.remoteAddress ||
+    null
+  );
 }
 
 export async function withRateLimit(

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Sparkles, Loader2, ArrowRight } from "lucide-react";
+import { Sparkles, Loader2, ArrowRight } from "@/components/icons";
 import { useQuery } from "@tanstack/react-query";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -141,14 +141,19 @@ const Compare = () => {
   }, [isLoading, result]);
 
   useGSAP(() => {
-    if (!isLoading && result) {
-      const tl = gsap.timeline();
-      tl.from(".compare-hero-badge", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" })
-        .from(".compare-hero-title", { y: 30, opacity: 0, duration: 1, ease: "expo.out" }, "-=0.6")
-        .from(".compare-hero-desc", { opacity: 0, duration: 0.8 }, "-=0.4")
-        .from(".compare-content-grid", { y: 60, opacity: 0, duration: 1.2, ease: "expo.out" }, "-=0.6");
-    }
-  }, [isLoading, result]);
+    if (isLoading || !result) return;
+    const mm = gsap.matchMedia();
+
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
+      tl.from(".compare-hero-badge", { y: 20, opacity: 0, duration: 0.7, ease: "power3.out" })
+        .from(".compare-hero-title", { y: 28, opacity: 0, duration: 0.85, ease: "expo.out" }, "-=0.5")
+        .from(".compare-hero-desc", { opacity: 0, duration: 0.65 }, "-=0.4")
+        .from(".compare-content-grid", { y: 36, opacity: 0, duration: 0.9, ease: "expo.out" }, "-=0.5");
+    });
+
+    return () => mm.revert();
+  }, { scope: containerRef, dependencies: [isLoading, result] });
 
   return (
     <div ref={containerRef} className="min-h-screen overflow-x-hidden bg-[#030303] text-white selection:bg-orange-500/30 relative">

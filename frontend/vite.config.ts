@@ -66,7 +66,7 @@ export default defineConfig(({ mode }) => ({
           if (!id.includes("node_modules")) return undefined;
           if (id.includes("@clerk")) return "vendor-auth";
           if (id.includes("gsap") || id.includes("framer-motion")) return "vendor-animation";
-          if (id.includes("lucide-react")) return "vendor-icons";
+          if (id.includes("@phosphor-icons") || id.includes("/src/components/icons/")) return "vendor-icons";
           if (id.includes("@sentry")) return "vendor-observability";
           if (id.includes("@tanstack")) return "vendor-data";
           if (id.includes("recharts") || id.includes("d3-")) return "vendor-charts";

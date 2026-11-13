@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ArrowRight, Check, LifeBuoy, Mail, MessagesSquare, Sparkles } from "lucide-react";
+import { ArrowRight, Check, LifeBuoy, Mail, MessagesSquare, Sparkles } from "@/components/icons";
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { usePageTitle } from "@/hooks/usePageTitle";

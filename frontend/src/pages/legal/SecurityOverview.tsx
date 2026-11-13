@@ -2,10 +2,9 @@ import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { AlertTriangle, ArrowRight, Check, ChevronDown, Database, KeyRound, LockKeyhole, ServerCog, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, ChevronDown, Database, KeyRound, LockKeyhole, ServerCog, ShieldCheck } from "@/components/icons";
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
-import { brand } from "@/config/brand";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 const controls = [
@@ -145,7 +144,7 @@ const SecurityOverview = () => {
               <ServerCog className="h-5 w-5 text-white/35" />
               <h3 className="mt-4 font-serif text-2xl text-white">Found a vulnerability?</h3>
               <p className="mt-2 text-sm leading-6 text-white/48">Send a clear report with reproduction steps. Please do not access other users’ data while testing.</p>
-              <a href={`mailto:security@${brand.domain}?subject=SideBy%20security%20report`} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/15 px-5 text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-emerald-300">security@{brand.domain} <ArrowRight className="h-4 w-4" /></a>
+              <a href="mailto:snapsolvework@gmail.com?subject=SideBy%20security%20report" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/15 px-5 text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-emerald-300">snapsolvework@gmail.com <ArrowRight className="h-4 w-4" /></a>
             </div>
           </aside>
         </section>

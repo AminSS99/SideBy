@@ -14,7 +14,7 @@ import {
   AlertTriangle,
   Clock,
   GitCompare,
-} from "lucide-react";
+} from "@/components/icons";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
@@ -50,7 +50,7 @@ import {
 import { SafePanel } from "@/components/SafePanel";
 import { isAdaptiveCanvasEnabled, hasAdaptiveCanvasPreviewOptIn } from "@/lib/featureFlags";
 import { AdaptiveDecisionCanvas } from "@/components/AdaptiveCanvas/AdaptiveDecisionCanvas";
-import { Sparkles } from "lucide-react";
+import { Sparkles } from "@/components/icons";
 
 type ComparisonJob = {
   id: string;
@@ -144,7 +144,14 @@ const ComparisonDetailPage = () => {
       return (await res.json()) as ComparisonJob;
     },
     enabled: Boolean(id),
-    refetchInterval: (query) => (query.state.data?.status === "running" ? 2500 : false),
+    refetchInterval: (query) => {
+      if (query.state.data?.status !== "running") return false;
+      if (typeof document !== "undefined" && document.hidden) return false;
+      const updateCount = query.state.dataUpdateCount ?? 0;
+      const baseMs = updateCount < 5 ? 2500 : updateCount < 15 ? 4000 : 6000;
+      const jitterMs = Math.floor(Math.random() * 600);
+      return baseMs + jitterMs;
+    },
     refetchOnWindowFocus: true,
     refetchOnReconnect: "always",
     staleTime: 1500,
@@ -347,20 +354,24 @@ const ComparisonDetailPage = () => {
   }, [job?.id, job?.status]);
 
   useGSAP(() => {
-    if (!comparisonQuery.isLoading && result) {
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-      const tl = gsap.timeline();
+    if (comparisonQuery.isLoading || !result) return;
+    const mm = gsap.matchMedia();
+
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
       const actions = gsap.utils.toArray(".wb-actions");
       const grid = gsap.utils.toArray(".wb-grid");
-      tl.from(".wb-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" });
+      tl.from(".wb-header", { y: -20, opacity: 0, duration: 0.7, ease: "power3.out" });
       if (actions.length) {
-        tl.from(actions, { x: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6");
+        tl.from(actions, { x: 20, opacity: 0, duration: 0.7, ease: "power3.out" }, "-=0.55");
       }
       if (grid.length) {
-        tl.from(grid, { y: 60, opacity: 0, duration: 1.2, ease: "expo.out" }, "-=0.4");
+        tl.from(grid, { y: 36, opacity: 0, duration: 0.9, ease: "expo.out" }, "-=0.4");
       }
-    }
-  }, [comparisonQuery.isLoading, result]);
+    });
+
+    return () => mm.revert();
+  }, { scope: containerRef, dependencies: [comparisonQuery.isLoading, result] });
 
   const renderWorkbenchGrid = (resultData: ComparisonData, activityData?: ComparisonActivityStep[]) => {
     return (

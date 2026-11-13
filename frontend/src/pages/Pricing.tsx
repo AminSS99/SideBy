@@ -9,13 +9,17 @@ import {
   ShieldCheck,
   Sparkles,
   Zap,
-} from "lucide-react";
+} from "@/components/icons";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { brand } from "@/config/brand";
+
+const PULSE_TERMS =
+  "3-day free trial, then $9/month plus applicable taxes. A payment card is required to start the trial. Cancel before the trial ends and you are not charged.";
+const CORE_TERMS = "$19/month plus applicable taxes, charged when you subscribe. No trial.";
 
 const TIERS = [
   {
@@ -41,8 +45,9 @@ const TIERS = [
     name: "Pulse",
     price: "$9",
     suffix: "/month",
-    status: "Most popular",
-    description: "The active paid tier for using more of the SnapSolve suite from one subscription.",
+    status: "3-day free trial",
+    terms: PULSE_TERMS,
+    description: "The main paid tier for using more of the SnapSolve suite from one subscription.",
     features: [
       "Everything in Flow",
       "10 SideBy comparisons per day, up to 100 per month",
@@ -51,7 +56,7 @@ const TIERS = [
       "3 workspaces and up to 15 team members",
       "+500 SnapPoints subscription bonus",
     ],
-    cta: "Start Pulse",
+    cta: "Start 3-day free trial",
     href: brand.billingUrl,
     external: true,
     featured: true,
@@ -62,8 +67,9 @@ const TIERS = [
     name: "Core",
     price: "$19",
     suffix: "/month",
-    status: "Invite only",
-    description: "Advanced intelligence, cross-product identity, and early access for power users.",
+    status: "Now available",
+    terms: CORE_TERMS,
+    description: "Higher limits, advanced intelligence, and cross-product identity for power users.",
     features: [
       "Everything in Pulse",
       "25 SideBy comparisons per day, up to 300 per month",
@@ -73,7 +79,7 @@ const TIERS = [
       "Cross-product identity and API access",
       "+750 SnapPoints subscription bonus",
     ],
-    cta: "Join Core waitlist",
+    cta: "Get Core",
     href: brand.billingUrl,
     external: true,
     icon: ShieldCheck,
@@ -83,8 +89,9 @@ const TIERS = [
     name: "Orbit",
     price: "$39",
     suffix: "/month",
-    status: "Future release",
-    description: "One subscription across SideBy and the complete SnapSolve product ecosystem.",
+    status: "Future tier",
+    terms: "Not available for purchase yet.",
+    description: "The future top tier across SideBy and the complete SnapSolve product ecosystem.",
     features: [
       "Everything in Core",
       "60 SideBy comparisons per day, up to 800 per month",
@@ -94,9 +101,9 @@ const TIERS = [
       "Unified ecosystem identity and workspace",
       "Centralized billing for all SnapSolve apps",
     ],
-    cta: "Reserve Orbit access",
-    href: brand.billingUrl,
-    external: true,
+    cta: "Not available yet",
+    href: "/contact",
+    external: false,
     icon: Orbit,
   },
 ] as const;
@@ -104,7 +111,8 @@ const TIERS = [
 const FAQS = [
   { question: "Is SideBy billed separately?", answer: "No. SideBy is part of the SnapSolve ecosystem. Your Flow, Pulse, Core, or Orbit tier is shared across the products enabled in your SnapSolve workspace, with fair, bounded usage limits on each plan." },
   { question: "Can I use SideBy without a card?", answer: "Yes. Flow requires no payment details and includes 5 SideBy comparisons, 10 follow-ups, and 10 exports each day." },
-  { question: "Which paid plans are available?", answer: "Pulse checkout is active ($9/month for 10 comparisons/day, up to 100/month). Core is invite-only, and Orbit is the future full-ecosystem subscription. Availability is managed centrally in SnapSolve Cockpit." },
+  { question: "Which paid plans are available?", answer: "Two. Pulse is $9/month plus applicable taxes after a 3-day free trial (10 comparisons/day, up to 100/month). Core is $19/month plus applicable taxes with no trial (25 comparisons/day, up to 300/month). Orbit is a future tier and cannot be purchased yet. Checkout is handled centrally in SnapSolve Cockpit." },
+  { question: "How do the trial, renewal, and cancellation work?", answer: "The Pulse trial lasts 3 days, needs a payment card, and is available once per SnapSolve workspace. If you cancel before it ends you are not charged; otherwise the first $9 charge happens when the trial ends. Both paid plans renew monthly until cancelled. You can cancel anytime in SnapSolve Cockpit billing and keep access until the end of the period already paid for." },
   { question: "What counts as a comparison and how do limits work?", answer: "A completed research job comparing two options counts as one comparison. Each tier provides finite daily allowances resetting at 00:00 UTC, plus monthly comparison caps on paid tiers resetting on the 1st of each month (UTC). Follow-ups, refreshes, and exports have separate daily allowances." },
 ] as const;
 
@@ -141,7 +149,7 @@ const Pricing = () => {
         </header>
 
         <div className="pricing-control mx-auto mt-8 flex max-w-xl items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.15em] text-white/45 sm:mt-10">
-          Monthly billing · Annual billing is coming soon · Managed centrally by SnapSolve
+          Monthly billing · Prices in USD plus applicable taxes · One subscription for every enabled product
         </div>
 
         <section className="mx-auto mt-10 grid max-w-7xl gap-4 md:grid-cols-2 lg:mt-14 xl:grid-cols-4 xl:items-stretch">
@@ -163,6 +171,7 @@ const Pricing = () => {
                   <span className="font-serif text-5xl tracking-tight text-white">{tier.price}</span>
                   {"suffix" in tier && <span className="mb-1.5 text-sm text-white/35">{tier.suffix}</span>}
                 </div>
+                {"terms" in tier && <p data-billing-terms className="mt-3 text-xs leading-5 text-white/55">{tier.terms}</p>}
                 <div className="my-6 h-px bg-white/[0.08]" />
                 <ul className="flex-1 space-y-3.5">
                   {tier.features.map((feature) => (
@@ -192,7 +201,7 @@ const Pricing = () => {
 
         <div className="mx-auto mt-16 max-w-5xl rounded-3xl border border-white/10 sm:mt-24">
           <FaqDrawer
-            items={FAQS.map((item, index) => ({ ...item, topic: ["Billing", "Free plan", "Paid plans", "Usage"][index] }))}
+            items={FAQS.map((item, index) => ({ ...item, topic: ["Billing", "Free plan", "Paid plans", "Trial and renewal", "Usage"][index] }))}
             label="Straight answers"
             title="Before you choose."
             lead="How SideBy plans, billing, and comparison runs fit together."

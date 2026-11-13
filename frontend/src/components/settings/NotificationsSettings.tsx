@@ -1,5 +1,5 @@
 import { BellToggle } from "@/components/ui/bell-toggle";
-import { Bell, BellOff, CheckCircle2, LoaderCircle, Send, ShieldAlert, Smartphone, XCircle } from "lucide-react";
+import { Bell, BellOff, CheckCircle2, LoaderCircle, Send, ShieldAlert, Smartphone, XCircle } from "@/components/icons";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePushSubscription } from "@/hooks/usePushSubscription";

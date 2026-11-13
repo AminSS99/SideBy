@@ -15,7 +15,7 @@ import {
   Tag,
   XCircle,
   ArrowRight,
-} from "lucide-react";
+} from "@/components/icons";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import gsap from "gsap";
@@ -201,10 +201,13 @@ const ComparisonsPage = () => {
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      if (hasRunningRef.current) {
+      if (
+        hasRunningRef.current &&
+        (typeof document === "undefined" || document.visibilityState === "visible")
+      ) {
         void load();
       }
-    }, 3000);
+    }, 4500);
 
     return () => window.clearInterval(interval);
   }, [load]);

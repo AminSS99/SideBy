@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ArrowLeft, BookOpenCheck, CheckCircle2, FolderLock, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, CheckCircle2, FolderLock, Sparkles } from "@/components/icons";
 import { brand } from "@/config/brand";
 import InteractiveConstellation from "./InteractiveConstellation";
 

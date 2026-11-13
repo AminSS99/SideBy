@@ -11,6 +11,9 @@ import {
   isRetrievableCitation,
 } from "../../../_lib/public-eligibility.js";
 import { authenticateRequest } from "../../../_lib/auth.js";
+import { configuredQuota } from "../../../_lib/plan-limits.js";
+import { checkRateLimit } from "../../../_lib/rate-limit.js";
+import { getClientIp } from "../../../_lib/route-guard.js";
 import { logger } from "../../../_lib/log.js";
 import { analyzeComparisonQuery, summarizeComparisonTaxonomy } from "../../../../src/lib/comparisonTaxonomy.js";
 import { projectPublicResult } from "../../../../src/lib/publicComparison.js";
@@ -89,6 +92,29 @@ export default async function handler(
       : request.query.slug;
     if (!slug) {
       return sendJson(response, { error: "Comparison slug is required." }, 400);
+    }
+
+    const clientIp = getClientIp(request);
+    if (clientIp) {
+      const burst = await checkRateLimit(
+        "ip",
+        clientIp,
+        "public-slug-read",
+        configuredQuota("PUBLIC_SLUG_RPM", 120),
+      ).catch((error) => {
+        logger.warn("Public slug rate limit unavailable; allowing read", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return { allowed: true as const, resetAt: Date.now() + 60_000 };
+      });
+      if (!burst.allowed) {
+        response.setHeader("Retry-After", String(Math.max(1, Math.ceil((burst.resetAt - Date.now()) / 1000))));
+        return sendJson(
+          response,
+          { error: "Too many requests. Please slow down.", code: "RATE_LIMITED" },
+          429,
+        );
+      }
     }
 
     const db = createDbClient();

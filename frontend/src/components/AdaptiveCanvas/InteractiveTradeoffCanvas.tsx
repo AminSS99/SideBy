@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Sliders, RotateCcw, Trophy, Sparkles, Scale, CheckCircle2 } from "lucide-react";
+import { Sliders, RotateCcw, Trophy, Sparkles, Scale, CheckCircle2 } from "@/components/icons";
 import { motion, useReducedMotion, type Transition } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";

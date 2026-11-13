@@ -5,7 +5,9 @@
  * Enforces cost/time guardrails per job.
  */
 import { z } from "zod";
-import { asc, eq, and, sql, or, lte, lt, inArray } from "drizzle-orm";
+import { getJobLimits } from "./job-limits.js";
+import { configuredQuota } from "./plan-limits.js";
+import { asc, eq, and, sql, or, lte, lt, gt, inArray } from "drizzle-orm";
 import { createDbClient } from "../../src/db/index.js";
 import {
   comparisons,
@@ -70,10 +72,12 @@ const safeWaitUntil = (promise: Promise<unknown>) => {
 
 // ─── Guardrails ─────────────────────────────────────────────────────────────
 
-const MAX_JOB_COST_USD = Number(process.env.MAX_JOB_COST_USD || "0.50");
-const MAX_JOB_TIME_MS = Number(process.env.MAX_JOB_TIME_MS || "300000"); // 5 minutes
-const MAX_SEARCH_CALLS = Number(process.env.MAX_SEARCH_CALLS || "12");
-const MAX_AI_CALLS = Number(process.env.MAX_AI_CALLS || "6");
+const {
+  maxCostUsd: MAX_JOB_COST_USD,
+  maxTimeMs: MAX_JOB_TIME_MS,
+  maxSearchCalls: MAX_SEARCH_CALLS,
+  maxAiCalls: MAX_AI_CALLS,
+} = getJobLimits();
 
 interface GuardrailState {
   totalCost: number;
@@ -455,6 +459,25 @@ async function clearDerivedComparisonData(
 // ─── Core Pipeline Steps ────────────────────────────────────────────────────
 
 const MAX_RETRIES = 2;
+const ACTIVE_JOB_WINDOW_MS = 7 * 60 * 1000; // job cap is 5 min + lock TTL
+
+async function countActiveRunningJobs(
+  db: ReturnType<typeof createDbClient>,
+  excludeComparisonId?: string,
+): Promise<number> {
+  const activeCutoff = new Date(Date.now() - ACTIVE_JOB_WINDOW_MS);
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::integer` })
+    .from(comparisons)
+    .where(
+      and(
+        eq(comparisons.status, "running"),
+        gt(comparisons.updatedAt, activeCutoff),
+        ...(excludeComparisonId ? [sql`${comparisons.id} <> ${excludeComparisonId}`] : []),
+      ),
+    );
+  return row?.count ?? 0;
+}
 
 export async function runComparisonJob(
   comparisonId: string,
@@ -469,12 +492,13 @@ export async function runComparisonJob(
     return;
   }
 
+  let didStartExecution = false;
   try {
     const db = createDbClient();
 
     // Check retry count
     const [comp] = await db
-      .select({ retryCount: comparisons.retryCount })
+      .select({ retryCount: comparisons.retryCount, status: comparisons.status })
       .from(comparisons)
       .where(eq(comparisons.id, comparisonId))
       .limit(1);
@@ -489,6 +513,23 @@ export async function runComparisonJob(
           updatedAt: new Date(),
         })
         .where(eq(comparisons.id, comparisonId));
+      return;
+    }
+
+    const maxActive = configuredQuota("MAX_GLOBAL_ACTIVE_COMPARISONS", 25);
+    const activeCount = await countActiveRunningJobs(db, comparisonId);
+    if (activeCount >= maxActive) {
+      logger.warn("Deferring comparison job until active concurrency slot frees up", {
+        comparisonId,
+        activeCount,
+        maxActive,
+      });
+      if (comp && comp.status !== "queued") {
+        await db
+          .update(comparisons)
+          .set({ status: "queued", updatedAt: new Date() })
+          .where(eq(comparisons.id, comparisonId));
+      }
       return;
     }
 
@@ -513,6 +554,7 @@ export async function runComparisonJob(
     await clearDerivedComparisonData(db, comparisonId);
 
     // Update comparison status
+    didStartExecution = true;
     await updateComparisonProgress(ctx, 5, 0, { status: "running" });
 
     // Step 1: Parse query
@@ -934,6 +976,9 @@ export async function runComparisonJob(
     }
   } finally {
     await redisReleaseLock(lock);
+    if (didStartExecution) {
+      safeWaitUntil(drainQueuedComparisonJobs(1, safeWaitUntil).then(() => undefined));
+    }
   }
 }
 
@@ -953,7 +998,7 @@ export async function drainQueuedComparisonJobs(
 ) {
   const db = createDbClient();
   const safeLimit = Math.max(1, Math.min(limit, 10));
-  const tenMinutesAgo = new Date(Date.now() - 7 * 60 * 1000); // job cap is 5 min + lock TTL
+  const activeWindowCutoff = new Date(Date.now() - ACTIVE_JOB_WINDOW_MS);
 
   const rows = await db
     .select({
@@ -971,7 +1016,7 @@ export async function drainQueuedComparisonJobs(
         eq(comparisons.status, "queued"),
         and(
           eq(comparisons.status, "running"),
-          lte(comparisons.updatedAt, tenMinutesAgo)
+          lte(comparisons.updatedAt, activeWindowCutoff)
         )
       )
     )
@@ -1022,6 +1067,17 @@ export async function drainQueuedComparisonJobs(
       .where(inArray(comparisons.id, toFailIds));
   }
 
+  const maxActive = configuredQuota("MAX_GLOBAL_ACTIVE_COMPARISONS", 25);
+  const activeCount = await countActiveRunningJobs(db);
+  const availableSlots = Math.max(0, maxActive - activeCount);
+  if (availableSlots === 0) {
+    return {
+      scanned: rows.length,
+      due: 0,
+      started: 0,
+    };
+  }
+
   const dueRows = rows
     .filter(
       (row) =>
@@ -1030,7 +1086,7 @@ export async function drainQueuedComparisonJobs(
         row.retryCount <= MAX_RETRIES &&
         isQueuedJobDue(row),
     )
-    .slice(0, safeLimit);
+    .slice(0, Math.min(safeLimit, availableSlots));
 
   let started = 0;
   for (const row of dueRows) {

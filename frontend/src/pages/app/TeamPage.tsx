@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { KeyboardSpacer } from "@/components/KeyboardSpacer";
 
-import { Users, Mail, Shield, ShieldAlert, ShieldCheck, User, Trash2, Edit2, GitCompareArrows, Database } from "lucide-react";
+import { Users, Mail, Shield, ShieldAlert, ShieldCheck, User, Trash2, Edit2, GitCompareArrows, Database } from "@/components/icons";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { toast } from "sonner";

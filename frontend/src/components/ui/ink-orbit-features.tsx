@@ -6,7 +6,7 @@
 // Uses the existing React/Lucide packages; no remote assets or extra dependencies.
 
 import React from "react"
-import { ArrowRight, FileSearch, GitCompareArrows, FileCheck2 } from "lucide-react"
+import { ArrowRight, FileSearch, GitCompareArrows, FileCheck2 } from "@/components/icons"
 import "./ink-orbit-features.css"
 
 export type InkFeatureCopy = { title: string; description: string }

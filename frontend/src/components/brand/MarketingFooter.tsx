@@ -1,8 +1,7 @@
-import { ArrowUpRight, Mail } from "lucide-react";
+import { ArrowUpRight, Mail } from "@/components/icons";
 import { Link } from "react-router-dom";
 import { FooterBackgroundGradient, TextHoverEffect } from "@/components/ui/hover-footer";
 import { BrandFooter } from "@/components/brand/BrandFooter";
-import { brand } from "@/config/brand";
 
 const footerGroups = [
   {
@@ -52,11 +51,11 @@ export function MarketingFooter() {
               Source-backed comparisons for decisions that deserve more than another browser tab.
             </p>
             <a
-              href={`mailto:support@${brand.domain}`}
+              href="mailto:snapsolvework@gmail.com"
               className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.035] px-4 text-sm text-white/65 transition hover:border-orange-300/25 hover:text-white"
             >
               <Mail className="h-4 w-4 text-orange-300" />
-              support@{brand.domain}
+              snapsolvework@gmail.com
             </a>
           </div>
 

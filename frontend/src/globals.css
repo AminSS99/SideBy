@@ -454,3 +454,123 @@ select {
   -webkit-backface-visibility: hidden;
   transform: translate3d(0, 0, 0);
 }
+
+/* ------------------------------------------------------------------
+   Icon micro-motion
+   Transform-only (no layout shift), fires once per hover/focus on devices
+   with a real hover, skipped for reduced-motion, disabled controls and any
+   icon that already runs its own animate-* class (spinners).
+   ------------------------------------------------------------------ */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .sb-icon {
+    transform-origin: center;
+  }
+  .sb-icon g,
+  .sb-icon rect,
+  .sb-icon path {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  :is(a, button, [role="button"], [role="tab"], summary):not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible)
+    .sb-motion-pop:not([class*="animate-"]) {
+    animation: sb-icon-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) 1;
+  }
+  :is(a, button, [role="button"], [role="tab"], summary):not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible)
+    .sb-motion-tilt:not([class*="animate-"]) {
+    animation: sb-icon-tilt 0.5s ease-in-out 1;
+  }
+  :is(a, button, [role="button"], [role="tab"], summary):not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible)
+    .sb-motion-refresh:not([class*="animate-"]) {
+    animation: sb-icon-spin 0.6s cubic-bezier(0.4, 0, 0.2, 1) 1;
+  }
+  :is(a, button, [role="button"], [role="tab"], summary):not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible)
+    .sb-motion-rotate-ccw:not([class*="animate-"]) {
+    animation: sb-icon-spin-ccw 0.5s cubic-bezier(0.4, 0, 0.2, 1) 1;
+  }
+  :is(a, button, [role="button"], [role="tab"], summary):not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible)
+    .sb-motion-right:not([class*="animate-"]) {
+    animation: sb-icon-nudge-x 0.4s ease-out 1;
+  }
+  :is(a, button, [role="button"], [role="tab"], summary):not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible)
+    .sb-motion-left:not([class*="animate-"]) {
+    animation: sb-icon-nudge-x-neg 0.4s ease-out 1;
+  }
+  :is(a, button, [role="button"], [role="tab"], summary):not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible)
+    .sb-motion-up:not([class*="animate-"]) {
+    animation: sb-icon-nudge-y-neg 0.4s ease-out 1;
+  }
+  :is(a, button, [role="button"], [role="tab"], summary):not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible)
+    .sb-motion-upright:not([class*="animate-"]) {
+    animation: sb-icon-nudge-diag 0.4s ease-out 1;
+  }
+  :is(a, button, [role="button"], [role="tab"], summary):not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible)
+    .sb-motion-send:not([class*="animate-"]) {
+    animation: sb-icon-send 0.5s ease-in-out 1;
+  }
+
+  /* Bespoke two-part marks */
+  :is(a, button, [role="button"], [role="tab"], summary):not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible)
+    .sb-icon-sparkles .sb-prism-sub {
+    animation: sb-icon-tilt 0.5s ease-in-out 1;
+  }
+  :is(a, button, [role="button"], [role="tab"], summary):not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible)
+    .sb-icon-wand .sb-wand-head {
+    animation: sb-icon-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) 1;
+  }
+  :is(a, button, [role="button"], [role="tab"], summary):not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible)
+    .sb-icon-compare .sb-col-left {
+    animation: sb-icon-nudge-x 0.4s ease-out 1;
+  }
+  :is(a, button, [role="button"], [role="tab"], summary):not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible)
+    .sb-icon-compare .sb-col-right {
+    animation: sb-icon-nudge-x-neg 0.4s ease-out 1;
+  }
+}
+
+@keyframes sb-icon-pop {
+  0% { transform: scale(1); }
+  55% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+@keyframes sb-icon-tilt {
+  0%, 100% { transform: rotate(0); }
+  30% { transform: rotate(-12deg); }
+  70% { transform: rotate(10deg); }
+}
+@keyframes sb-icon-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes sb-icon-spin-ccw {
+  to { transform: rotate(-360deg); }
+}
+@keyframes sb-icon-nudge-x {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(2px); }
+}
+@keyframes sb-icon-nudge-x-neg {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-2px); }
+}
+@keyframes sb-icon-nudge-y-neg {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+@keyframes sb-icon-nudge-diag {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(1.5px, -1.5px); }
+}
+@keyframes sb-icon-send {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  45% { transform: translate(2px, -2px) rotate(-8deg); }
+}
+
+/* Mobile safety: single-column grids must be able to shrink below their
+   content's min-content width, otherwise one wide child (long heading,
+   monospace trace, table) widens the whole column and clips on the right.
+   :where() keeps specificity at zero so any explicit min-w-* utility wins. */
+@media (max-width: 1023px) {
+  :where(.grid) > * {
+    min-width: 0;
+  }
+}

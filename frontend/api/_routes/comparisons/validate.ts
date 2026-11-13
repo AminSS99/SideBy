@@ -1,7 +1,10 @@
 import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { validateComparisonQuery } from "../../_lib/comparison-validator.js";
+import { configuredQuota } from "../../_lib/plan-limits.js";
+import { logger } from "../../_lib/log.js";
 import { checkRateLimit } from "../../_lib/rate-limit.js";
+import { getClientIp } from "../../_lib/route-guard.js";
 
 const BodySchema = z.object({
   query: z.string().trim().min(1).max(800),
@@ -10,13 +13,6 @@ const BodySchema = z.object({
 const sendJson = (response: VercelResponse, payload: unknown, status = 200) => {
   response.setHeader("Cache-Control", "private, max-age=60");
   return response.status(status).json(payload);
-};
-
-const getClientIp = (request: VercelRequest) => {
-  const forwarded = request.headers["x-forwarded-for"];
-  if (typeof forwarded === "string") return forwarded.split(",")[0]?.trim() || null;
-  if (Array.isArray(forwarded)) return forwarded[0]?.trim() || null;
-  return request.socket?.remoteAddress || null;
 };
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
@@ -37,16 +33,21 @@ export default async function handler(request: VercelRequest, response: VercelRe
     const { query } = BodySchema.parse(request.body || {});
     // Global spend breaker: unauthenticated validation fans out to Tavily +
     // the LLM, so cap total AI-backed validations per minute across all IPs.
-    const globalCap = Number(process.env.VALIDATION_AI_GLOBAL_PER_MIN || "60");
+    const globalCap = configuredQuota("VALIDATION_AI_GLOBAL_PER_MIN", 60);
     const global = await checkRateLimit("ip", "global", "comparison-validation-ai", globalCap);
     const validation = await validateComparisonQuery(query, { allowAi: global.allowed });
     return sendJson(response, validation);
   } catch (error) {
-    const status = error instanceof z.ZodError ? 400 : 500;
+    const unavailable = error instanceof Error && "statusCode" in error && error.statusCode === 503;
+    const status = error instanceof z.ZodError ? 400 : unavailable ? 503 : 500;
+    if (!(error instanceof z.ZodError)) {
+      logger.warn("Comparison eligibility check failed", { error: error instanceof Error ? error.message : String(error) });
+    }
+    if (unavailable) response.setHeader("Retry-After", "60");
     return sendJson(response, {
       error: error instanceof z.ZodError
         ? error.errors[0]?.message || "Invalid request."
-        : error instanceof Error ? error.message : "Unable to validate comparison.",
+        : "Comparison checks are temporarily unavailable. Please try again shortly.",
     }, status);
   }
 }

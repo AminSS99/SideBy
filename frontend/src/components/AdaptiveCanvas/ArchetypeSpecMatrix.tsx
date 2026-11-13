@@ -8,7 +8,7 @@ import {
   Shield,
   Sparkles,
   CheckCircle2,
-} from "lucide-react";
+} from "@/components/icons";
 import type { ComparisonData, ComparisonFact, Entity } from "@/components/Comparison/types";
 import type { ComparisonArchetype } from "@/lib/adaptive-canvas/presentation-spec";
 

@@ -58,13 +58,20 @@ export default async function handler(
       if (job.status === "running") sweepStaleJobs();
       // Authoritative classification from server-written evidence (never a
       // client claim) so the UI can explain publishability before acting.
-      const db = createDbClient();
+      const publishEligibility =
+        job.status === "completed" && job.result
+          ? assessPublishEligibility(
+              job.result,
+              await loadPublishEvidence(createDbClient(), id),
+            )
+          : {
+              eligible: false,
+              classification: "incomplete" as const,
+              reasons: ["Research has not finished yet."],
+            };
       return sendJson(response, {
         ...job,
-        publishEligibility: assessPublishEligibility(
-          job.result,
-          await loadPublishEvidence(db, id),
-        ),
+        publishEligibility,
       });
     } catch (error) {
       const status =
@@ -81,24 +88,23 @@ export default async function handler(
 
   if (request.method === "POST") {
     // Feedback submission
-    return withRateLimit(request, response, "followUp", async () => {
-      try {
-        const auth = await requireAuth(request);
-        const id = Array.isArray(request.query.id)
-          ? request.query.id[0]
-          : request.query.id;
-        if (!id) {
-          return sendJson(response, { error: "Comparison id is required." }, 400);
-        }
+    try {
+      const auth = await requireAuth(request);
+      const id = Array.isArray(request.query.id)
+        ? request.query.id[0]
+        : request.query.id;
+      if (!id) {
+        return sendJson(response, { error: "Comparison id is required." }, 400);
+      }
 
-        const body = FeedbackBodySchema.parse(request.body || {});
+      const body = FeedbackBodySchema.parse(request.body || {});
+      const db = createDbClient();
+      const hasAccess = await canAccessComparison(db, auth.userId, id);
+      if (!hasAccess) {
+        return sendJson(response, { error: "Comparison not found." }, 404);
+      }
 
-        const db = createDbClient();
-        const hasAccess = await canAccessComparison(db, auth.userId, id);
-        if (!hasAccess) {
-          return sendJson(response, { error: "Comparison not found." }, 404);
-        }
-
+      return await withRateLimit(request, response, "followUp", async () => {
         await db.insert(feedback).values({
           comparisonId: id,
           clerkUserId: auth.userId,
@@ -108,19 +114,24 @@ export default async function handler(
         });
 
         return sendJson(response, { success: true });
-      } catch (error) {
-        const status = error instanceof z.ZodError ? 400 : 500;
-        return sendJson(
-          response,
-          {
-            error: error instanceof z.ZodError
-              ? error.errors[0]?.message || "Invalid request body."
-              : error instanceof Error ? error.message : "Unable to submit feedback.",
-          },
-          status,
-        );
-      }
-    });
+      });
+    } catch (error) {
+      const status =
+        error instanceof z.ZodError
+          ? 400
+          : error instanceof Error && "statusCode" in error
+            ? (error as Error & { statusCode: number }).statusCode
+            : 500;
+      return sendJson(
+        response,
+        {
+          error: error instanceof z.ZodError
+            ? error.errors[0]?.message || "Invalid request body."
+            : error instanceof Error ? error.message : "Unable to submit feedback.",
+        },
+        status,
+      );
+    }
   }
 
   return sendJson(response, { error: "Method not allowed" }, 405);

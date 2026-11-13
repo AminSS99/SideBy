@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { requireAuth } from "../_lib/auth.js";
+import { getClientIp } from "../_lib/route-guard.js";
 import { createDbClient } from "../../src/db/index.js";
 import { consentRecords } from "../../src/db/schema.js";
 import { sendJson } from "../_lib/sideby.js";
@@ -18,9 +19,8 @@ function getHeader(request: VercelRequest, name: string): string | null {
   return Array.isArray(value) ? value[0] || null : value || null;
 }
 
-function getClientIp(request: VercelRequest): string | null {
-  const forwardedFor = getHeader(request, "x-forwarded-for");
-  return forwardedFor?.split(",")[0]?.trim().slice(0, 64) || null;
+function getConsentClientIp(request: VercelRequest): string | null {
+  return getClientIp(request)?.slice(0, 64) || null;
 }
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
@@ -48,7 +48,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
           policyVersion: body.policyVersion,
           source: body.source,
           globalPrivacyControl: body.globalPrivacyControl,
-          ipAddress: getClientIp(request),
+          ipAddress: getConsentClientIp(request),
           userAgent: getHeader(request, "user-agent")?.slice(0, 1024) || null,
         })
         .returning();

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { CheckCircle2, Zap } from 'lucide-react';
+import { CheckCircle2, Zap } from "@/components/icons";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";

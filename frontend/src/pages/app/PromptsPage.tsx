@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
-import { Terminal, Plus, Search, Play, Copy, Edit3, Trash2, X, Save, Variable } from "lucide-react";
+import { Terminal, Plus, Search, Play, Copy, Edit3, Trash2, X, Save, Variable } from "@/components/icons";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { motion, AnimatePresence } from "framer-motion";

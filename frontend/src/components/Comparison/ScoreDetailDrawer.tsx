@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Trophy, Globe, Sparkles, Scale, AlertTriangle, ShieldCheck, HelpCircle } from "lucide-react";
+import { Trophy, Globe, Sparkles, Scale, AlertTriangle, ShieldCheck, HelpCircle } from "@/components/icons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";

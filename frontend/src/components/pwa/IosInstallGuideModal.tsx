@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Share, PlusSquare, X, Smartphone, Sparkles } from "lucide-react";
+import { Share, PlusSquare, X, Smartphone, Sparkles } from "@/components/icons";
 
 interface IosInstallGuideModalProps {
   open: boolean;

@@ -9,7 +9,7 @@ import {
   Database,
   AlertCircle,
   RefreshCw,
-} from "lucide-react";
+} from "@/components/icons";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { toast } from "sonner";

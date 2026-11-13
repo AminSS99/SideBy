@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { RefreshCw, X } from "lucide-react";
+import { RefreshCw, X } from "@/components/icons";
 import { pwaUpdates } from "@/lib/pwa/register";
 
 /**

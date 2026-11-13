@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState, type KeyboardEvent } from 'react';
-import { ChevronDown, GitBranch, Pin } from 'lucide-react';
+import { ChevronDown, GitBranch, Pin } from "@/components/icons";
 
 export type ChangelogCategory = 'new' | 'improved' | 'fixed';
 

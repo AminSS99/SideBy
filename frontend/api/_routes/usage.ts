@@ -26,6 +26,15 @@ export const config = {
   maxDuration: 15,
 };
 
+function getPlatformAdminIds(): Set<string> {
+  return new Set(
+    (process.env.SIDEBY_PLATFORM_ADMIN_USER_IDS || "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean),
+  );
+}
+
 export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
@@ -43,11 +52,18 @@ export default async function handler(
       : request.query.type;
 
     if (queryType === "quality") {
-      // Restrict quality dashboard to org admins/owners
-      if (!auth.orgRole || !["org:admin", "admin", "owner"].includes(auth.orgRole)) {
+      const isPlatformAdmin = getPlatformAdminIds().has(auth.userId);
+      const isOrgAdmin =
+        Boolean(auth.orgId) &&
+        Boolean(auth.orgRole) &&
+        ["org:admin", "admin", "owner"].includes(auth.orgRole ?? "");
+
+      // Restrict global quality dashboard to explicit platform admins; org admins see only their active org.
+      if (!isPlatformAdmin && !isOrgAdmin) {
         return sendJson(response, { error: "Admin access required." }, 403);
       }
 
+      const scopedOrgId = isPlatformAdmin ? null : auth.orgId;
       const db = createDbClient();
 
       const [
@@ -80,7 +96,11 @@ export default async function handler(
           })
           .from(comparisons)
           .leftJoin(queryAnalytics, eq(comparisons.id, queryAnalytics.comparisonId))
-          .where(eq(comparisons.status, "failed"))
+          .where(
+            scopedOrgId
+              ? and(eq(comparisons.status, "failed"), eq(comparisons.clerkOrgId, scopedOrgId))
+              : eq(comparisons.status, "failed"),
+          )
           .orderBy(desc(comparisons.updatedAt))
           .limit(20),
         db
@@ -97,6 +117,7 @@ export default async function handler(
               eq(comparisons.status, "completed"),
               sql`${comparisons.overallConfidence} IS NOT NULL`,
               sql`${comparisons.overallConfidence}::numeric < 0.7`,
+              ...(scopedOrgId ? [eq(comparisons.clerkOrgId, scopedOrgId)] : []),
             ),
           )
           .orderBy(desc(comparisons.updatedAt))
@@ -110,94 +131,244 @@ export default async function handler(
             updatedAt: comparisons.updatedAt,
           })
           .from(comparisons)
-          .where(sql`${comparisons.totalCost} IS NOT NULL`)
+          .where(
+            scopedOrgId
+              ? and(sql`${comparisons.totalCost} IS NOT NULL`, eq(comparisons.clerkOrgId, scopedOrgId))
+              : sql`${comparisons.totalCost} IS NOT NULL`,
+          )
           .orderBy(desc(comparisons.totalCost))
           .limit(20),
-        db
-          .select({
-            category: queryAnalytics.queryCategory,
-            status: queryAnalytics.taxonomyStatus,
-            safetyLevel: queryAnalytics.safetyLevel,
-            count: sql<number>`count(*)::integer`,
-          })
-          .from(queryAnalytics)
-          .where(sql`${queryAnalytics.queryCategory} IS NOT NULL`)
-          .groupBy(queryAnalytics.queryCategory, queryAnalytics.taxonomyStatus, queryAnalytics.safetyLevel)
-          .orderBy(desc(sql`count(*)`)),
-        db
-          .select({
-            safetyLevel: queryAnalytics.safetyLevel,
-            count: sql<number>`count(*)::integer`,
-          })
-          .from(queryAnalytics)
-          .where(sql`${queryAnalytics.safetyLevel} IS NOT NULL`)
-          .groupBy(queryAnalytics.safetyLevel)
-          .orderBy(desc(sql`count(*)`)),
-        db
-          .select({
-            status: queryAnalytics.taxonomyStatus,
-            count: sql<number>`count(*)::integer`,
-          })
-          .from(queryAnalytics)
-          .where(sql`${queryAnalytics.taxonomyStatus} IS NOT NULL`)
-          .groupBy(queryAnalytics.taxonomyStatus)
-          .orderBy(desc(sql`count(*)`)),
-        db
-          .select({
-            note: queryAnalytics.policyNote,
-            count: sql<number>`count(*)::integer`,
-          })
-          .from(queryAnalytics)
-          .where(sql`${queryAnalytics.policyNote} IS NOT NULL`)
-          .groupBy(queryAnalytics.policyNote)
-          .orderBy(desc(sql`count(*)`))
-          .limit(20),
-        db
-          .select({ count: sql<number>`count(*)::integer` })
-          .from(queryAnalytics)
-          .where(eq(queryAnalytics.isVague, true)),
+        scopedOrgId
+          ? db
+              .select({
+                category: queryAnalytics.queryCategory,
+                status: queryAnalytics.taxonomyStatus,
+                safetyLevel: queryAnalytics.safetyLevel,
+                count: sql<number>`count(*)::integer`,
+              })
+              .from(queryAnalytics)
+              .innerJoin(comparisons, eq(queryAnalytics.comparisonId, comparisons.id))
+              .where(
+                and(
+                  sql`${queryAnalytics.queryCategory} IS NOT NULL`,
+                  eq(comparisons.clerkOrgId, scopedOrgId),
+                ),
+              )
+              .groupBy(queryAnalytics.queryCategory, queryAnalytics.taxonomyStatus, queryAnalytics.safetyLevel)
+              .orderBy(desc(sql`count(*)`))
+          : db
+              .select({
+                category: queryAnalytics.queryCategory,
+                status: queryAnalytics.taxonomyStatus,
+                safetyLevel: queryAnalytics.safetyLevel,
+                count: sql<number>`count(*)::integer`,
+              })
+              .from(queryAnalytics)
+              .where(sql`${queryAnalytics.queryCategory} IS NOT NULL`)
+              .groupBy(queryAnalytics.queryCategory, queryAnalytics.taxonomyStatus, queryAnalytics.safetyLevel)
+              .orderBy(desc(sql`count(*)`)),
+        scopedOrgId
+          ? db
+              .select({
+                safetyLevel: queryAnalytics.safetyLevel,
+                count: sql<number>`count(*)::integer`,
+              })
+              .from(queryAnalytics)
+              .innerJoin(comparisons, eq(queryAnalytics.comparisonId, comparisons.id))
+              .where(
+                and(
+                  sql`${queryAnalytics.safetyLevel} IS NOT NULL`,
+                  eq(comparisons.clerkOrgId, scopedOrgId),
+                ),
+              )
+              .groupBy(queryAnalytics.safetyLevel)
+              .orderBy(desc(sql`count(*)`))
+          : db
+              .select({
+                safetyLevel: queryAnalytics.safetyLevel,
+                count: sql<number>`count(*)::integer`,
+              })
+              .from(queryAnalytics)
+              .where(sql`${queryAnalytics.safetyLevel} IS NOT NULL`)
+              .groupBy(queryAnalytics.safetyLevel)
+              .orderBy(desc(sql`count(*)`)),
+        scopedOrgId
+          ? db
+              .select({
+                status: queryAnalytics.taxonomyStatus,
+                count: sql<number>`count(*)::integer`,
+              })
+              .from(queryAnalytics)
+              .innerJoin(comparisons, eq(queryAnalytics.comparisonId, comparisons.id))
+              .where(
+                and(
+                  sql`${queryAnalytics.taxonomyStatus} IS NOT NULL`,
+                  eq(comparisons.clerkOrgId, scopedOrgId),
+                ),
+              )
+              .groupBy(queryAnalytics.taxonomyStatus)
+              .orderBy(desc(sql`count(*)`))
+          : db
+              .select({
+                status: queryAnalytics.taxonomyStatus,
+                count: sql<number>`count(*)::integer`,
+              })
+              .from(queryAnalytics)
+              .where(sql`${queryAnalytics.taxonomyStatus} IS NOT NULL`)
+              .groupBy(queryAnalytics.taxonomyStatus)
+              .orderBy(desc(sql`count(*)`)),
+        scopedOrgId
+          ? db
+              .select({
+                note: queryAnalytics.policyNote,
+                count: sql<number>`count(*)::integer`,
+              })
+              .from(queryAnalytics)
+              .innerJoin(comparisons, eq(queryAnalytics.comparisonId, comparisons.id))
+              .where(
+                and(
+                  sql`${queryAnalytics.policyNote} IS NOT NULL`,
+                  eq(comparisons.clerkOrgId, scopedOrgId),
+                ),
+              )
+              .groupBy(queryAnalytics.policyNote)
+              .orderBy(desc(sql`count(*)`))
+              .limit(20)
+          : db
+              .select({
+                note: queryAnalytics.policyNote,
+                count: sql<number>`count(*)::integer`,
+              })
+              .from(queryAnalytics)
+              .where(sql`${queryAnalytics.policyNote} IS NOT NULL`)
+              .groupBy(queryAnalytics.policyNote)
+              .orderBy(desc(sql`count(*)`))
+              .limit(20),
+        scopedOrgId
+          ? db
+              .select({ count: sql<number>`count(*)::integer` })
+              .from(queryAnalytics)
+              .innerJoin(comparisons, eq(queryAnalytics.comparisonId, comparisons.id))
+              .where(and(eq(queryAnalytics.isVague, true), eq(comparisons.clerkOrgId, scopedOrgId)))
+          : db
+              .select({ count: sql<number>`count(*)::integer` })
+              .from(queryAnalytics)
+              .where(eq(queryAnalytics.isVague, true)),
         db
           .select({ count: sql<number>`count(*)::integer` })
           .from(comparisons)
-          .where(eq(comparisons.status, "completed")),
+          .where(
+            scopedOrgId
+              ? and(eq(comparisons.status, "completed"), eq(comparisons.clerkOrgId, scopedOrgId))
+              : eq(comparisons.status, "completed"),
+          ),
         db
           .select({ count: sql<number>`count(*)::integer` })
           .from(comparisons)
-          .where(eq(comparisons.status, "failed")),
+          .where(
+            scopedOrgId
+              ? and(eq(comparisons.status, "failed"), eq(comparisons.clerkOrgId, scopedOrgId))
+              : eq(comparisons.status, "failed"),
+          ),
         db
           .select({ avg: sql<number>`avg(${comparisons.totalCost})::float` })
           .from(comparisons)
-          .where(sql`${comparisons.totalCost} IS NOT NULL`),
-        db
-          .select({
-            rating: feedbackTable.rating,
-            count: sql<number>`count(*)::integer`,
-          })
-          .from(feedbackTable)
-          .where(sql`${feedbackTable.rating} IS NOT NULL`)
-          .groupBy(feedbackTable.rating)
-          .orderBy(feedbackTable.rating),
-        db
-          .select({ count: sql<number>`count(*)::integer` })
-          .from(queryAnalytics)
-          .where(sql`${queryAnalytics.reusedFromId} IS NOT NULL`),
-        db
-          .select({ count: sql<number>`count(*)::integer` })
-          .from(queryAnalytics),
-        db
-          .select({ count: sql<number>`count(*)::integer` })
-          .from(queryAnalytics)
-          .where(sql`${queryAnalytics.safetyLevel} = 'blocked' OR ${queryAnalytics.taxonomyStatus} IN ('sensitive', 'unsupported')`),
-        db
-          .select({
-            provider: aiRuns.provider,
-            totalCost: sql<number>`sum(${aiRuns.estimatedCost})::float`,
-            callCount: sql<number>`count(*)::integer`,
-          })
-          .from(aiRuns)
-          .where(sql`${aiRuns.estimatedCost} IS NOT NULL`)
-          .groupBy(aiRuns.provider)
-          .orderBy(desc(sql`sum(${aiRuns.estimatedCost})`)),
+          .where(
+            scopedOrgId
+              ? and(sql`${comparisons.totalCost} IS NOT NULL`, eq(comparisons.clerkOrgId, scopedOrgId))
+              : sql`${comparisons.totalCost} IS NOT NULL`,
+          ),
+        scopedOrgId
+          ? db
+              .select({
+                rating: feedbackTable.rating,
+                count: sql<number>`count(*)::integer`,
+              })
+              .from(feedbackTable)
+              .innerJoin(comparisons, eq(feedbackTable.comparisonId, comparisons.id))
+              .where(
+                and(
+                  sql`${feedbackTable.rating} IS NOT NULL`,
+                  eq(comparisons.clerkOrgId, scopedOrgId),
+                ),
+              )
+              .groupBy(feedbackTable.rating)
+              .orderBy(feedbackTable.rating)
+          : db
+              .select({
+                rating: feedbackTable.rating,
+                count: sql<number>`count(*)::integer`,
+              })
+              .from(feedbackTable)
+              .where(sql`${feedbackTable.rating} IS NOT NULL`)
+              .groupBy(feedbackTable.rating)
+              .orderBy(feedbackTable.rating),
+        scopedOrgId
+          ? db
+              .select({ count: sql<number>`count(*)::integer` })
+              .from(queryAnalytics)
+              .innerJoin(comparisons, eq(queryAnalytics.comparisonId, comparisons.id))
+              .where(
+                and(
+                  sql`${queryAnalytics.reusedFromId} IS NOT NULL`,
+                  eq(comparisons.clerkOrgId, scopedOrgId),
+                ),
+              )
+          : db
+              .select({ count: sql<number>`count(*)::integer` })
+              .from(queryAnalytics)
+              .where(sql`${queryAnalytics.reusedFromId} IS NOT NULL`),
+        scopedOrgId
+          ? db
+              .select({ count: sql<number>`count(*)::integer` })
+              .from(queryAnalytics)
+              .innerJoin(comparisons, eq(queryAnalytics.comparisonId, comparisons.id))
+              .where(eq(comparisons.clerkOrgId, scopedOrgId))
+          : db
+              .select({ count: sql<number>`count(*)::integer` })
+              .from(queryAnalytics),
+        scopedOrgId
+          ? db
+              .select({ count: sql<number>`count(*)::integer` })
+              .from(queryAnalytics)
+              .innerJoin(comparisons, eq(queryAnalytics.comparisonId, comparisons.id))
+              .where(
+                and(
+                  sql`(${queryAnalytics.safetyLevel} = 'blocked' OR ${queryAnalytics.taxonomyStatus} IN ('sensitive', 'unsupported'))`,
+                  eq(comparisons.clerkOrgId, scopedOrgId),
+                ),
+              )
+          : db
+              .select({ count: sql<number>`count(*)::integer` })
+              .from(queryAnalytics)
+              .where(sql`${queryAnalytics.safetyLevel} = 'blocked' OR ${queryAnalytics.taxonomyStatus} IN ('sensitive', 'unsupported')`),
+        scopedOrgId
+          ? db
+              .select({
+                provider: aiRuns.provider,
+                totalCost: sql<number>`sum(${aiRuns.estimatedCost})::float`,
+                callCount: sql<number>`count(*)::integer`,
+              })
+              .from(aiRuns)
+              .innerJoin(comparisons, eq(aiRuns.comparisonId, comparisons.id))
+              .where(
+                and(
+                  sql`${aiRuns.estimatedCost} IS NOT NULL`,
+                  eq(comparisons.clerkOrgId, scopedOrgId),
+                ),
+              )
+              .groupBy(aiRuns.provider)
+              .orderBy(desc(sql`sum(${aiRuns.estimatedCost})`))
+          : db
+              .select({
+                provider: aiRuns.provider,
+                totalCost: sql<number>`sum(${aiRuns.estimatedCost})::float`,
+                callCount: sql<number>`count(*)::integer`,
+              })
+              .from(aiRuns)
+              .where(sql`${aiRuns.estimatedCost} IS NOT NULL`)
+              .groupBy(aiRuns.provider)
+              .orderBy(desc(sql`sum(${aiRuns.estimatedCost})`)),
       ]);
 
       const vagueCount = vagueCountResult[0];
@@ -218,7 +389,7 @@ export default async function handler(
         },
         // Phase 12: Cache and reuse stats
         cache: {
-          memorySize: comparisonCache.size(),
+          memorySize: isPlatformAdmin ? comparisonCache.size() : 0,
           totalQueries: totalQueries?.count || 0,
           reusedCount: totalReused?.count || 0,
           reuseRate: totalQueries?.count

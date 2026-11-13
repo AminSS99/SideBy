@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Send, Sparkles, Bot, User, Loader2, ArrowRight, AlertCircle } from "lucide-react";
+import { Send, Sparkles, Bot, User, Loader2, ArrowRight, AlertCircle } from "@/components/icons";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { apiFetch, ApiError } from "@/lib/api";
