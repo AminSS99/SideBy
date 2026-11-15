@@ -65,6 +65,17 @@ describe('Azure OpenAI embeddings & failover', () => {
     );
   });
 
+  it('appends /embeddings without api-version for Azure Foundry /openai/v1 endpoints', () => {
+    const url = buildAzureEmbeddingUrl(
+      'https://snapeco1-resource.openai.azure.com/openai/v1',
+      'text-embedding-3-small',
+      '2024-10-21',
+    );
+    expect(url).toBe(
+      'https://snapeco1-resource.openai.azure.com/openai/v1/embeddings',
+    );
+  });
+
   it('uses Azure OpenAI embeddings when OPENAI_API_KEY is not set', async () => {
     delete process.env.OPENAI_API_KEY;
     process.env.AZURE_OPENAI_API_KEY = 'az-embed-key';

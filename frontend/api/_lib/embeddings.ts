@@ -43,6 +43,13 @@ export function buildAzureEmbeddingUrl(
     DEFAULT_AZURE_API_VERSION
   ).trim();
 
+  if (endpoint.includes("/openai/v1")) {
+    if (endpoint.includes("/embeddings")) {
+      return endpoint;
+    }
+    return `${endpoint}/embeddings`;
+  }
+
   if (endpoint.includes("/embeddings")) {
     if (endpoint.includes("api-version=")) {
       return endpoint;

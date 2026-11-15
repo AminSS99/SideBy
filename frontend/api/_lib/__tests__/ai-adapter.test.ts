@@ -195,6 +195,17 @@ describe('AzureOpenAIAdapter & FailoverAIProvider', () => {
     );
   });
 
+  it('appends /chat/completions without api-version for Azure Foundry /openai/v1 endpoints', () => {
+    const url = buildAzureChatCompletionsUrl(
+      'https://snapeco1-resource.openai.azure.com/openai/v1/',
+      'Llama-3.3-70B-Instruct',
+      '2024-10-21',
+    );
+    expect(url).toBe(
+      'https://snapeco1-resource.openai.azure.com/openai/v1/chat/completions',
+    );
+  });
+
   it('registers azure in listAvailableProviders and honors AI_PRIMARY_PROVIDER=azure', () => {
     process.env.DEEPSEEK_API_KEY = 'sk-deepseek-test';
     process.env.AZURE_OPENAI_API_KEY = 'az-key-test';

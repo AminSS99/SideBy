@@ -24,6 +24,13 @@ export function buildAzureChatCompletionsUrl(
   const deployment = (deploymentRaw || process.env.AZURE_OPENAI_DEPLOYMENT || DEFAULT_DEPLOYMENT).trim();
   const apiVersion = (apiVersionRaw || process.env.AZURE_OPENAI_API_VERSION || DEFAULT_API_VERSION).trim();
 
+  if (endpoint.includes("/openai/v1")) {
+    if (endpoint.includes("/chat/completions")) {
+      return endpoint;
+    }
+    return `${endpoint}/chat/completions`;
+  }
+
   if (endpoint.includes("/chat/completions")) {
     if (endpoint.includes("api-version=")) {
       return endpoint;
