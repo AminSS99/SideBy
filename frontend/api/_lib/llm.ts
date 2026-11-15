@@ -1,4 +1,6 @@
-type LLMProvider = "openai" | "anthropic" | "gemini" | "deepseek";
+import { buildAzureChatCompletionsUrl, isAzureOpenAIConfigured } from "./providers/azure.js";
+
+type LLMProvider = "openai" | "azure" | "anthropic" | "gemini" | "deepseek";
 
 type LLMMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -13,7 +15,13 @@ const isKeyConfigured = (key?: string) => {
 };
 
 const detectProvider = (): LLMProvider | null => {
+  const preferred = process.env.AI_PRIMARY_PROVIDER?.trim().toLowerCase();
+  if (preferred === "azure" && isAzureOpenAIConfigured()) return "azure";
+  if (preferred === "deepseek" && isKeyConfigured(process.env.DEEPSEEK_API_KEY)) return "deepseek";
+  if (preferred === "openai" && isKeyConfigured(process.env.OPENAI_API_KEY)) return "openai";
+
   if (isKeyConfigured(process.env.OPENAI_API_KEY)) return "openai";
+  if (isAzureOpenAIConfigured()) return "azure";
   if (isKeyConfigured(process.env.ANTHROPIC_API_KEY)) return "anthropic";
   if (isKeyConfigured(process.env.GEMINI_API_KEY)) return "gemini";
   if (isKeyConfigured(process.env.DEEPSEEK_API_KEY)) return "deepseek";
@@ -48,6 +56,38 @@ const callOpenAI = async (messages: LLMMessage[]): Promise<string> => {
     choices: Array<{ message: { content: string } }>;
   };
   return data.choices[0].message.content;
+};
+
+const callAzureOpenAI = async (messages: LLMMessage[]): Promise<string> => {
+  const key = process.env.AZURE_OPENAI_API_KEY!.trim();
+  const endpoint = process.env.AZURE_OPENAI_ENDPOINT!.trim();
+  const model = (process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini").trim();
+  const url = buildAzureChatCompletionsUrl(endpoint, model);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-key": key,
+      Authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.3,
+      max_tokens: 4000,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Azure OpenAI error: ${response.status} ${await response.text()}`);
+  }
+
+  const data = (await response.json()) as {
+    choices: Array<{ message: { content: string } }>;
+  };
+  return data.choices[0]?.message?.content || "";
 };
 
 const callAnthropic = async (messages: LLMMessage[]): Promise<string> => {
@@ -147,12 +187,25 @@ const callDeepSeek = async (messages: LLMMessage[]): Promise<string> => {
   return data.choices[0].message.content;
 };
 
-const openAiCompatibleConfig = (provider: Extract<LLMProvider, "openai" | "deepseek">) => {
+const openAiCompatibleConfig = (provider: Extract<LLMProvider, "openai" | "azure" | "deepseek">) => {
   if (provider === "openai") {
     return {
       key: process.env.OPENAI_API_KEY!,
       url: process.env.OPENAI_API_URL || "https://api.openai.com/v1/chat/completions",
       model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      extraHeaders: {} as Record<string, string>,
+    };
+  }
+
+  if (provider === "azure") {
+    const key = process.env.AZURE_OPENAI_API_KEY!.trim();
+    const endpoint = process.env.AZURE_OPENAI_ENDPOINT!.trim();
+    const model = (process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini").trim();
+    return {
+      key,
+      url: buildAzureChatCompletionsUrl(endpoint, model),
+      model,
+      extraHeaders: { "api-key": key },
     };
   }
 
@@ -160,11 +213,12 @@ const openAiCompatibleConfig = (provider: Extract<LLMProvider, "openai" | "deeps
     key: process.env.DEEPSEEK_API_KEY!,
     url: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/v1/chat/completions",
     model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+    extraHeaders: {} as Record<string, string>,
   };
 };
 
 const callOpenAICompatibleStream = async (
-  provider: Extract<LLMProvider, "openai" | "deepseek">,
+  provider: Extract<LLMProvider, "openai" | "azure" | "deepseek">,
   messages: LLMMessage[],
   onToken: (token: string) => void,
 ): Promise<string> => {
@@ -174,6 +228,7 @@ const callOpenAICompatibleStream = async (
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${config.key}`,
+      ...config.extraHeaders,
     },
     body: JSON.stringify({
       model: config.model,
@@ -229,6 +284,7 @@ const providers: Record<
   (messages: LLMMessage[]) => Promise<string>
 > = {
   openai: callOpenAI,
+  azure: callAzureOpenAI,
   anthropic: callAnthropic,
   gemini: callGemini,
   deepseek: callDeepSeek,
@@ -238,7 +294,7 @@ export const llmChat = async (messages: LLMMessage[]): Promise<LLMResponse> => {
   const provider = detectProvider();
   if (!provider) {
     throw new Error(
-      "No LLM provider configured. Set OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or DEEPSEEK_API_KEY.",
+      "No LLM provider configured. Set OPENAI_API_KEY, AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT, ANTHROPIC_API_KEY, GEMINI_API_KEY, or DEEPSEEK_API_KEY.",
     );
   }
 
@@ -246,6 +302,7 @@ export const llmChat = async (messages: LLMMessage[]): Promise<LLMResponse> => {
 
   const models: Record<LLMProvider, string> = {
     openai: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    azure: process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini",
     anthropic: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
     gemini: process.env.GEMINI_MODEL || "gemini-2.0-flash",
     deepseek: process.env.DEEPSEEK_MODEL || "deepseek-chat",
@@ -261,18 +318,19 @@ export const llmChatStream = async (
   const provider = detectProvider();
   if (!provider) {
     throw new Error(
-      "No LLM provider configured. Set OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or DEEPSEEK_API_KEY.",
+      "No LLM provider configured. Set OPENAI_API_KEY, AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT, ANTHROPIC_API_KEY, GEMINI_API_KEY, or DEEPSEEK_API_KEY.",
     );
   }
 
   const models: Record<LLMProvider, string> = {
     openai: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    azure: process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini",
     anthropic: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
     gemini: process.env.GEMINI_MODEL || "gemini-2.0-flash",
     deepseek: process.env.DEEPSEEK_MODEL || "deepseek-chat",
   };
 
-  if (provider === "openai" || provider === "deepseek") {
+  if (provider === "openai" || provider === "azure" || provider === "deepseek") {
     const content = await callOpenAICompatibleStream(provider, messages, onToken);
     return { content, model: models[provider], provider };
   }

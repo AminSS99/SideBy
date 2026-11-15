@@ -24,13 +24,15 @@ export function checkEnvironment(): EnvCheck {
   const warnings: string[] = [];
   const production = isProductionRuntime();
 
+  const hasAzureOpenai = present(serverEnv.azureOpenaiApiKey) && present(serverEnv.azureOpenaiEndpoint);
+
   const requiredInProduction: Array<[string, boolean]> = [
     ["CLERK_SECRET_KEY", present(serverEnv.clerkSecretKey)],
     ["DATABASE_URL or POSTGRES_URL", present(serverEnv.databaseUrl)],
     ["Redis or Postgres runtime store", isRuntimeStoreConfigured()],
-    ["DEEPSEEK_API_KEY or OPENROUTER_API_KEY", present(serverEnv.deepseekApiKey) || present(serverEnv.openrouterApiKey)],
+    ["DEEPSEEK_API_KEY, AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT, or OPENROUTER_API_KEY", present(serverEnv.deepseekApiKey) || hasAzureOpenai || present(serverEnv.openrouterApiKey)],
     ["TAVILY_API_KEY or GOOGLE_SEARCH_API_KEY + GOOGLE_SEARCH_CX", present(serverEnv.tavilyApiKey) || (present(serverEnv.googleSearchApiKey) && present(serverEnv.googleSearchCx))],
-    ["OPENAI_API_KEY", present(serverEnv.openaiApiKey)],
+    ["OPENAI_API_KEY or AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT", present(serverEnv.openaiApiKey) || hasAzureOpenai],
   ];
 
   if (production) {

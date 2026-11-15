@@ -1,31 +1,124 @@
 /**
  * Embedding utility for semantic search.
- * Uses OpenAI text-embedding-3-small (1536 dims) by default.
- * Falls back to other providers if OpenAI key is not available.
+ * Supports OpenAI text-embedding-3-small (1536 dims) and Azure OpenAI Embeddings
+ * with automatic failover when both providers are configured.
  */
 import { logger } from "./log.js";
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const EMBEDDING_MODEL = "text-embedding-3-small";
-const EMBEDDING_URL = "https://api.openai.com/v1/embeddings";
+const OPENAI_EMBEDDING_URL = "https://api.openai.com/v1/embeddings";
+const DEFAULT_AZURE_API_VERSION = "2024-10-21";
 
-const isKeyConfigured = (key?: string) => {
+export type EmbeddingBackend = "openai" | "azure";
+
+const isKeyConfigured = (key?: string): boolean => {
   return Boolean(key && key.trim() !== "" && key !== "sk-placeholder");
 };
 
-export async function embedText(text: string): Promise<number[]> {
-  if (!isKeyConfigured(OPENAI_API_KEY)) {
-    throw new Error("OpenAI API key is missing or not configured (placeholder detected). Set a valid OPENAI_API_KEY for fact embeddings.");
+export function isOpenAIEmbeddingConfigured(): boolean {
+  return isKeyConfigured(process.env.OPENAI_API_KEY);
+}
+
+export function isAzureEmbeddingConfigured(): boolean {
+  return Boolean(
+    isKeyConfigured(process.env.AZURE_OPENAI_API_KEY) &&
+      process.env.AZURE_OPENAI_ENDPOINT?.trim(),
+  );
+}
+
+export function buildAzureEmbeddingUrl(
+  endpointRaw: string,
+  deploymentRaw?: string,
+  apiVersionRaw?: string,
+): string {
+  const endpoint = endpointRaw.trim().replace(/\/+$/, "");
+  const deployment = (
+    deploymentRaw ||
+    process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT ||
+    EMBEDDING_MODEL
+  ).trim();
+  const apiVersion = (
+    apiVersionRaw ||
+    process.env.AZURE_OPENAI_API_VERSION ||
+    DEFAULT_AZURE_API_VERSION
+  ).trim();
+
+  if (endpoint.includes("/embeddings")) {
+    if (endpoint.includes("api-version=")) {
+      return endpoint;
+    }
+    const separator = endpoint.includes("?") ? "&" : "?";
+    return `${endpoint}${separator}api-version=${encodeURIComponent(apiVersion)}`;
   }
 
-  const response = await fetch(EMBEDDING_URL, {
+  return `${endpoint}/openai/deployments/${encodeURIComponent(deployment)}/embeddings?api-version=${encodeURIComponent(apiVersion)}`;
+}
+
+function getOrderedEmbeddingBackends(): EmbeddingBackend[] {
+  const preferred = process.env.EMBEDDING_PROVIDER?.trim().toLowerCase() as
+    | EmbeddingBackend
+    | undefined;
+  const configured: Record<EmbeddingBackend, boolean> = {
+    openai: isOpenAIEmbeddingConfigured(),
+    azure: isAzureEmbeddingConfigured(),
+  };
+
+  const defaultOrder: EmbeddingBackend[] = ["openai", "azure"];
+  const ordered =
+    preferred && defaultOrder.includes(preferred)
+      ? [preferred, ...defaultOrder.filter((name) => name !== preferred)]
+      : defaultOrder;
+
+  return ordered.filter((name) => configured[name]);
+}
+
+async function requestEmbeddingBatch(
+  backend: EmbeddingBackend,
+  inputs: string[],
+): Promise<number[][]> {
+  const truncatedInputs = inputs.map((t) => t.slice(0, 8000));
+
+  if (backend === "azure") {
+    const apiKey = process.env.AZURE_OPENAI_API_KEY!.trim();
+    const endpoint = process.env.AZURE_OPENAI_ENDPOINT!.trim();
+    const deployment = (
+      process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT || EMBEDDING_MODEL
+    ).trim();
+    const url = buildAzureEmbeddingUrl(endpoint, deployment);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": apiKey,
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        input: truncatedInputs.length === 1 ? truncatedInputs[0] : truncatedInputs,
+        model: deployment,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text().catch(() => "");
+      throw new Error(`Azure embedding error ${response.status}: ${err.slice(0, 200)}`);
+    }
+
+    const data = (await response.json()) as {
+      data?: Array<{ embedding: number[] }>;
+    };
+    return (data.data ?? []).map((d) => d.embedding);
+  }
+
+  const openaiKey = process.env.OPENAI_API_KEY!.trim();
+  const response = await fetch(OPENAI_EMBEDDING_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      Authorization: `Bearer ${openaiKey}`,
     },
     body: JSON.stringify({
-      input: text.slice(0, 8000), // Max input length
+      input: truncatedInputs.length === 1 ? truncatedInputs[0] : truncatedInputs,
       model: EMBEDDING_MODEL,
     }),
   });
@@ -36,15 +129,49 @@ export async function embedText(text: string): Promise<number[]> {
   }
 
   const data = (await response.json()) as {
-    data: Array<{ embedding: number[] }>;
+    data?: Array<{ embedding: number[] }>;
   };
+  return (data.data ?? []).map((d) => d.embedding);
+}
 
-  return data.data[0]?.embedding || [];
+async function requestWithFailover(inputs: string[]): Promise<number[][]> {
+  const backends = getOrderedEmbeddingBackends();
+  if (backends.length === 0) {
+    throw new Error(
+      "Embedding provider is missing or not configured. Set OPENAI_API_KEY or AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT for fact embeddings.",
+    );
+  }
+
+  let lastError: unknown;
+  for (let i = 0; i < backends.length; i++) {
+    const backend = backends[i];
+    try {
+      return await requestEmbeddingBatch(backend, inputs);
+    } catch (error) {
+      lastError = error;
+      if (i + 1 < backends.length) {
+        logger.warn("Primary embedding provider failed; failing over", {
+          failedBackend: backend,
+          nextBackend: backends[i + 1],
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+export async function embedText(text: string): Promise<number[]> {
+  const vectors = await requestWithFailover([text]);
+  return vectors[0] || [];
 }
 
 export async function embedTexts(texts: string[]): Promise<number[][]> {
-  if (!isKeyConfigured(OPENAI_API_KEY)) {
-    throw new Error("OpenAI API key is missing or not configured (placeholder detected). Set a valid OPENAI_API_KEY for fact embeddings.");
+  if (getOrderedEmbeddingBackends().length === 0) {
+    throw new Error(
+      "Embedding provider is missing or not configured. Set OPENAI_API_KEY or AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT for fact embeddings.",
+    );
   }
 
   // Batch embeddings - process in chunks of 100
@@ -53,29 +180,8 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
 
   for (let i = 0; i < texts.length; i += chunkSize) {
     const chunk = texts.slice(i, i + chunkSize);
-    const response = await fetch(EMBEDDING_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        input: chunk.map((t) => t.slice(0, 8000)),
-        model: EMBEDDING_MODEL,
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text().catch(() => "");
-      throw new Error(`Batch embedding error ${response.status}: ${err.slice(0, 200)}`);
-    }
-
-    const data = (await response.json()) as {
-      data: Array<{ embedding: number[] }> | undefined;
-    };
-
-    const embeddings = data.data ?? [];
-    results.push(...embeddings.map((d) => d.embedding));
+    const embeddings = await requestWithFailover(chunk);
+    results.push(...embeddings);
   }
 
   return results;

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { cosineSimilarity } from '../embeddings.js';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { buildAzureEmbeddingUrl, cosineSimilarity, embedText } from '../embeddings.js';
 
 describe('cosineSimilarity', () => {
   it('throws an error if vectors have different dimensions', () => {
@@ -43,5 +43,70 @@ describe('cosineSimilarity', () => {
 
   it('returns 0 for empty vectors', () => {
     expect(cosineSimilarity([], [])).toBe(0);
+  });
+});
+
+describe('Azure OpenAI embeddings & failover', () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    vi.restoreAllMocks();
+  });
+
+  it('builds Azure OpenAI embeddings deployment URL', () => {
+    const url = buildAzureEmbeddingUrl(
+      'https://sideby-ai.openai.azure.com/',
+      'text-embedding-3-small',
+      '2024-10-21',
+    );
+    expect(url).toBe(
+      'https://sideby-ai.openai.azure.com/openai/deployments/text-embedding-3-small/embeddings?api-version=2024-10-21',
+    );
+  });
+
+  it('uses Azure OpenAI embeddings when OPENAI_API_KEY is not set', async () => {
+    delete process.env.OPENAI_API_KEY;
+    process.env.AZURE_OPENAI_API_KEY = 'az-embed-key';
+    process.env.AZURE_OPENAI_ENDPOINT = 'https://sideby-ai.openai.azure.com';
+    process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT = 'text-embedding-3-small';
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: [{ embedding: [0.1, 0.2, 0.3] }],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    const vector = await embedText('React vs Vue performance');
+    expect(vector).toEqual([0.1, 0.2, 0.3]);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const [calledUrl, init] = fetchSpy.mock.calls[0];
+    expect(String(calledUrl)).toContain('/openai/deployments/text-embedding-3-small/embeddings');
+    expect((init?.headers as Record<string, string>)['api-key']).toBe('az-embed-key');
+  });
+
+  it('fails over from OpenAI to Azure OpenAI embeddings when OpenAI returns 429/500', async () => {
+    process.env.OPENAI_API_KEY = 'sk-openai-test';
+    process.env.AZURE_OPENAI_API_KEY = 'az-embed-key';
+    process.env.AZURE_OPENAI_ENDPOINT = 'https://sideby-ai.openai.azure.com';
+
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('Quota exceeded', { status: 429 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [{ embedding: [0.4, 0.5, 0.6] }],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
+
+    const vector = await embedText('Postgres vs MySQL');
+    expect(vector).toEqual([0.4, 0.5, 0.6]);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });

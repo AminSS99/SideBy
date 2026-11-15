@@ -1,5 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { estimateCost, validateWithRepair, type AIProvider } from '../ai-adapter.js'; // Use .js extension for local ESM imports
+import { AzureOpenAIAdapter, buildAzureChatCompletionsUrl } from '../providers/azure.js';
+import { FailoverAIProvider, getPrimaryProvider, listAvailableProviders } from '../providers/index.js';
 import { z } from 'zod';
 
 describe('estimateCost', () => {
@@ -160,5 +162,104 @@ describe('validateWithRepair normalization', () => {
     await expect(
       validateWithRepair('not json at all', z.array(FactSchema), provider),
     ).rejects.toThrow(/Failed to validate AI output after repair/);
+  });
+});
+
+describe('AzureOpenAIAdapter & FailoverAIProvider', () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    vi.restoreAllMocks();
+  });
+
+  it('builds standard Azure OpenAI deployment chat completions URL', () => {
+    const url = buildAzureChatCompletionsUrl(
+      'https://sideby-ai.openai.azure.com/',
+      'gpt-4o-mini',
+      '2024-10-21',
+    );
+    expect(url).toBe(
+      'https://sideby-ai.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-10-21',
+    );
+  });
+
+  it('preserves full Azure AI Foundry chat completions URL when already specified', () => {
+    const url = buildAzureChatCompletionsUrl(
+      'https://sideby-foundry.services.ai.azure.com/models/chat/completions',
+      'gpt-4o-mini',
+      '2024-10-21',
+    );
+    expect(url).toBe(
+      'https://sideby-foundry.services.ai.azure.com/models/chat/completions?api-version=2024-10-21',
+    );
+  });
+
+  it('registers azure in listAvailableProviders and honors AI_PRIMARY_PROVIDER=azure', () => {
+    process.env.DEEPSEEK_API_KEY = 'sk-deepseek-test';
+    process.env.AZURE_OPENAI_API_KEY = 'az-key-test';
+    process.env.AZURE_OPENAI_ENDPOINT = 'https://sideby-ai.openai.azure.com';
+    process.env.AI_PRIMARY_PROVIDER = 'azure';
+
+    expect(listAvailableProviders()).toEqual(['azure', 'deepseek']);
+    expect(getPrimaryProvider().name).toBe('azure');
+  });
+
+  it('fails over from primary provider to Azure when primary throws', async () => {
+    const failingPrimary: AIProvider = {
+      ...stubProvider,
+      name: 'deepseek',
+      generateText: vi.fn().mockRejectedValue(new Error('DeepSeek 503 Unavailable')),
+    };
+    const azureFallback: AIProvider = {
+      ...stubProvider,
+      name: 'azure',
+      generateText: vi.fn().mockResolvedValue({
+        data: 'ok from azure',
+        raw: 'ok from azure',
+        model: 'gpt-4o-mini',
+        provider: 'azure',
+        inputTokens: 5,
+        outputTokens: 3,
+        latencyMs: 42,
+        estimatedCost: 0.0001,
+      }),
+    };
+
+    const failover = new FailoverAIProvider([failingPrimary, azureFallback]);
+    const result = await failover.generateText([{ role: 'user', content: 'ping' }]);
+    expect(result.provider).toBe('azure');
+    expect(result.data).toBe('ok from azure');
+    expect(failingPrimary.generateText).toHaveBeenCalledOnce();
+    expect(azureFallback.generateText).toHaveBeenCalledOnce();
+  });
+
+  it('sends api-key header and parses completion from AzureOpenAIAdapter', async () => {
+    process.env.AZURE_OPENAI_API_KEY = 'az-test-secret';
+    process.env.AZURE_OPENAI_ENDPOINT = 'https://sideby-ai.openai.azure.com';
+    process.env.AZURE_OPENAI_DEPLOYMENT = 'gpt-4o-mini';
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"status":"healthy"}' } }],
+          usage: { prompt_tokens: 12, completion_tokens: 6 },
+          model: 'gpt-4o-mini',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    const adapter = new AzureOpenAIAdapter();
+    const res = await adapter.generateText([{ role: 'user', content: 'check' }], {
+      responseFormat: 'json',
+    });
+
+    expect(res.provider).toBe('azure');
+    expect(res.raw).toBe('{"status":"healthy"}');
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const [calledUrl, init] = fetchSpy.mock.calls[0];
+    expect(String(calledUrl)).toContain('/openai/deployments/gpt-4o-mini/chat/completions');
+    expect((init?.headers as Record<string, string>)['api-key']).toBe('az-test-secret');
   });
 });

@@ -27,6 +27,11 @@ export const serverEnv = {
   // AI Providers
   deepseekApiKey: optional("DEEPSEEK_API_KEY"),
   openaiApiKey: optional("OPENAI_API_KEY"),
+  azureOpenaiApiKey: optional("AZURE_OPENAI_API_KEY"),
+  azureOpenaiEndpoint: optional("AZURE_OPENAI_ENDPOINT"),
+  azureOpenaiDeployment: optional("AZURE_OPENAI_DEPLOYMENT") || "gpt-4o-mini",
+  azureOpenaiEmbeddingDeployment: optional("AZURE_OPENAI_EMBEDDING_DEPLOYMENT") || "text-embedding-3-small",
+  azureOpenaiApiVersion: optional("AZURE_OPENAI_API_VERSION") || "2024-10-21",
   anthropicApiKey: optional("ANTHROPIC_API_KEY"),
   geminiApiKey: optional("GEMINI_API_KEY"),
   openrouterApiKey: optional("OPENROUTER_API_KEY"),
@@ -78,13 +83,14 @@ export function assertAiProviderConfigured(): void {
   const hasAi =
     serverEnv.deepseekApiKey ||
     serverEnv.openaiApiKey ||
+    (serverEnv.azureOpenaiApiKey && serverEnv.azureOpenaiEndpoint) ||
     serverEnv.anthropicApiKey ||
     serverEnv.geminiApiKey ||
     serverEnv.openrouterApiKey;
 
   if (!hasAi) {
     throw new Error(
-      "No AI provider configured. Set DEEPSEEK_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or OPENROUTER_API_KEY.",
+      "No AI provider configured. Set DEEPSEEK_API_KEY, OPENAI_API_KEY, AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT, ANTHROPIC_API_KEY, GEMINI_API_KEY, or OPENROUTER_API_KEY.",
     );
   }
 }
