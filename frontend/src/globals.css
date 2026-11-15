@@ -574,3 +574,13 @@ select {
     min-width: 0;
   }
 }
+
+/* Clerk's "Last used" badge is absolutely positioned half outside its button
+   and gets cut off by the auth card's overflow clipping; pin it inside. */
+.clerk-auth-scope .cl-lastAuthenticationStrategyBadge {
+  top: 50% !important;
+  right: 10px !important;
+  left: auto !important;
+  bottom: auto !important;
+  transform: translateY(-50%) !important;
+}
