@@ -60,7 +60,8 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
   const quota = quotaQuery.data ?? null;
 
   useGSAP(() => {
-    const tl = gsap.timeline();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
     tl.from(".fu-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
       .from(".fu-suggestion", { y: 20, opacity: 0, stagger: 0.1, duration: 0.6, ease: "power2.out" }, "-=0.6")
       .from(".fu-input", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.4");
@@ -172,7 +173,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
               <button
                 key={idx}
                 onClick={() => void handleAsk(q)}
-                className="fu-suggestion flex items-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] px-4 py-2 text-sm text-[#fdfbf7]/70 transition-all hover:border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-400"
+                className="fu-suggestion flex items-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] px-4 py-2 text-sm text-[#fdfbf7]/70 transition-colors hover:border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-400"
               >
                 {q}
                 <ArrowRight className="h-3 w-3 opacity-50" />

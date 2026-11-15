@@ -273,7 +273,7 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
                       }}
                       role="button"
                       tabIndex={0}
-                      className="matrix-row cursor-pointer rounded-xl border border-white/[0.08] bg-black/20 p-4 transition-all hover:border-orange-500/25 hover:bg-orange-500/[0.035] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
+                      className="matrix-row cursor-pointer rounded-xl border border-white/[0.08] bg-black/20 p-4 transition-colors hover:border-orange-500/25 hover:bg-orange-500/[0.035] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
                     >
                       <p className="text-xs font-bold text-[#fdfbf7]/70 mb-2">{row.label}</p>
                       <div className="grid gap-2.5">

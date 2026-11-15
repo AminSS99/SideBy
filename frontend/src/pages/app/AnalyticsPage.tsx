@@ -151,7 +151,7 @@ const AnalyticsPage = () => {
         </button>
       </div>
 
-      <div className="stat-nav flex items-center gap-2 border-b border-[#2a2a2a] pb-px overflow-x-auto no-scrollbar">
+      <div className="stat-nav grid grid-cols-2 gap-1.5 border-b border-[#2a2a2a] pb-2 sm:flex sm:items-center sm:gap-2 sm:pb-px sm:overflow-x-auto sm:no-scrollbar">
         <NavButton active={activeTab === "overview"} icon={Activity} label="Usage Overview" onClick={() => setActiveTab("overview")} />
         <NavButton active={activeTab === "taxonomy"} icon={ShieldCheck} label="Taxonomy" onClick={() => setActiveTab("taxonomy")} />
         <NavButton active={activeTab === "costs"} icon={DollarSign} label="Cost Inspector" onClick={() => setActiveTab("costs")} />

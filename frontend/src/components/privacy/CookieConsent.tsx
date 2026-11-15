@@ -74,9 +74,9 @@ export default function CookieConsent() {
       {showBanner ? (
         <section
           aria-label="Cookie preferences"
-          className="w-full max-w-sm rounded-2xl border border-white/15 bg-[#0d0b0a]/96 p-3 shadow-[0_18px_50px_rgba(0,0,0,.65)] backdrop-blur-xl sm:p-4"
+          className="w-full max-w-sm rounded-2xl border border-white/15 bg-[#0d0b0a]/96 p-2.5 shadow-[0_18px_50px_rgba(0,0,0,.65)] backdrop-blur-xl sm:p-4"
         >
-          <p className="text-xs leading-5 text-white/80">
+          <p className="text-[11px] leading-4 text-white/80 sm:text-xs sm:leading-5">
             <Cookie aria-hidden="true" className="mr-1.5 -mt-0.5 inline h-3.5 w-3.5 text-orange-300" />
             Essential cookies keep you signed in. Optional analytics help us improve SideBy.{" "}
             <Link to="/legal/cookies" className="text-white/80 underline underline-offset-2 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400">Learn more</Link>
@@ -84,14 +84,14 @@ export default function CookieConsent() {
           {gpcEnabled ? (
             <p className="mt-1 text-xs text-amber-300">Global Privacy Control is on, so analytics stay off.</p>
           ) : null}
-          <div className="mt-2 flex items-center gap-2">
-            <button type="button" onClick={() => save("accepted", "banner")} disabled={gpcEnabled} className="min-h-11 flex-1 rounded-xl bg-white px-3 text-xs font-semibold text-[#130d09] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50">
+          <div className="mt-1.5 flex items-center gap-1.5 sm:mt-2 sm:gap-2">
+            <button type="button" onClick={() => save("accepted", "banner")} disabled={gpcEnabled} className="min-h-9 flex-1 rounded-xl bg-white px-2.5 text-xs font-semibold text-[#130d09] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:px-3">
               Accept
             </button>
-            <button type="button" onClick={() => save("rejected", "banner")} className="min-h-11 flex-1 rounded-xl border border-white/20 px-3 text-xs font-medium text-white/85 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-[0.99]">
+            <button type="button" onClick={() => save("rejected", "banner")} className="min-h-9 flex-1 rounded-xl border border-white/20 px-2.5 text-xs font-medium text-white/85 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-[0.99] sm:min-h-11 sm:px-3">
               Essential only
             </button>
-            <button type="button" onClick={openSettings} className="min-h-11 rounded-xl px-2.5 text-xs text-white/80 underline underline-offset-2 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400">
+            <button type="button" onClick={openSettings} className="min-h-9 rounded-xl px-2 text-xs text-white/80 underline underline-offset-2 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 sm:min-h-11 sm:px-2.5">
               Settings
             </button>
           </div>

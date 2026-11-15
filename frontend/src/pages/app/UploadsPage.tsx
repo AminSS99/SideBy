@@ -49,7 +49,8 @@ const UploadsPage = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
     tl.from(".up-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
       .from(".up-dropzone", { scale: 0.95, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6")
       .from(".up-list", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.4");
@@ -238,7 +239,7 @@ const UploadsPage = () => {
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
-        className={`up-dropzone relative flex flex-col items-center justify-center rounded-sm border-2 border-dashed p-14 text-center transition-all ${
+        className={`up-dropzone relative flex flex-col items-center justify-center rounded-sm border-2 border-dashed p-14 text-center transition-colors ${
           isDragging ? "border-emerald-500 bg-emerald-500/10" : "border-[#333] bg-[#0c0b0a] hover:border-[#555] hover:bg-[#111]"
         }`}
       >

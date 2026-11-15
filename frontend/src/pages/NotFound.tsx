@@ -18,7 +18,8 @@ const NotFound = () => {
   }, [location.pathname]);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
     tl.from(".nf-404", { scale: 0.8, opacity: 0, duration: 1, ease: "back.out(1.5)" })
       .from(".nf-text", { y: 20, opacity: 0, stagger: 0.1, duration: 0.8, ease: "power3.out" }, "-=0.6")
       .from(".nf-btn", { y: 20, opacity: 0, duration: 0.6, ease: "power2.out" }, "-=0.4");
@@ -47,7 +48,7 @@ const NotFound = () => {
         
         <Link 
           to="/" 
-          className="nf-btn inline-flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-all hover:bg-[#e0e0e0] active:scale-[0.98]"
+          className="nf-btn inline-flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] active:scale-[0.98]"
         >
           <ArrowLeft className="h-4 w-4" />
           Return to Matrix

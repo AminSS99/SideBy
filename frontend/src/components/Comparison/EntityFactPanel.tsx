@@ -17,11 +17,20 @@ export const EntityFactPanel = ({ result, facts }: EntityFactPanelProps) => {
   const entityFactSummary = useMemo(() => {
     return (["a", "b"] as const).map((key) => {
       const entityFacts = facts[key] || [];
+      const counts = new Map<string, number>();
+      for (const item of entityFacts) {
+        const cat = item.category?.trim();
+        if (!cat) continue;
+        counts.set(cat, (counts.get(cat) ?? 0) + 1);
+      }
+      const categories = Array.from(counts.entries())
+        .slice(0, 6)
+        .map(([category, count]) => ({ category, count }));
       return {
         key,
         entity: result.entities[key],
         totalCount: entityFacts.length,
-        categories: entityFacts.slice(0, 6),
+        categories,
       };
     });
   }, [facts, result]);
@@ -70,12 +79,13 @@ export const EntityFactPanel = ({ result, facts }: EntityFactPanelProps) => {
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {categories.map((f, idx) => (
+              {categories.map((f) => (
                 <span
-                  key={`${key}-${f.category}-${idx}`}
-                  className="border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 truncate max-w-[120px]"
+                  key={`${key}-${f.category}`}
+                  className="inline-flex max-w-full items-center gap-1.5 rounded-sm border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-[#fdfbf7]/60"
                 >
-                  {f.category}
+                  <span className="truncate">{f.category}</span>
+                  <span className="shrink-0 text-[#fdfbf7]/90">· {f.count}</span>
                 </span>
               ))}
             </div>

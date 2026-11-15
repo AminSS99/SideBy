@@ -397,11 +397,11 @@ const ComparisonDetailPage = () => {
           </div>
         )}
         {/* Tab Selector on Mobile */}
-        <div role="tablist" aria-label="Comparison result sections" className="sticky top-[calc(72px+env(safe-area-inset-top,0px))] z-30 -mx-4 flex items-center gap-1 overflow-x-auto border-y border-white/[0.07] bg-[#0b0a09]/90 px-4 py-2.5 shadow-[0_12px_30px_rgba(0,0,0,.25)] backdrop-blur-2xl no-scrollbar lg:hidden">
+        <div role="tablist" aria-label="Comparison result sections" className="sticky top-[calc(72px+env(safe-area-inset-top,0px))] z-30 -mx-4 grid grid-cols-3 gap-1 border-y border-white/[0.07] bg-[#0b0a09]/90 px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,.25)] backdrop-blur-2xl lg:hidden">
           {[
-            { id: "overview", label: "Overview" },
-            { id: "intelligence", label: "Intelligence Matrix" },
-            { id: "metadata", label: "Sources & Tech" }
+            { id: "overview", label: "Overview", shortLabel: "Overview" },
+            { id: "intelligence", label: "Intelligence Matrix", shortLabel: "Matrix" },
+            { id: "metadata", label: "Sources & Tech", shortLabel: "Sources" }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -411,13 +411,14 @@ const ComparisonDetailPage = () => {
               aria-controls={`comparison-panel-${tab.id}`}
               aria-selected={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id as "overview" | "intelligence" | "metadata")}
-              className={`min-h-11 whitespace-nowrap rounded-xl px-4 text-[11px] font-semibold transition-all ${
+              className={`min-h-11 truncate rounded-xl px-2 text-center text-[11px] font-semibold transition-colors ${
                 activeTab === tab.id
                   ? "border border-orange-300/20 bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-[0_10px_24px_rgba(249,115,22,.18)]"
-                  : "border border-transparent text-white/50 hover:bg-white/[0.05] hover:text-white"
+                  : "border border-transparent text-white/55 hover:bg-white/[0.05] hover:text-white"
               }`}
             >
-              {tab.label}
+              <span className="sm:hidden">{tab.shortLabel}</span>
+              <span className="hidden sm:inline">{tab.label}</span>
             </button>
           ))}
         </div>

@@ -781,7 +781,7 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
                 type="button"
                 onClick={() => setSelectedId(node.id)}
                 className={cn(
-                  "absolute max-w-[170px] -translate-x-1/2 -translate-y-1/2 rounded-sm border bg-[#111]/95 px-3 py-2 text-left shadow-2xl transition-all hover:z-20 hover:border-orange-500/50 graph-node-btn",
+                  "absolute max-w-[170px] -translate-x-1/2 -translate-y-1/2 rounded-sm border bg-[#111]/95 px-3 py-2 text-left shadow-2xl transition-colors hover:z-20 hover:border-orange-500/50 graph-node-btn",
                   selectedId === node.id ? "z-20 border-orange-500/60 scale-105" : "z-10 border-[#333]",
                   isDimmed ? "opacity-35 hover:opacity-85 scale-95" : "opacity-100"
                 )}

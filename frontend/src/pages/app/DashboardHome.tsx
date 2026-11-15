@@ -71,7 +71,7 @@ const DashboardHome = () => {
   useGSAP(() => {
     if (!comparisonsLoading && !isLoading && !projectsLoading) {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-      const tl = gsap.timeline();
+      const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
       const listItems = gsap.utils.toArray(".dash-list-item");
       tl.from(".dash-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
         .from(".dash-action", { y: 20, opacity: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }, "-=0.6")
@@ -96,7 +96,7 @@ const DashboardHome = () => {
         }
       });
     }
-  }, [comparisonsLoading, isLoading, projectsLoading]);
+  }, { dependencies: [comparisonsLoading, isLoading, projectsLoading], scope: containerRef });
 
   useEffect(() => {
     if (!activeWorkspaceId || !isConfigured) {
@@ -180,7 +180,7 @@ const DashboardHome = () => {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-[1.35fr_1fr_1fr]">
-          <Link to="/app/comparisons" className="dash-action group col-span-2 flex items-center justify-between gap-4 overflow-hidden rounded-3xl border border-orange-400/20 bg-gradient-to-r from-orange-500/15 via-rose-500/10 to-fuchsia-500/10 p-5 transition-all hover:border-orange-400/45 hover:shadow-[0_18px_45px_rgba(0,0,0,.2)] sm:p-6 lg:col-span-1">
+          <Link to="/app/comparisons" className="dash-action group col-span-2 flex items-center justify-between gap-4 overflow-hidden rounded-3xl border border-orange-400/20 bg-gradient-to-r from-orange-500/15 via-rose-500/10 to-fuchsia-500/10 p-5 transition-[border-color,background-color,box-shadow] hover:border-orange-400/45 hover:shadow-[0_18px_45px_rgba(0,0,0,.2)] sm:p-6 lg:col-span-1">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-orange-400/25 bg-orange-400/15 text-orange-300 transition-colors group-hover:bg-orange-400/25">
               <Plus className="h-5 w-5" />
             </div>
@@ -191,7 +191,7 @@ const DashboardHome = () => {
             <ArrowRight className="h-4 w-4 text-orange-300 transition-transform group-hover:translate-x-1" />
           </Link>
 
-          <Link to="/app/uploads" className="dash-action group flex min-h-36 flex-col items-start justify-between gap-3 rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 transition-all hover:border-blue-400/35 hover:bg-blue-500/[0.06]">
+          <Link to="/app/uploads" className="dash-action group flex min-h-36 flex-col items-start justify-between gap-3 rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 transition-colors hover:border-blue-400/35 hover:bg-blue-500/[0.06]">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-[#fdfbf7] transition-colors group-hover:border-blue-400/30 group-hover:text-blue-300">
               <UploadCloud className="h-5 w-5" />
             </div>
@@ -201,7 +201,7 @@ const DashboardHome = () => {
             </div>
           </Link>
 
-          <Link to="/app/team" className="dash-action group flex min-h-36 flex-col items-start justify-between gap-3 rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 transition-all hover:border-fuchsia-400/35 hover:bg-fuchsia-500/[0.06]">
+          <Link to="/app/team" className="dash-action group flex min-h-36 flex-col items-start justify-between gap-3 rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 transition-colors hover:border-fuchsia-400/35 hover:bg-fuchsia-500/[0.06]">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-[#fdfbf7] transition-colors group-hover:border-fuchsia-400/30 group-hover:text-fuchsia-300">
               <UserPlus className="h-5 w-5" />
             </div>

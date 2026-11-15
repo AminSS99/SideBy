@@ -15,6 +15,7 @@ import "./globals.css";
 
 // Global GSAP ScrollTrigger Optimization
 gsap.registerPlugin(ScrollTrigger);
+gsap.ticker.lagSmoothing(0);
 ScrollTrigger.config({
   limitCallbacks: true,
   autoRefreshEvents: "visibilitychange,DOMContentLoaded,load"
