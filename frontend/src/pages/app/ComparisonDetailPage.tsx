@@ -20,6 +20,7 @@ import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { researchSteps } from "@/lib/comparisonUtils";
 import { captureEvent } from "@/lib/posthog";
+import HelpfulRating from "@/components/kokonutui/helpful-rating";
 import { useAuth } from "@/contexts/AuthContext";
 import { completeFirstComparison, isFirstComparison as isStoredFirstComparison } from "@/lib/onboardingAttribution";
 import {
@@ -820,6 +821,23 @@ const ComparisonDetailPage = () => {
         </SafePanel>
       ) : (
         renderWorkbenchGrid(result, job.activity)
+      )}
+
+      {id && result && job?.status === "completed" && (
+        <section className="dark mx-auto mt-10 flex w-full max-w-sm justify-center px-4 pb-4" aria-label="Rate this comparison">
+          <HelpfulRating
+            question="Was this comparison helpful?"
+            onSubmit={({ rating, reasons, note }) => {
+              captureEvent("comparison_feedback", {
+                comparison_id: id,
+                rating,
+                reasons,
+                has_note: note.trim().length > 0,
+              });
+              toast.success("Thanks — your feedback helps us improve SideBy.");
+            }}
+          />
+        </section>
       )}
 
       {id && (

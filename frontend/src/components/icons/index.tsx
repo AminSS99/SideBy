@@ -33,6 +33,7 @@ import {
   ClipboardText as PhClipboardText,
   Clock as PhClock,
   CloudArrowUp as PhCloudArrowUp,
+  CloudSlash as PhCloudSlash,
   Code as PhCode,
   Compass as PhCompass,
   Cookie as PhCookie,
@@ -132,6 +133,7 @@ import {
   Warning as PhWarning,
   WarningCircle as PhWarningCircle,
   WebhooksLogo as PhWebhooksLogo,
+  WifiHigh as PhWifiHigh,
   WifiSlash as PhWifiSlash,
   X as PhX,
   XCircle as PhXCircle,
@@ -323,6 +325,8 @@ export const Volume2 = wrapPhosphor(PhSpeakerHigh, "regular", "sb-motion-pop");
 export const VolumeX = wrapPhosphor(PhSpeakerSlash);
 export const Webhook = wrapPhosphor(PhWebhooksLogo, "duotone", "sb-motion-tilt");
 export const WifiOff = wrapPhosphor(PhWifiSlash);
+export const Wifi = wrapPhosphor(PhWifiHigh);
+export const CloudOff = wrapPhosphor(PhCloudSlash);
 export const Workflow = wrapPhosphor(PhFlowArrow, "duotone", "sb-motion-pop");
 export const X = wrapPhosphor(PhX);
 export const XCircle = wrapPhosphor(PhXCircle);

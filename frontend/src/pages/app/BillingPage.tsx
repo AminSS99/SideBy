@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { brand } from "@/config/brand";
 import { toast } from "sonner";
+import LiquidGauge from "@/components/kokonutui/liquid-gauge";
 
 type UsageStatus = {
   plan: string;
@@ -236,6 +237,24 @@ const BillingPage = () => {
               </div>
             ) : usage ? (
               <div className="space-y-4">
+                {(() => {
+                  const cmp = usage.usage.comparison;
+                  const cmpLimit = cmp?.limit ?? usage.limits?.comparisonsPerDay;
+                  if (!cmp || typeof cmpLimit !== "number" || !Number.isFinite(cmpLimit) || cmpLimit <= 0) return null;
+                  return (
+                    <div className="flex justify-center pb-2">
+                      <LiquidGauge
+                        readOnly
+                        value={Math.min(100, (cmp.used / cmpLimit) * 100)}
+                        label="Comparisons today"
+                        total={cmpLimit}
+                        unit="comparisons"
+                        warnAt={90}
+                        wholeUnits
+                      />
+                    </div>
+                  );
+                })()}
                 {usageItems.map((item) => {
                   const data = usage.usage[item.key];
                   if (!data) return null;

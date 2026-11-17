@@ -20,6 +20,7 @@ import { BottomNoticeStack } from "@/components/layout/BottomNoticeStack";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
+import Loader from "@/components/kokonutui/loader";
 import Index from "./pages/Index";
 
 // Lazy-load non-landing pages to reduce initial bundle and memory pressure
@@ -91,8 +92,8 @@ const queryClient = new QueryClient({
 });
 
 const LazyFallback = () => (
-  <div className="min-h-screen flex items-center justify-center bg-[#030303]">
-    <div className="w-6 h-6 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+  <div className="dark flex min-h-screen items-center justify-center bg-[#030303] text-white" role="status" aria-live="polite">
+    <Loader size="sm" title="Loading SideBy" subtitle="" />
   </div>
 );
 

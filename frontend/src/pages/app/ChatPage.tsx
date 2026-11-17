@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import AITextLoading from "@/components/kokonutui/ai-text-loading";
 import { Send, Bot, User, LoaderCircle, Sparkles, Database, FolderKanban, Check, ToggleRight, ToggleLeft, X } from "@/components/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import gsap from "gsap";
@@ -332,9 +333,12 @@ const ChatPage = () => {
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-orange-500/10 text-orange-400 border border-orange-500/20">
                   <Sparkles className="h-4 w-4 animate-pulse" />
                 </div>
-                <div className="flex items-center rounded-sm bg-[#0c0b0a] border border-[#333] px-5 py-3">
-                  <LoaderCircle className="h-4 w-4 animate-spin text-orange-400" />
-                  <span className="ml-3 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">Synthesizing context...</span>
+                <div className="dark flex items-center rounded-sm bg-[#0c0b0a] border border-[#333] px-5 py-3 text-sm text-[#fdfbf7]/70">
+                  <AITextLoading
+                    texts={["Reading your sources", "Cross-checking the facts", "Synthesizing context", "Drafting the answer"]}
+                    label="SideBy is working on your answer"
+                    className="justify-start text-sm font-medium text-[#fdfbf7]/80 dark:text-[#fdfbf7]/80"
+                  />
                 </div>
               </div>
             )}

@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
+import ScrollIndex from "@/components/kokonutui/scroll-index";
 
 interface LegalPageShellProps {
   title: string;
@@ -31,8 +32,12 @@ export const LegalPageShell = ({ title, lastUpdated, children }: LegalPageShellP
           </p>
         </div>
         
-        <div className="legal-content prose prose-invert prose-p:text-white/70 prose-headings:font-serif prose-headings:font-normal prose-headings:text-[#fdfbf7] prose-a:text-orange-400 max-w-none">
-          {children}
+        <div className="dark">
+          <ScrollIndex scroller="window" selector="h2" className="grid-cols-1 lg:grid-cols-[minmax(0,1fr)_3rem]">
+            <div className="legal-content prose prose-invert prose-p:text-white/70 prose-headings:font-serif prose-headings:font-normal prose-headings:text-[#fdfbf7] prose-a:text-orange-400 max-w-none">
+              {children}
+            </div>
+          </ScrollIndex>
         </div>
       </main>
 

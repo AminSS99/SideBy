@@ -22,10 +22,20 @@ import { AmbientOrbs } from "@/components/AmbientOrbs";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAuth } from "@/contexts/AuthContext";
 import { ComparisonComposer } from "@/components/ComparisonComposer";
+import TypewriterTitle from "@/components/kokonutui/type-writer";
 import { ProductDemo } from "@/components/landing/ProductDemo";
 import { ResearchPreviewCard } from "@/components/landing/ResearchPreviewCard";
 
 gsap.registerPlugin(ScrollTrigger);
+
+const HERO_EXAMPLES = [
+  { text: "iPhone 16 vs Pixel 9" },
+  { text: "Japan vs Germany" },
+  { text: "LG C4 vs Samsung S90D" },
+  { text: "Notion vs Obsidian" },
+  { text: "Tesla Model 3 vs BYD Seal" },
+  { text: "Coursera vs Udemy" },
+];
 
 const featuredComparisons = [
   { label: "iPhone 16 vs Google Pixel 9 for photography", category: "Phones", sourceRequirement: "Manufacturer specs and independent reviews" },
@@ -126,6 +136,19 @@ const Index = () => {
               </h1>
               <p className="hero-copy mx-auto mt-5 max-w-xl text-base leading-7 text-white/75 sm:text-lg lg:mx-0">
                 Phones, TVs, cars, countries, software, courses, and more. Choose two options, tell us what matters, and get a side-by-side comparison with sources you can check.
+              </p>
+              <p aria-hidden="true" className="mx-auto mt-4 flex min-h-7 max-w-xl items-baseline justify-center gap-2 text-sm text-white/55 lg:mx-0 lg:justify-start">
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300/80">Try</span>
+                <TypewriterTitle
+                  as="span"
+                  sequences={HERO_EXAMPLES}
+                  typingSpeed={42}
+                  deleteSpeed={22}
+                  pauseBeforeDelete={1600}
+                  deleteMode="select"
+                  className="font-serif text-[#fffaf1]/90"
+                  textClassName="text-xl leading-[1.3] sm:text-2xl"
+                />
               </p>
 
             </div>

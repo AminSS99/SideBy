@@ -16,6 +16,7 @@ import { MarketingNav } from "@/components/brand/MarketingNav";
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { brand } from "@/config/brand";
+import BackgroundPaths from "@/components/kokonutui/background-paths";
 
 const PULSE_TERMS =
   "3-day free trial, then $9/month plus applicable taxes. A payment card is required to start the trial. Cancel before the trial ends and you are not charged.";
@@ -133,6 +134,16 @@ const Pricing = () => {
       <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,.35)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.35)_1px,transparent_1px)] [background-size:72px_72px] [mask-image:linear-gradient(to_bottom,black,transparent_75%)]" />
       <div className="pointer-events-none absolute -left-40 top-32 h-[420px] w-[420px] rounded-full bg-orange-500/10 blur-[120px]" />
       <div className="pointer-events-none absolute -right-48 top-[32rem] h-[480px] w-[480px] rounded-full bg-fuchsia-500/[0.08] blur-[140px]" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[560px] max-md:hidden">
+        <BackgroundPaths
+          count={21}
+          interactive={false}
+          speed={0.6}
+          className="h-full min-h-0 bg-transparent text-orange-300/55 dark:bg-transparent"
+        >
+          {null}
+        </BackgroundPaths>
+      </div>
       <MarketingNav />
 
       <main className="relative z-10 mx-auto max-w-7xl px-4 pb-20 pt-12 sm:px-6 sm:pb-28 sm:pt-20">
