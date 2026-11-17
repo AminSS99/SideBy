@@ -26,7 +26,8 @@ const ProjectsPage = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
     tl.from(".proj-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
       .from(".proj-form", { x: -20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6")
       .from(".proj-list", { x: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.8");

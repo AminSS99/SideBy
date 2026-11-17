@@ -111,7 +111,8 @@ const BillingPage = () => {
   const [portalLoading, setPortalLoading] = useState(false);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
     tl.from(".bill-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
       .from(".bill-card", { y: 20, opacity: 0, stagger: 0.15, duration: 0.8, ease: "power3.out" }, "-=0.6")
       .from(".bill-sidebar", { x: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6");

@@ -31,6 +31,7 @@ const Contact = lazy(() => import("./pages/Contact"));
 const About = lazy(() => import("./pages/About"));
 const Blog = lazy(() => import("./pages/Blog"));
 const Docs = lazy(() => import("./pages/Docs"));
+const IosApp = lazy(() => import("./pages/IosApp"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/legal/TermsOfService"));
@@ -137,6 +138,8 @@ const App = ({ clerkUnavailable = false }: { clerkUnavailable?: boolean }) => {
                     <Route path="/about" element={<About />} />
                     <Route path="/blog" element={<Blog />} />
                     <Route path="/docs" element={<Docs />} />
+                    <Route path="/ios" element={<IosApp />} />
+                    <Route path="/mobile" element={<Navigate to="/ios" replace />} />
                     <Route path="/legal/privacy" element={<PrivacyPolicy />} />
                     <Route path="/legal/terms" element={<TermsOfService />} />
                     <Route path="/legal/cookies" element={<CookiesPolicy />} />

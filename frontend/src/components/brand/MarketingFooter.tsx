@@ -11,6 +11,7 @@ const footerGroups = [
       { label: "Changelog", to: "/changelog" },
       { label: "Pricing", to: "/pricing" },
       { label: "Documentation", to: "/docs" },
+      { label: "iOS App", to: "/ios" },
       { label: "Research notes", to: "/blog" },
     ],
   },

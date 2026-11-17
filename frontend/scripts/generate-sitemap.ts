@@ -26,6 +26,7 @@ const staticPages: StaticPage[] = [
   { path: "/features", source: "src/pages/Features.tsx" },
   { path: "/pricing", source: "src/pages/Pricing.tsx" },
   { path: "/docs", source: "src/pages/Docs.tsx" },
+  { path: "/ios", source: "src/pages/IosApp.tsx" },
   { path: "/about", source: "src/pages/About.tsx" },
   { path: "/blog", source: "src/pages/Blog.tsx" },
   { path: "/contact", source: "src/pages/Contact.tsx" },

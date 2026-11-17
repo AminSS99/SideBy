@@ -90,7 +90,8 @@ const SettingsPage = () => {
   }, [activeTab, searchParams]);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
     tl.from(".set-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
       .from(".set-nav", { x: -20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6")
       .from(".set-content", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6");

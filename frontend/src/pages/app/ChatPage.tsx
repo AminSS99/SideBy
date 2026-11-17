@@ -63,7 +63,8 @@ const ChatPage = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
     tl.from(".chat-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
       .from(".chat-layout > *", { y: 40, opacity: 0, stagger: 0.15, duration: 1, ease: "expo.out" }, "-=0.6");
   }, { scope: containerRef });

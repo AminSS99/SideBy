@@ -70,7 +70,8 @@ export const SourcesPanel = ({ sources }: { sources: ComparisonSource[] }) => {
       opacity: 0,
       stagger: 0.1,
       duration: 0.7,
-      ease: "back.out(1.2)"
+      ease: "back.out(1.2)",
+      clearProps: "transform,opacity",
     });
   }, { scope: containerRef });
 
@@ -97,7 +98,7 @@ export const SourcesPanel = ({ sources }: { sources: ComparisonSource[] }) => {
                 href={safeHref(source.url)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex min-h-24 flex-col gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.025] p-4 transition-all hover:border-orange-500/25 hover:bg-orange-500/[0.035]"
+                className="group flex min-h-24 flex-col gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.025] p-4 transition-colors hover:border-orange-500/25 hover:bg-orange-500/[0.035]"
               >
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-sm font-serif text-[#fdfbf7] line-clamp-2 group-hover:text-orange-400 transition-colors leading-snug">
