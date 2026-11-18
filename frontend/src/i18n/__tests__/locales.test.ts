@@ -34,3 +34,20 @@ describe.each([
     expect(empty).toEqual([]);
   });
 });
+
+import * as scopes from "../locales/extra";
+import { enBase } from "../locales/en.base";
+
+describe("extra scopes", () => {
+  it("never reuse a key across scopes or collide with the base file", () => {
+    const seen = new Map<string, string>(Object.keys(enBase).map((key) => [key, "base"]));
+    const clashes: string[] = [];
+    for (const [name, scope] of Object.entries(scopes.extraScopes)) {
+      for (const key of Object.keys(scope.en)) {
+        if (seen.has(key)) clashes.push(`${key} (${seen.get(key)} vs ${name})`);
+        seen.set(key, name);
+      }
+    }
+    expect(clashes).toEqual([]);
+  });
+});
