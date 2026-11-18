@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { RefreshCw, X } from "@/components/icons";
 import { pwaUpdates } from "@/lib/pwa/register";
+import { useT } from "@/i18n";
 
 /**
  * Shown when a new service worker version is waiting. Activating is explicit:
@@ -12,6 +13,7 @@ import { pwaUpdates } from "@/lib/pwa/register";
  * only ever an explicit user choice ("Discard draft & refresh").
  */
 export function UpdatePrompt() {
+  const t = useT();
   const [needRefresh, setNeedRefresh] = useState(pwaUpdates.needRefresh);
   const [isUpdating, setIsUpdating] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
@@ -52,7 +54,7 @@ export function UpdatePrompt() {
         role="alert"
         className="flex w-full max-w-sm items-center gap-2 rounded-2xl border border-orange-500/25 bg-[#0c0b0a]/96 py-1.5 pl-3.5 pr-1.5 shadow-[0_0_30px_rgba(0,0,0,0.5)] backdrop-blur-xl"
       >
-        <p className="min-w-0 flex-1 text-xs font-medium text-[#fdfbf7]/85">New version available</p>
+        <p className="min-w-0 flex-1 text-xs font-medium text-[#fdfbf7]/85">{t("upd.title")}</p>
         <button
           type="button"
           disabled={isUpdating || isDiscarding}
@@ -60,11 +62,11 @@ export function UpdatePrompt() {
           className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-3.5 text-xs font-semibold text-white transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-[0.99] disabled:opacity-60"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${isUpdating ? "animate-spin" : ""}`} />
-          Refresh
+          {t("upd.refresh")}
         </button>
         <button
           type="button"
-          aria-label="Dismiss update prompt"
+          aria-label={t("upd.dismiss")}
           onClick={() => {
             pwaUpdates.dismissUpdate();
             setNeedRefresh(false);
@@ -85,18 +87,18 @@ export function UpdatePrompt() {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-[#fdfbf7]">New version available</p>
+          <p className="text-sm font-bold text-[#fdfbf7]">{t("upd.title")}</p>
           <p className="mt-1 text-xs leading-relaxed text-[#fdfbf7]/75">
             {saveFailed
-              ? "SideBy couldn't preserve your draft (browser storage may be blocked). Copy your input or retry before refreshing."
+              ? t("upd.saveFailed")
               : isDirty
-                ? "You have unsaved input. SideBy will preserve your draft and restore it automatically after reloading."
-                : "Refresh to load the latest SideBy experience."}
+                ? t("upd.dirty")
+                : t("upd.clean")}
           </p>
         </div>
         <button
           type="button"
-          aria-label="Dismiss update prompt"
+          aria-label={t("upd.dismiss")}
           onClick={() => {
             pwaUpdates.dismissUpdate();
             setNeedRefresh(false);
@@ -114,7 +116,7 @@ export function UpdatePrompt() {
         className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 text-xs font-bold uppercase tracking-wider text-white transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-[0.99] disabled:opacity-60 motion-reduce:transition-none"
       >
         <RefreshCw className={`h-3.5 w-3.5 ${isUpdating ? "animate-spin" : ""}`} />
-        {isUpdating ? "Updating..." : saveFailed ? "Retry save & update" : isDirty ? "Save draft & update" : "Refresh now"}
+        {isUpdating ? t("upd.updating") : saveFailed ? t("upd.retry") : isDirty ? t("upd.saveUpdate") : t("upd.now")}
       </button>
       {saveFailed && (
         <button
@@ -123,7 +125,7 @@ export function UpdatePrompt() {
           onClick={() => void handleDiscardAndUpdate()}
           className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-xs font-bold uppercase tracking-wider text-[#fdfbf7]/80 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 disabled:opacity-60"
         >
-          {isDiscarding ? "Refreshing..." : "Discard draft & refresh"}
+          {isDiscarding ? t("upd.discardRefreshing") : t("upd.discard")}
         </button>
       )}
     </div>

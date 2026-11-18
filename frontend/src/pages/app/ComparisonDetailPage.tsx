@@ -20,7 +20,8 @@ import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { researchSteps } from "@/lib/comparisonUtils";
 import { captureEvent } from "@/lib/posthog";
-import { useI18n } from "@/i18n";
+import { LANGS, useI18n } from "@/i18n";
+import { useResultTranslation } from "@/hooks/useResultTranslation";
 import HelpfulRating from "@/components/kokonutui/helpful-rating";
 import { useAuth } from "@/contexts/AuthContext";
 import { completeFirstComparison, isFirstComparison as isStoredFirstComparison } from "@/lib/onboardingAttribution";
@@ -174,7 +175,8 @@ const ComparisonDetailPage = () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [job?.status, comparisonQuery]);
-  const result = viewedHistoricalResult || job?.result;
+  const translation = useResultTranslation(id, job?.status === "completed" ? job.result : null);
+  const result = viewedHistoricalResult || (job?.status === "completed" ? translation.displayed : job?.result);
   const isFirstFlow = searchParams.get("first") === "1" || isStoredFirstComparison(user?.id, id);
   const showCompletionBridge = Boolean(isFirstFlow && job?.status === "completed" && result);
 
@@ -632,6 +634,40 @@ const ComparisonDetailPage = () => {
           </div>
         )}
       </div>
+
+      {translation.supported && job?.status === "completed" && job.result && !viewedHistoricalResult && (
+        <div role="status" aria-live="polite" className="flex flex-col gap-3 rounded-2xl border border-sky-400/20 bg-sky-400/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <Globe2 className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" aria-hidden="true" />
+            <p className="min-w-0 text-xs leading-5 text-white/65">
+              {translation.status === "loading"
+                ? t("tr.loading")
+                : translation.status === "error"
+                  ? t("tr.error")
+                  : translation.status === "limit"
+                    ? t("tr.limit")
+                    : translation.isTranslated
+                      ? t("tr.showing")
+                      : t("tr.note")}
+            </p>
+          </div>
+          {translation.status === "loading" ? (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-sky-300" aria-hidden="true" />
+          ) : translation.isTranslated ? (
+            <button type="button" onClick={translation.disable} className="min-h-11 shrink-0 rounded-xl border border-white/10 px-4 text-[10px] font-bold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.06]">
+              {t("tr.original")}
+            </button>
+          ) : translation.status === "error" || translation.status === "limit" ? (
+            <button type="button" onClick={translation.retry} className="min-h-11 shrink-0 rounded-xl border border-white/10 px-4 text-[10px] font-bold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.06]">
+              {t("tr.retry")}
+            </button>
+          ) : (
+            <button type="button" onClick={translation.enable} className="min-h-11 shrink-0 rounded-xl border border-sky-300/30 bg-sky-400/10 px-4 text-[10px] font-bold uppercase tracking-wider text-sky-200 transition-colors hover:bg-sky-400/20">
+              {t("tr.show", { language: LANGS.find((item) => item.code === translation.lang)?.label ?? translation.lang })}
+            </button>
+          )}
+        </div>
+      )}
 
       {viewedHistoricalResult && viewedHistoricalVersionNumber && (
         <div className="rounded-3xl border border-orange-500/30 bg-orange-500/5 p-4 flex items-center justify-between">

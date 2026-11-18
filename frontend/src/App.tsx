@@ -22,6 +22,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import Loader from "@/components/kokonutui/loader";
 import Index from "./pages/Index";
+import { useT } from "@/i18n";
 
 // Lazy-load non-landing pages to reduce initial bundle and memory pressure
 const Compare = lazy(() => import("./pages/Compare"));
@@ -91,11 +92,14 @@ const queryClient = new QueryClient({
   },
 });
 
-const LazyFallback = () => (
+const LazyFallback = () => {
+  const t = useT();
+  return (
   <div className="dark flex min-h-screen items-center justify-center bg-[#030303] text-white" role="status" aria-live="polite">
-    <Loader size="sm" title="Loading SideBy" subtitle="" />
+    <Loader size="sm" title={t("app.loadingSideby")} subtitle="" />
   </div>
-);
+  );
+};
 
 const App = ({ clerkUnavailable = false }: { clerkUnavailable?: boolean }) => {
   const showGoogleOneTap = import.meta.env.VITE_ENABLE_GOOGLE_ONE_TAP === "true"

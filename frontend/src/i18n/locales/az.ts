@@ -762,4 +762,53 @@ export const az: Partial<Record<MessageKey, string>> = {
   "rl.s5d": "İstinadlar, etibar və mənşə saxlanılır",
   "rl.s6": "Müqayisə qurulur",
   "rl.s6d": "Kateqoriya meyarları qiymətləndirilir və nəticə yaradılır",
+
+  // ── Result translation ──
+  "tr.show": "Bu müqayisəni {language} dilində göstər",
+  "tr.note": "Hesabat mətninin AI tərcüməsi. Adlar, rəqəmlər və mənbələr dəyişmir.",
+  "tr.loading": "Tərcümə olunur…",
+  "tr.showing": "AI tərcüməsi göstərilir",
+  "tr.original": "Orijinalı göstər (ingiliscə)",
+  "tr.error": "Bu müqayisəni indi tərcümə etmək mümkün olmadı.",
+  "tr.retry": "Yenidən cəhd et",
+  "tr.limit": "Gündəlik tərcümə limitinə çatıldı. Sabah yenidən cəhd edin.",
+
+  // ── Public compare page ──
+  "pub.loading": "Müqayisə yüklənir...",
+  "pub.notFound": "Müqayisə tapılmadı",
+  "pub.notFoundBody": "Bu müqayisə hələ mövcud olmaya bilər və ya hələ araşdırılır. Özünüz başlatmağa çalışın.",
+  "pub.home": "Ana səhifə",
+  "pub.sample": "Bu, interfeysi tanımaq üçün nümunə məlumatdır, canlı tədqiqat deyil. Aktual və müstəqil mənbəli sübutlar üçün yeni müqayisə yaradın.",
+  "pub.another": "Başqa müqayisə sınayın",
+  "pub.create": "Öz müqayisənizi yaradın",
+
+  // ── Command menu and update prompt ──
+  "cmd.placeholder": "Əmr yazın və ya axtarın...",
+  "cmd.empty": "Heç nə tapılmadı.",
+  "cmd.suggestions": "Təkliflər",
+  "cmd.new": "Yeni müqayisə",
+  "cmd.navigation": "Naviqasiya",
+  "cmd.studio": "Prompt studiyası",
+  "upd.title": "Yeni versiya mövcuddur",
+  "upd.refresh": "Yenilə",
+  "upd.dismiss": "Yeniləmə bildirişini bağla",
+  "upd.saveFailed": "SideBy qaralamanızı saxlaya bilmədi (brauzer yaddaşı bloklanmış ola bilər). Yeniləməzdən əvvəl yazdığınızı kopyalayın və ya yenidən cəhd edin.",
+  "upd.dirty": "Saxlanmamış məlumatınız var. SideBy qaralamanı saxlayacaq və səhifə yenilənəndən sonra avtomatik bərpa edəcək.",
+  "upd.clean": "SideBy-ın ən son versiyasını yükləmək üçün yeniləyin.",
+  "upd.updating": "Yenilənir...",
+  "upd.retry": "Saxlamağı təkrarla və yenilə",
+  "upd.saveUpdate": "Qaralamanı saxla və yenilə",
+  "upd.now": "İndi yenilə",
+  "upd.discardRefreshing": "Yenilənir...",
+  "upd.discard": "Qaralamanı sil və yenilə",
+
+  // ── Chat and billing loaders ──
+  "chat.load1": "Mənbələriniz oxunur",
+  "chat.load2": "Faktlar çarpaz yoxlanılır",
+  "chat.load3": "Kontekst birləşdirilir",
+  "chat.load4": "Cavab hazırlanır",
+  "chat.working": "SideBy cavabınız üzərində işləyir",
+  "bill.gaugeLabel": "Bu gün müqayisələr",
+  "bill.gaugeUnit": "müqayisə",
+  "app.loadingSideby": "SideBy yüklənir",
 };

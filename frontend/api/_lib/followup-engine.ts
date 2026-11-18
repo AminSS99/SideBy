@@ -237,6 +237,7 @@ Rules:
 3. If the facts don't answer at all → say "I don't have enough information to answer this" and set type to "insufficient".
 4. Never hallucinate. Never use outside knowledge.
 5. Every claim must cite a fact number or be labeled as inference.
+6. Reply in the same language as the user's question (for example Azerbaijani or Russian). Keep product names, numbers and citations like [1] unchanged.
 
 Return valid JSON only with this structure:
 {

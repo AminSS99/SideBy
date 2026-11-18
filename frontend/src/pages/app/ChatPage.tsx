@@ -9,6 +9,7 @@ import { buildApiUrl } from "@/config/env";
 import { useProjects } from "@/contexts/ProjectsContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { KeyboardSpacer } from "@/components/KeyboardSpacer";
+import { useT } from "@/i18n";
 
 interface Message {
   id: string;
@@ -31,6 +32,7 @@ interface ActiveKnowledgeFile {
 }
 
 const ChatPage = () => {
+  const t = useT();
   const { activeWorkspace } = useWorkspace();
   const { activeProject } = useProjects();
   const [messages, setMessages] = useState<Message[]>([
@@ -335,8 +337,8 @@ const ChatPage = () => {
                 </div>
                 <div className="dark flex items-center rounded-sm bg-[#0c0b0a] border border-[#333] px-5 py-3 text-sm text-[#fdfbf7]/70">
                   <AITextLoading
-                    texts={["Reading your sources", "Cross-checking the facts", "Synthesizing context", "Drafting the answer"]}
-                    label="SideBy is working on your answer"
+                    texts={[t("chat.load1"), t("chat.load2"), t("chat.load3"), t("chat.load4")]}
+                    label={t("chat.working")}
                     className="justify-start text-sm font-medium text-[#fdfbf7]/80 dark:text-[#fdfbf7]/80"
                   />
                 </div>

@@ -15,6 +15,7 @@ import comparisonsIdManage from "./_routes/comparisons/[id]/manage.js";
 import comparisonsIdNotes from "./_routes/comparisons/[id]/notes.js";
 import comparisonsIdVersions from "./_routes/comparisons/[id]/versions.js";
 import comparisonsIdVisibility from "./_routes/comparisons/[id]/visibility.js";
+import comparisonsIdTranslate from "./_routes/comparisons/[id]/translate.js";
 import comparisonsIdPublicSnapshot from "./_routes/comparisons/[id]/public-snapshot.js";
 import comparisonsValidate from "./_routes/comparisons/validate.js";
 
@@ -147,6 +148,7 @@ async function routeRequest(
       if (segment2 === "public-snapshot") return comparisonsIdPublicSnapshot(request, response);
       if (segment2 === "versions") return comparisonsIdVersions(request, response);
       if (segment2 === "visibility") return comparisonsIdVisibility(request, response);
+      if (segment2 === "translate") return comparisonsIdTranslate(request, response);
       return comparisonsId(request, response);
     }
     return comparisonsIndex(request, response);

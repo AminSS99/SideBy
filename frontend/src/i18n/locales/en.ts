@@ -776,6 +776,55 @@ export const en = {
   "rl.s5d": "Saving citations, confidence, and provenance",
   "rl.s6": "Building comparison",
   "rl.s6d": "Scoring category dimensions and generating the verdict",
+
+  // ── Result translation ──
+  "tr.show": "Show this comparison in {language}",
+  "tr.note": "AI translation of the report text. Names, numbers and sources stay unchanged.",
+  "tr.loading": "Translating…",
+  "tr.showing": "Showing AI translation",
+  "tr.original": "Show original (English)",
+  "tr.error": "Couldn't translate this comparison right now.",
+  "tr.retry": "Try again",
+  "tr.limit": "Daily translation limit reached. Try again tomorrow.",
+
+  // ── Public compare page ──
+  "pub.loading": "Loading comparison...",
+  "pub.notFound": "Comparison not found",
+  "pub.notFoundBody": "This comparison may not exist yet or is still being researched. Try running it yourself.",
+  "pub.home": "Go Home",
+  "pub.sample": "This is illustrative sample data for exploring the interface, not a live research run. Create a new comparison for current, independently cited evidence.",
+  "pub.another": "Try another comparison",
+  "pub.create": "Create your own comparison",
+
+  // ── Command menu and update prompt ──
+  "cmd.placeholder": "Type a command or search...",
+  "cmd.empty": "No signals found in the matrix.",
+  "cmd.suggestions": "Suggestions",
+  "cmd.new": "New Comparison",
+  "cmd.navigation": "Navigation",
+  "cmd.studio": "Prompt Studio",
+  "upd.title": "New version available",
+  "upd.refresh": "Refresh",
+  "upd.dismiss": "Dismiss update prompt",
+  "upd.saveFailed": "SideBy couldn't preserve your draft (browser storage may be blocked). Copy your input or retry before refreshing.",
+  "upd.dirty": "You have unsaved input. SideBy will preserve your draft and restore it automatically after reloading.",
+  "upd.clean": "Refresh to load the latest SideBy experience.",
+  "upd.updating": "Updating...",
+  "upd.retry": "Retry save & update",
+  "upd.saveUpdate": "Save draft & update",
+  "upd.now": "Refresh now",
+  "upd.discardRefreshing": "Refreshing...",
+  "upd.discard": "Discard draft & refresh",
+
+  // ── Chat and billing loaders ──
+  "chat.load1": "Reading your sources",
+  "chat.load2": "Cross-checking the facts",
+  "chat.load3": "Synthesizing context",
+  "chat.load4": "Drafting the answer",
+  "chat.working": "SideBy is working on your answer",
+  "bill.gaugeLabel": "Comparisons today",
+  "bill.gaugeUnit": "comparisons",
+  "app.loadingSideby": "Loading SideBy",
 } as const;
 
 export type MessageKey = keyof typeof en;

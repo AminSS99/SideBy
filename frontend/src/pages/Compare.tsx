@@ -27,8 +27,10 @@ import {
   DecisionMatrixPanel,
   WatchlistPanel,
 } from "@/components/Comparison/ComparisonEngine";
+import { useT } from "@/i18n";
 
 const Compare = () => {
+  const t = useT();
   const { slug } = useParams<{ slug: string }>();
   const [followUp, setFollowUp] = useState("");
   const [followUpAnswer, setFollowUpAnswer] = useState("");
@@ -168,14 +170,14 @@ const Compare = () => {
           <div className="flex items-center justify-center py-32">
             <div className="text-center">
               <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-orange-500/50" />
-              <p className="text-sm text-white/30">Loading comparison...</p>
+              <p className="text-sm text-white/30">{t("pub.loading")}</p>
             </div>
           </div>
         ) : error || !result ? (
           <div className="flex flex-col items-center justify-center py-32 text-center">
-            <p className="mb-4 font-serif text-4xl text-white/20">Comparison not found</p>
+            <p className="mb-4 font-serif text-4xl text-white/20">{t("pub.notFound")}</p>
             <p className="mb-8 text-sm text-white/30 max-w-md">
-              This comparison may not exist yet or is still being researched. Try running it yourself — it only takes 30 seconds.
+              {t("pub.notFoundBody")}
             </p>
             <div className="flex flex-wrap justify-center gap-2 mb-8 max-w-lg">
               {["Supabase vs Firebase", "Cursor vs Windsurf", "React vs Vue"].map((q) => (
@@ -192,7 +194,7 @@ const Compare = () => {
               to="/"
               className="rounded-xl bg-white px-6 py-3 text-xs font-bold uppercase tracking-widest text-black transition-colors hover:bg-white/90"
             >
-              Go Home
+              {t("pub.home")}
             </Link>
           </div>
         ) : (
@@ -209,7 +211,7 @@ const Compare = () => {
               <p className="compare-hero-desc mt-3 text-sm text-white/30">{brand.tagline} — {brand.domain}</p>
               {result.provenance === "illustrative" && (
                 <div className="mt-6 max-w-3xl rounded-xl border border-amber-400/20 bg-amber-400/[0.07] px-4 py-3 text-sm leading-6 text-amber-100/70">
-                  This is illustrative sample data for exploring the interface, not a live research run. Create a new comparison for current, independently cited evidence.
+                  {t("pub.sample")}
                 </div>
               )}
             </section>
@@ -247,7 +249,7 @@ const Compare = () => {
             </div>
 
             <section className="mt-20 border-t border-white/[0.06] pt-12">
-              <p className="mb-6 text-center text-sm text-white/25">Try another comparison</p>
+              <p className="mb-6 text-center text-sm text-white/25">{t("pub.another")}</p>
               <div className="flex flex-wrap justify-center gap-3">
                 {["Supabase vs Firebase", "Cursor vs Windsurf", "ChatGPT Plus vs Claude Pro", "Vercel vs Render"].map((q) => {
                   return (
@@ -260,7 +262,7 @@ const Compare = () => {
               <div className="mt-8 text-center">
                 <Link to="/" className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/30 hover:text-orange-400 transition-colors">
                   <ArrowRight className="h-3 w-3" />
-                  Create your own comparison
+                  {t("pub.create")}
                 </Link>
               </div>
             </section>

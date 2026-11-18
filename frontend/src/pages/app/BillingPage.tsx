@@ -9,6 +9,7 @@ import { buildApiUrl } from "@/config/env";
 import { brand } from "@/config/brand";
 import { toast } from "sonner";
 import LiquidGauge from "@/components/kokonutui/liquid-gauge";
+import { useT } from "@/i18n";
 
 type UsageStatus = {
   plan: string;
@@ -105,6 +106,7 @@ const getPlanInclusions = (plan?: string) => {
 };
 
 const BillingPage = () => {
+  const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
   const [usage, setUsage] = useState<UsageStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -246,9 +248,9 @@ const BillingPage = () => {
                       <LiquidGauge
                         readOnly
                         value={Math.min(100, (cmp.used / cmpLimit) * 100)}
-                        label="Comparisons today"
+                        label={t("bill.gaugeLabel")}
                         total={cmpLimit}
-                        unit="comparisons"
+                        unit={t("bill.gaugeUnit")}
                         warnAt={90}
                         wholeUnits
                       />
