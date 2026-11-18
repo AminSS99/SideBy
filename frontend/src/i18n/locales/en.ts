@@ -587,7 +587,7 @@ export const en = {
   // ── Entity card stats ──
   "res.entity.facts": "Facts",
   "res.entity.confidence": "Avg. confidence",
-  "res.entity.wins": "Categories led",
+  "res.entity.wins": "Category wins",
 
   // ── Header (cont.) ──
   "res.updatedUnavailable": "Update date unavailable",
@@ -825,6 +825,11 @@ export const en = {
   "bill.gaugeLabel": "Comparisons today",
   "bill.gaugeUnit": "comparisons",
   "app.loadingSideby": "Loading SideBy",
+
+  // ── Radar panel ──
+  "radar.badge": "Capabilities Radar",
+  "radar.title": "Strategic Mapping",
+  "radar.body": "A multidimensional visualization of how {a} and {b} compare across core engineering and business vectors.",
 } as const;
 
 export type MessageKey = keyof typeof en;

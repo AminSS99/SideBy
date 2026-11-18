@@ -73,6 +73,16 @@ const I18nContext = createContext<I18nValue>({
 export const I18nProvider = ({ children }: { children: ReactNode }) => {
   const [lang, setLangState] = useState<Lang>(() => detectLang());
 
+  // A shared ?lang=az link should stick, so navigating on keeps the language.
+  useEffect(() => {
+    try {
+      const fromQuery = new URLSearchParams(window.location.search).get("lang");
+      if (isLang(fromQuery)) window.localStorage.setItem(STORAGE_KEY, fromQuery);
+    } catch {
+      /* storage blocked: the query param still applied for this load */
+    }
+  }, []);
+
   useEffect(() => {
     document.documentElement.lang = LANGS.find((item) => item.code === lang)?.htmlLang ?? "en";
   }, [lang]);
@@ -130,4 +140,21 @@ const STATUS_KEYS: Record<string, MessageKey> = {
 export const statusLabel = (t: TFunction, status: string): string => {
   const key = STATUS_KEYS[status];
   return key ? t(key) : status;
+};
+
+const AZ_MONTHS = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avq", "sen", "okt", "noy", "dek"];
+
+/** Medium date ("18 noy 2026"). Azerbaijani is formatted by hand: some browsers' ICU data renders it as "2026 M11 18". */
+export const formatDate = (value: string | number | Date, lang: Lang): string => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  if (lang === "az") return `${date.getDate()} ${AZ_MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+  return new Intl.DateTimeFormat(intlLocale[lang], { year: "numeric", month: "short", day: "numeric" }).format(date);
+};
+
+export const formatDateTime = (value: string | number | Date, lang: Lang): string => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  const time = new Intl.DateTimeFormat(intlLocale[lang], { hour: "2-digit", minute: "2-digit" }).format(date);
+  return `${formatDate(date, lang)}, ${time}`;
 };

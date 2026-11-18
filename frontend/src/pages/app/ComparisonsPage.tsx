@@ -32,7 +32,7 @@ import { GlowCard } from "@/components/GlowCard";
 import { ComparisonComposer } from "@/components/ComparisonComposer";
 import { MultiOptionBracketComposer, type BracketRun } from "@/components/MultiOptionBracketComposer";
 import { SUPPORTED_COMPARISON_CATEGORIES } from "@/lib/comparisonTaxonomy";
-import { statusLabel, useI18n, type MessageKey } from "@/i18n";
+import { formatDateTime, statusLabel, useI18n, type Lang, type MessageKey } from "@/i18n";
 
 type ComparisonStatus = "running" | "completed" | "failed";
 type ComparisonVisibility = "private" | "team" | "public";
@@ -96,11 +96,7 @@ const filters: Array<{ key: FilterKey; label: MessageKey }> = [
   { key: "private", label: "cmp.filter.private" },
 ];
 
-const formatTimestamp = (value: string, locale: string) =>
-  new Date(value).toLocaleString(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+const formatTimestamp = (value: string, lang: Lang) => formatDateTime(value, lang);
 
 const statusIcon = {
   completed: CheckCircle2,
@@ -683,7 +679,7 @@ const ComparisonRow = ({
   onPublish: () => void;
   onOrganize: (updates: Pick<ComparisonHistoryItem, "isFavorited" | "folder" | "tags">) => Promise<void>;
 }) => {
-  const { t, locale } = useI18n();
+  const { t, lang } = useI18n();
   const StatusIcon = statusIcon[item.status];
   const VisibilityIcon = visibilityIcon[item.visibility];
   const title = [item.entityA, item.entityB].filter(Boolean).join(" vs ") || item.query;
@@ -751,7 +747,7 @@ const ComparisonRow = ({
           <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[9px] font-bold uppercase tracking-wider text-[#fdfbf7]/40">
             <span className="flex items-center gap-2">
               <Clock3 className="h-3 w-3" />
-              {formatTimestamp(item.updatedAt, locale)}
+              {formatTimestamp(item.updatedAt, lang)}
             </span>
             <span className="h-1 w-1 rounded-full bg-[#333]" />
             <span>{t("cmp.row.sources", { count: item.sourceCount })}</span>

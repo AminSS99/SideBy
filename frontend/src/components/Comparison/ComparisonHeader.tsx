@@ -6,7 +6,7 @@ import { ShareButton } from "@/components/ShareModal";
 import { ExportModal } from "./ExportModal";
 import { EntityCard } from "./EntityCard";
 import type { ComparisonData } from "./types";
-import { useI18n, type TFunction } from "@/i18n";
+import { formatDate, useI18n, type Lang, type TFunction } from "@/i18n";
 
 interface ComparisonHeaderProps {
   result: ComparisonData;
@@ -40,16 +40,10 @@ const fallbackSlug = (a: string, b: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "") || "comparison";
 
-const formatUpdatedAt = (value: string, locale: string, t: TFunction) => {
+const formatUpdatedAt = (value: string, lang: Lang, t: TFunction) => {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return t("res.updatedUnavailable");
-  return t("res.updatedOn", {
-    date: new Intl.DateTimeFormat(locale, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }).format(date),
-  });
+  return t("res.updatedOn", { date: formatDate(date, lang) });
 };
 
 const entityStats = (result: ComparisonData, side: "a" | "b") => {
@@ -75,7 +69,7 @@ export const ComparisonHeader = ({
   publishReasons,
   publishClassification,
 }: ComparisonHeaderProps) => {
-  const { t, locale } = useI18n();
+  const { t, lang } = useI18n();
   const container = useRef<HTMLDivElement>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const shareSlug = result.slug || fallbackSlug(result.entities.a.name, result.entities.b.name);
@@ -156,7 +150,7 @@ export const ComparisonHeader = ({
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            {result.provenance === "illustrative" ? t("res.illustrative") : formatUpdatedAt(result.updatedAt, locale, t)}
+            {result.provenance === "illustrative" ? t("res.illustrative") : formatUpdatedAt(result.updatedAt, lang, t)}
           </span>
           <span className="ch-top-item text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
             {t(result.provenance === "illustrative" ? "res.refSourcesCount" : "res.sourcesCount", { count: result.sources.length })}

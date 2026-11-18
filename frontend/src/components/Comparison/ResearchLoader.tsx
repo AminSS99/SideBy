@@ -45,6 +45,8 @@ export const ResearchLoader = ({
   dimensionsScored = 0,
 }: ResearchLoaderProps) => {
   const t = useT();
+  // The server appends this default context when the user wrote none; it is not part of the option names.
+  const displayQuery = query.replace(/\s+for the decision you described$/i, "");
   const stepKeys: Record<string, [MessageKey, MessageKey]> = {
     "Classifying category": ["rl.s1", "rl.s1d"],
     "Finding sources": ["rl.s2", "rl.s2d"],
@@ -211,7 +213,7 @@ export const ResearchLoader = ({
   }, { dependencies: [progress, activeStep, prefersReducedMotion], scope: containerRef, revertOnUpdate: true });
 
   return (
-    <div ref={containerRef} role="status" aria-live="polite" aria-label={t("rl.aria", { query, progress })} className={cn(panelClass, "relative flex min-h-[560px] flex-col overflow-hidden rounded-[28px] shadow-2xl")}>
+    <div ref={containerRef} role="status" aria-live="polite" aria-label={t("rl.aria", { query: displayQuery, progress })} className={cn(panelClass, "relative flex min-h-[560px] flex-col overflow-hidden rounded-[28px] shadow-2xl")}>
       <BorderBeam colorFrom="#f97316" colorTo="#fb7185" duration={8} />
       {/* Ambient moving glow inside the loader */}
       <div 
@@ -247,10 +249,10 @@ export const ResearchLoader = ({
               {t("rl.inProgress")}
             </p>
             <h2 className="max-w-3xl break-words font-serif text-2xl leading-[1.08] tracking-tight text-[#fdfbf7] sm:text-3xl lg:text-4xl xl:text-5xl">
-              {query}
+              {displayQuery}
             </h2>
             {(() => {
-              const parts = query.split(/\s+(?:vs\.?|versus)\s+/i);
+              const parts = displayQuery.split(/\s+(?:vs\.?|versus)\s+/i);
               if (parts.length === 2 && parts[0].trim() && parts[1].trim()) {
                 return (
                   <div className="mt-3 flex flex-wrap items-center gap-2">

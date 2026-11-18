@@ -6,6 +6,7 @@ import type { ComparisonData } from './types';
 import { panelClass } from './constants';
 import { Layers } from "@/components/icons";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useT } from "@/i18n";
 
 const wrapLabel = (text: string, max: number) => {
   const words = String(text).split(/\s+/);
@@ -39,6 +40,7 @@ const RadarTick = ({ x, y, cx, payload, compact }: { x?: number; y?: number; cx?
 export const RadarChartPanel = ({ result }: { result: ComparisonData }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const compact = useIsMobile();
+  const t = useT();
 
   useGSAP(() => {
     if (!containerRef.current) return;
@@ -76,11 +78,11 @@ export const RadarChartPanel = ({ result }: { result: ComparisonData }) => {
         <div className="md:w-1/3 z-10">
           <div className="mb-4 inline-flex items-center gap-2 rounded-sm border border-[#333] bg-[#111] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
             <Layers className="h-3.5 w-3.5" />
-            Capabilities Radar
+            {t("radar.badge")}
           </div>
-          <h3 className="font-serif text-3xl text-[#fdfbf7] mb-4">Strategic Mapping</h3>
+          <h3 className="font-serif text-3xl text-[#fdfbf7] mb-4">{t("radar.title")}</h3>
           <p className="text-sm text-[#fdfbf7]/60 leading-relaxed mb-6">
-            A multidimensional visualization of how {result.entities.a.name} and {result.entities.b.name} compare across core engineering and business vectors.
+            {t("radar.body", { a: result.entities.a.name, b: result.entities.b.name })}
           </p>
           <div className="space-y-3">
             <div className="flex items-center gap-3">

@@ -28,7 +28,7 @@ import { buildApiUrl } from "@/config/env";
 import { GlowCard } from "@/components/GlowCard";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { captureEvent } from "@/lib/posthog";
-import { statusLabel, useI18n } from "@/i18n";
+import { formatDateTime, statusLabel, useI18n, type Lang } from "@/i18n";
 
 type ComparisonHistoryItem = {
   id: string;
@@ -44,11 +44,7 @@ type ComparisonHistoryItem = {
   entityB: string | null;
 };
 
-const formatTimestamp = (value: string, locale: string) =>
-  new Date(value).toLocaleString(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+const formatTimestamp = (value: string, lang: Lang) => formatDateTime(value, lang);
 
 const onboardingExamples = [
   "React vs Vue for a SaaS",
@@ -59,7 +55,7 @@ const onboardingExamples = [
 ];
 
 const DashboardHome = () => {
-  const { t, locale } = useI18n();
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
   const { user, isConfigured } = useAuth();
   const { activeWorkspace, error, isLoading, workspaces } = useWorkspace();
@@ -359,7 +355,7 @@ const DashboardHome = () => {
                       </span>
                       <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
                         <Clock3 className="h-3 w-3" />
-                        {formatTimestamp(comparison.updatedAt, locale)}
+                        {formatTimestamp(comparison.updatedAt, lang)}
                       </div>
                     </div>
                     

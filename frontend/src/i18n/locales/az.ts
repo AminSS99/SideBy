@@ -573,7 +573,7 @@ export const az: Partial<Record<MessageKey, string>> = {
   // ── Entity card stats ──
   "res.entity.facts": "Faktlar",
   "res.entity.confidence": "Orta etibar",
-  "res.entity.wins": "Öndə olduğu bölmələr",
+  "res.entity.wins": "Qələbələr",
 
   // ── Header (cont.) ──
   "res.updatedUnavailable": "Yenilənmə tarixi əlçatan deyil",
@@ -811,4 +811,9 @@ export const az: Partial<Record<MessageKey, string>> = {
   "bill.gaugeLabel": "Bu gün müqayisələr",
   "bill.gaugeUnit": "müqayisə",
   "app.loadingSideby": "SideBy yüklənir",
+
+  // ── Radar panel ──
+  "radar.badge": "İmkanlar radarı",
+  "radar.title": "Strateji xəritə",
+  "radar.body": "{a} və {b} əsas mühəndislik və biznes istiqamətləri üzrə necə müqayisə olunur — çoxölçülü təsvir.",
 };

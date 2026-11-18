@@ -573,7 +573,7 @@ export const ru: Partial<Record<MessageKey, string>> = {
   // ── Entity card stats ──
   "res.entity.facts": "Факты",
   "res.entity.confidence": "Ср. уверенность",
-  "res.entity.wins": "Лидирует в категориях",
+  "res.entity.wins": "Победы",
 
   // ── Header (cont.) ──
   "res.updatedUnavailable": "Дата обновления недоступна",
@@ -811,4 +811,9 @@ export const ru: Partial<Record<MessageKey, string>> = {
   "bill.gaugeLabel": "Сравнений сегодня",
   "bill.gaugeUnit": "сравнений",
   "app.loadingSideby": "Загрузка SideBy",
+
+  // ── Radar panel ──
+  "radar.badge": "Радар возможностей",
+  "radar.title": "Стратегическая карта",
+  "radar.body": "Многомерная визуализация сравнения {a} и {b} по ключевым инженерным и бизнес-направлениям.",
 };

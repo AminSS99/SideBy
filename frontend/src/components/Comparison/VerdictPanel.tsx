@@ -119,7 +119,7 @@ export const VerdictPanel = ({ result }: VerdictPanelProps) => {
       <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-orange-500/[0.08] blur-3xl" />
       <div className="relative mb-5 flex items-center justify-between gap-3">
         <div><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-orange-300">{t("res.guide.kicker")}</p><h3 className="mt-1 font-serif text-2xl tracking-tight text-[#fffaf1]">{t("res.guide.title")}</h3></div>
-        <span className="rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-[9px] font-semibold text-white/45">{t("res.guide.scenarios", { count: rows.length })}</span>
+        <span className="shrink-0 whitespace-nowrap rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-[9px] font-semibold text-white/45">{t("res.guide.scenarios", { count: rows.length })}</span>
       </div>
       <div className="relative space-y-1">
         {rows.map((row) => (
