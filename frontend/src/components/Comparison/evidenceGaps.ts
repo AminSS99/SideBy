@@ -5,6 +5,18 @@ export type Gap = {
   title: string;
   detail: string;
   question: string;
+  /** Structured values for render-time i18n without altering English output. */
+  i18n?: {
+    category?: string;
+    entityA?: string;
+    entityB?: string;
+    missing?: string;
+    present?: string;
+    presentCount?: number;
+    count?: number;
+    labels?: string;
+    threshold?: number;
+  };
 };
 
 const LOW_CONFIDENCE = 0.6;
@@ -24,6 +36,7 @@ export function deriveEvidenceGaps(result: ComparisonData): Gap[] {
         title: `No evidence for either option on ${category.name}`,
         detail: `Research returned no sourced claims for ${a.name} or ${b.name} in this category — the verdict here rests on nothing retrievable.`,
         question: `What sourced evidence exists for ${a.name} and ${b.name} on ${category.name}?`,
+        i18n: { category: category.name, entityA: a.name, entityB: b.name },
       });
       continue;
     }
@@ -37,17 +50,20 @@ export function deriveEvidenceGaps(result: ComparisonData): Gap[] {
         title: `No ${category.name} evidence for ${missing}`,
         detail: `${present} has ${presentCount} sourced claim${presentCount === 1 ? "" : "s"} here; ${missing} has none, so this category is one-sided.`,
         question: `What sourced evidence exists for ${missing} on ${category.name}? Compare it against ${present}.`,
+        i18n: { category: category.name, missing, present, presentCount },
       });
     }
 
     const uncited = facts.filter((fact) => !fact.sourceUrl?.trim());
     if (uncited.length > 0) {
       const labels = uncited.slice(0, 2).map((fact) => fact.label).join(", ");
+      const formattedLabels = `${labels}${uncited.length > 2 ? "…" : ""}`;
       gaps.push({
         kind: "uncited",
         title: `Claims without retrievable citations in ${category.name}`,
-        detail: `${uncited.length} claim${uncited.length === 1 ? "" : "s"} (${labels}${uncited.length > 2 ? "…" : ""}) name a source but link nowhere retrievable — treat them as assertions, not evidence.`,
+        detail: `${uncited.length} claim${uncited.length === 1 ? "" : "s"} (${formattedLabels}) name a source but link nowhere retrievable — treat them as assertions, not evidence.`,
         question: `Can you provide retrievable sources for the ${category.name} claims about ${a.name} and ${b.name} that currently lack citations?`,
+        i18n: { category: category.name, count: uncited.length, labels: formattedLabels },
       });
     }
 
@@ -56,11 +72,14 @@ export function deriveEvidenceGaps(result: ComparisonData): Gap[] {
     );
     if (weak.length > 0) {
       const labels = weak.slice(0, 2).map((fact) => fact.label).join(", ");
+      const formattedLabels = `${labels}${weak.length > 2 ? "…" : ""}`;
+      const threshold = Math.round(LOW_CONFIDENCE * 100);
       gaps.push({
         kind: "weak",
         title: `Weakly supported ${category.name} claims`,
-        detail: `${weak.length} claim${weak.length === 1 ? "" : "s"} here score below ${Math.round(LOW_CONFIDENCE * 100)} on the pipeline's support score — which is not a probability of being right (${labels}${weak.length > 2 ? "…" : ""}).`,
+        detail: `${weak.length} claim${weak.length === 1 ? "" : "s"} here score below ${threshold} on the pipeline's support score — which is not a probability of being right (${formattedLabels}).`,
         question: `What stronger evidence supports or refutes the ${category.name} claims for ${a.name} and ${b.name}?`,
+        i18n: { category: category.name, count: weak.length, threshold, labels: formattedLabels },
       });
     }
   }

@@ -35,11 +35,11 @@ const ChatPage = () => {
   const t = useT();
   const { activeWorkspace } = useWorkspace();
   const { activeProject } = useProjects();
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<Message[]>(() => [
     {
       id: "1",
       role: "assistant",
-      content: "Hello! I'm the SideBy Research Engine. I'm connected and ready to help you analyze products, architectures, or development tools.",
+      content: t("ins.chat.welcome"),
     },
   ]);
   const [input, setInput] = useState("");
@@ -111,12 +111,12 @@ const ChatPage = () => {
         });
       });
     } catch (error) {
-      setFilesError(error instanceof Error ? error.message : "Unable to load knowledge files.");
+      setFilesError(error instanceof Error ? error.message : t("ins.chat.loadFilesError"));
       setActiveFiles([]);
     } finally {
       setIsLoadingFiles(false);
     }
-  }, [activeProject, activeWorkspace]);
+  }, [activeProject, activeWorkspace, t]);
 
   useEffect(() => {
     void loadKnowledgeFiles();
@@ -178,7 +178,7 @@ const ChatPage = () => {
         setMessages((prev) =>
           prev.map((message) =>
             message.id === assistantId
-              ? { ...message, content: data.answer || "Sorry, I couldn't generate a response." }
+              ? { ...message, content: data.answer || t("ins.chat.noResponseError") }
               : message,
           ),
         );
@@ -255,8 +255,7 @@ const ChatPage = () => {
           message.id === assistantId
             ? {
                 ...message,
-                content:
-                  "I encountered an error connecting to the orchestrator. Please check your API keys or try again later.",
+                content: t("ins.chat.orchestratorError"),
               }
             : message,
         ),
@@ -272,10 +271,10 @@ const ChatPage = () => {
         <div className="flex items-end justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-400">
-              Research Assistant
+              {t("ins.chat.kicker")}
             </p>
             <h1 className="mt-2 font-serif text-3xl sm:text-4xl text-[#fdfbf7] tracking-tight">
-              AI Chat
+              {t("app.nav.chat")}
             </h1>
           </div>
           <button
@@ -283,11 +282,11 @@ const ChatPage = () => {
             className="lg:hidden flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-xl hover:bg-orange-500/20 transition-all shadow-[0_0_15px_-3px_rgba(249,115,22,0.15)] active:scale-[0.98]"
           >
             <Database className="h-4 w-4" />
-            <span>Context ({activeContextCount})</span>
+            <span>{t("ins.chat.contextButton", { count: activeContextCount })}</span>
           </button>
         </div>
         <p className="mt-3 text-sm text-[#fdfbf7]/55 leading-relaxed max-w-3xl">
-          Ask questions, synthesize findings, or deep dive into specific product details. You can ground the AI by selecting files from your knowledge base.
+          {t("ins.chat.subtitle")}
         </p>
       </div>
 
@@ -362,7 +361,7 @@ const ChatPage = () => {
                     handleSend();
                   }
                 }}
-                placeholder="Ask anything..."
+                placeholder={t("ins.chat.inputPlaceholder")}
                 className="max-h-32 min-h-[44px] w-full resize-none bg-transparent px-3 py-3 text-sm text-[#fdfbf7] placeholder:text-[#fdfbf7]/30 outline-none"
                 rows={1}
               />
@@ -376,7 +375,7 @@ const ChatPage = () => {
             </form>
             <div className="mt-3 text-center hidden sm:block">
               <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
-                AI responses can be inaccurate. Verify important facts.
+                {t("ins.chat.disclaimer")}
               </p>
             </div>
             <KeyboardSpacer />
@@ -388,13 +387,13 @@ const ChatPage = () => {
           <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5">
             <h3 className="flex items-center gap-2 font-serif text-lg text-[#fdfbf7] border-b border-[#2a2a2a] pb-3 mb-4">
               <FolderKanban className="h-4 w-4 text-emerald-400" />
-              Active Project
+              {t("ins.chat.activeProject")}
             </h3>
             <div className="rounded-sm border border-[#333] bg-[#0c0b0a] p-3 text-sm text-[#fdfbf7]/70">
-              {activeProject ? activeProject.name : "Global Workspace (No Project)"}
+              {activeProject ? activeProject.name : t("ins.chat.globalWorkspace")}
             </div>
             <p className="mt-2 text-[9px] uppercase tracking-widest font-bold text-[#fdfbf7]/40 leading-relaxed">
-              Conversations are saved to the active project automatically.
+              {t("ins.chat.activeProjectNote")}
             </p>
           </div>
 
@@ -402,22 +401,22 @@ const ChatPage = () => {
             <div className="flex items-center justify-between border-b border-[#2a2a2a] pb-3 mb-4">
               <h3 className="flex items-center gap-2 font-serif text-lg text-[#fdfbf7]">
                 <Database className="h-4 w-4 text-orange-400" />
-                Knowledge Base
+                {t("ins.chat.knowledgeBase")}
               </h3>
               <span className="text-[9px] font-bold uppercase tracking-widest bg-[#1a1a1a] border border-[#333] px-2 py-0.5 rounded-sm">
-                {activeFiles.some((file) => file.active) ? "RAG Active" : "General"}
+                {activeFiles.some((file) => file.active) ? t("ins.chat.modeRag") : t("ins.chat.modeGeneral")}
               </span>
             </div>
             
             <p className="text-[10px] text-[#fdfbf7]/50 uppercase tracking-widest font-bold mb-4">
-              Ground AI in indexed files:
+              {t("ins.chat.groundPrompt")}
             </p>
 
             <div className="space-y-2 flex-1">
               {isLoadingFiles && (
                 <div className="flex items-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] p-3 text-xs text-[#fdfbf7]/45">
                   <LoaderCircle className="h-3.5 w-3.5 animate-spin text-orange-400" />
-                  Loading documents...
+                  {t("ins.chat.loadingDocs")}
                 </div>
               )}
 
@@ -429,7 +428,7 @@ const ChatPage = () => {
 
               {!isLoadingFiles && !filesError && activeFiles.length === 0 && (
                 <div className="rounded-sm border border-[#333] bg-[#0c0b0a] p-3 text-xs leading-relaxed text-[#fdfbf7]/45">
-                  No indexed documents in this scope.
+                  {t("ins.chat.noDocsScope")}
                 </div>
               )}
 
@@ -464,9 +463,9 @@ const ChatPage = () => {
 
             <div className="mt-4 pt-4 border-t border-[#2a2a2a]">
               <p className="text-[9px] text-[#fdfbf7]/40 leading-relaxed">
-                Active context: <strong className="text-[#fdfbf7]/70">{activeContextCount} documents</strong>
+                {t("ins.chat.activeContextLabel")} <strong className="text-[#fdfbf7]/70">{t("ins.chat.docsCount", { count: activeContextCount })}</strong>
                 <br />
-                Available chunks: <strong className="text-[#fdfbf7]/70">{availableChunksCount}</strong>
+                {t("ins.chat.availableChunksLabel")} <strong className="text-[#fdfbf7]/70">{availableChunksCount}</strong>
               </p>
             </div>
           </div>
@@ -496,7 +495,7 @@ const ChatPage = () => {
               <div className="flex items-center justify-between border-b border-[#2a2a2a] pb-3">
                 <h3 className="flex items-center gap-2 font-serif text-lg text-white">
                   <Database className="h-4 w-4 text-orange-400" />
-                  Chat Grounding
+                  {t("ins.chat.mobileDrawerTitle")}
                 </h3>
                 <button
                   onClick={() => setSidebarOpen(false)}
@@ -511,32 +510,32 @@ const ChatPage = () => {
                 <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-4">
                   <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/70 border-b border-[#2a2a2a] pb-2 mb-3">
                     <FolderKanban className="h-3.5 w-3.5 text-emerald-400" />
-                    Active Project
+                    {t("ins.chat.activeProject")}
                   </h4>
                   <div className="rounded-sm border border-[#333] bg-[#0c0b0a] p-2.5 text-xs text-[#fdfbf7]/70">
-                    {activeProject ? activeProject.name : "Global Workspace (No Project)"}
+                    {activeProject ? activeProject.name : t("ins.chat.globalWorkspace")}
                   </div>
                 </div>
 
                 <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-4 flex flex-col">
                   <div className="flex items-center justify-between border-b border-[#2a2a2a] pb-2 mb-3">
                     <h4 className="text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/70">
-                      Knowledge Base
+                      {t("ins.chat.knowledgeBase")}
                     </h4>
                     <span className="text-[9px] font-bold uppercase tracking-widest bg-[#1a1a1a] border border-[#333] px-2 py-0.5 rounded-sm">
-                      {activeFiles.some((file) => file.active) ? "RAG Active" : "General"}
+                      {activeFiles.some((file) => file.active) ? t("ins.chat.modeRag") : t("ins.chat.modeGeneral")}
                     </span>
                   </div>
 
                   <p className="text-[9px] text-[#fdfbf7]/50 uppercase tracking-widest font-bold mb-3">
-                    Ground AI in indexed files:
+                    {t("ins.chat.groundPrompt")}
                   </p>
 
                   <div className="space-y-2">
                     {isLoadingFiles && (
                       <div className="flex items-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] p-3 text-xs text-[#fdfbf7]/45">
                         <LoaderCircle className="h-3.5 w-3.5 animate-spin text-orange-400" />
-                        Loading...
+                        {t("ins.chat.loadingShort")}
                       </div>
                     )}
 
@@ -548,7 +547,7 @@ const ChatPage = () => {
 
                     {!isLoadingFiles && !filesError && activeFiles.length === 0 && (
                       <div className="rounded-sm border border-[#333] bg-[#0c0b0a] p-3 text-[11px] leading-relaxed text-[#fdfbf7]/45">
-                        No indexed documents.
+                        {t("ins.chat.noDocsShort")}
                       </div>
                     )}
 
@@ -583,9 +582,9 @@ const ChatPage = () => {
 
                   <div className="mt-4 pt-3 border-t border-[#2a2a2a]">
                     <p className="text-[9px] text-[#fdfbf7]/40 leading-relaxed">
-                      Active context: <strong className="text-[#fdfbf7]/70">{activeContextCount} docs</strong>
+                      {t("ins.chat.activeContextLabel")} <strong className="text-[#fdfbf7]/70">{t("ins.chat.docsShort", { count: activeContextCount })}</strong>
                       <br />
-                      Chunks: <strong className="text-[#fdfbf7]/70">{availableChunksCount}</strong>
+                      {t("ins.chat.chunksLabel")} <strong className="text-[#fdfbf7]/70">{availableChunksCount}</strong>
                     </p>
                   </div>
                 </div>

@@ -6,19 +6,22 @@ import { ArrowRight, Check, LifeBuoy, Mail, MessagesSquare, Sparkles } from "@/c
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useT, type MessageKey } from "@/i18n";
 
 type ContactIntent = "product" | "beta" | "support";
 type FormState = { name: string; email: string; message: string };
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
-const intents: { id: ContactIntent; label: string; description: string }[] = [
-  { id: "product", label: "Product question", description: "How SideBy works or whether it fits your decision workflow." },
-  { id: "beta", label: "Beta & teams", description: "Private beta access, team use, and plan questions." },
-  { id: "support", label: "Support", description: "Help with an account, comparison run, export, or usage limit." },
+// `routing` stays English: it is the subject tag the support inbox sorts on.
+const intents: { id: ContactIntent; label: MessageKey; description: MessageKey; routing: string }[] = [
+  { id: "product", label: "mkt.contact.intent1.label", description: "mkt.contact.intent1.desc", routing: "Product question" },
+  { id: "beta", label: "mkt.contact.intent2.label", description: "mkt.contact.intent2.desc", routing: "Beta & teams" },
+  { id: "support", label: "mkt.contact.intent3.label", description: "mkt.contact.intent3.desc", routing: "Support" },
 ];
 
 const Contact = () => {
-  usePageTitle("Contact");
+  const t = useT();
+  usePageTitle(t("mkt.contact.pageTitle"));
   const [searchParams] = useSearchParams();
   const pageRef = useRef<HTMLDivElement>(null);
   const [intent, setIntent] = useState<ContactIntent>(searchParams.get("plan") === "team" ? "beta" : "product");
@@ -41,13 +44,13 @@ const Contact = () => {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const nextErrors: FormErrors = {};
-    if (form.name.trim().length < 2) nextErrors.name = "Please enter your name.";
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) nextErrors.email = "Enter a valid email address.";
-    if (form.message.trim().length < 12) nextErrors.message = "Tell us a little more so we can route your note.";
+    if (form.name.trim().length < 2) nextErrors.name = t("mkt.contact.errName");
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) nextErrors.email = t("mkt.contact.errEmail");
+    if (form.message.trim().length < 12) nextErrors.message = t("mkt.contact.errMessage");
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    const selectedIntent = intents.find((item) => item.id === intent)?.label ?? "Product question";
+    const selectedIntent = intents.find((item) => item.id === intent)?.routing ?? "Product question";
     const recipient = "snapsolvework@gmail.com";
     const subject = encodeURIComponent(`[SideBy ${selectedIntent}] ${form.name.trim()}`);
     const body = encodeURIComponent(`${form.message.trim()}\n\nFrom: ${form.name.trim()} <${form.email.trim()}>`);
@@ -64,13 +67,13 @@ const Contact = () => {
       <main className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-24 pt-10 sm:px-6 sm:pt-16 lg:px-8">
         <section className="contact-reveal mb-9 max-w-4xl sm:mb-12">
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-400/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-200">
-            <MessagesSquare className="h-3.5 w-3.5" /> Talk to a human
+            <MessagesSquare className="h-3.5 w-3.5" /> {t("mkt.contact.eyebrow")}
           </div>
           <h1 className="font-serif text-[2.75rem] leading-[0.96] tracking-[-0.045em] text-white sm:text-6xl lg:text-7xl">
-            Tell us where your <span className="bg-gradient-to-r from-orange-200 via-amber-100 to-rose-200 bg-clip-text text-transparent">decision got stuck.</span>
+            {t("mkt.contact.titleA")} <span className="bg-gradient-to-r from-orange-200 via-amber-100 to-rose-200 bg-clip-text text-transparent">{t("mkt.contact.titleAccent")}</span>
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-7 text-white/58 sm:text-lg">
-            Product fit, beta access, or a comparison that needs attention—we’ll route your note to the right SideBy inbox.
+            {t("mkt.contact.body")}
           </p>
         </section>
 
@@ -79,33 +82,33 @@ const Contact = () => {
             <a href="mailto:snapsolvework@gmail.com" className="group flex min-h-[108px] items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-orange-300/25 hover:bg-white/[0.055] focus:outline-none focus:ring-2 focus:ring-orange-300">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-orange-300/20 bg-orange-400/10 text-orange-200"><LifeBuoy className="h-5 w-5" /></span>
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-white">Product & support</span>
+                <span className="block font-semibold text-white">{t("mkt.contact.supportTitle")}</span>
                 <span className="mt-1 block break-all text-sm text-white/48">snapsolvework@gmail.com</span>
-                <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-orange-200">Open email <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></span>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-orange-200">{t("mkt.contact.openEmail")} <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></span>
               </span>
             </a>
             <a href="mailto:snapsolvework@gmail.com" className="group flex min-h-[108px] items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-violet-300/25 hover:bg-white/[0.055] focus:outline-none focus:ring-2 focus:ring-violet-300">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-violet-300/20 bg-violet-400/10 text-violet-200"><Sparkles className="h-5 w-5" /></span>
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-white">Beta & teams</span>
+                <span className="block font-semibold text-white">{t("mkt.contact.betaTitle")}</span>
                 <span className="mt-1 block break-all text-sm text-white/48">snapsolvework@gmail.com</span>
-                <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-200">Open email <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></span>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-200">{t("mkt.contact.openEmail")} <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></span>
               </span>
             </a>
             <div className="rounded-2xl border border-emerald-300/15 bg-emerald-400/[0.055] p-5">
-              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100"><Check className="h-4 w-4" /> What helps us help you</div>
-              <p className="mt-2 text-sm leading-6 text-white/48">Include the comparison title, what you expected, and what happened. Please leave passwords and API keys out.</p>
+              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100"><Check className="h-4 w-4" /> {t("mkt.contact.helpTitle")}</div>
+              <p className="mt-2 text-sm leading-6 text-white/48">{t("mkt.contact.helpBody")}</p>
             </div>
           </aside>
 
           <section className="contact-reveal overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-2xl shadow-orange-950/20">
             <div className="border-b border-white/10 px-5 py-6 sm:px-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-200/70">Start a conversation</p>
-              <h2 className="mt-2 font-serif text-3xl text-white">What can we help with?</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-200/70">{t("mkt.contact.formEyebrow")}</p>
+              <h2 className="mt-2 font-serif text-3xl text-white">{t("mkt.contact.formTitle")}</h2>
             </div>
             <form onSubmit={handleSubmit} noValidate className="space-y-6 p-5 sm:p-8">
               <fieldset>
-                <legend className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">Choose a route</legend>
+                <legend className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">{t("mkt.contact.routeLegend")}</legend>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {intents.map((item) => (
                     <button
@@ -115,8 +118,8 @@ const Contact = () => {
                       aria-pressed={intent === item.id}
                       className={`min-h-[82px] rounded-xl border p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-orange-300 ${intent === item.id ? "border-orange-300/40 bg-orange-400/12" : "border-white/10 bg-black/15 hover:border-white/20"}`}
                     >
-                      <span className={`block text-sm font-semibold ${intent === item.id ? "text-orange-100" : "text-white"}`}>{item.label}</span>
-                      <span className="mt-1 block text-[11px] leading-4 text-white/40">{item.description}</span>
+                      <span className={`block text-sm font-semibold ${intent === item.id ? "text-orange-100" : "text-white"}`}>{t(item.label)}</span>
+                      <span className="mt-1 block text-[11px] leading-4 text-white/40">{t(item.description)}</span>
                     </button>
                   ))}
                 </div>
@@ -124,12 +127,12 @@ const Contact = () => {
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="contact-name" className="mb-2 block text-xs font-semibold text-white/55">Your name</label>
-                  <input id="contact-name" value={form.name} onChange={(event) => updateField("name", event.target.value)} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? "contact-name-error" : undefined} autoComplete="name" placeholder="Ada Lovelace" className={fieldClass(Boolean(errors.name))} />
+                  <label htmlFor="contact-name" className="mb-2 block text-xs font-semibold text-white/55">{t("mkt.contact.nameLabel")}</label>
+                  <input id="contact-name" value={form.name} onChange={(event) => updateField("name", event.target.value)} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? "contact-name-error" : undefined} autoComplete="name" placeholder={t("mkt.contact.namePlaceholder")} className={fieldClass(Boolean(errors.name))} />
                   {errors.name && <p id="contact-name-error" className="mt-2 text-xs text-rose-300">{errors.name}</p>}
                 </div>
                 <div>
-                  <label htmlFor="contact-email" className="mb-2 block text-xs font-semibold text-white/55">Email</label>
+                  <label htmlFor="contact-email" className="mb-2 block text-xs font-semibold text-white/55">{t("mkt.contact.emailLabel")}</label>
                   <input id="contact-email" type="email" value={form.email} onChange={(event) => updateField("email", event.target.value)} aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "contact-email-error" : undefined} autoComplete="email" inputMode="email" placeholder="ada@company.com" className={fieldClass(Boolean(errors.email))} />
                   {errors.email && <p id="contact-email-error" className="mt-2 text-xs text-rose-300">{errors.email}</p>}
                 </div>
@@ -137,17 +140,17 @@ const Contact = () => {
 
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <label htmlFor="contact-message" className="text-xs font-semibold text-white/55">Your message</label>
-                  <span className="text-[11px] text-white/30">No secrets or API keys</span>
+                  <label htmlFor="contact-message" className="text-xs font-semibold text-white/55">{t("mkt.contact.messageLabel")}</label>
+                  <span className="text-[11px] text-white/30">{t("mkt.contact.noSecrets")}</span>
                 </div>
-                <textarea id="contact-message" value={form.message} onChange={(event) => updateField("message", event.target.value)} aria-invalid={Boolean(errors.message)} aria-describedby={errors.message ? "contact-message-error" : "contact-message-hint"} rows={6} placeholder="I’m comparing… and I need help with…" className={`${fieldClass(Boolean(errors.message))} resize-y py-3`} />
-                {errors.message ? <p id="contact-message-error" className="mt-2 text-xs text-rose-300">{errors.message}</p> : <p id="contact-message-hint" className="mt-2 text-xs leading-5 text-white/32">Submitting opens your default email app with the note pre-filled, so nothing disappears into a fake form.</p>}
+                <textarea id="contact-message" value={form.message} onChange={(event) => updateField("message", event.target.value)} aria-invalid={Boolean(errors.message)} aria-describedby={errors.message ? "contact-message-error" : "contact-message-hint"} rows={6} placeholder={t("mkt.contact.messagePlaceholder")} className={`${fieldClass(Boolean(errors.message))} resize-y py-3`} />
+                {errors.message ? <p id="contact-message-error" className="mt-2 text-xs text-rose-300">{errors.message}</p> : <p id="contact-message-hint" className="mt-2 text-xs leading-5 text-white/32">{t("mkt.contact.hint")}</p>}
               </div>
 
               <button type="submit" className="group flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-orange-200 via-amber-100 to-orange-200 px-6 text-sm font-bold text-[#1a0e07] shadow-lg shadow-orange-900/20 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:ring-offset-2 focus:ring-offset-[#15110e]">
-                Continue in email <Mail className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                {t("mkt.contact.submit")} <Mail className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>
-              <p className="text-center text-[11px] leading-5 text-white/30">Prefer to browse first? <Link to="/docs" className="text-white/55 underline decoration-white/20 underline-offset-4 hover:text-white">Visit the SideBy field guide.</Link></p>
+              <p className="text-center text-[11px] leading-5 text-white/30">{t("mkt.contact.browsePre")}{" "}<Link to="/docs" className="text-white/55 underline decoration-white/20 underline-offset-4 hover:text-white">{t("mkt.contact.browseLink")}</Link></p>
             </form>
           </section>
         </div>

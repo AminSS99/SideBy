@@ -9,7 +9,7 @@ import { buildApiUrl } from "@/config/env";
 import { brand } from "@/config/brand";
 import { toast } from "sonner";
 import LiquidGauge from "@/components/kokonutui/liquid-gauge";
-import { useT } from "@/i18n";
+import { useT, type MessageKey } from "@/i18n";
 
 type UsageStatus = {
   plan: string;
@@ -59,48 +59,48 @@ const SNAP_SOLVE_PLAN_NAMES: Record<string, string> = {
   orbit: "Orbit",
 };
 
-const getPlanInclusions = (plan?: string) => {
+const getPlanInclusions = (plan?: string): MessageKey[] => {
   const p = (plan ?? "free").toLowerCase();
   switch (p) {
     case "pulse":
     case "pro":
       return [
-        "10 comparisons per day (up to 100 per month)",
-        "30 follow-ups per day",
-        "10 refreshes per day",
-        "20 exports per day",
-        "10 live web searches per day (up to 100 per month)",
-        "Priority background queue execution",
+        "billing.inclusions.pulse.comparisons",
+        "billing.inclusions.pulse.followUps",
+        "billing.inclusions.pulse.refreshes",
+        "billing.inclusions.pulse.exports",
+        "billing.inclusions.pulse.webSearches",
+        "billing.inclusions.priorityQueue",
       ];
     case "core":
     case "team":
       return [
-        "25 comparisons per day (up to 300 per month)",
-        "80 follow-ups per day",
-        "25 refreshes per day",
-        "50 exports per day",
-        "25 live web searches per day (up to 300 per month)",
-        "Priority background queue execution",
+        "billing.inclusions.core.comparisons",
+        "billing.inclusions.core.followUps",
+        "billing.inclusions.core.refreshes",
+        "billing.inclusions.core.exports",
+        "billing.inclusions.core.webSearches",
+        "billing.inclusions.priorityQueue",
       ];
     case "orbit":
     case "business":
       return [
-        "60 comparisons per day (up to 800 per month)",
-        "200 follow-ups per day",
-        "60 refreshes per day",
-        "120 exports per day",
-        "60 live web searches per day (up to 800 per month)",
-        "Priority background queue execution",
+        "billing.inclusions.orbit.comparisons",
+        "billing.inclusions.orbit.followUps",
+        "billing.inclusions.orbit.refreshes",
+        "billing.inclusions.orbit.exports",
+        "billing.inclusions.orbit.webSearches",
+        "billing.inclusions.priorityQueue",
       ];
     default:
       return [
-        "5 comparisons per day",
-        "10 follow-ups per day",
-        "3 refreshes per day",
-        "10 exports per day",
-        "2 live web searches per day",
-        "Source-backed citations",
-        "Public share links",
+        "billing.inclusions.flow.comparisons",
+        "billing.inclusions.flow.followUps",
+        "billing.inclusions.flow.refreshes",
+        "billing.inclusions.flow.exports",
+        "billing.inclusions.flow.webSearches",
+        "billing.inclusions.flow.citations",
+        "billing.inclusions.flow.shareLinks",
       ];
   }
 };
@@ -125,11 +125,11 @@ const BillingPage = () => {
     try {
       setIsLoading(true);
       const res = await apiFetch(buildApiUrl("/api/usage"));
-      if (!res.ok) throw new Error("Unable to load usage.");
+      if (!res.ok) throw new Error(t("billing.error.loadUsage"));
       const data = (await res.json()) as UsageStatus;
       setUsage(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load usage.");
+      setError(e instanceof Error ? e.message : t("billing.error.failedUsage"));
     } finally {
       setIsLoading(false);
     }
@@ -140,16 +140,16 @@ const BillingPage = () => {
   }, []);
 
   const usageItems = [
-    { key: "comparison", label: "Comparisons", icon: GitCompareArrows, color: "text-orange-400" },
-    { key: "followUp", label: "Follow-ups", icon: MessageSquare, color: "text-blue-400" },
-    { key: "refresh", label: "Refreshes", icon: RefreshCw, color: "text-purple-400" },
-    { key: "export", label: "Exports", icon: Download, color: "text-emerald-400" },
-    { key: "webSearch", label: "Live web searches", icon: Globe, color: "text-sky-400" },
+    { key: "comparison", label: t("billing.usage.comparisons"), icon: GitCompareArrows, color: "text-orange-400" },
+    { key: "followUp", label: t("billing.usage.followUps"), icon: MessageSquare, color: "text-blue-400" },
+    { key: "refresh", label: t("billing.usage.refreshes"), icon: RefreshCw, color: "text-purple-400" },
+    { key: "export", label: t("billing.usage.exports"), icon: Download, color: "text-emerald-400" },
+    { key: "webSearch", label: t("billing.usage.webSearches"), icon: Globe, color: "text-sky-400" },
   ];
 
   const monthlyItems = [
-    { key: "comparison" as const, label: "Monthly comparisons", icon: GitCompareArrows, color: "text-orange-400" },
-    { key: "webSearch" as const, label: "Monthly live web searches", icon: Globe, color: "text-sky-400" },
+    { key: "comparison" as const, label: t("billing.monthly.comparisons"), icon: GitCompareArrows, color: "text-orange-400" },
+    { key: "webSearch" as const, label: t("billing.monthly.webSearches"), icon: Globe, color: "text-sky-400" },
   ];
 
   const manageSubscription = async () => {
@@ -160,23 +160,25 @@ const BillingPage = () => {
       });
       if (!response.ok) {
         const errorData = (await response.json()) as { error?: string };
-        throw new Error(errorData.error || "Unable to open billing portal.");
+        throw new Error(errorData.error || t("billing.portal.unableToOpen"));
       }
       const data = (await response.json()) as { url?: string | null };
       if (!data.url) {
-        throw new Error("No customer portal URL was returned.");
+        throw new Error(t("billing.portal.noUrl"));
       }
       window.location.href = data.url;
     } catch (e) {
-      toast.error("Failed to load customer portal", {
-        description: e instanceof Error ? e.message : "Make sure your billing environment is live.",
+      toast.error(t("billing.portal.loadFailed"), {
+        description: e instanceof Error ? e.message : t("billing.portal.envCheck"),
       });
     } finally {
       setPortalLoading(false);
     }
   };
 
-  const currentPlanName = `${SNAP_SOLVE_PLAN_NAMES[usage?.plan ?? "free"] ?? "Flow"} Plan`;
+  const currentPlanName = t("billing.plan.title", {
+    plan: SNAP_SOLVE_PLAN_NAMES[usage?.plan ?? "free"] ?? "Flow",
+  });
   const isSnapSolveManaged =
     usage?.subscription?.billingProvider === "snapsolve" ||
     usage?.subscription?.source.startsWith("snapsolve_");
@@ -186,15 +188,13 @@ const BillingPage = () => {
     <div ref={containerRef} className="space-y-8 max-w-6xl">
       <div className="bill-header">
         <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-          Subscription
+          {t("billing.header.eyebrow")}
         </p>
         <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
-          Billing & Plans
+          {t("billing.header.title")}
         </h1>
         <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[#fdfbf7]/60">
-          SideBy uses the same Flow, Pulse, Core, or Orbit subscription as the rest of your SnapSolve workspace.
-          Plans and payment are managed centrally in SnapSolve — SideBy reads your entitlement and never grants
-          paid access on its own.
+          {t("billing.header.subtitle")}
         </p>
       </div>
 
@@ -210,8 +210,8 @@ const BillingPage = () => {
                 <h2 className="font-serif text-2xl text-[#fdfbf7]">{currentPlanName}</h2>
                 <p className="text-xs text-[#fdfbf7]/50">
                   {usage?.plan && usage.plan !== "free"
-                    ? "Your shared SnapSolve workspace entitlement is active."
-                    : "Flow is the shared free SnapSolve tier. No card required."}
+                    ? t("billing.plan.activeEntitlement")
+                    : t("billing.plan.freeTier")}
                 </p>
               </div>
             </div>
@@ -224,17 +224,16 @@ const BillingPage = () => {
               </div>
             ) : error ? (
               <div role="alert" className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200/90">
-                <p className="font-semibold">Plan status unavailable</p>
+                <p className="font-semibold">{t("billing.error.unavailableTitle")}</p>
                 <p className="mt-1 text-amber-200/70">
-                  We couldn't confirm your SnapSolve entitlement, so no plan level is shown and nothing was
-                  upgraded or downgraded. The rest of SideBy keeps working.
+                  {t("billing.error.unavailableBody")}
                 </p>
                 <button
                   type="button"
                   onClick={() => void loadUsage()}
                   className="mt-3 inline-flex min-h-10 items-center rounded-sm border border-amber-400/30 px-3.5 text-[10px] font-bold uppercase tracking-widest text-amber-200 transition-colors hover:bg-amber-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
                 >
-                  Retry
+                  {t("billing.error.retry")}
                 </button>
               </div>
             ) : usage ? (
@@ -303,7 +302,7 @@ const BillingPage = () => {
                       </div>
                       {isAtLimit && (
                         <p className="mt-2 text-[10px] text-red-400 uppercase tracking-widest font-bold">
-                          Daily limit reached — resets at midnight UTC
+                          {t("billing.limit.dailyReached")}
                         </p>
                       )}
                     </div>
@@ -327,7 +326,7 @@ const BillingPage = () => {
                               <item.icon className={`h-4 w-4 ${item.color}`} />
                               <span className="text-sm text-[#fdfbf7]">{item.label}</span>
                               <span className="rounded-sm border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[#fdfbf7]/50">
-                                Monthly
+                                {t("billing.monthly.badge")}
                               </span>
                             </div>
                             <span
@@ -344,7 +343,7 @@ const BillingPage = () => {
                           </div>
                           {isAtLimit && (
                             <p className="mt-2 text-[10px] text-red-400 uppercase tracking-widest font-bold">
-                              Monthly limit reached, resets on the 1st (UTC)
+                              {t("billing.limit.monthlyReached")}
                             </p>
                           )}
                         </div>
@@ -354,7 +353,7 @@ const BillingPage = () => {
                 )}
 
                 <p className="mt-4 text-xs text-[#fdfbf7]/50 leading-relaxed">
-                  One SnapSolve plan covers all your SnapSolve products, so SideBy limits are shared fairly.
+                  {t("billing.usage.sharedNote")}
                 </p>
               </div>
             ) : null}
@@ -367,26 +366,26 @@ const BillingPage = () => {
             <div className="flex items-center gap-3 mb-6">
               <AlertCircle className="h-5 w-5 text-[#fdfbf7]/40" />
               <h3 className="font-serif text-xl text-[#fdfbf7]">
-                {usage?.plan && usage.plan !== "free" ? "Manage Plan" : "Available Plans"}
+                {usage?.plan && usage.plan !== "free" ? t("billing.sidebar.managePlan") : t("billing.sidebar.availablePlans")}
               </h3>
             </div>
             
             {usage?.plan && usage.plan !== "free" ? (
               <div className="space-y-4">
                 <p className="text-sm text-[#fdfbf7]/60 leading-relaxed">
-                  Manage your billing profiles, view previous invoices, update card methods, or cancel subscription inside the secure customer portal.
+                  {t("billing.sidebar.manageDesc")}
                 </p>
                 {usage.subscription && (
                   <div className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-3 text-xs text-[#fdfbf7]/50">
                     <p className="font-bold uppercase tracking-widest text-[#fdfbf7]/70">
-                      {isSnapSolveSourced ? "SnapSolve ecosystem" : "Local billing"}
+                      {isSnapSolveSourced ? t("billing.source.snapsolve") : t("billing.source.local")}
                     </p>
                     <p className="mt-1">
-                      Source: {usage.subscription.source.replace(/_/g, " ")}
+                      {t("billing.source.label", { source: usage.subscription.source.replace(/_/g, " ") })}
                     </p>
                     {usage.subscription.snapsolveWorkspace && (
                       <p className="mt-1">
-                        Workspace: {usage.subscription.snapsolveWorkspace.name}
+                        {t("billing.source.workspace", { name: usage.subscription.snapsolveWorkspace.name })}
                       </p>
                     )}
                   </div>
@@ -397,7 +396,7 @@ const BillingPage = () => {
                     className="w-full flex items-center justify-center gap-2 rounded-sm bg-orange-600 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
-                    Manage in SnapSolve
+                    {t("billing.sidebar.manageInSnapSolve")}
                   </a>
                 ) : (
                   <button
@@ -406,21 +405,21 @@ const BillingPage = () => {
                     className="w-full flex items-center justify-center gap-2 rounded-sm bg-orange-600 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700 disabled:opacity-50"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
-                    {portalLoading ? "Opening..." : "Customer Portal"}
+                    {portalLoading ? t("billing.sidebar.opening") : t("billing.sidebar.customerPortal")}
                   </button>
                 )}
               </div>
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-[#fdfbf7]/60 leading-relaxed">
-                  SideBy does not have a separate subscription. Review Flow, Pulse, Core, and Orbit once in SnapSolve Cockpit.
+                  {t("billing.sidebar.freeDesc")}
                 </p>
                 <a
                   href={brand.billingUrl}
                   className="flex items-center justify-center gap-2 rounded-sm bg-[#fdfbf7] px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                  Open SnapSolve Plans
+                  {t("billing.sidebar.openPlans")}
                 </a>
               </div>
             )}
@@ -429,15 +428,15 @@ const BillingPage = () => {
           {/* Plan Inclusion List */}
           <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-8">
             <h3 className="mb-6 font-serif text-xl text-[#fdfbf7]">
-              {usage?.plan && usage.plan !== "free" ? "Your Plan Inclusions" : "Flow Includes"}
+              {usage?.plan && usage.plan !== "free" ? t("billing.inclusions.paidTitle") : t("billing.inclusions.freeTitle")}
             </h3>
             <ul className="space-y-4">
-              {getPlanInclusions(usage?.plan).map((feature) => (
-                <li key={feature} className="flex items-start gap-3 text-sm text-[#fdfbf7]/70">
+              {getPlanInclusions(usage?.plan).map((featureKey) => (
+                <li key={featureKey} className="flex items-start gap-3 text-sm text-[#fdfbf7]/70">
                   <CheckCircle2
                     className={`mt-0.5 h-4 w-4 shrink-0 ${usage?.plan && usage.plan !== "free" ? "text-orange-500" : "text-emerald-500"}`}
                   />
-                  <span>{feature}</span>
+                  <span>{t(featureKey)}</span>
                 </li>
               ))}
             </ul>
@@ -447,7 +446,7 @@ const BillingPage = () => {
 
       <div className="mt-12 pt-6 border-t border-[#1f1f1f] text-center text-xs text-[#fdfbf7]/60">
         <a href={brand.companyUrl} target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
-          Made by SnapSolve Ink
+          {t("billing.footer.madeBy")}
         </a>
       </div>
   <KeyboardSpacer />

@@ -14,6 +14,7 @@ import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { toast } from "sonner";
 import type { ComparisonData } from "./types";
+import { formatDate, useI18n } from "@/i18n";
 
 interface VersionHistoryUIProps {
   comparisonId: string;
@@ -59,6 +60,7 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
   onSelectResult,
   activeVersionNumber,
 }) => {
+  const { t, lang, locale } = useI18n();
   const [baseVersion, setBaseVersion] = useState<number | null>(null);
   const [targetVersion, setTargetVersion] = useState<number | null>(null);
   const [isDiffMode, setIsDiffMode] = useState(false);
@@ -68,7 +70,7 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
     queryKey: ["comparison-versions", comparisonId],
     queryFn: async () => {
       const res = await apiFetch(buildApiUrl(`/api/comparisons/${comparisonId}/versions`));
-      if (!res.ok) throw new Error("Failed to load versions list.");
+      if (!res.ok) throw new Error(t("dw.ver.err.load"));
       const data = await res.json();
       return data.versions as Array<{
         id: string;
@@ -97,7 +99,7 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
           `/api/comparisons/${comparisonId}/diff?fromVersion=${baseVersion}&toVersion=${targetVersion}`,
         ),
       );
-      if (!res.ok) throw new Error("Failed to compute diff.");
+      if (!res.ok) throw new Error(t("dw.ver.err.diff"));
       return (await res.json()) as DiffOutput;
     },
     enabled: isDiffMode && baseVersion !== null && targetVersion !== null,
@@ -111,16 +113,16 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
     if (activeVersionNumber === ver.versionNumber) {
       // Toggle back to latest state
       onSelectResult(null, undefined);
-      toast.info("Showing latest live workbench state.");
+      toast.info(t("dw.ver.toast.live"));
     } else {
       onSelectResult(ver.result, ver.versionNumber);
-      toast.success(`Viewing historical Version ${ver.versionNumber} snapshot.`);
+      toast.success(t("dw.ver.toast.snapshot", { version: ver.versionNumber }));
     }
   };
 
   const handleCompareClick = () => {
     if (versions.length < 2) {
-      toast.error("At least two versions are required to compute a diff.");
+      toast.error(t("dw.ver.toast.needTwo"));
       return;
     }
     setIsDiffMode(true);
@@ -143,14 +145,15 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
           <div>
             <h2 className="text-xl font-black uppercase tracking-tight text-white flex items-center gap-2">
               <Clock className="h-5 w-5 text-orange-500/80" />
-              Time Travel Workbench
+              {t("dw.ver.title")}
             </h2>
             <p className="text-xs text-white/45 mt-1">
-              Analyze historical runs, identify score drifts, and audit fact variations.
+              {t("dw.ver.subtitle")}
             </p>
           </div>
           <button
             type="button"
+            aria-label={t("dw.ver.closeAria")}
             onClick={onClose}
             className="rounded-full border border-white/10 p-2 text-white/50 hover:bg-white/5 hover:text-white transition-all"
           >
@@ -166,19 +169,19 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              <p className="text-xs">Scanning run timeline...</p>
+              <p className="text-xs">{t("dw.ver.scanning")}</p>
             </div>
           ) : versions.length === 0 ? (
             <div className="text-center py-12 text-white/40">
               <Clock className="mx-auto h-8 w-8 mb-3 opacity-30" />
-              <p className="text-sm">No historical version snapshots found.</p>
-              <p className="text-xs mt-1">Version snapshots are created automatically after each comparison refresh.</p>
+              <p className="text-sm">{t("dw.ver.emptyTitle")}</p>
+              <p className="text-xs mt-1">{t("dw.ver.emptyDesc")}</p>
             </div>
           ) : !isDiffMode ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-widest text-white/45">
-                  Timeline ({versions.length} runs)
+                  {t("dw.ver.timeline", { count: versions.length })}
                 </span>
                 {versions.length >= 2 && (
                   <button
@@ -187,7 +190,7 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
                     className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/25 bg-orange-500/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-orange-400 hover:bg-orange-500/20 transition-all"
                   >
                     <GitCompare className="h-3.5 w-3.5" />
-                    Diff snapshots
+                    {t("dw.ver.diffSnapshots")}
                   </button>
                 )}
               </div>
@@ -216,33 +219,32 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
                             {hasAlert && (
                               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 uppercase tracking-widest">
                                 <AlertTriangle className="h-3 w-3" />
-                                Drift alert
+                                {t("dw.ver.driftAlert")}
                               </span>
                             )}
                           </div>
                           <p className="mt-2 text-sm font-medium text-white/80">
-                            {ver.result?.query || "Entity Comparison"}
+                            {ver.result?.query || t("dw.ver.entityComparison")}
                           </p>
                         </div>
                         <span className="text-[10px] text-white/40 font-mono">
-                          {new Date(ver.createdAt).toLocaleTimeString([], {
+                          {new Intl.DateTimeFormat(locale, {
                             hour: "2-digit",
                             minute: "2-digit",
-                          })}
+                          }).format(new Date(ver.createdAt))}
                         </span>
                       </div>
 
                       <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-[10px] text-white/45">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {new Date(ver.createdAt).toLocaleDateString([], {
-                            month: "short",
-                            day: "numeric",
-                          })}
+                          {formatDate(ver.createdAt, lang)}
                         </span>
-                        <span>{ver.sourceCount} cited sources</span>
+                        <span>{t("dw.ver.citedSources", { count: ver.sourceCount })}</span>
                         <span>
-                          Conf: {ver.overallConfidence ? `${Math.round(ver.overallConfidence * 100)}%` : "N/A"}
+                          {t("dw.ver.conf", {
+                            value: ver.overallConfidence ? `${Math.round(ver.overallConfidence * 100)}%` : t("dw.ver.na"),
+                          })}
                         </span>
                       </div>
 
@@ -265,10 +267,10 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
                   onClick={() => setIsDiffMode(false)}
                   className="text-xs font-bold uppercase tracking-wider text-white/55 hover:text-white transition-colors"
                 >
-                  ← Back to timeline
+                  {t("dw.ver.backToTimeline")}
                 </button>
                 <span className="text-xs font-bold uppercase tracking-widest text-orange-400">
-                  Version Difference
+                  {t("dw.ver.versionDiff")}
                 </span>
               </div>
 
@@ -276,7 +278,7 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
               <div className="grid grid-cols-2 gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-wider text-white/45 mb-1.5">
-                    Base Snapshot
+                    {t("dw.ver.baseSnapshot")}
                   </label>
                   <select
                     value={baseVersion || ""}
@@ -285,14 +287,14 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
                   >
                     {versions.map((v) => (
                       <option key={v.id} value={v.versionNumber}>
-                        V{v.versionNumber} ({new Date(v.createdAt).toLocaleDateString()})
+                        V{v.versionNumber} ({formatDate(v.createdAt, lang)})
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-wider text-white/45 mb-1.5">
-                    Target Snapshot
+                    {t("dw.ver.targetSnapshot")}
                   </label>
                   <select
                     value={targetVersion || ""}
@@ -301,7 +303,7 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
                   >
                     {versions.map((v) => (
                       <option key={v.id} value={v.versionNumber}>
-                        V{v.versionNumber} ({new Date(v.createdAt).toLocaleDateString()})
+                        V{v.versionNumber} ({formatDate(v.createdAt, lang)})
                       </option>
                     ))}
                   </select>
@@ -314,7 +316,7 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  <p className="text-xs">Computing JSON diff matrix...</p>
+                  <p className="text-xs">{t("dw.ver.computingDiff")}</p>
                 </div>
               ) : diffQuery.data ? (
                 <div className="space-y-6">
@@ -322,11 +324,11 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-widest text-white/45 mb-3 flex items-center gap-1.5">
                       <TrendingUp className="h-3.5 w-3.5 text-orange-400" />
-                      Score Drift Analysis
+                      {t("dw.ver.scoreDrift")}
                     </h3>
                     {(!diffQuery.data.diff?.scores || diffQuery.data.diff.scores.length === 0) ? (
                       <div className="rounded-xl border border-white/5 bg-white/5 p-4 text-center text-xs text-white/40">
-                        No dimensions scored differently. All scores are matching.
+                        {t("dw.ver.noScoreDrift")}
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -339,7 +341,7 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
                             <div className="mt-3 grid grid-cols-2 gap-4 text-xs">
                               {/* Entity A */}
                               <div className="border-r border-white/10 pr-2">
-                                <span className="text-[10px] text-white/45 font-semibold uppercase">Entity A</span>
+                                <span className="text-[10px] text-white/45 font-semibold uppercase">{t("dw.ver.entityA")}</span>
                                 <div className="flex items-center justify-between mt-1">
                                   <span className="text-white/60">{score.oldA} → {score.newA}</span>
                                   <span
@@ -357,7 +359,7 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
                               </div>
                               {/* Entity B */}
                               <div>
-                                <span className="text-[10px] text-white/45 font-semibold uppercase">Entity B</span>
+                                <span className="text-[10px] text-white/45 font-semibold uppercase">{t("dw.ver.entityB")}</span>
                                 <div className="flex items-center justify-between mt-1">
                                   <span className="text-white/60">{score.oldB} → {score.newB}</span>
                                   <span
@@ -384,24 +386,24 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-widest text-white/45 mb-3 flex items-center gap-1.5">
                       <GitCompare className="h-3.5 w-3.5 text-orange-400" />
-                      Fact Variations
+                      {t("dw.ver.factVariations")}
                     </h3>
                     <div className="space-y-4">
                       {/* Added Facts */}
                       <div>
                         <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1 mb-2">
                           <Plus className="h-3 w-3" />
-                          Added Facts ({diffQuery.data.diff?.facts?.added?.length || 0})
+                          {t("dw.ver.addedFacts", { count: diffQuery.data.diff?.facts?.added?.length || 0 })}
                         </span>
                         {!diffQuery.data.diff?.facts?.added || diffQuery.data.diff.facts.added.length === 0 ? (
-                          <p className="text-[11px] text-white/30 italic pl-4">No new facts added.</p>
+                          <p className="text-[11px] text-white/30 italic pl-4">{t("dw.ver.noAddedFacts")}</p>
                         ) : (
                           <ul className="space-y-2 pl-2">
                             {diffQuery.data.diff.facts.added.map((f, i) => (
                               <li key={i} className="text-xs text-white/75 bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-2.5">
                                 <div className="flex items-center justify-between mb-1.5">
                                   <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                                    {f.entity === "a" ? "Entity A" : "Entity B"} • {f.dimension}
+                                    {f.entity === "a" ? t("dw.ver.entityA") : t("dw.ver.entityB")} • {f.dimension}
                                   </span>
                                   <span className="text-[9px] text-white/30 truncate max-w-[200px]">{f.source}</span>
                                 </div>
@@ -416,17 +418,17 @@ export const VersionHistoryUI: React.FC<VersionHistoryUIProps> = ({
                       <div>
                         <span className="text-[10px] font-black uppercase tracking-wider text-red-400 flex items-center gap-1 mb-2">
                           <Minus className="h-3 w-3" />
-                          Removed Facts ({diffQuery.data.diff?.facts?.removed?.length || 0})
+                          {t("dw.ver.removedFacts", { count: diffQuery.data.diff?.facts?.removed?.length || 0 })}
                         </span>
                         {!diffQuery.data.diff?.facts?.removed || diffQuery.data.diff.facts.removed.length === 0 ? (
-                          <p className="text-[11px] text-white/30 italic pl-4">No facts removed.</p>
+                          <p className="text-[11px] text-white/30 italic pl-4">{t("dw.ver.noRemovedFacts")}</p>
                         ) : (
                           <ul className="space-y-2 pl-2">
                             {diffQuery.data.diff.facts.removed.map((f, i) => (
                               <li key={i} className="text-xs text-white/60 bg-red-500/5 border border-red-500/10 rounded-xl p-2.5">
                                 <div className="flex items-center justify-between mb-1.5">
                                   <span className="text-[10px] font-bold uppercase tracking-wider text-red-400">
-                                    {f.entity === "a" ? "Entity A" : "Entity B"} • {f.dimension}
+                                    {f.entity === "a" ? t("dw.ver.entityA") : t("dw.ver.entityB")} • {f.dimension}
                                   </span>
                                   <span className="text-[9px] text-white/30 truncate max-w-[200px]">{f.source}</span>
                                 </div>

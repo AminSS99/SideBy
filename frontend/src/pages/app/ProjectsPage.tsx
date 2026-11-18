@@ -9,8 +9,10 @@ import { EmptyState } from "@/components/EmptyState";
 import { GlowCard } from "@/components/GlowCard";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { formatDate, useI18n } from "@/i18n";
 
 const ProjectsPage = () => {
+  const { t, lang } = useI18n();
   const { activeWorkspace } = useWorkspace();
   const {
     projects,
@@ -37,7 +39,7 @@ const ProjectsPage = () => {
     event.preventDefault();
 
     if (!name.trim()) {
-      toast.error("Project name is required.");
+      toast.error(t("wsp.projects.nameRequired"));
       return;
     }
 
@@ -49,15 +51,15 @@ const ProjectsPage = () => {
       });
       setName("");
       setDescription("");
-      toast.success("Project created.", {
-        description: `${project.name} is now ready to receive tracked AI runs.`,
+      toast.success(t("wsp.projects.createdToast"), {
+        description: t("wsp.projects.createdToastDesc", { name: project.name }),
       });
     } catch (creationError) {
-      toast.error("Failed to create project.", {
+      toast.error(t("wsp.projects.createFail"), {
         description:
           creationError instanceof Error
             ? creationError.message
-            : "Check your workspace state and try again.",
+            : t("wsp.projects.createFailDesc"),
       });
     } finally {
       setIsSubmitting(false);
@@ -68,14 +70,13 @@ const ProjectsPage = () => {
     <div ref={containerRef} className="space-y-8">
       <div className="proj-header">
         <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-          Projects
+          {t("app.nav.projects")}
         </p>
         <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
-          Real project records
+          {t("wsp.projects.title")}
         </h1>
         <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[#fdfbf7]/60">
-          Create projects inside your active workspace and use them to group persisted
-          compare runs before richer orchestration lands.
+          {t("wsp.projects.subtitle")}
         </p>
       </div>
 
@@ -91,11 +92,11 @@ const ProjectsPage = () => {
                 <Plus className="h-6 w-6" />
               </div>
               <div>
-                <h2 className="font-serif text-2xl text-[#fdfbf7]">Create project</h2>
+                <h2 className="font-serif text-2xl text-[#fdfbf7]">{t("wsp.projects.createHeading")}</h2>
                 <p className="mt-1 text-xs text-[#fdfbf7]/40">
                   {activeWorkspace
-                    ? `Inside ${activeWorkspace.name}`
-                    : "Load a workspace first"}
+                    ? t("wsp.projects.insideWorkspace", { name: activeWorkspace.name })
+                    : t("wsp.projects.loadWorkspaceFirst")}
                 </p>
               </div>
             </div>
@@ -103,12 +104,12 @@ const ProjectsPage = () => {
             <div className="space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
-                  Project name
+                  {t("wsp.projects.nameLabel")}
                 </label>
                 <Input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  placeholder="e.g. Q4 Competitor Analysis"
+                  placeholder={t("wsp.projects.namePlaceholder")}
                   className="h-12 rounded-sm border-[#333] bg-[#0c0b0a] text-[#fdfbf7] focus-visible:ring-1 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
                   disabled={!activeWorkspace || isSubmitting}
                 />
@@ -116,12 +117,12 @@ const ProjectsPage = () => {
 
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
-                  Description
+                  {t("wsp.projects.descLabel")}
                 </label>
                 <Textarea
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Track the first persisted compare and dashboard history flows."
+                  placeholder={t("wsp.projects.descPlaceholder")}
                   className="min-h-32 resize-none rounded-sm border-[#333] bg-[#0c0b0a] text-[#fdfbf7] focus-visible:ring-1 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
                   disabled={!activeWorkspace || isSubmitting}
                 />
@@ -135,12 +136,12 @@ const ProjectsPage = () => {
                 {isSubmitting ? (
                   <>
                     <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    {t("wsp.projects.creating")}
                   </>
                 ) : (
                   <>
                     <Plus className="mr-2 h-4 w-4" />
-                    Create project
+                    {t("wsp.projects.createHeading")}
                   </>
                 )}
               </button>
@@ -157,25 +158,25 @@ const ProjectsPage = () => {
         <GlowCard containerClassName="proj-list" className="p-8">
           <div className="mb-8 flex items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
             <div>
-              <h2 className="font-serif text-2xl text-[#fdfbf7]">Workspace projects</h2>
+              <h2 className="font-serif text-2xl text-[#fdfbf7]">{t("wsp.projects.listHeading")}</h2>
               <p className="mt-2 text-sm text-[#fdfbf7]/50">
-                Select the active project to attach future compare runs.
+                {t("wsp.projects.listSubtitle")}
               </p>
             </div>
             <div className="rounded-sm border border-[#333] bg-[#0c0b0a] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
-              {projects.length} total
+              {t("wsp.common.totalCount", { count: projects.length })}
             </div>
           </div>
 
           {isLoading ? (
             <div className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-12 text-center text-sm text-[#fdfbf7]/40 animate-pulse">
-              Loading projects...
+              {t("wsp.projects.loading")}
             </div>
           ) : projects.length === 0 ? (
             <EmptyState 
               icon={FolderKanban}
-              title="No projects yet"
-              description="Create the first project so compare runs can start landing in something more structured than the workspace root."
+              title={t("wsp.projects.emptyTitle")}
+              description={t("wsp.projects.emptyDesc")}
               glowColor="emerald"
             />
           ) : (
@@ -201,7 +202,7 @@ const ProjectsPage = () => {
                           {project.name}
                         </h3>
                         <p className="mt-3 text-sm leading-relaxed text-[#fdfbf7]/60 line-clamp-2">
-                          {project.description || "No description added yet."}
+                          {project.description || t("wsp.projects.noDesc")}
                         </p>
                       </div>
                       <span
@@ -212,14 +213,14 @@ const ProjectsPage = () => {
                             : "border-[#333] bg-[#111] text-[#fdfbf7]/40",
                         ].join(" ")}
                       >
-                        {isActive ? "Active" : "Available"}
+                        {isActive ? t("wsp.projects.active") : t("wsp.projects.available")}
                       </span>
                     </div>
 
                     <div className="mt-6 flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
-                      <span>Created</span>
+                      <span>{t("wsp.common.created")}</span>
                       <span className="h-1 w-1 rounded-full bg-[#444]" />
-                      <span>{new Date(project.createdAt).toLocaleDateString()}</span>
+                      <span>{formatDate(project.createdAt, lang)}</span>
                     </div>
                   </button>
                 );

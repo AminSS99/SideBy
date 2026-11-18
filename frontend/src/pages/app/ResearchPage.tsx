@@ -16,6 +16,7 @@ import { GlowCard } from "@/components/GlowCard";
 import { buildApiUrl } from "@/config/env";
 import { ApiError, apiFetch, describeApiFailure } from "@/lib/api";
 import { safeHref } from "@/lib/safe-url";
+import { useT, type MessageKey } from "@/i18n";
 
 interface WebResult {
   title: string;
@@ -29,11 +30,11 @@ interface SearchOutcome {
   usage: { limit: number | null; remaining: number | null };
 }
 
-const STARTER_QUERIES = [
-  "Neon vs Supabase pricing 2026",
-  "Cursor vs Windsurf enterprise security",
-  "Vercel vs Cloudflare Workers cold start",
-  "Linear vs Jira API rate limits",
+const STARTER_QUERY_KEYS: MessageKey[] = [
+  "ins.research.starter1",
+  "ins.research.starter2",
+  "ins.research.starter3",
+  "ins.research.starter4",
 ];
 
 const hostOf = (url: string) => {
@@ -45,6 +46,7 @@ const hostOf = (url: string) => {
 };
 
 const ResearchPage = () => {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [outcome, setOutcome] = useState<SearchOutcome | null>(null);
@@ -104,13 +106,13 @@ const ResearchPage = () => {
       <div className="res-header flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.24em] text-orange-300">
-            <Sparkles className="h-3.5 w-3.5" /> Live web search
+            <Sparkles className="h-3.5 w-3.5" /> {t("ins.research.kicker")}
           </p>
           <h1 className="mt-2.5 font-serif text-3xl tracking-tight text-[#fdfbf7] sm:text-4xl">
-            Research Canvas
+            {t("ins.research.title")}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#fdfbf7]/75">
-            Search the live web for sources before you compare. Free accounts get 2 searches a day.
+            {t("ins.research.subtitle")}
           </p>
         </div>
 
@@ -140,10 +142,12 @@ const ResearchPage = () => {
           </span>
           <span className="font-medium">
             {limitReached
-              ? "You've used today's free searches · resets at midnight UTC"
+              ? t("ins.research.allowanceUsedBadge")
               : remaining !== null
-                ? `${remaining} free ${remaining === 1 ? "search" : "searches"} left today`
-                : "2 free searches per day"}
+                ? remaining === 1
+                  ? t("ins.research.remainingOne")
+                  : t("ins.research.remainingMany", { count: remaining })
+                : t("ins.research.allowanceDefault")}
           </span>
         </div>
       </div>
@@ -161,8 +165,8 @@ const ResearchPage = () => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 maxLength={300}
-                aria-label="Web search query"
-                placeholder="What do you want to find? e.g. Neon vs Supabase pricing 2026"
+                aria-label={t("ins.research.inputAria")}
+                placeholder={t("ins.research.inputPlaceholder")}
                 className="min-h-12 w-full bg-transparent px-3.5 py-2.5 font-serif text-base text-[#fdfbf7] outline-none placeholder:text-[#fdfbf7]/40 focus-visible:outline-none sm:text-lg"
               />
             </div>
@@ -174,11 +178,11 @@ const ResearchPage = () => {
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Searching
+                  {t("ins.research.searching")}
                 </>
               ) : (
                 <>
-                  Search
+                  {t("ins.research.search")}
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
@@ -188,13 +192,15 @@ const ResearchPage = () => {
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 px-1">
             <p className="text-xs text-[#fdfbf7]/70" aria-live="polite">
               {limitReached
-                ? "You've used today's free searches. They reset at midnight UTC."
+                ? t("ins.research.allowanceUsedNote")
                 : remaining !== null
-                  ? `${remaining} free ${remaining === 1 ? "search" : "searches"} left today`
-                  : "2 free searches per day"}
+                  ? remaining === 1
+                    ? t("ins.research.remainingOne")
+                    : t("ins.research.remainingMany", { count: remaining })
+                  : t("ins.research.allowanceDefault")}
             </p>
             <span className="font-mono text-[11px] text-[#fdfbf7]/55">
-              Minimum 3 characters · Primary sources prioritized
+              {t("ins.research.inputHint")}
             </span>
           </div>
         </form>
@@ -204,15 +210,15 @@ const ResearchPage = () => {
         {loading ? (
           <div
             role="status"
-            aria-label="Searching the live web for sources"
+            aria-label={t("ins.research.loadingAria")}
             className="space-y-4"
           >
             <div className="flex items-center justify-between px-1">
               <p className=" inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-orange-300">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Scanning live documentation & benchmarks…
+                {t("ins.research.loadingStatus")}
               </p>
-              <span className="font-mono text-xs text-[#fdfbf7]/60">Querying index</span>
+              <span className="font-mono text-xs text-[#fdfbf7]/60">{t("ins.research.queryingIndex")}</span>
             </div>
             {[0, 1, 2].map((item) => (
               <div
@@ -235,10 +241,12 @@ const ResearchPage = () => {
           <div className="space-y-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
               <h2 className="font-serif text-2xl tracking-tight text-[#fdfbf7]">
-                {outcome.results.length} {outcome.results.length === 1 ? "source" : "sources"} for “{outcome.query}”
+                {outcome.results.length === 1
+                  ? t("ins.research.resultsOne", { query: outcome.query })
+                  : t("ins.research.resultsMany", { count: outcome.results.length, query: outcome.query })}
               </h2>
               <span className="font-mono text-xs text-[#fdfbf7]/60">
-                Verified external links
+                {t("ins.research.verifiedLinks")}
               </span>
             </div>
 
@@ -246,10 +254,10 @@ const ResearchPage = () => {
               <div className="rounded-2xl border border-white/[0.09] bg-[#100e0c] p-8 text-center">
                 <FileSearch className="mx-auto h-8 w-8 text-orange-300/80" />
                 <p className="mt-3 font-serif text-xl text-[#fdfbf7]">
-                  No sources found for that query
+                  {t("ins.research.emptyResultsTitle")}
                 </p>
                 <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-[#fdfbf7]/70">
-                  No sources found. Try a more specific search with product names, pricing tiers, or benchmark terms.
+                  {t("ins.research.emptyResultsDesc")}
                 </p>
               </div>
             ) : (
@@ -273,7 +281,7 @@ const ResearchPage = () => {
                           {hostOf(result.url)}
                         </span>
                         <span className="font-mono text-xs text-[#fdfbf7]/55">
-                          Source 0{index + 1}
+                          {t("ins.research.sourceLabel", { num: `0${index + 1}` })}
                         </span>
                       </div>
 
@@ -306,29 +314,32 @@ const ResearchPage = () => {
                   <Compass className="h-5 w-5" />
                 </div>
                 <h2 className="mt-4 font-serif text-2xl text-[#fdfbf7]">
-                  Inspect primary evidence before you run a full comparison
+                  {t("ins.research.emptyStateTitle")}
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-[#fdfbf7]/70">
-                  Enter a technical question above or pick a starter prompt below to pull official pricing pages, documentation, and benchmark reports.
+                  {t("ins.research.emptyStateDesc")}
                 </p>
               </div>
 
               <div className="w-full lg:max-w-md">
                 <p className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.18em] text-[#fdfbf7]/65">
-                  Try a research query
+                  {t("ins.research.tryQuery")}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {STARTER_QUERIES.map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setQuery(preset)}
-                      className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/[0.1] bg-black/40 px-3.5 py-2 text-left text-xs font-medium text-[#fdfbf7]/80 transition duration-200 hover:border-orange-300/35 hover:bg-orange-400/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-[0.99]"
-                    >
-                      <span>{preset}</span>
-                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-orange-300" />
-                    </button>
-                  ))}
+                  {STARTER_QUERY_KEYS.map((presetKey) => {
+                    const preset = t(presetKey);
+                    return (
+                      <button
+                        key={presetKey}
+                        type="button"
+                        onClick={() => setQuery(preset)}
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/[0.1] bg-black/40 px-3.5 py-2 text-left text-xs font-medium text-[#fdfbf7]/80 transition duration-200 hover:border-orange-300/35 hover:bg-orange-400/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-[0.99]"
+                      >
+                        <span>{preset}</span>
+                        <ArrowRight className="h-3.5 w-3.5 shrink-0 text-orange-300" />
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>

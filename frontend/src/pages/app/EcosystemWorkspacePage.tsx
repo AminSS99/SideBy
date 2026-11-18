@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { captureEvent } from "@/lib/posthog";
+import { statusLabel, useT, type MessageKey } from "@/i18n";
 
 type EcosystemProduct = {
   slug: string;
@@ -41,6 +42,7 @@ type EcosystemSession = {
 type ProductView = EcosystemProduct & {
   fallbackIcon: typeof GitCompareArrows;
   accent: string;
+  taglineKey?: MessageKey;
 };
 
 const fallbackProducts: ProductView[] = [
@@ -48,6 +50,7 @@ const fallbackProducts: ProductView[] = [
     slug: "sideby",
     name: "SideBy",
     tagline: "Source-backed comparisons and decision intelligence.",
+    taglineKey: "ins.eco.product.sidebyTagline",
     icon_url: "/sideby.ico?v=20260728-real",
     launch_url: "/app/comparisons",
     status: "active",
@@ -59,6 +62,7 @@ const fallbackProducts: ProductView[] = [
     slug: "orizonte",
     name: "Orizonte",
     tagline: "Available when your Snap workspace enables it.",
+    taglineKey: "ins.eco.product.availableTagline",
     icon_url: null,
     launch_url: null,
     status: "workspace_required",
@@ -70,6 +74,7 @@ const fallbackProducts: ProductView[] = [
     slug: "rallia",
     name: "Rallia",
     tagline: "Available when your Snap workspace enables it.",
+    taglineKey: "ins.eco.product.availableTagline",
     icon_url: null,
     launch_url: null,
     status: "workspace_required",
@@ -94,7 +99,8 @@ const productAccent = (slug: string) => {
 };
 
 const EcosystemWorkspacePage = () => {
-  usePageTitle("Snap workspace");
+  const t = useT();
+  usePageTitle(t("ins.eco.kicker"));
   const { user } = useAuth();
   const { activeWorkspace } = useWorkspace();
   const [searchParams] = useSearchParams();
@@ -174,25 +180,25 @@ const EcosystemWorkspacePage = () => {
           <div className="flex items-start gap-3">
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
             <div>
-              <p className="text-sm font-semibold text-emerald-100">Your first comparison is complete.</p>
-              <p className="mt-1 text-xs leading-5 text-white/45">The result is saved in this workspace and remains available whenever you need the evidence.</p>
+              <p className="text-sm font-semibold text-emerald-100">{t("ins.eco.bannerTitle")}</p>
+              <p className="mt-1 text-xs leading-5 text-white/45">{t("ins.eco.bannerDesc")}</p>
             </div>
           </div>
-          <Link to={`/app/comparisons/${encodeURIComponent(completedComparisonId)}`} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-emerald-200/20 px-5 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-300/10">Review result <ArrowRight className="h-4 w-4" /></Link>
+          <Link to={`/app/comparisons/${encodeURIComponent(completedComparisonId)}`} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-emerald-200/20 px-5 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-300/10">{t("ins.eco.reviewResult")} <ArrowRight className="h-4 w-4" /></Link>
         </section>
       )}
 
       <section className="relative overflow-hidden rounded-[28px] border border-white/[0.09] bg-[radial-gradient(circle_at_85%_20%,rgba(217,70,239,.13),transparent_34%),radial-gradient(circle_at_20%_0%,rgba(249,115,22,.14),transparent_38%),rgba(255,255,255,.025)] p-5 sm:p-8 lg:grid lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-10 lg:p-10">
         <div className="ecosystem-hero-copy relative z-10">
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300"><Layers3 className="h-4 w-4" /> Snap workspace</div>
-          <h1 className="mt-4 max-w-3xl font-serif text-4xl leading-[0.98] tracking-tight text-[#fffaf1] sm:text-5xl lg:text-6xl">One workspace. Every product that helps you move forward.</h1>
-          <p className="mt-5 max-w-2xl text-sm leading-6 text-white/52 sm:text-base sm:leading-7">Your comparison is one part of a broader Snap workflow. Open enabled products from the same workspace and keep the decision trail connected.</p>
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300"><Layers3 className="h-4 w-4" /> {t("ins.eco.kicker")}</div>
+          <h1 className="mt-4 max-w-3xl font-serif text-4xl leading-[0.98] tracking-tight text-[#fffaf1] sm:text-5xl lg:text-6xl">{t("ins.eco.heroTitle")}</h1>
+          <p className="mt-5 max-w-2xl text-sm leading-6 text-white/52 sm:text-base sm:leading-7">{t("ins.eco.heroDesc")}</p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <button type="button" onClick={() => productsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 px-6 text-sm font-bold text-white transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-orange-300">
-              Explore products <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              {t("ins.eco.exploreProducts")} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </button>
             <Link to="/app/comparisons" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.035] px-6 text-sm font-semibold text-white transition hover:bg-white/[0.07]">
-              New comparison <GitCompareArrows className="h-4 w-4" />
+              {t("ins.eco.newComparison")} <GitCompareArrows className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -209,26 +215,26 @@ const EcosystemWorkspacePage = () => {
 
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5">
-          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/35">Workspace</p>
-          <p className="mt-2 truncate font-serif text-xl text-white">{session?.workspace?.name || activeWorkspace?.name || "SideBy workspace"}</p>
+          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/35">{t("ins.eco.stat.workspace")}</p>
+          <p className="mt-2 truncate font-serif text-xl text-white">{session?.workspace?.name || activeWorkspace?.name || t("ins.eco.stat.workspaceFallback")}</p>
         </div>
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5">
-          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/35">Connected products</p>
-          <p className="mt-2 font-serif text-xl text-white">{products.reduce((acc, product) => acc + (product.enabled ? 1 : 0), 0)} enabled</p>
+          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/35">{t("ins.eco.stat.connectedProducts")}</p>
+          <p className="mt-2 font-serif text-xl text-white">{t("ins.eco.stat.enabledCount", { count: products.reduce((acc, product) => acc + (product.enabled ? 1 : 0), 0) })}</p>
         </div>
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5">
-          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/35">Privacy</p>
-          <p className="mt-2 flex items-center gap-2 font-serif text-xl text-white"><LockKeyhole className="h-4 w-4 text-emerald-300" /> Workspace scoped</p>
+          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/35">{t("ins.eco.stat.privacy")}</p>
+          <p className="mt-2 flex items-center gap-2 font-serif text-xl text-white"><LockKeyhole className="h-4 w-4 text-emerald-300" /> {t("ins.eco.stat.workspaceScoped")}</p>
         </div>
       </section>
 
       <section ref={productsRef} className="scroll-mt-24">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300">Product constellation</p>
-            <h2 className="mt-2 font-serif text-3xl text-[#fffaf1] sm:text-4xl">Continue across Snap</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300">{t("ins.eco.sectionKicker")}</p>
+            <h2 className="mt-2 font-serif text-3xl text-[#fffaf1] sm:text-4xl">{t("ins.eco.sectionTitle")}</h2>
           </div>
-          {isLoading && <LoaderCircle className="h-5 w-5 animate-spin text-white/35" aria-label="Loading ecosystem products" />}
+          {isLoading && <LoaderCircle className="h-5 w-5 animate-spin text-white/35" aria-label={t("ins.eco.loadingAria")} />}
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
@@ -236,6 +242,11 @@ const EcosystemWorkspacePage = () => {
             const Icon = product.fallbackIcon;
             const canOpen = Boolean(product.launch_url && (product.enabled || product.slug === "sideby"));
             const isExternal = Boolean(product.launch_url?.startsWith("http"));
+            const productStatus = product.enabled
+              ? t("ins.eco.status.enabled")
+              : product.status === "workspace_required"
+                ? t("ins.eco.status.workspaceRequired")
+                : statusLabel(t, product.status).replace(/_/g, " ");
             const content = (
               <>
                 <div className={`absolute inset-0 bg-gradient-to-br ${product.accent}`} />
@@ -246,13 +257,13 @@ const EcosystemWorkspacePage = () => {
                     </span>
                     <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[9px] font-bold uppercase tracking-[0.13em] ${product.enabled ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-200" : "border-white/10 bg-black/20 text-white/35"}`}>
                       {product.enabled ? <CheckCircle2 className="h-3 w-3" /> : <LockKeyhole className="h-3 w-3" />}
-                      {product.enabled ? "Enabled" : product.status.replace(/_/g, " ")}
+                      {productStatus}
                     </span>
                   </div>
                   <h3 className="mt-10 font-serif text-3xl text-white">{product.name}</h3>
-                  <p className="mt-3 flex-1 text-sm leading-6 text-white/48">{product.tagline || "A product in your Snap workspace."}</p>
+                  <p className="mt-3 flex-1 text-sm leading-6 text-white/48">{product.taglineKey ? t(product.taglineKey) : product.tagline || t("ins.eco.product.defaultTagline")}</p>
                   <span className={`mt-7 inline-flex min-h-11 items-center gap-2 text-sm font-semibold ${canOpen ? "text-orange-200" : "text-white/30"}`}>
-                    {canOpen ? "Open product" : "Enable in Snap workspace"}
+                    {canOpen ? t("ins.eco.openProduct") : t("ins.eco.enableInWorkspace")}
                     {canOpen ? (isExternal ? <ExternalLink className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />) : <LockKeyhole className="h-4 w-4" />}
                   </span>
                 </div>
@@ -275,10 +286,10 @@ const EcosystemWorkspacePage = () => {
       {!session?.workspace && !isLoading && (
         <div className="flex flex-col gap-4 rounded-2xl border border-sky-300/15 bg-sky-400/[0.055] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
-            <p className="text-sm font-semibold text-sky-100">Snap workspace connection is not available in this environment.</p>
-            <p className="mt-1 text-xs leading-5 text-white/42">SideBy remains fully usable. Additional products activate when the ecosystem bridge returns an enabled workspace session.</p>
+            <p className="text-sm font-semibold text-sky-100">{t("ins.eco.unavailableTitle")}</p>
+            <p className="mt-1 text-xs leading-5 text-white/42">{t("ins.eco.unavailableDesc")}</p>
           </div>
-          <Link to="/contact" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-sky-200/20 px-5 text-xs font-semibold text-sky-100 hover:bg-sky-300/10">Ask about access</Link>
+          <Link to="/contact" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-sky-200/20 px-5 text-xs font-semibold text-sky-100 hover:bg-sky-300/10">{t("ins.eco.askAccess")}</Link>
         </div>
       )}
     </div>

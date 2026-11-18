@@ -7,6 +7,7 @@ import { copyText } from "@/lib/clipboard";
 import { toast } from "sonner";
 import type { ComparisonData } from "./types";
 import { safeHref } from "@/lib/safe-url";
+import { formatDate, useI18n } from "@/i18n";
 
 /**
  * Decision receipt (F01), bound to an explicit record.
@@ -55,10 +56,10 @@ const pickWinner = (value: unknown): "a" | "b" | "tie" | null =>
  * (choiceEntities) when present, falling back to the current record's
  * names only for choices saved before snapshots existed.
  */
-function choiceEntityName(matrix: SavedMatrix | null, result: ComparisonData) {
+function choiceEntityName(matrix: SavedMatrix | null, result: ComparisonData, tieLabel: string) {
   if (!matrix) return null;
   const winner = pickWinner(matrix.result?.winner);
-  if (winner === "tie") return "Tie";
+  if (winner === "tie") return tieLabel;
   if (!winner) return null;
   const snapshot = matrix.result?.choiceEntities;
   const frozen = winner === "a" ? snapshot?.a : snapshot?.b;
@@ -79,6 +80,7 @@ export function DecisionReceiptPanel({
   versionNumber?: number;
   isHistorical: boolean;
 }) {
+  const { t, lang } = useI18n();
   const [copied, setCopied] = useState(false);
   const [choice, setChoice] = useState<"a" | "b" | "">("");
   const [rationale, setRationale] = useState("");
@@ -94,7 +96,7 @@ export function DecisionReceiptPanel({
     queryKey: ["decision-matrices", comparisonId],
     queryFn: async () => {
       const res = await apiFetch(buildApiUrl(`/api/decision-matrices?comparisonId=${comparisonId}`));
-      if (!res.ok) throw new Error("Unable to load saved decisions.");
+      if (!res.ok) throw new Error(t("dw.rec.err.load"));
       const data = (await res.json()) as { matrices: SavedMatrix[] };
       return Array.isArray(data.matrices) ? data.matrices : [];
     },
@@ -143,7 +145,9 @@ export function DecisionReceiptPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           comparisonId,
-          name: `My decision — ${choice === "a" ? result.entities.a.name : result.entities.b.name}`,
+          name: t("dw.rec.myDecisionName", {
+            name: choice === "a" ? result.entities.a.name : result.entities.b.name,
+          }),
           weights: {},
           result: {
             winner: choice,
@@ -157,7 +161,7 @@ export function DecisionReceiptPanel({
           },
         }),
       });
-      if (!res.ok) throw new Error("Your decision could not be recorded. Try again.");
+      if (!res.ok) throw new Error(t("dw.rec.err.record"));
       const data: unknown = await res.json();
       if (
         typeof data !== "object" ||
@@ -169,17 +173,17 @@ export function DecisionReceiptPanel({
         ((data as { matrix: { result: { recordedAs?: unknown } | null } }).matrix.result?.recordedAs !==
           "user-choice")
       ) {
-        throw new Error("The saved decision came back in an unexpected shape and was not shown.");
+        throw new Error(t("dw.rec.err.unexpectedShape"));
       }
       prependMatrix((data as { matrix: SavedMatrix }).matrix);
       setChoice("");
       setRationale("");
-      toast.success("Your decision is recorded.", {
-        description: "It stays distinct from the AI recommendation.",
+      toast.success(t("dw.rec.toast.recorded"), {
+        description: t("dw.rec.toast.recordedDesc"),
       });
     } catch (error) {
-      toast.error("Unable to record your decision.", {
-        description: error instanceof Error ? error.message : "Please try again.",
+      toast.error(t("dw.rec.toast.recordFailed"), {
+        description: error instanceof Error ? error.message : t("dw.rec.err.tryAgain"),
       });
     } finally {
       recordingRef.current = false;
@@ -189,37 +193,55 @@ export function DecisionReceiptPanel({
 
   const topSources = result.sources.slice(0, 4);
   const recordDate = useMemo(() => {
-    const date = new Date(isHistorical && version ? version.createdAt : result.updatedAt);
-    return Number.isFinite(date.getTime()) ? date.toLocaleDateString() : "Unknown date";
-  }, [isHistorical, result.updatedAt, version]);
+    const formatted = formatDate(isHistorical && version ? version.createdAt : result.updatedAt, lang);
+    return formatted || t("dw.rec.unknownDate");
+  }, [isHistorical, lang, result.updatedAt, t, version]);
 
   const receiptText = useMemo(() => {
+    const tieLabel = t("res.cat.tie");
     const lines = [
-      `Decision receipt — ${result.query}`,
+      t("dw.rec.copy.header", { query: result.query }),
       isHistorical
         ? version
-          ? `Recorded against snapshot Version ${version.versionNumber} (snapshot date ${recordDate}) — point-in-time reference`
-          : `Historical snapshot${versionNumber !== undefined ? ` Version ${versionNumber}` : ""} — version details unavailable; treat as the recorded past`
-        : `Live comparison as of ${recordDate} — not an immutable snapshot; future refreshes may update it`,
-      `Question: ${result.query}`,
-      `Decision context: ${result.context?.trim() ? result.context : "None recorded"}`,
+          ? t("dw.rec.copy.histVersion", { version: version.versionNumber, date: recordDate })
+          : versionNumber !== undefined
+            ? t("dw.rec.copy.histLoadingVer", { version: versionNumber })
+            : t("dw.rec.copy.histLoading")
+        : t("dw.rec.copy.live", { date: recordDate }),
+      t("dw.rec.copy.question", { query: result.query }),
+      t("dw.rec.copy.context", {
+        context: result.context?.trim() ? result.context : t("dw.rec.noneRecorded"),
+      }),
       "",
-      `AI recommendation: ${result.verdict.bestOverall || "No single recommendation"}`,
+      t("dw.rec.copy.aiRec", {
+        rec: result.verdict.bestOverall || t("dw.rec.noSingleRec"),
+      }),
       result.verdict.summary,
       "",
       userChoice
-        ? `Your recorded decision: ${choiceEntityName(userChoice, result) ?? "No winner"} — ${typeof userChoice.result?.rationale === "string" && userChoice.result.rationale ? `because ${userChoice.result.rationale}` : "no rationale recorded"} (saved ${new Date(userChoice.updatedAt).toLocaleDateString()}, recorded reference: ${userChoice.result?.recordedAgainst === "live" ? "live comparison" : String(userChoice.result?.recordedAgainst || "comparison record")})`
+        ? t("dw.rec.copy.yourDecision", {
+            choice: choiceEntityName(userChoice, result, tieLabel) ?? t("dw.rec.noWinner"),
+            rationale:
+              typeof userChoice.result?.rationale === "string" && userChoice.result.rationale
+                ? t("dw.rec.copy.because", { rationale: userChoice.result.rationale })
+                : t("dw.rec.copy.noRationale"),
+            date: formatDate(userChoice.updatedAt, lang),
+            ref:
+              userChoice.result?.recordedAgainst === "live"
+                ? t("dw.rec.copy.refLive")
+                : String(userChoice.result?.recordedAgainst || t("dw.rec.copy.refRecord")),
+          })
         : latestScenario
-          ? `Your recorded decision: not recorded yet (a saved weighted scenario “${latestScenario.name}” exists but is not your decision)`
-          : "Your recorded decision: not recorded yet (the recommendation above is SideBy's, not yours)",
+          ? t("dw.rec.copy.notRecordedScenario", { name: latestScenario.name })
+          : t("dw.rec.copy.notRecorded"),
       "",
-      "Evidence references:",
+      t("dw.rec.copy.evidence"),
       ...(topSources.length
         ? topSources.map((source) => `- ${source.title || source.url} (${source.url})`)
-        : ["- No sources attached to this record."]),
+        : [t("dw.rec.copy.noSources")]),
     ];
     return lines.join("\n");
-  }, [latestScenario, recordDate, result, topSources, userChoice, version, versionNumber, isHistorical]);
+  }, [isHistorical, lang, latestScenario, recordDate, result, t, topSources, userChoice, version, versionNumber]);
 
   const onCopy = async () => {
     const ok = await copyText(receiptText);
@@ -228,11 +250,11 @@ export function DecisionReceiptPanel({
   };
 
   return (
-    <section aria-label="Decision receipt" className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5">
+    <section aria-label={t("dw.rec.aria")} className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <ReceiptText className="h-4 w-4 text-orange-500" aria-hidden="true" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">Decision receipt</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">{t("dw.rec.title")}</p>
         </div>
         <button
           type="button"
@@ -240,69 +262,72 @@ export function DecisionReceiptPanel({
           className="inline-flex min-h-9 items-center gap-1.5 rounded-sm border border-[#333] bg-[#0c0b0a] px-2.5 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-orange-500/40 hover:text-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
         >
           {copied ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
-          {copied ? "Copied" : "Copy"}
+          {copied ? t("dw.rec.copied") : t("dw.rec.copyBtn")}
         </button>
       </div>
 
       <dl className="mt-4 space-y-3 text-sm">
         <div>
-          <dt className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">Question</dt>
+          <dt className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">{t("dw.rec.question")}</dt>
           <dd className="mt-1 font-serif text-base leading-snug text-[#fdfbf7]">{result.query}</dd>
         </div>
         <div>
-          <dt className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">Decision context</dt>
+          <dt className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">{t("dw.rec.context")}</dt>
           <dd className="mt-1 text-xs leading-relaxed text-[#fdfbf7]/65">
-            {result.context?.trim() ? result.context : "None recorded"}
+            {result.context?.trim() ? result.context : t("dw.rec.noneRecorded")}
           </dd>
         </div>
         <div>
-          <dt className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">AI recommendation</dt>
+          <dt className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">{t("dw.rec.aiRec")}</dt>
           <dd className="mt-1 text-xs leading-relaxed text-[#fdfbf7]/75">
-            {result.verdict.bestOverall || "No single recommendation"} — {result.verdict.summary}
+            {result.verdict.bestOverall || t("dw.rec.noSingleRec")} — {result.verdict.summary}
           </dd>
         </div>
         <div>
-          <dt className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">Your recorded decision</dt>
+          <dt className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">{t("dw.rec.yourDecision")}</dt>
           <dd className="mt-1 text-xs leading-relaxed text-[#fdfbf7]/75">
-            {fetchState === "loading" && "Checking your saved decisions…"}
+            {fetchState === "loading" && t("dw.rec.checking")}
             {fetchState === "error" && (
               <span className="inline-flex items-start gap-1.5 text-amber-300">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                Saved decisions couldn't be loaded. The record above still stands; retry by reopening this
-                comparison.
+                {t("dw.rec.loadError")}
               </span>
             )}
             {fetchState === "ready" && userChoice && (
               <>
-                {choiceEntityName(userChoice, result) ?? "No winner"}
+                {choiceEntityName(userChoice, result, t("res.cat.tie")) ?? t("dw.rec.noWinner")}
                 {typeof userChoice.result?.rationale === "string" && userChoice.result.rationale
                   ? ` — ${userChoice.result.rationale}` : ""}
-                {" "}(saved {new Date(userChoice.updatedAt).toLocaleDateString()}
-                {userChoice.result?.recordedAgainst === "live"
-                  ? ", against the live comparison"
-                  : typeof userChoice.result?.recordedAgainst === "string" &&
-                      userChoice.result.recordedAgainst === `version:${version?.id ?? ""}`
-                    ? ", against this snapshot"
-                    : ", against the comparison"}
-                {isHistorical ? "; choices belong to the comparison, not to one frozen snapshot" : ""})
+                {" "}
+                {(() => {
+                  const savedDate = formatDate(userChoice.updatedAt, lang);
+                  const note = isHistorical ? t("dw.rec.histChoiceNote") : "";
+                  if (userChoice.result?.recordedAgainst === "live") {
+                    return t("dw.rec.savedAgainstLive", { date: savedDate, note });
+                  }
+                  if (
+                    typeof userChoice.result?.recordedAgainst === "string" &&
+                    userChoice.result.recordedAgainst === `version:${version?.id ?? ""}`
+                  ) {
+                    return t("dw.rec.savedAgainstSnapshot", { date: savedDate, note });
+                  }
+                  return t("dw.rec.savedAgainstComparison", { date: savedDate, note });
+                })()}
               </>
             )}
             {fetchState === "ready" && !userChoice && (
               <>
-                Not recorded yet.
-                {latestScenario ? (
-                  <> A saved weighted scenario (“{latestScenario.name}”) exists below, but it is a scenario, not your decision.</>
-                ) : (
-                  <> The recommendation above is SideBy's, not yours.</>
-                )}
+                {latestScenario
+                  ? t("dw.rec.notRecordedScenario", { name: latestScenario.name })
+                  : t("dw.rec.notRecorded")}
               </>
             )}
           </dd>
         </div>
         {fetchState === "ready" && !userChoice && (
           <div className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/45">Record your decision</p>
-            <div className="mt-2 flex gap-2" role="radiogroup" aria-label="Which option do you choose">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/45">{t("dw.rec.recordTitle")}</p>
+            <div className="mt-2 flex gap-2" role="radiogroup" aria-label={t("dw.rec.chooseAria")}>
               {(["a", "b"] as const).map((entity) => (
                 <button
                   key={entity}
@@ -321,7 +346,7 @@ export function DecisionReceiptPanel({
               ))}
             </div>
             <label htmlFor="receipt-rationale" className="mt-2 block text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">
-              Why <span className="text-[#fdfbf7]/25">(optional)</span>
+              {t("dw.rec.why")} <span className="text-[#fdfbf7]/25">{t("dw.rec.optional")}</span>
             </label>
             <input
               id="receipt-rationale"
@@ -329,7 +354,7 @@ export function DecisionReceiptPanel({
               value={rationale}
               onChange={(event) => setRationale(event.target.value)}
               maxLength={280}
-              placeholder="One line is enough, e.g. Cheaper at our scale"
+              placeholder={t("dw.rec.whyPlaceholder")}
               className="mt-1 h-10 w-full rounded-sm border border-[#333] bg-[#0c0b0a] px-3 text-xs text-[#fdfbf7] outline-none placeholder:text-white/25 focus:border-orange-500"
             />
             <button
@@ -338,12 +363,12 @@ export function DecisionReceiptPanel({
               disabled={!choice || isRecording}
               className="mt-2 inline-flex min-h-10 w-full items-center justify-center rounded-sm bg-orange-500 px-3 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-400 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
             >
-              {isRecording ? "Recording…" : "Record my decision"}
+              {isRecording ? t("dw.rec.recording") : t("dw.rec.recordBtn")}
             </button>
           </div>
         )}
         <div>
-          <dt className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">Evidence</dt>
+          <dt className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">{t("dw.rec.evidence")}</dt>
           <dd className="mt-1 space-y-1.5">
             {topSources.length ? (
               topSources.map((source) => (
@@ -358,19 +383,21 @@ export function DecisionReceiptPanel({
                 </a>
               ))
             ) : (
-              <span className="text-xs text-[#fdfbf7]/50">No sources attached to this record.</span>
+              <span className="text-xs text-[#fdfbf7]/50">{t("dw.rec.noSources")}</span>
             )}
           </dd>
         </div>
         <div>
-          <dt className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">Record</dt>
+          <dt className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">{t("dw.rec.recordLabel")}</dt>
           <dd className="mt-1 text-xs text-[#fdfbf7]/50">
             {isHistorical
               ? version
-                ? `Frozen snapshot Version ${version.versionNumber} (recorded ${recordDate}). A recorded decision below was saved against the comparison, not frozen with this snapshot. `
-                : `Historical snapshot${versionNumber !== undefined ? ` Version ${versionNumber}` : ""} (details still loading). Treat evidence below as the recorded past, not current research. `
-              : `Live record as of ${recordDate} — not a frozen snapshot; refreshing or re-running research changes what you see here. `}
-            {result.sourceCount} sources at time of research
+                ? t("dw.rec.recordFrozen", { version: version.versionNumber, date: recordDate })
+                : versionNumber !== undefined
+                  ? t("dw.rec.recordHistLoadingVer", { version: versionNumber })
+                  : t("dw.rec.recordHistLoading")
+              : t("dw.rec.recordLive", { date: recordDate })}{" "}
+            {t("dw.rec.sourcesCount", { count: result.sourceCount })}
           </dd>
         </div>
       </dl>

@@ -8,6 +8,7 @@ import { getClientIp } from "../../_lib/route-guard.js";
 
 const BodySchema = z.object({
   query: z.string().trim().min(1).max(800),
+  language: z.enum(["az", "ru"]).optional(),
 });
 
 const sendJson = (response: VercelResponse, payload: unknown, status = 200) => {
@@ -30,12 +31,12 @@ export default async function handler(request: VercelRequest, response: VercelRe
       return sendJson(response, { error: "Too many validation requests. Please wait a moment." }, 429);
     }
 
-    const { query } = BodySchema.parse(request.body || {});
+    const { query, language } = BodySchema.parse(request.body || {});
     // Global spend breaker: unauthenticated validation fans out to Tavily +
     // the LLM, so cap total AI-backed validations per minute across all IPs.
     const globalCap = configuredQuota("VALIDATION_AI_GLOBAL_PER_MIN", 60);
     const global = await checkRateLimit("ip", "global", "comparison-validation-ai", globalCap);
-    const validation = await validateComparisonQuery(query, { allowAi: global.allowed });
+    const validation = await validateComparisonQuery(query, { allowAi: global.allowed, language });
     return sendJson(response, validation);
   } catch (error) {
     const unavailable = error instanceof Error && "statusCode" in error && error.statusCode === 503;

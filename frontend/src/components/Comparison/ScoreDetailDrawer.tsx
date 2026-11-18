@@ -7,6 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import type { ComparisonData, ComparisonFact } from "./types";
 import { cn } from "@/lib/utils";
 import { safeHref } from "@/lib/safe-url";
+import { useT } from "@/i18n";
 
 interface ScoreDetailDrawerProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export function ScoreDetailDrawer({
   result,
 }: ScoreDetailDrawerProps) {
   const isMobile = useIsMobile();
+  const t = useT();
 
   const details = useMemo(() => {
     if (!result || !dimensionSubject) return null;
@@ -77,7 +79,7 @@ export function ScoreDetailDrawer({
     if (facts.length === 0) {
       return (
         <div className="text-sm text-[#fdfbf7]/30 italic p-4 rounded-sm border border-[#2a2a2a] bg-black/20">
-          No concrete facts extracted for {entityName}.
+          {t("dm.drawer.noFacts", { entity: entityName })}
         </div>
       );
     }
@@ -96,7 +98,7 @@ export function ScoreDetailDrawer({
               <span className="text-xs font-semibold text-[#fdfbf7]">{fact.label}</span>
               <div className="flex items-center gap-1.5 shrink-0 select-none">
                 <span className="text-[9px] font-bold text-[#fdfbf7]/40 uppercase tracking-widest">
-                  {Math.round(fact.confidence * 100)}% Conf
+                  {t("res.fact.conf", { percent: Math.round(fact.confidence * 100) })}
                 </span>
                 <span className={cn(
                   "h-1.5 w-1.5 rounded-full",
@@ -147,7 +149,7 @@ export function ScoreDetailDrawer({
       <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <span className="text-[9px] font-bold uppercase tracking-widest text-orange-500 block mb-1">
-            Category Verdict
+            {t("dm.drawer.categoryVerdict")}
           </span>
           <p className="font-serif text-base text-[#fdfbf7]/90 italic leading-relaxed">
             "{category.verdict}"
@@ -158,12 +160,12 @@ export function ScoreDetailDrawer({
           {category.winner !== "tie" && winnerEntity ? (
             <div className="flex items-center gap-2 rounded-sm border border-orange-500/20 bg-orange-500/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-orange-400">
               <Trophy className="h-3.5 w-3.5" />
-              {winnerEntity.name} Wins
+              {t("dm.winnerWins", { name: winnerEntity.name })}
             </div>
           ) : (
             <div className="flex items-center gap-2 rounded-sm border border-[#333] bg-[#222] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/60">
               <Scale className="h-3.5 w-3.5" />
-              Tied
+              {t("dm.drawer.tied")}
             </div>
           )}
         </div>
@@ -174,18 +176,18 @@ export function ScoreDetailDrawer({
         <div className="grid grid-cols-2 gap-4">
           <div className="rounded-sm border border-[#1f1f1f] bg-black/30 p-4 text-center">
             <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1.5">
-              {result.entities.a.name} Score
+              {t("dm.drawer.entityScore", { name: result.entities.a.name })}
             </span>
             <span className="text-3xl font-serif font-black text-[#fdfbf7]">
-              {scoreA !== null ? `${scoreA}/${maxScore}` : "N/A"}
+              {scoreA !== null ? `${scoreA}/${maxScore}` : t("dm.drawer.na")}
             </span>
           </div>
           <div className="rounded-sm border border-[#1f1f1f] bg-black/30 p-4 text-center">
             <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1.5">
-              {result.entities.b.name} Score
+              {t("dm.drawer.entityScore", { name: result.entities.b.name })}
             </span>
             <span className="text-3xl font-serif font-black text-[#fdfbf7]">
-              {scoreB !== null ? `${scoreB}/${maxScore}` : "N/A"}
+              {scoreB !== null ? `${scoreB}/${maxScore}` : t("dm.drawer.na")}
             </span>
           </div>
         </div>
@@ -197,7 +199,7 @@ export function ScoreDetailDrawer({
           <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
           <div>
             <span className="text-[9px] font-bold uppercase tracking-widest text-amber-500 block mb-1">
-              Contradictions Identified
+              {t("dm.drawer.contradictions")}
             </span>
             <ul className="space-y-1.5">
               {contradictions.map((c, idx) => (
@@ -218,7 +220,7 @@ export function ScoreDetailDrawer({
             className="text-[10px] font-bold uppercase tracking-[0.15em] block border-b border-white/5 pb-2"
             style={{ color: result.entities.a.hex }}
           >
-            {result.entities.a.name} Evidence
+            {t("dm.drawer.entityEvidence", { name: result.entities.a.name })}
           </span>
           {renderFactsSection(factsA, result.entities.a.name, result.entities.a.hex)}
         </div>
@@ -229,7 +231,7 @@ export function ScoreDetailDrawer({
             className="text-[10px] font-bold uppercase tracking-[0.15em] block border-b border-white/5 pb-2"
             style={{ color: result.entities.b.hex }}
           >
-            {result.entities.b.name} Evidence
+            {t("dm.drawer.entityEvidence", { name: result.entities.b.name })}
           </span>
           {renderFactsSection(factsB, result.entities.b.name, result.entities.b.hex)}
         </div>
@@ -246,7 +248,7 @@ export function ScoreDetailDrawer({
               {category.name}
             </DrawerTitle>
             <DrawerDescription className="text-xs text-[#fdfbf7]/40 uppercase tracking-widest mt-1">
-              Source-Backed Decision Evidence
+              {t("dm.drawer.subtitle")}
             </DrawerDescription>
           </DrawerHeader>
 
@@ -257,7 +259,7 @@ export function ScoreDetailDrawer({
               onClick={onClose}
               className="w-full h-11 bg-[#222] hover:bg-[#333] border border-[#444] rounded-sm text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/80 hover:text-white transition-colors"
             >
-              Close
+              {t("dm.drawer.close")}
             </button>
           </DrawerFooter>
         </DrawerContent>
@@ -273,7 +275,7 @@ export function ScoreDetailDrawer({
             {category.name}
           </DialogTitle>
           <DialogDescription className="text-xs text-[#fdfbf7]/40 uppercase tracking-widest mt-1">
-            Source-Backed Decision Evidence
+            {t("dm.drawer.subtitle")}
           </DialogDescription>
         </DialogHeader>
 

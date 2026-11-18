@@ -31,6 +31,7 @@ import type {
   EntityKey,
 } from "./types";
 import { safeHref } from "@/lib/safe-url";
+import { formatDate, statusLabel, useI18n, useT, type MessageKey, type TFunction } from "@/i18n";
 
 type DecisionIntelligencePanelProps = {
   result: ComparisonData;
@@ -64,10 +65,33 @@ type GraphEdge = {
   color: string;
 };
 
-const confidenceLabel = (value: number) => {
-  if (value >= 0.82) return "Strong";
-  if (value >= 0.64) return "Watch";
-  return "Thin";
+const confidenceLabelKey = (value: number): MessageKey => {
+  if (value >= 0.82) return "di.conf.strong";
+  if (value >= 0.64) return "di.conf.watch";
+  return "di.conf.thin";
+};
+
+const PRESET_KEYS: Record<"balanced" | "startup" | "enterprise" | "developer", MessageKey> = {
+  balanced: "di.weights.preset.balanced",
+  startup: "di.weights.preset.startup",
+  enterprise: "di.weights.preset.enterprise",
+  developer: "di.weights.preset.developer",
+};
+
+const GRAPH_NODE_TYPE_KEYS: Record<GraphNode["type"], MessageKey> = {
+  verdict: "di.graph.type.verdict",
+  entity: "di.graph.type.entity",
+  dimension: "di.graph.type.dimension",
+  fact: "di.graph.type.fact",
+  source: "di.graph.type.source",
+};
+
+const SOURCE_MODE_KEYS: Record<"balanced" | "official" | "recent" | "community" | "contradictions", MessageKey> = {
+  balanced: "di.sources.mode.balanced",
+  official: "di.sources.mode.official",
+  recent: "di.sources.mode.recent",
+  community: "di.sources.mode.community",
+  contradictions: "di.sources.mode.contradictions",
 };
 
 const confidenceColor = (value: number) => {
@@ -244,6 +268,7 @@ const SectionHeader = ({
 );
 
 const ExecutiveBriefPanel = ({ result }: { result: ComparisonData }) => {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   const topCategories = result.categories.slice(0, 4);
   const citedSources = result.sources.slice(0, 4);
@@ -252,7 +277,7 @@ const ExecutiveBriefPanel = ({ result }: { result: ComparisonData }) => {
       .map((category) => {
         const winner =
           category.winner === "tie"
-            ? "Tie"
+            ? t("res.cat.tie")
             : category.winner === "a"
               ? result.entities.a.name
               : result.entities.b.name;
@@ -267,22 +292,24 @@ const ExecutiveBriefPanel = ({ result }: { result: ComparisonData }) => {
     return [
       `${result.query}`,
       "",
-      `Recommendation: ${result.verdict.bestOverall || "Review the weighted result"}`,
+      t("di.brief.memo.recommendation", {
+        value: result.verdict.bestOverall || t("di.brief.memo.reviewWeighted"),
+      }),
       "",
       result.verdict.summary,
       "",
-      "Decision signals:",
-      categoryLines || "- No category-level signal available.",
+      t("di.brief.memo.signals"),
+      categoryLines || t("di.brief.memo.noSignals"),
       "",
-      "What could change the recommendation:",
+      t("di.brief.memo.whatChanges"),
       result.contradictions?.length
         ? result.contradictions.map((item) => `- ${item}`).join("\n")
-        : "- A material pricing, performance, or evidence-quality change in monitored sources.",
+        : t("di.brief.memo.defaultChange"),
       "",
-      "Sources:",
-      sourceLines || "- No sources attached.",
+      t("di.brief.memo.sources"),
+      sourceLines || t("di.brief.memo.noSources"),
     ].join("\n");
-  }, [citedSources, result, topCategories]);
+  }, [citedSources, result, t, topCategories]);
 
   const copyMemo = async () => {
     const ok = await copyText(memo);
@@ -294,8 +321,8 @@ const ExecutiveBriefPanel = ({ result }: { result: ComparisonData }) => {
     <section id="executive-brief" className={cn(panelClass, "p-6 md:p-8 scroll-mt-28")}>
       <SectionHeader
         icon={FileText}
-        eyebrow="Executive brief"
-        title="Decision memo"
+        eyebrow={t("di.brief.eyebrow")}
+        title={t("di.brief.title")}
         right={
           <button
             type="button"
@@ -303,7 +330,7 @@ const ExecutiveBriefPanel = ({ result }: { result: ComparisonData }) => {
             className="inline-flex h-10 items-center gap-2 rounded-sm border border-[#333] bg-[#111] px-3 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-orange-500/40 hover:text-orange-400"
           >
             {copied ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-            {copied ? "Copied" : "Copy memo"}
+            {copied ? t("di.brief.copied") : t("di.brief.copy")}
           </button>
         }
       />
@@ -311,10 +338,10 @@ const ExecutiveBriefPanel = ({ result }: { result: ComparisonData }) => {
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <div className="rounded-sm border border-orange-500/20 bg-orange-500/10 p-5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-orange-300/70">
-            Current recommendation
+            {t("di.brief.currentRec")}
           </p>
           <p className="mt-3 font-serif text-3xl leading-tight text-[#fdfbf7]">
-            {result.verdict.bestOverall || "Evidence-weighted review"}
+            {result.verdict.bestOverall || t("di.brief.fallbackOverall")}
           </p>
           <p className="mt-4 text-sm leading-relaxed text-[#fdfbf7]/65">
             {result.verdict.summary}
@@ -325,7 +352,7 @@ const ExecutiveBriefPanel = ({ result }: { result: ComparisonData }) => {
           {topCategories.map((category) => {
             const winner =
               category.winner === "tie"
-                ? "Tie"
+                ? t("res.cat.tie")
                 : category.winner === "a"
                   ? result.entities.a.name
                   : result.entities.b.name;
@@ -352,6 +379,7 @@ const ExecutiveBriefPanel = ({ result }: { result: ComparisonData }) => {
 };
 
 const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
+  const t = useT();
   const metrics = buildMetrics(result);
   const [weights, setWeights] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {};
@@ -443,7 +471,7 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
 
   const winnerName =
     weighted.winner === "tie"
-      ? "Tie"
+      ? t("res.cat.tie")
       : weighted.winner === "a"
         ? result.entities.a.name
         : result.entities.b.name;
@@ -452,8 +480,8 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
     <section id="personalized-verdict" className={cn(panelClass, "p-6 md:p-8 scroll-mt-28")}>
       <SectionHeader
         icon={SlidersHorizontal}
-        eyebrow="Personalized verdict"
-        title="Weight what matters"
+        eyebrow={t("di.weights.eyebrow")}
+        title={t("di.weights.title")}
         right={
           <div className="flex flex-wrap gap-2">
             {(["balanced", "startup", "enterprise", "developer"] as const).map((preset) => (
@@ -463,7 +491,7 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
                 onClick={() => applyPreset(preset)}
                 className="rounded-sm border border-[#333] bg-[#111] px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 transition-colors hover:border-orange-500/40 hover:text-orange-400"
               >
-                {preset}
+                {t(PRESET_KEYS[preset])}
               </button>
             ))}
           </div>
@@ -472,15 +500,13 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
 
       {metrics.length === 0 || !balanced ? (
         <div role="note" className="rounded-sm border border-[#2a2a2a] bg-[#111] p-6 text-sm leading-relaxed text-[#fdfbf7]/55">
-          Sensitivity analysis isn't available for this comparison yet — the research didn't return
-          dimension scores to re-weight. The recommendation above stands as recorded; re-running
-          research may produce scoreable dimensions.
+          {t("di.weights.unavailable")}
         </div>
       ) : (
       <div className="grid gap-8 xl:grid-cols-[0.8fr_1.2fr]">
         <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">
-            Weighted winner
+            {t("di.weights.winner")}
           </p>
           <p className="mt-3 font-serif text-4xl text-[#fdfbf7]">{winnerName}</p>
           <div className="mt-6 space-y-4">
@@ -489,12 +515,33 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
           </div>
           <p className="mt-6 text-xs leading-relaxed text-[#fdfbf7]/55" aria-live="polite">
             {!hasAdjustedWeights
-              ? "These are the original balanced weights (every dimension at 1.0x). Adjust them to see how the recommendation responds — the recorded verdict never changes here."
+              ? t("di.weights.msg.original")
               : weighted.winner !== balanced.winner
-                ? `With your current weights, ${winnerName} moves ahead of the balanced-weights result${drivers.length ? ` — driven most by ${drivers.join(" and ")}` : ""}. Restore the original weights any time to return to the recorded outcome.`
+                ? drivers.length
+                  ? t("di.weights.msg.movedAheadDriven", {
+                      winner: winnerName,
+                      drivers: drivers.join(t("di.common.andJoiner")),
+                    })
+                  : t("di.weights.msg.movedAhead", { winner: winnerName })
                 : weighted.winner === "tie"
-                  ? "Your weights level the two options out. Restore the original weights to return to the recorded outcome."
-                  : `${winnerName} still leads with your weights${drivers.length ? `, carried mainly by ${drivers.join(" and ")}` : ""}. The margin ${Math.abs(weighted.a - weighted.b) >= Math.abs(balanced.a - balanced.b) ? "widened" : "narrowed"} versus balanced weights.`}
+                  ? t("di.weights.msg.tie")
+                  : (() => {
+                      const widened =
+                        Math.abs(weighted.a - weighted.b) >= Math.abs(balanced.a - balanced.b);
+                      if (drivers.length) {
+                        return t(
+                          widened ? "di.weights.msg.leadsWidenedDriven" : "di.weights.msg.leadsNarrowedDriven",
+                          {
+                            winner: winnerName,
+                            drivers: drivers.join(t("di.common.andJoiner")),
+                          },
+                        );
+                      }
+                      return t(
+                        widened ? "di.weights.msg.leadsWidened" : "di.weights.msg.leadsNarrowed",
+                        { winner: winnerName },
+                      );
+                    })()}
           </p>
           {hasAdjustedWeights && (
             <button
@@ -502,7 +549,7 @@ const DecisionWeightsPanel = ({ result }: { result: ComparisonData }) => {
               onClick={restoreOriginalWeights}
               className="mt-4 inline-flex min-h-10 items-center rounded-sm border border-orange-500/30 bg-orange-500/10 px-3.5 text-[10px] font-bold uppercase tracking-widest text-orange-300 transition-colors hover:bg-orange-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
             >
-              Restore original weights
+              {t("di.weights.restore")}
             </button>
           )}
         </div>
@@ -556,6 +603,7 @@ const ScoreBar = ({ label, score, color }: { label: string; score: number; color
 );
 
 const ChangeTimelinePanel = ({ result }: { result: ComparisonData }) => {
+  const t = useT();
   const facts = useMemo(() => allFacts(result), [result]);
 
   const { changedFacts, monitorFacts } = useMemo(() => {
@@ -574,11 +622,11 @@ const ChangeTimelinePanel = ({ result }: { result: ComparisonData }) => {
     <section id="changed-facts" className={cn(panelClass, "p-6 md:p-8 scroll-mt-28")}>
       <SectionHeader
         icon={Diff}
-        eyebrow="Changed facts"
-        title={changedFacts.length > 0 ? "Refresh diff" : "No changes detected"}
+        eyebrow={t("di.changes.eyebrow")}
+        title={changedFacts.length > 0 ? t("di.changes.titleDiff") : t("di.changes.titleNone")}
         right={
           <span className="rounded-sm border border-[#333] bg-[#111] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
-            {changedFacts.length} changed
+            {t("di.changes.count", { count: changedFacts.length })}
           </span>
         }
       />
@@ -605,7 +653,7 @@ const ChangeTimelinePanel = ({ result }: { result: ComparisonData }) => {
         )) : (
           <div className="rounded-sm border border-emerald-500/20 bg-emerald-500/10 p-5">
             <p className="text-sm leading-relaxed text-emerald-100/75">
-              The current result has no refreshed fact deltas. A future refresh will surface changed values, previous values, and monitored facts here.
+              {t("di.changes.empty")}
             </p>
           </div>
         )}
@@ -615,9 +663,10 @@ const ChangeTimelinePanel = ({ result }: { result: ComparisonData }) => {
 };
 
 const ConfidenceHeatmapPanel = ({ result }: { result: ComparisonData }) => {
+  const t = useT();
   return (
     <section id="confidence-heatmap" className={cn(panelClass, "p-6 md:p-8 scroll-mt-28")}>
-      <SectionHeader icon={Gauge} eyebrow="Confidence heatmap" title="Evidence strength" />
+      <SectionHeader icon={Gauge} eyebrow={t("di.heatmap.eyebrow")} title={t("di.heatmap.title")} />
 
       <div className="space-y-3">
         {result.categories.map((category) => {
@@ -654,22 +703,27 @@ const ConfidenceHeatmapPanel = ({ result }: { result: ComparisonData }) => {
   );
 };
 
-const HeatCell = ({ label, confidence, count }: { label: string; confidence: number; count: number }) => (
-  <div className={cn("min-h-14 rounded-sm border p-3", confidenceColor(confidence))}>
-    <div className="flex items-center justify-between gap-2">
-      <span className="min-w-0 truncate text-[9px] font-bold uppercase tracking-widest" title={label}>{label}</span>
-      <span className="font-mono text-xs">{formatPercent(confidence)}</span>
+const HeatCell = ({ label, confidence, count }: { label: string; confidence: number; count: number }) => {
+  const t = useT();
+  const level = t(confidenceLabelKey(confidence));
+  return (
+    <div className={cn("min-h-14 rounded-sm border p-3", confidenceColor(confidence))}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-[9px] font-bold uppercase tracking-widest" title={label}>{label}</span>
+        <span className="font-mono text-xs">{formatPercent(confidence)}</span>
+      </div>
+      <p className="mt-1 text-[10px] uppercase tracking-widest opacity-70">
+        {t(count === 1 ? "di.heatmap.cellSingle" : "di.heatmap.cellPlural", { level, count })}
+      </p>
     </div>
-    <p className="mt-1 text-[10px] uppercase tracking-widest opacity-70">
-      {confidenceLabel(confidence)} | {count} fact{count === 1 ? "" : "s"}
-    </p>
-  </div>
-);
+  );
+};
 
 const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
+  const t = useT();
   const facts = useMemo(() => allFacts(result).slice(0, 8), [result]);
   const compact = useIsMobile();
-  const graph = useMemo(() => buildGraph(result, facts, compact), [facts, result, compact]);
+  const graph = useMemo(() => buildGraph(result, facts, compact, t), [facts, result, compact, t]);
   const [selectedId, setSelectedId] = useState(graph.nodes[0]?.id || "");
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -741,7 +795,7 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
   return (
     <section ref={containerRef} id="evidence-graph" className={cn(panelClass, "overflow-hidden scroll-mt-28")}>
       <div className="p-6 md:p-8">
-        <SectionHeader icon={Network} eyebrow="Evidence graph" title="Claim to source map" />
+        <SectionHeader icon={Network} eyebrow={t("di.graph.eyebrow")} title={t("di.graph.title")} />
       </div>
 
       <div className="grid gap-0 border-t border-[#2a2a2a] xl:grid-cols-[1fr_300px]">
@@ -790,7 +844,7 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
                 style={{ left: `${node.x}%`, top: `${node.y}%` }}
               >
                 <span className="block text-[8px] font-bold uppercase tracking-widest" style={{ color: node.color }}>
-                  {node.type}
+                  {t(GRAPH_NODE_TYPE_KEYS[node.type])}
                 </span>
                 <span className="mt-1 block line-clamp-2 break-words text-[11px] font-medium leading-tight text-[#fdfbf7] sm:truncate sm:text-xs">
                   {node.label}
@@ -804,7 +858,7 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
           {selected ? (
             <>
               <p className="text-[10px] font-bold uppercase tracking-widest text-orange-400">
-                {selected.type}
+                {t(GRAPH_NODE_TYPE_KEYS[selected.type])}
               </p>
               <h4 className="mt-2 font-serif text-2xl text-[#fdfbf7]">{selected.label}</h4>
               <p className="mt-4 text-sm leading-relaxed text-[#fdfbf7]/60">{selected.detail}</p>
@@ -816,7 +870,7 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
   );
 };
 
-const buildGraph = (result: ComparisonData, facts: FactWithCategory[], compact = false) => {
+const buildGraph = (result: ComparisonData, facts: FactWithCategory[], compact: boolean, t: TFunction) => {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
   const sourceMap = new Map<string, ComparisonSource>();
@@ -843,7 +897,7 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[], compact =
   nodes.push({
     id: "verdict",
     type: "verdict",
-    label: result.verdict.bestOverall || "Verdict",
+    label: result.verdict.bestOverall || t("di.graph.fallbackVerdict"),
     detail: result.verdict.summary,
     x: 50,
     y: 9,
@@ -854,7 +908,7 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[], compact =
     id: "entity-a",
     type: "entity",
     label: result.entities.a.name,
-    detail: result.entities.a.subtitle || "First comparison entity",
+    detail: result.entities.a.subtitle || t("di.graph.entityA"),
     x: 18,
     y: 22,
     color: result.entities.a.hex,
@@ -863,7 +917,7 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[], compact =
     id: "entity-b",
     type: "entity",
     label: result.entities.b.name,
-    detail: result.entities.b.subtitle || "Second comparison entity",
+    detail: result.entities.b.subtitle || t("di.graph.entityB"),
     x: 82,
     y: 22,
     color: result.entities.b.hex,
@@ -942,10 +996,11 @@ const ResearchReplayPanel = ({
   result: ComparisonData;
   activity: ComparisonActivityStep[];
 }) => {
+  const t = useT();
   const replaySteps = useMemo(() => {
     if (activity.length > 0) return activity;
-    return synthesizeReplay(result);
-  }, [activity, result]);
+    return synthesizeReplay(result, t);
+  }, [activity, result, t]);
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -960,8 +1015,8 @@ const ResearchReplayPanel = ({
     <section id="research-replay" className={cn(panelClass, "p-6 md:p-8 scroll-mt-28")}>
       <SectionHeader
         icon={Activity}
-        eyebrow="Research replay"
-        title="Scrub the run"
+        eyebrow={t("di.replay.eyebrow")}
+        title={t("di.replay.title")}
         right={
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
             <span>{index + 1}</span>
@@ -978,7 +1033,7 @@ const ResearchReplayPanel = ({
           </p>
           <h4 className="mt-2 font-serif text-3xl text-[#fdfbf7]">{active.stepName}</h4>
           <p className="mt-4 text-sm leading-relaxed text-[#fdfbf7]/60">
-            {active.outputSummary || active.inputSummary || active.error || "Step telemetry is being collected."}
+            {active.outputSummary || active.inputSummary || active.error || t("di.replay.collecting")}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <StatusBadge status={active.status} />
@@ -1021,7 +1076,7 @@ const ResearchReplayPanel = ({
                   {String(stepIndex + 1).padStart(2, "0")}
                 </p>
                 <p className="mt-2 truncate text-sm font-serif text-[#fdfbf7]">{step.stepName}</p>
-                <p className="mt-1 truncate text-[10px] uppercase tracking-widest text-[#fdfbf7]/30">{step.status}</p>
+                <p className="mt-1 truncate text-[10px] uppercase tracking-widest text-[#fdfbf7]/30">{statusLabel(t, step.status)}</p>
               </button>
             ))}
           </div>
@@ -1031,85 +1086,89 @@ const ResearchReplayPanel = ({
   );
 };
 
-const synthesizeReplay = (result: ComparisonData): ComparisonActivityStep[] => {
+const synthesizeReplay = (result: ComparisonData, t: TFunction): ComparisonActivityStep[] => {
   const now = result.updatedAt || new Date().toISOString();
   return [
     {
       id: "synthetic-parse",
       task: "parse",
-      stepName: "Query parsing",
+      stepName: t("di.replay.step.parse"),
       status: "completed",
       startedAt: now,
       completedAt: now,
       durationMs: null,
       inputSummary: result.query,
-      outputSummary: `${result.entities.a.name} vs ${result.entities.b.name}`,
+      outputSummary: t("di.replay.vs", { a: result.entities.a.name, b: result.entities.b.name }),
       error: null,
     },
     {
       id: "synthetic-sources",
       task: "search",
-      stepName: "Source discovery",
+      stepName: t("di.replay.step.search"),
       status: "completed",
       startedAt: now,
       completedAt: now,
       durationMs: null,
-      inputSummary: `${result.sourceCount} sources reviewed`,
+      inputSummary: t("di.replay.sourcesReviewed", { count: result.sourceCount }),
       outputSummary: result.sources.slice(0, 3).map((source) => safeHostname(source.url)).join(", "),
       error: null,
     },
     {
       id: "synthetic-facts",
       task: "extract",
-      stepName: "Fact extraction",
+      stepName: t("di.replay.step.extract"),
       status: "completed",
       startedAt: now,
       completedAt: now,
       durationMs: null,
-      inputSummary: `${allFacts(result).length} facts`,
-      outputSummary: `${result.categories.length} comparison dimensions`,
+      inputSummary: t("di.replay.factsCount", { count: allFacts(result).length }),
+      outputSummary: t("di.replay.dimensionsCount", { count: result.categories.length }),
       error: null,
     },
     {
       id: "synthetic-score",
       task: "score",
-      stepName: "Dimension scoring",
+      stepName: t("di.replay.step.score"),
       status: "completed",
       startedAt: now,
       completedAt: now,
       durationMs: null,
-      inputSummary: "Evidence-weighted scoring",
-      outputSummary: result.dimensions?.map((dimension) => dimension.subject).slice(0, 4).join(", ") || "Category scores",
+      inputSummary: t("di.replay.scoreInput"),
+      outputSummary: result.dimensions?.map((dimension) => dimension.subject).slice(0, 4).join(", ") || t("di.replay.scoreFallback"),
       error: null,
     },
     {
       id: "synthetic-verdict",
       task: "reason",
-      stepName: "Verdict synthesis",
+      stepName: t("di.replay.step.verdict"),
       status: "completed",
       startedAt: now,
       completedAt: now,
       durationMs: null,
-      inputSummary: "Scores, facts, and contradictions",
+      inputSummary: t("di.replay.verdictInput"),
       outputSummary: result.verdict.summary,
       error: null,
     },
   ];
 };
 
-const StatusBadge = ({ status }: { status: string }) => (
-  <span className={cn(
-    "rounded-sm border px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest",
-    status === "completed" && "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
-    status === "running" && "border-orange-500/20 bg-orange-500/10 text-orange-300",
-    status === "failed" && "border-red-500/20 bg-red-500/10 text-red-300",
-    !["completed", "running", "failed"].includes(status) && "border-[#333] bg-[#111] text-[#fdfbf7]/40",
-  )}>
-    {status}
-  </span>
-);
+const StatusBadge = ({ status }: { status: string }) => {
+  const t = useT();
+  return (
+    <span className={cn(
+      "rounded-sm border px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest",
+      status === "completed" && "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
+      status === "running" && "border-orange-500/20 bg-orange-500/10 text-orange-300",
+      status === "failed" && "border-red-500/20 bg-red-500/10 text-red-300",
+      !["completed", "running", "failed"].includes(status) && "border-[#333] bg-[#111] text-[#fdfbf7]/40",
+    )}>
+      {statusLabel(t, status)}
+    </span>
+  );
+};
 
 const SourceQualityPanel = ({ result }: { result: ComparisonData }) => {
+  const t = useT();
   const [mode, setMode] = useState<"balanced" | "official" | "recent" | "community" | "contradictions">("balanced");
   const quality = useMemo(() => sourceQualitySummary(result.sources), [result.sources]);
   const sources = useMemo(() => {
@@ -1122,13 +1181,13 @@ const SourceQualityPanel = ({ result }: { result: ComparisonData }) => {
 
   return (
     <section id="source-quality" className={cn(panelClass, "p-6 md:p-8 scroll-mt-28")}>
-      <SectionHeader icon={BookOpenCheck} eyebrow="Source quality mode" title="Trust filters" />
+      <SectionHeader icon={BookOpenCheck} eyebrow={t("di.sources.eyebrow")} title={t("di.sources.title")} />
 
       <div className="mb-5 grid grid-cols-3 gap-2">
         {[
-          { label: "Quality", value: quality.score ? `${quality.score}/100` : "—" },
-          { label: "Official", value: `${quality.official}%` },
-          { label: "Fresh ≤30d", value: `${quality.recent}%` },
+          { label: t("di.sources.metric.quality"), value: quality.score ? `${quality.score}/100` : "—" },
+          { label: t("di.sources.metric.official"), value: `${quality.official}%` },
+          { label: t("di.sources.metric.fresh"), value: `${quality.recent}%` },
         ].map((metric) => (
           <div key={metric.label} className="rounded-sm border border-[#2a2a2a] bg-[#111] p-3">
             <p className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">{metric.label}</p>
@@ -1150,14 +1209,14 @@ const SourceQualityPanel = ({ result }: { result: ComparisonData }) => {
                 : "border-[#333] bg-[#111] text-[#fdfbf7]/45 hover:border-[#555]",
             )}
           >
-            {item}
+            {t(SOURCE_MODE_KEYS[item])}
           </button>
         ))}
       </div>
 
       {mode === "contradictions" ? (
         <div className="space-y-3">
-          {(result.contradictions?.length ? result.contradictions : ["No contradictions were saved for this run."]).map((item) => (
+          {(result.contradictions?.length ? result.contradictions : [t("di.sources.noContradictions")]).map((item) => (
             <div key={item} className="rounded-sm border border-amber-500/20 bg-amber-500/10 p-4 text-sm leading-relaxed text-amber-100/75">
               {item}
             </div>
@@ -1191,7 +1250,7 @@ const SourceQualityPanel = ({ result }: { result: ComparisonData }) => {
           ))}
           {sources.length === 0 && (
             <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 text-sm text-[#fdfbf7]/45">
-              No sources match this mode.
+              {t("di.sources.noMatch")}
             </div>
           )}
         </div>
@@ -1217,6 +1276,7 @@ const DecisionBoardPanel = ({
   result: ComparisonData;
   comparisonId: string;
 }) => {
+  const { t, lang } = useI18n();
   const [records, setRecords] = useState<DecisionBoardRecord[]>([]);
   const [saved, setSaved] = useState(false);
 
@@ -1234,7 +1294,7 @@ const DecisionBoardPanel = ({
       id: result.slug,
       comparisonId,
       query: result.query,
-      winner: result.verdict.bestOverall || "Review",
+      winner: result.verdict.bestOverall || t("di.board.fallbackWinner"),
       savedAt: new Date().toISOString(),
     };
     const next = [record, ...records.filter((item) => item.id !== record.id)].slice(0, 8);
@@ -1248,8 +1308,8 @@ const DecisionBoardPanel = ({
     <section id="decision-board" className={cn(panelClass, "p-6 md:p-8 scroll-mt-28")}>
       <SectionHeader
         icon={Clipboard}
-        eyebrow="Decision board"
-        title="Comparison collection"
+        eyebrow={t("di.board.eyebrow")}
+        title={t("di.board.title")}
         right={
           <button
             type="button"
@@ -1257,7 +1317,7 @@ const DecisionBoardPanel = ({
             className="inline-flex h-10 items-center gap-2 rounded-sm border border-[#333] bg-[#111] px-3 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-orange-500/40 hover:text-orange-400"
           >
             {saved ? <CheckCircle2 className="h-3.5 w-3.5" /> : <GitBranch className="h-3.5 w-3.5" />}
-            {saved ? "Saved" : "Save"}
+            {saved ? t("di.board.saved") : t("di.board.save")}
           </button>
         }
       />
@@ -1265,10 +1325,10 @@ const DecisionBoardPanel = ({
       <div className="space-y-3">
         <div className="rounded-sm border border-orange-500/20 bg-orange-500/10 p-4">
           <p className="text-[10px] font-bold uppercase tracking-widest text-orange-300/70">
-            Active decision
+            {t("di.board.active")}
           </p>
           <p className="mt-2 font-serif text-xl text-[#fdfbf7]">{result.query}</p>
-          <p className="mt-2 text-sm text-[#fdfbf7]/60">{result.verdict.bestOverall || "Evidence review"}</p>
+          <p className="mt-2 text-sm text-[#fdfbf7]/60">{result.verdict.bestOverall || t("di.board.fallbackActive")}</p>
         </div>
 
         {records.length > 0 ? records.map((record) => (
@@ -1278,12 +1338,12 @@ const DecisionBoardPanel = ({
               <Trophy className="h-4 w-4 shrink-0 text-orange-400" />
             </div>
             <p className="mt-2 text-[10px] uppercase tracking-widest text-[#fdfbf7]/35">
-              {record.winner} | {new Date(record.savedAt).toLocaleDateString()}
+              {record.winner} | {formatDate(record.savedAt, lang)}
             </p>
           </div>
         )) : (
           <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 text-sm leading-relaxed text-[#fdfbf7]/45">
-            Save this comparison to start a lightweight decision collection in this browser.
+            {t("di.board.empty")}
           </div>
         )}
       </div>

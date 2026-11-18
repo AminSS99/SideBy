@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api";
 import { copyText } from "@/lib/clipboard";
 import { projectPublicResult } from "@/lib/publicComparison";
 import type { ComparisonData } from "@/components/Comparison/types";
+import { useT } from "@/i18n";
 import {
   Dialog,
   DialogClose,
@@ -57,6 +58,7 @@ const resolveShareUrl = (slug?: string | null) => {
  *   that instead of promising instant recall.
  */
 const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPublic = false, result, eligibilityReasons, eligibilityClassification }: ShareModalProps) => {
+  const t = useT();
   const [publicNow, setPublicNow] = useState(isPublic);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
@@ -94,7 +96,7 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
 
   const generateSnapshot = async () => {
     if (!comparisonId) {
-      setSnapshotError("Save the comparison before generating a snapshot.");
+      setSnapshotError(t("share.snapshot.saveFirst"));
       return;
     }
     // Synchronous duplicate guard: state updates can't land before the
@@ -117,12 +119,12 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
         throw new Error(
           typeof data?.error === "string" && data.error
             ? data.error
-            : "Unable to generate a public snapshot.",
+            : t("share.snapshot.generateError"),
         );
       }
       const data = (await res.json()) as { id?: string };
       if (!data.id) {
-        throw new Error("The snapshot response was incomplete. Please try again.");
+        throw new Error(t("share.snapshot.incompleteResponse"));
       }
       // The snapshot is its own record: continue on its page, where the run
       // status and the (then-)publish step live.
@@ -132,7 +134,7 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
     } catch (error) {
       setSnapshotState("error");
       setSnapshotError(
-        error instanceof Error ? error.message : "Snapshot generation failed. Please try again.",
+        error instanceof Error ? error.message : t("share.snapshot.failed"),
       );
     } finally {
       snapshotWorkingRef.current = false;
@@ -141,7 +143,7 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
 
   const setVisibility = async (action: "publish" | "unpublish") => {
     if (!comparisonId) {
-      setPublishError("This comparison can't change visibility yet.");
+      setPublishError(t("share.visibility.cannotChange"));
       return false;
     }
     try {
@@ -155,14 +157,14 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
       if (!res.ok) {
         throw new Error(
           action === "publish"
-            ? "Unable to publish this comparison."
-            : "Unable to make this comparison private.",
+            ? t("share.visibility.publishError")
+            : t("share.visibility.unpublishError"),
         );
       }
       setPublicNow(action === "publish");
       return true;
     } catch (error) {
-      setPublishError(error instanceof Error ? error.message : "Visibility change failed. Please try again.");
+      setPublishError(error instanceof Error ? error.message : t("share.visibility.failed"));
       return false;
     } finally {
       setIsWorking(false);
@@ -176,19 +178,19 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } else {
-      setPublishError("Clipboard permission is blocked. Select and copy the URL manually.");
+      setPublishError(t("share.clipboardBlocked"));
     }
   };
 
   const open = () => {
     const win = window.open(url, "_blank", "noopener");
     if (!win) {
-      setPublishError("The popup was blocked. Copy the link and open it manually.");
+      setPublishError(t("share.popupBlocked"));
     }
   };
 
   const categoryWinner = (winner: "a" | "b" | "tie") =>
-    winner === "tie" ? "Tie" : winner === "a" ? entityA : entityB;
+    winner === "tie" ? t("share.tie") : winner === "a" ? entityA : entityB;
 
   return (
     <Dialog open={opens} onOpenChange={(value) => { if (!value) onClose(); }}>
@@ -199,16 +201,15 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
         >
           <div className="mb-1 flex items-start justify-between gap-3">
             <div>
-              <DialogTitle className="font-serif text-lg text-white">Share comparison</DialogTitle>
+              <DialogTitle className="font-serif text-lg text-white">{t("share.title")}</DialogTitle>
               <DialogDescription className="mt-1 text-xs leading-relaxed text-white/50">
-                Publishing shows exactly the record previewed below. Private notes, uploads and your saved
-                decisions stay private.
+                {t("share.description")}
               </DialogDescription>
             </div>
             <DialogClose asChild>
               <button
                 type="button"
-                aria-label="Close share dialog"
+                aria-label={t("share.closeAria")}
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-white/40 transition-colors hover:bg-white/[0.05] hover:text-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
@@ -221,16 +222,16 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
               <>
                 <Eye className="h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
                 <p className="text-xs leading-relaxed text-white/60">
-                  <span className="font-semibold text-emerald-300">Public.</span> Anyone with the link can view
-                  the record below.
+                  <span className="font-semibold text-emerald-300">{t("share.status.publicLabel")}</span>{" "}
+                  {t("share.status.publicDesc")}
                 </p>
               </>
             ) : (
               <>
                 <LockKeyhole className="h-4 w-4 shrink-0 text-white/40" aria-hidden="true" />
                 <p className="text-xs leading-relaxed text-white/60">
-                  <span className="font-semibold text-white/80">Private.</span> Only you can see this record.
-                  Nothing is published until you choose Publish.
+                  <span className="font-semibold text-white/80">{t("share.status.privateLabel")}</span>{" "}
+                  {t("share.status.privateDesc")}
                 </p>
               </>
             )}
@@ -238,7 +239,7 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
 
           <div className="mb-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/25">
-              What the public sees
+              {t("share.preview.heading")}
             </p>
             <div className="rounded-lg border border-white/[0.04] bg-[#050505] p-3">
               <p className="mb-1 font-serif text-sm text-white">
@@ -248,16 +249,15 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
               </p>
               {result && !projected ? (
                 <p className="text-[11px] leading-relaxed text-amber-300">
-                  This record can't be published in its current form — the public projection rejected it. Keep
-                  it private or re-run research.
+                  {t("share.preview.rejected")}
                 </p>
               ) : projected ? (
                 <>
                   <p className="text-[11px] leading-relaxed text-white/50">
                     {typeof projected.verdict === "object" && projected.verdict !== null && "summary" in projected.verdict && typeof (projected.verdict as Record<string, unknown>).summary === "string" ? (
-                      <>{(projected.verdict as { bestOverall?: string; summary: string }).bestOverall ? `Recommendation: ${(projected.verdict as { bestOverall?: string }).bestOverall}. ` : ""}{(projected.verdict as { summary: string }).summary}</>
+                      <>{(projected.verdict as { bestOverall?: string; summary: string }).bestOverall ? `${t("share.preview.recommendation", { name: (projected.verdict as { bestOverall?: string }).bestOverall! })} ` : ""}{(projected.verdict as { summary: string }).summary}</>
                     ) : (
-                      "SideBy · Source-backed comparison engine"
+                      t("share.preview.fallbackTagline")
                     )}
                   </p>
                   {projected.categories.length > 0 && (
@@ -273,14 +273,14 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
                     </ul>
                   )}
                   <p className="mt-3 text-[10px] leading-relaxed text-white/35">
-                    {projected.sources.length} source{projected.sources.length === 1 ? "" : "s"} with titles, links
-                    and retrieval dates. Question, verdict, category outcomes and sources only — your decision
-                    context and saved decisions are never part of the public record.
+                    {projected.sources.length === 1
+                      ? t("share.preview.sourcesOne", { count: projected.sources.length })
+                      : t("share.preview.sourcesMany", { count: projected.sources.length })}
                   </p>
                 </>
               ) : (
                 <p className="text-[10px] text-white/25">
-                  SideBy · Source-backed comparison engine
+                  {t("share.preview.fallbackTagline")}
                 </p>
               )}
             </div>
@@ -289,7 +289,7 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
           {publicNow && (
             <div className="mb-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
               <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/25">
-                Public URL
+                {t("share.publicUrl.heading")}
               </p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 truncate rounded-lg bg-white/[0.04] px-3 py-2 font-mono text-xs text-white/60">
@@ -298,7 +298,7 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
                 <button
                   type="button"
                   onClick={() => void copy()}
-                  aria-label="Copy public link"
+                  aria-label={t("share.publicUrl.copyAria")}
                   className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] transition-all hover:border-orange-400/30 hover:bg-orange-400/[0.06]"
                 >
                   {copied ? (
@@ -310,7 +310,7 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
               </div>
               {copied && (
                 <p className="mt-2 text-[10px] font-bold text-emerald-400/80">
-                  Copied to clipboard
+                  {t("share.publicUrl.copied")}
                 </p>
               )}
             </div>
@@ -324,14 +324,15 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
 
           {!publicNow && (
             <p className="mb-4 text-[11px] leading-relaxed text-white/40">
-              Public reads are never cached. Unpublishing later stops new visits on the very next request;
-              anything someone already downloaded or re-shared outside SideBy can't be recalled.
+              {t("share.cacheNotice")}
             </p>
           )}
 
           {eligibilityReasons && eligibilityReasons.length > 0 && (
             <div role="note" className="mb-4 rounded-xl border border-amber-400/25 bg-amber-400/[0.06] p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300">Can't publish yet</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300">
+                {t("share.eligibility.heading")}
+              </p>
               <ul className="mt-2 space-y-1.5">
                 {eligibilityReasons.map((reason) => (
                   <li key={reason} className="text-[11px] leading-relaxed text-amber-200/85">{reason}</li>
@@ -342,16 +343,16 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
 
           {requiresSnapshot && (
             <div className="mb-4 rounded-xl border border-sky-400/25 bg-sky-400/[0.05] p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-sky-300">Public snapshot</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-sky-300">
+                {t("share.snapshot.heading")}
+              </p>
               <p className="mt-1.5 text-[11px] leading-relaxed text-sky-200/85">
-                A snapshot re-runs fresh research using only the two recorded option names — no written brief,
-                priorities or uploads travel with it. The snapshot is its own record; publish it once the run
-                completes. Research runs take a few minutes.
+                {t("share.snapshot.description")}
               </p>
 
               <div className="mt-2.5 rounded-lg border border-sky-400/20 bg-black/40 p-2.5">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-sky-300/80 mb-1">
-                  Option names to be researched and published:
+                  {t("share.snapshot.optionNamesLabel")}
                 </p>
                 <div className="flex items-center gap-2 text-xs font-semibold text-white">
                   <span className="truncate rounded bg-white/10 px-2 py-0.5">{entityA}</span>
@@ -361,7 +362,7 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
               </div>
 
               <p className="mt-2 text-[10px] leading-relaxed text-amber-300/90">
-                Option names extracted from private input are not automatically public. Verify that neither option name exposes private project codes, client names, or confidential context.
+                {t("share.snapshot.privacyWarning")}
               </p>
 
               <label className="mt-3 flex items-start gap-2.5 cursor-pointer text-[11px] leading-snug text-sky-100/90 select-none">
@@ -371,20 +372,28 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
                   onChange={(e) => setSnapshotApproved(e.target.checked)}
                   className="mt-0.5 h-4 w-4 rounded border-sky-400/40 bg-black/50 text-sky-400 accent-sky-400 focus:ring-sky-400"
                 />
-                <span>I confirm these exact option names are safe to publish and contain no private context.</span>
+                <span>{t("share.snapshot.confirmCheckbox")}</span>
               </label>
 
               <button
                 type="button"
                 onClick={() => void generateSnapshot()}
                 disabled={snapshotState === "working" || !snapshotApproved}
-                title={!comparisonId ? "Save the comparison first" : !snapshotApproved ? "Review and approve the option names first" : undefined}
+                title={
+                  !comparisonId
+                    ? t("share.snapshot.saveFirstTitle")
+                    : !snapshotApproved
+                      ? t("share.snapshot.approveFirstTitle")
+                      : undefined
+                }
                 className="mt-3 w-full rounded-xl bg-sky-300 py-2.5 text-xs font-bold uppercase tracking-widest text-black transition-colors hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
               >
-                {snapshotState === "working" ? "Generating…" : "Generate public snapshot"}
+                {snapshotState === "working"
+                  ? t("share.snapshot.generating")
+                  : t("share.snapshot.generateButton")}
               </button>
               <p className="mt-2 text-[10px] leading-relaxed text-sky-200/60">
-                Runs a real research job, so it counts as one comparison on your plan.
+                {t("share.snapshot.planNotice")}
               </p>
             </div>
           )}
@@ -403,27 +412,33 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
                 disabled={isWorking}
                 className="flex-1 rounded-xl border border-white/[0.08] bg-transparent py-2.5 text-xs font-bold uppercase tracking-widest text-white/60 transition-colors hover:border-red-400/30 hover:text-red-300 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
               >
-                {isWorking ? "Working…" : "Make private"}
+                {isWorking ? t("share.actions.working") : t("share.actions.makePrivate")}
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => void setVisibility("publish")}
                 disabled={isWorking || !canPublish || Boolean(eligibilityReasons?.length)}
-                title={!comparisonId ? "Save the comparison before publishing" : !projected && result ? "This record can't be published safely" : undefined}
+                title={
+                  !comparisonId
+                    ? t("share.actions.saveBeforePublishTitle")
+                    : !projected && result
+                      ? t("share.actions.cannotPublishSafelyTitle")
+                      : undefined
+                }
                 className="flex-1 rounded-xl bg-white py-2.5 text-xs font-bold uppercase tracking-widest text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
               >
-                {isWorking ? "Publishing…" : "Publish"}
+                {isWorking ? t("share.actions.publishing") : t("share.actions.publish")}
               </button>
             )}
             <button
               type="button"
               onClick={open}
               disabled={!publicNow}
-              title={!publicNow ? "Publish first — opening never publishes on its own" : undefined}
+              title={!publicNow ? t("share.actions.publishFirstTitle") : undefined}
               className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-transparent py-2.5 text-xs font-bold uppercase tracking-widest text-white/70 transition-colors hover:border-orange-400/25 hover:text-orange-200 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
             >
-              Open page
+              {t("share.actions.openPage")}
               <ExternalLink className="h-3 w-3" aria-hidden="true" />
             </button>
           </div>
@@ -454,6 +469,7 @@ export const ShareButton = ({
   eligibilityClassification?: string | null;
   className?: string;
 }) => {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   return (
@@ -464,7 +480,7 @@ export const ShareButton = ({
         className={`inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-xs font-bold uppercase tracking-widest text-white/50 transition-all hover:border-orange-400/25 hover:bg-orange-400/[0.05] hover:text-orange-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${className || ""}`}
       >
         <Share2 className="h-3 w-3" aria-hidden="true" />
-        Share
+        {t("share.button")}
       </button>
       <ShareModal
         opens={open}

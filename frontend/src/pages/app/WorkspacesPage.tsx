@@ -5,8 +5,10 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Layers3, Settings2, LoaderCircle, AlertCircle } from "@/components/icons";
 import { GlowCard } from "@/components/GlowCard";
+import { formatDate, useI18n } from "@/i18n";
 
 const WorkspacesPage = () => {
+  const { t, lang } = useI18n();
   const { workspaces, isLoading, error, refresh, setActiveWorkspaceId, activeWorkspace } = useWorkspace();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -27,13 +29,13 @@ const WorkspacesPage = () => {
       <div className="ws-header flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-            Workspaces
+            {t("app.nav.workspaces")}
           </p>
           <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
-            Workspace model active
+            {t("wsp.workspaces.title")}
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[#fdfbf7]/60">
-            This page bootstraps your private beta workspace from Clerk session state.
+            {t("wsp.workspaces.subtitle")}
           </p>
         </div>
       </div>
@@ -47,7 +49,7 @@ const WorkspacesPage = () => {
               className="mt-4 rounded-sm border border-amber-500/40 px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors hover:bg-amber-500/20"
               onClick={() => void refresh()}
             >
-              Retry workspace bootstrap
+              {t("wsp.workspaces.retry")}
             </button>
           </div>
         </div>
@@ -56,7 +58,7 @@ const WorkspacesPage = () => {
       {!error && isLoading && (
         <div className="ws-card rounded-sm border border-[#2a2a2a] bg-[#111] p-12 text-center text-sm text-[#fdfbf7]/50 flex flex-col items-center gap-4">
           <LoaderCircle className="h-6 w-6 animate-spin text-orange-500" />
-          Creating or loading your SideBy workspace...
+          {t("wsp.workspaces.loading")}
         </div>
       )}
 
@@ -83,18 +85,18 @@ const WorkspacesPage = () => {
                   </div>
                 </div>
                 <span className="rounded-sm border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-emerald-400">
-                  Owner
+                  {t("wsp.common.owner")}
                 </span>
               </div>
               
               <div className="grid grid-cols-2 gap-4 flex-1">
                 <div className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">Plan</p>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">{t("wsp.workspaces.plan")}</p>
                   <p className="text-sm text-[#fdfbf7] capitalize">{workspace.plan}</p>
                 </div>
                 <div className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">Created</p>
-                  <p className="text-sm text-[#fdfbf7]">{new Date(workspace.createdAt).toLocaleDateString()}</p>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">{t("wsp.common.created")}</p>
+                  <p className="text-sm text-[#fdfbf7]">{formatDate(workspace.createdAt, lang)}</p>
                 </div>
               </div>
               
@@ -102,11 +104,11 @@ const WorkspacesPage = () => {
                 <button
                   type="button"
                   onClick={() => manageWorkspace(workspace.id)}
-                  aria-label={`Manage ${workspace.name} workspace settings`}
+                  aria-label={t("wsp.workspaces.manageAria", { name: workspace.name })}
                   className="flex items-center gap-2 rounded-sm bg-[#1a1a1a] border border-[#333] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/70 transition-colors hover:border-[#555] hover:text-[#fdfbf7]"
                 >
                   <Settings2 className="h-3.5 w-3.5" />
-                  {activeWorkspace?.id === workspace.id ? "Manage" : "Switch & Manage"}
+                  {activeWorkspace?.id === workspace.id ? t("wsp.workspaces.manage") : t("wsp.workspaces.switchManage")}
                 </button>
               </div>
             </GlowCard>

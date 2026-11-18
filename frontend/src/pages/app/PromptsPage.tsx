@@ -10,6 +10,7 @@ import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useProjects } from "@/contexts/ProjectsContext";
+import { formatDate, useI18n, useT } from "@/i18n";
 
 interface PromptTemplate {
   id: string;
@@ -50,6 +51,7 @@ const extractVariables = (text: string): string[] => {
 };
 
 const PromptsPage = () => {
+  const { t, lang } = useI18n();
   const { activeWorkspace } = useWorkspace();
   const { activeProject } = useProjects();
   const [prompts, setPrompts] = useState<PromptTemplate[]>([]);
@@ -98,12 +100,12 @@ const PromptsPage = () => {
     };
 
     void loadPrompts().catch((error) => {
-      toast.error("Unable to load prompts", {
-        description: error instanceof Error ? error.message : "Try again shortly.",
+      toast.error(t("wsp.prompts.loadError"), {
+        description: error instanceof Error ? error.message : t("wsp.common.tryAgainShortly"),
       });
       setPrompts(initialPrompts);
     });
-  }, [activeWorkspace?.id, activeProject?.id]);
+  }, [activeWorkspace?.id, activeProject?.id, t]);
 
   const filteredPrompts = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -122,9 +124,9 @@ const PromptsPage = () => {
   const copyToClipboard = async (text: string) => {
     const ok = await copyText(text);
     if (ok) {
-      toast.success("Prompt copied to clipboard");
+      toast.success(t("wsp.prompts.copied"));
     } else {
-      toast.error("Clipboard permission is blocked.");
+      toast.error(t("wsp.prompts.copyBlocked"));
     }
   };
 
@@ -146,11 +148,11 @@ const PromptsPage = () => {
 
   const handleDelete = async (id: string) => {
     const prompt = prompts.find((item) => item.id === id);
-    if (!window.confirm(`Delete the prompt “${prompt?.name ?? "Untitled"}”? This cannot be undone.`)) return;
+    if (!window.confirm(t("wsp.prompts.deleteConfirm", { name: prompt?.name ?? t("wsp.prompts.untitled") }))) return;
     const res = await apiFetch(buildApiUrl(`/api/prompts?id=${id}`), { method: "DELETE" });
-    if (!res.ok) throw new Error("The prompt could not be deleted. Try again.");
+    if (!res.ok) throw new Error(t("wsp.prompts.deleteFailMsg"));
     setPrompts(prev => prev.filter(p => p.id !== id));
-    toast.success("Prompt deleted");
+    toast.success(t("wsp.prompts.deleted"));
   };
 
   const handleSave = async (savedPrompt: PromptTemplate) => {
@@ -180,7 +182,7 @@ const PromptsPage = () => {
       }
     });
     setIsModalOpen(false);
-    toast.success("Prompt saved successfully");
+    toast.success(t("wsp.prompts.saved"));
   };
 
   return (
@@ -188,13 +190,13 @@ const PromptsPage = () => {
       <div className="prompt-header flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-            Generation Studio
+            {t("wsp.prompts.kicker")}
           </p>
           <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
-            Prompt Library
+            {t("wsp.prompts.title")}
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[#fdfbf7]/60">
-            Manage reusable system prompts, workflow instructions, and contextual templates for your workspace.
+            {t("wsp.prompts.subtitle")}
           </p>
         </div>
         <button 
@@ -202,7 +204,7 @@ const PromptsPage = () => {
           className="flex h-10 items-center justify-center gap-2 rounded-sm bg-[#fdfbf7] px-6 text-[10px] font-bold uppercase tracking-widest text-black transition-colors hover:bg-[#e0e0e0] shrink-0"
         >
           <Plus className="h-4 w-4" />
-          New Prompt
+          {t("wsp.prompts.newPrompt")}
         </button>
       </div>
 
@@ -213,7 +215,7 @@ const PromptsPage = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search prompts..."
+            placeholder={t("wsp.prompts.searchPlaceholder")}
             className="h-12 w-full rounded-sm border border-[#333] bg-[#0c0b0a] pl-11 pr-4 text-sm text-[#fdfbf7] outline-none transition-colors placeholder:text-[#fdfbf7]/30 focus:border-orange-500"
           />
         </div>
@@ -236,7 +238,7 @@ const PromptsPage = () => {
                   <div>
                     <h3 className="font-serif text-xl text-[#fdfbf7]">{prompt.name}</h3>
                     <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 mt-1">
-                      Edited {new Date(prompt.lastEdited).toLocaleDateString()}
+                      {t("wsp.prompts.editedOn", { date: formatDate(prompt.lastEdited, lang) })}
                     </p>
                   </div>
                 </div>
@@ -252,6 +254,7 @@ const PromptsPage = () => {
                 </code>
                 <button 
                   onClick={() => copyToClipboard(prompt.content)}
+                  aria-label={t("wsp.prompts.copyAria")}
                   className="absolute top-2 right-2 p-1.5 rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7]/50 opacity-0 group-hover/code:opacity-100 transition-opacity hover:text-[#fdfbf7]"
                 >
                   <Copy className="h-3 w-3" />
@@ -273,12 +276,14 @@ const PromptsPage = () => {
               <div className="flex gap-2">
                 <button 
                   onClick={() => handleOpenEditor(prompt)}
+                  aria-label={t("wsp.prompts.editAria")}
                   className="p-2 text-[#fdfbf7]/40 hover:text-emerald-400 transition-colors"
                 >
                   <Edit3 className="h-4 w-4" />
                 </button>
                 <button 
-                  onClick={() => void handleDelete(prompt.id).catch((error) => toast.error("Delete failed", { description: error instanceof Error ? error.message : "Try again shortly." }))}
+                  onClick={() => void handleDelete(prompt.id).catch((error) => toast.error(t("wsp.prompts.deleteFail"), { description: error instanceof Error ? error.message : t("wsp.common.tryAgainShortly") }))}
+                  aria-label={t("wsp.prompts.deleteAria")}
                   className="p-2 text-[#fdfbf7]/40 hover:text-red-400 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -286,7 +291,7 @@ const PromptsPage = () => {
               </div>
               <button className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/70 hover:text-white transition-colors">
                 <Play className="h-3 w-3" />
-                Test Prompt
+                {t("wsp.prompts.testPrompt")}
               </button>
             </div>
           </GlowCard>
@@ -295,7 +300,7 @@ const PromptsPage = () => {
         {filteredPrompts.length === 0 && (
           <div className="col-span-full py-16 text-center border border-dashed border-[#333] bg-[#0c0b0a] rounded-sm">
             <Terminal className="mx-auto h-8 w-8 text-[#fdfbf7]/20 mb-4" />
-            <p className="text-[#fdfbf7]/50 text-sm">No prompts found matching your search.</p>
+            <p className="text-[#fdfbf7]/50 text-sm">{t("wsp.prompts.empty")}</p>
           </div>
         )}
       </div>
@@ -305,7 +310,7 @@ const PromptsPage = () => {
           <PromptEditorModal 
             prompt={editingPrompt} 
             onClose={() => setIsModalOpen(false)} 
-            onSave={(prompt) => void handleSave(prompt).catch((error) => toast.error("Save failed", { description: error instanceof Error ? error.message : "Try again shortly." }))} 
+            onSave={(prompt) => void handleSave(prompt).catch((error) => toast.error(t("wsp.prompts.saveFail"), { description: error instanceof Error ? error.message : t("wsp.common.tryAgainShortly") }))} 
           />
         )}
       </AnimatePresence>
@@ -323,6 +328,7 @@ const PromptEditorModal = ({
   onClose: () => void, 
   onSave: (p: PromptTemplate) => void 
 }) => {
+  const t = useT();
   const [formData, setFormData] = useState(prompt);
   
   // Real-time variable extraction
@@ -331,7 +337,7 @@ const PromptEditorModal = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.content) {
-      toast.error("Name and Content are required");
+      toast.error(t("wsp.prompts.nameContentRequired"));
       return;
     }
     onSave({
@@ -361,11 +367,12 @@ const PromptEditorModal = ({
               <Terminal className="h-4 w-4" />
             </div>
             <h2 className="font-serif text-xl text-[#fdfbf7]">
-              {prompt.name ? "Edit Prompt" : "Create New Prompt"}
+              {prompt.name ? t("wsp.prompts.editTitle") : t("wsp.prompts.createTitle")}
             </h2>
           </div>
           <button
             onClick={onClose}
+            aria-label={t("wsp.prompts.closeAria")}
             className="rounded-sm p-2 text-[#fdfbf7]/40 transition-colors hover:bg-[#1a1a1a] hover:text-[#fdfbf7]"
           >
             <X className="h-5 w-5" />
@@ -376,24 +383,24 @@ const PromptEditorModal = ({
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
-                Prompt Name
+                {t("wsp.prompts.nameLabel")}
               </label>
               <input
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. Code Reviewer"
+                placeholder={t("wsp.prompts.namePlaceholder")}
                 className="w-full rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-[#fdfbf7] outline-none transition-colors focus:border-emerald-500"
               />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
-                Description (Optional)
+                {t("wsp.prompts.descLabel")}
               </label>
               <input
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="What does this prompt do?"
+                placeholder={t("wsp.prompts.descPlaceholder")}
                 className="w-full rounded-sm border border-[#333] bg-[#111] px-4 py-3 text-sm text-[#fdfbf7] outline-none transition-colors focus:border-emerald-500"
               />
             </div>
@@ -402,15 +409,15 @@ const PromptEditorModal = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
-                System Prompt Content
+                {t("wsp.prompts.contentLabel")}
               </label>
-              <span className="text-[10px] text-[#fdfbf7]/40 font-mono">Use {'{{variable}}'} syntax</span>
+              <span className="text-[10px] text-[#fdfbf7]/40 font-mono">{t("wsp.prompts.variableHint")}</span>
             </div>
             <textarea
               required
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              placeholder="You are a helpful assistant..."
+              placeholder={t("wsp.prompts.contentPlaceholder")}
               className="min-h-[200px] w-full resize-y rounded-sm border border-[#333] bg-[#111] p-4 font-mono text-sm text-[#fdfbf7] outline-none transition-colors focus:border-emerald-500"
             />
           </div>
@@ -418,7 +425,7 @@ const PromptEditorModal = ({
           <div className="rounded-sm border border-[#2a2a2a] bg-[#111]/50 p-4">
             <div className="flex items-center gap-2 mb-3">
               <Variable className="h-4 w-4 text-emerald-400" />
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/80">Detected Variables</h4>
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/80">{t("wsp.prompts.detectedVars")}</h4>
             </div>
             {detectedVariables.length > 0 ? (
               <div className="flex flex-wrap gap-2">
@@ -429,7 +436,7 @@ const PromptEditorModal = ({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-[#fdfbf7]/40 italic">No variables detected. Add them using {'{{variable_name}}'}</p>
+              <p className="text-xs text-[#fdfbf7]/40 italic">{t("wsp.prompts.noVars")}</p>
             )}
           </div>
         </form>
@@ -440,14 +447,14 @@ const PromptEditorModal = ({
             onClick={onClose}
             className="rounded-sm px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:bg-[#1a1a1a] hover:text-[#fdfbf7]"
           >
-            Cancel
+            {t("wsp.common.cancel")}
           </button>
           <button
             onClick={handleSubmit}
             className="flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]"
           >
             <Save className="h-4 w-4" />
-            Save Prompt
+            {t("wsp.prompts.savePrompt")}
           </button>
         </div>
       </motion.div>

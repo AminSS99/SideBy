@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GlowCard } from "@/components/GlowCard";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
+import { formatDate, statusLabel, useI18n, type MessageKey, type TFunction } from "@/i18n";
 
 interface TeamMember {
   id: string;
@@ -21,6 +22,15 @@ interface TeamMember {
   joinedAt: string;
 }
 
+const ROLE_KEYS: Record<TeamMember["role"], MessageKey> = {
+  owner: "wsp.team.role.owner",
+  admin: "wsp.team.role.admin",
+  member: "wsp.team.role.member",
+  viewer: "wsp.team.role.viewer",
+};
+
+const roleLabel = (t: TFunction, role: TeamMember["role"]) => t(ROLE_KEYS[role]);
+
 const RoleIcon = ({ role }: { role: TeamMember["role"] }) => {
   switch (role) {
     case "owner": return <ShieldAlert className="h-3.5 w-3.5 text-orange-500" />;
@@ -31,6 +41,7 @@ const RoleIcon = ({ role }: { role: TeamMember["role"] }) => {
 };
 
 const TeamPage = () => {
+  const { t, lang } = useI18n();
   const { activeWorkspace } = useWorkspace();
   const { user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -74,9 +85,9 @@ const TeamPage = () => {
     void loadTeam().catch((error) => {
       setMembers([]);
       setInvitations([]);
-      setTeamError(error instanceof Error ? error.message : "Unable to load team.");
+      setTeamError(error instanceof Error ? error.message : t("wsp.team.loadError"));
     });
-  }, [loadTeam]);
+  }, [loadTeam, t]);
 
   const directoryMembers = useMemo<TeamMember[]>(() => {
     if (!user?.email) return members;
@@ -105,10 +116,10 @@ const TeamPage = () => {
 
   const validateInviteEmail = (value: string): string | null => {
     const trimmed = value.trim();
-    if (!trimmed) return "Email address is required.";
-    if (!EMAIL_PATTERN.test(trimmed)) return "Enter a valid email address, e.g. colleague@company.com.";
+    if (!trimmed) return t("wsp.team.emailRequired");
+    if (!EMAIL_PATTERN.test(trimmed)) return t("wsp.team.emailInvalid");
     if (directoryMembers.some((member) => member.email.toLowerCase() === trimmed.toLowerCase())) {
-      return "That person already has access to this workspace.";
+      return t("wsp.team.emailDuplicate");
     }
     return null;
   };
@@ -120,7 +131,7 @@ const TeamPage = () => {
     if (validationError) {
       setInviteError(validationError);
       inviteInputRef.current?.focus();
-      toast.error("Cannot send invite", { description: validationError });
+      toast.error(t("wsp.team.cannotInvite"), { description: validationError });
       return;
     }
     setInviteError(null);
@@ -151,12 +162,15 @@ const TeamPage = () => {
         joinedAt: data.invitation.createdAt,
       }, ...current]);
       setInviteEmail("");
-      toast.success("Invite sent.", {
-        description: `${email} was invited as a ${inviteRole}.`,
+      toast.success(t("wsp.team.inviteSent"), {
+        description: t("wsp.team.inviteSentDesc", {
+          email,
+          role: roleLabel(t, inviteRole).toLowerCase(),
+        }),
       });
     } catch (error) {
-      toast.error("Invite failed", {
-        description: error instanceof Error ? error.message : "Try again shortly.",
+      toast.error(t("wsp.team.inviteFail"), {
+        description: error instanceof Error ? error.message : t("wsp.common.tryAgainShortly"),
       });
     } finally {
       setIsInviting(false);
@@ -175,23 +189,23 @@ const TeamPage = () => {
       });
       if (!response.ok) {
         const data = await response.json() as { error?: string };
-        throw new Error(data.error || "Failed to update role.");
+        throw new Error(data.error || t("wsp.team.roleUpdateFailMsg"));
       }
       setMembers((prev) =>
         prev.map((m) => (m.id === memberId ? { ...m, role: newRole } : m))
       );
       setEditingMember(null);
-      toast.success("Role updated.");
+      toast.success(t("wsp.team.roleUpdated"));
     } catch (error) {
-      toast.error("Role update failed", {
-        description: error instanceof Error ? error.message : "Try again shortly.",
+      toast.error(t("wsp.team.roleUpdateFail"), {
+        description: error instanceof Error ? error.message : t("wsp.common.tryAgainShortly"),
       });
     }
   };
 
   const handleRemoveMember = async (memberId: string, memberName: string) => {
     if (!activeWorkspace?.id) return;
-    if (!window.confirm(`Remove ${memberName} from this workspace? This cannot be undone.`)) return;
+    if (!window.confirm(t("wsp.team.removeConfirm", { name: memberName }))) return;
 
     try {
       const response = await apiFetch(buildApiUrl("/api/team"), {
@@ -204,14 +218,14 @@ const TeamPage = () => {
       });
       if (!response.ok) {
         const data = await response.json() as { error?: string };
-        throw new Error(data.error || "Failed to remove member.");
+        throw new Error(data.error || t("wsp.team.removeFailMsg"));
       }
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
       setInvitations((prev) => prev.filter((m) => m.id !== memberId));
-      toast.success("Member removed.");
+      toast.success(t("wsp.team.memberRemoved"));
     } catch (error) {
-      toast.error("Removal failed", {
-        description: error instanceof Error ? error.message : "Try again shortly.",
+      toast.error(t("wsp.team.removeFail"), {
+        description: error instanceof Error ? error.message : t("wsp.common.tryAgainShortly"),
       });
     }
   };
@@ -221,13 +235,13 @@ const TeamPage = () => {
       <div className="team-header flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-            Collaboration
+            {t("wsp.team.kicker")}
           </p>
           <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
-            Team & Access
+            {t("wsp.team.title")}
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#fdfbf7]/60">
-            Manage who has access to {activeWorkspace?.name || "your workspace"}. Invite colleagues to share research, comparisons, and prompts.
+            {t("wsp.team.subtitle", { workspace: activeWorkspace?.name || t("wsp.team.yourWorkspace") })}
           </p>
         </div>
       </div>
@@ -243,7 +257,7 @@ const TeamPage = () => {
           <GlowCard className="p-6 sm:p-8">
             <div className="mb-6 flex items-center gap-3 border-b border-[#2a2a2a] pb-4">
               <Mail className="h-5 w-5 text-orange-500" />
-              <h2 className="font-serif text-xl text-[#fdfbf7]">Invite new members</h2>
+              <h2 className="font-serif text-xl text-[#fdfbf7]">{t("wsp.team.inviteHeading")}</h2>
             </div>
 
             <form onSubmit={(event) => void handleInvite(event)} noValidate className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -274,18 +288,18 @@ const TeamPage = () => {
                 onChange={(e) => setInviteRole(e.target.value as TeamMember["role"])}
                 className="h-12 w-full sm:w-48 rounded-sm border border-[#333] bg-[#0c0b0a] px-4 text-sm text-[#fdfbf7] outline-none focus:border-orange-500 cursor-pointer"
               >
-                <option value="admin">Admin</option>
-                <option value="member">Member</option>
-                <option value="viewer">Viewer</option>
+                <option value="admin">{t("wsp.team.role.admin")}</option>
+                <option value="member">{t("wsp.team.role.member")}</option>
+                <option value="viewer">{t("wsp.team.role.viewer")}</option>
               </select>
 
               <button
                 type="submit"
                 disabled={isInviting || !EMAIL_PATTERN.test(inviteEmail.trim())}
-                title={!EMAIL_PATTERN.test(inviteEmail.trim()) ? "Enter a valid email address to enable" : undefined}
+                title={!EMAIL_PATTERN.test(inviteEmail.trim()) ? t("wsp.team.inviteButtonHint") : undefined}
                 className="h-12 w-full sm:w-auto shrink-0 rounded-sm bg-[#fdfbf7] px-8 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isInviting ? "Sending..." : "Send Invite"}
+                {isInviting ? t("wsp.team.sending") : t("wsp.team.sendInvite")}
               </button>
             </form>
           </GlowCard>
@@ -295,17 +309,17 @@ const TeamPage = () => {
             <div className="p-6 sm:p-8 border-b border-[#2a2a2a] flex items-center justify-between bg-[#0c0b0a]">
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-orange-500" />
-                <h2 className="font-serif text-xl text-[#fdfbf7]">Workspace Members</h2>
+                <h2 className="font-serif text-xl text-[#fdfbf7]">{t("wsp.team.membersHeading")}</h2>
               </div>
               <span className="rounded-sm border border-[#333] bg-[#1a1a1a] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
-                {directoryMembers.length} Total
+                {t("wsp.team.totalCount", { count: directoryMembers.length })}
               </span>
             </div>
 
             <div className="divide-y divide-[#2a2a2a]">
               {directoryMembers.length === 0 ? (
                 <div className="p-10 text-center text-sm text-[#fdfbf7]/40">
-                  No members yet. Send the first invite to start a shared workspace.
+                  {t("wsp.team.empty")}
                 </div>
               ) : directoryMembers.map((member) => (
                 <div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:px-8 hover:bg-[#151515] transition-colors group">
@@ -320,7 +334,7 @@ const TeamPage = () => {
                         </p>
                         {member.status === "invited" && (
                           <span className="rounded-sm border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-500">
-                            Pending
+                            {statusLabel(t, "pending")}
                           </span>
                         )}
                       </div>
@@ -337,21 +351,21 @@ const TeamPage = () => {
                             onChange={(e) => setEditRole(e.target.value as TeamMember["role"])}
                             className="h-8 rounded-sm border border-[#333] bg-[#0c0b0a] px-2 text-xs text-[#fdfbf7] outline-none focus:border-orange-500 cursor-pointer"
                           >
-                            <option value="admin">Admin</option>
-                            <option value="member">Member</option>
-                            <option value="viewer">Viewer</option>
+                            <option value="admin">{t("wsp.team.role.admin")}</option>
+                            <option value="member">{t("wsp.team.role.member")}</option>
+                            <option value="viewer">{t("wsp.team.role.viewer")}</option>
                           </select>
                           <button
                             onClick={() => void handleRoleChange(member.id, editRole)}
                             className="h-8 rounded-sm bg-orange-500 px-3 text-[10px] font-bold uppercase tracking-widest text-black hover:bg-orange-400 transition-colors"
                           >
-                            Save
+                            {t("wsp.common.save")}
                           </button>
                           <button
                             onClick={() => setEditingMember(null)}
                             className="h-8 rounded-sm border border-[#333] bg-[#0c0b0a] px-3 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 hover:text-white transition-colors"
                           >
-                            Cancel
+                            {t("wsp.common.cancel")}
                           </button>
                         </div>
                       ) : (
@@ -359,11 +373,13 @@ const TeamPage = () => {
                           <div className="flex items-center gap-1.5">
                             <RoleIcon role={member.role} />
                             <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/70">
-                              {member.role}
+                              {roleLabel(t, member.role)}
                             </span>
                           </div>
                           <span className="text-[10px] text-[#fdfbf7]/30">
-                            {member.status === "active" ? "Joined" : "Invited"} {new Date(member.joinedAt).toLocaleDateString()}
+                            {member.status === "active"
+                              ? t("wsp.team.joinedOn", { date: formatDate(member.joinedAt, lang) })
+                              : t("wsp.team.invitedOn", { date: formatDate(member.joinedAt, lang) })}
                           </span>
                         </>
                       )}
@@ -373,6 +389,7 @@ const TeamPage = () => {
                       <div className="flex items-center gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           disabled={member.role === "owner"}
+                          aria-label={t("wsp.team.editRoleAria")}
                           onClick={() => {
                             setEditingMember(member.id);
                             setEditRole(member.role === "owner" ? "admin" : member.role);
@@ -383,6 +400,7 @@ const TeamPage = () => {
                         </button>
                         <button
                           disabled={member.role === "owner"}
+                          aria-label={t("wsp.team.removeMemberAria")}
                           onClick={() => void handleRemoveMember(member.id, member.name || member.email)}
                           className="flex h-8 w-8 items-center justify-center rounded-sm border border-[#333] bg-[#0c0b0a] text-[#fdfbf7]/40 hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                         >

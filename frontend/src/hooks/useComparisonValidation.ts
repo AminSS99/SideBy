@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { analyzeQueryIntent, type QueryIntent } from "@/lib/queryIntent";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
+import { detectLang } from "@/i18n";
 
 export interface UseComparisonValidationProps {
   initialEntityA?: string;
@@ -78,7 +79,7 @@ export function useComparisonValidation({
       const response = await apiFetch(buildApiUrl("/api/comparisons/validate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: clean }),
+        body: JSON.stringify({ query: clean, ...(["az", "ru"].includes(detectLang()) ? { language: detectLang() } : {}) }),
       }, { retries: 0 });
 
       if (!response.ok) {

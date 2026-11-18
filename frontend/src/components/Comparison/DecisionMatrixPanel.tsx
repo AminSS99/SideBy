@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import type { ComparisonData } from "./types";
 import { panelClass } from "./constants";
+import { useT } from "@/i18n";
 
 import { ScoreDetailDrawer } from "./ScoreDetailDrawer";
 
@@ -32,6 +33,7 @@ export const DecisionMatrixPanel = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { session } = useAuth();
+  const t = useT();
   
   const [selectedDimension, setSelectedDimension] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -49,7 +51,7 @@ export const DecisionMatrixPanel = ({
     enabled: Boolean(session),
     queryFn: async () => {
       const res = await apiFetch(buildApiUrl(`/api/decision-matrices?comparisonId=${comparisonId}`));
-      if (!res.ok) throw new Error("Could not load decision templates.");
+      if (!res.ok) throw new Error(t("dm.err.loadTemplates"));
       const data = (await res.json()) as { matrices: DecisionMatrixRecord[] };
       return data.matrices;
     },
@@ -62,7 +64,7 @@ export const DecisionMatrixPanel = ({
     enabled: Boolean(session),
     queryFn: async () => {
       const res = await apiFetch(buildApiUrl("/api/decision-matrices"));
-      if (!res.ok) throw new Error("Could not load default profiles.");
+      if (!res.ok) throw new Error(t("dm.err.loadProfiles"));
       const data = (await res.json()) as { matrices: DecisionMatrixRecord[] };
       return data.matrices.filter((matrix) => matrix.comparisonId === null);
     },
@@ -160,18 +162,18 @@ export const DecisionMatrixPanel = ({
       resetWeights[d.subject] = 3;
     });
     setWeights(resetWeights);
-    toast.success("Weights reset to default.");
+    toast.success(t("dm.toast.reset"));
   };
 
   // Save the current weight template
   const handleSaveMatrix = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session) {
-      toast.error("Please sign in or create an account to save weight templates.");
+      toast.error(t("dm.toast.signInToSave"));
       return;
     }
     if (!matrixName.trim()) {
-      toast.error("Please enter a template name.");
+      toast.error(t("dm.toast.enterName"));
       return;
     }
 
@@ -192,12 +194,12 @@ export const DecisionMatrixPanel = ({
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to save template.");
-      toast.success("Weights template saved successfully.");
+      if (!res.ok) throw new Error(t("dm.err.saveTemplate"));
+      toast.success(t("dm.toast.saved"));
       setMatrixName("");
       void loadSavedMatrices();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error saving template.");
+      toast.error(err instanceof Error ? err.message : t("dm.err.saveTemplateGeneric"));
     } finally {
       setIsSaving(false);
     }
@@ -205,7 +207,7 @@ export const DecisionMatrixPanel = ({
 
   const handleSaveDefaultProfile = async () => {
     if (!session || !matrixName.trim()) {
-      toast.error("Name this profile before saving it as your default.");
+      toast.error(t("dm.toast.nameProfile"));
       return;
     }
     try {
@@ -214,12 +216,12 @@ export const DecisionMatrixPanel = ({
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: matrixName.trim(), weights, result: { scoreA: scores.scoreA, scoreB: scores.scoreB, winner: scores.winner } }),
       });
-      if (!res.ok) throw new Error("Failed to save default profile.");
-      toast.success("Default criteria profile saved.");
+      if (!res.ok) throw new Error(t("dm.err.saveProfile"));
+      toast.success(t("dm.toast.profileSaved"));
       setMatrixName("");
       void loadDefaultProfiles();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to save default profile.");
+      toast.error(error instanceof Error ? error.message : t("dm.err.saveProfileGeneric"));
     } finally { setIsSaving(false); }
   };
 
@@ -229,18 +231,18 @@ export const DecisionMatrixPanel = ({
       const res = await apiFetch(buildApiUrl(`/api/decision-matrices?id=${id}`), {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to delete template.");
+      if (!res.ok) throw new Error(t("dm.err.deleteTemplate"));
       refreshMatrices();
-      toast.success("Template deleted.");
+      toast.success(t("dm.toast.deleted"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error deleting template.");
+      toast.error(err instanceof Error ? err.message : t("dm.err.deleteTemplateGeneric"));
     }
   };
 
   // Load a saved template
   const handleLoadMatrix = (matrix: DecisionMatrixRecord) => {
     setWeights(matrix.weights);
-    toast.success(`Loaded weight template: "${matrix.name}"`);
+    toast.success(t("dm.toast.loaded", { name: matrix.name }));
   };
 
   return (
@@ -252,8 +254,8 @@ export const DecisionMatrixPanel = ({
             <Sliders className="h-5 w-5 text-orange-400" />
           </div>
           <div>
-            <h3 className="font-serif text-2xl tracking-tight text-[#fffaf1]">Tune your decision</h3>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mt-1">Weighted Decision Intelligence</p>
+            <h3 className="font-serif text-2xl tracking-tight text-[#fffaf1]">{t("dm.title")}</h3>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mt-1">{t("dm.subtitle")}</p>
           </div>
         </div>
         
@@ -261,7 +263,7 @@ export const DecisionMatrixPanel = ({
           onClick={handleReset}
           className="min-h-10 rounded-xl border border-white/10 px-4 text-[10px] font-bold uppercase tracking-wider text-white/55 transition-all hover:bg-white/[0.05] hover:text-white"
         >
-          Reset to default
+          {t("dm.reset")}
         </button>
       </div>
 
@@ -271,7 +273,7 @@ export const DecisionMatrixPanel = ({
         {/* Sliders Configuration */}
         <div className="space-y-5 border-b border-white/[0.08] p-4 sm:p-6 md:p-8 lg:col-span-7 lg:border-b-0 lg:border-r">
           <h4 className="text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/60 flex items-center gap-2">
-            <Sliders className="h-3.5 w-3.5 text-orange-500" /> Configure Dimension Importance
+            <Sliders className="h-3.5 w-3.5 text-orange-500" /> {t("dm.configure")}
           </h4>
           
           <div className="space-y-5">
@@ -291,11 +293,11 @@ export const DecisionMatrixPanel = ({
                           setSelectedDimension(dim.subject);
                           setIsDrawerOpen(true);
                         }}
-                        aria-label={`View evidence for ${dim.subject}`}
+                        aria-label={t("dm.viewEvidenceAria", { subject: dim.subject })}
                         className="inline-flex items-center gap-1 rounded border border-[#333] px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-orange-500/35 hover:text-orange-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
                       >
                         <HelpCircle className="h-3 w-3" />
-                        Evidence
+                        {t("res.bar.evidence")}
                       </button>
                       <span className="text-xs font-mono font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
                         w={currentWeight}
@@ -304,7 +306,7 @@ export const DecisionMatrixPanel = ({
                   </div>
                   
                   <div className="flex items-center gap-4">
-                    <span className="text-[9px] font-bold text-[#fdfbf7]/30 uppercase tracking-widest shrink-0">Low</span>
+                    <span className="text-[9px] font-bold text-[#fdfbf7]/30 uppercase tracking-widest shrink-0">{t("dm.weight.low")}</span>
                     <input 
                       type="range"
                       min="1"
@@ -312,10 +314,10 @@ export const DecisionMatrixPanel = ({
                       step="1"
                       value={currentWeight}
                       onChange={(e) => handleSliderChange(dim.subject, parseInt(e.target.value))}
-                      aria-label={`Importance of ${dim.subject}`}
+                      aria-label={t("dm.importanceAria", { subject: dim.subject })}
                       className="w-full h-1 bg-[#1f1f1f] rounded-lg appearance-none cursor-pointer accent-orange-500"
                     />
-                    <span className="text-[9px] font-bold text-[#fdfbf7]/30 uppercase tracking-widest shrink-0">Critical</span>
+                    <span className="text-[9px] font-bold text-[#fdfbf7]/30 uppercase tracking-widest shrink-0">{t("dm.weight.critical")}</span>
                   </div>
                 </div>
               );
@@ -327,7 +329,7 @@ export const DecisionMatrixPanel = ({
         <div className="flex flex-col justify-between bg-black/15 p-4 sm:p-6 md:p-8 lg:col-span-5">
           <div className="space-y-6">
             <h4 className="text-xs font-bold uppercase tracking-widest text-[#fdfbf7]/60 flex items-center gap-2">
-              <Activity className="h-3.5 w-3.5 text-cyan-400" /> Real-time Decision Matrix
+              <Activity className="h-3.5 w-3.5 text-cyan-400" /> {t("dm.matrixTitle")}
             </h4>
 
             {/* Score Boards */}
@@ -341,7 +343,7 @@ export const DecisionMatrixPanel = ({
                 <span className="mt-2 block font-serif text-3xl font-semibold text-[#fdfbf7] sm:text-4xl">
                   {scores.scoreA}
                 </span>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 block mt-1">Weighted Index</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 block mt-1">{t("dm.weightedIndex")}</span>
               </div>
 
               {/* Entity B */}
@@ -353,7 +355,7 @@ export const DecisionMatrixPanel = ({
                 <span className="mt-2 block font-serif text-3xl font-semibold text-[#fdfbf7] sm:text-4xl">
                   {scores.scoreB}
                 </span>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 block mt-1">Weighted Index</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 block mt-1">{t("dm.weightedIndex")}</span>
               </div>
             </div>
 
@@ -366,12 +368,12 @@ export const DecisionMatrixPanel = ({
                       <Trophy className="h-6 w-6" />
                     </div>
                     <div>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-orange-400 block">Decision Verdict</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-orange-400 block">{t("dm.verdict")}</span>
                       <h5 className="font-serif text-lg text-[#fdfbf7] mt-0.5">
-                        {scores.winner === "a" ? result.entities.a.name : result.entities.b.name} Wins
+                        {t("dm.winnerWins", { name: scores.winner === "a" ? result.entities.a.name : result.entities.b.name })}
                       </h5>
                       <p className="text-[10px] text-[#fdfbf7]/50 mt-1">
-                        Based on importance weights, {scores.winner === "a" ? result.entities.a.name : result.entities.b.name} is the optimal choice for your requirements.
+                        {t("dm.winnerDesc", { name: scores.winner === "a" ? result.entities.a.name : result.entities.b.name })}
                       </p>
                     </div>
                   </>
@@ -381,10 +383,10 @@ export const DecisionMatrixPanel = ({
                       <HelpCircle className="h-6 w-6" />
                     </div>
                     <div>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">Decision Verdict</span>
-                      <h5 className="font-serif text-lg text-[#fdfbf7] mt-0.5">Tied Recommendation</h5>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">{t("dm.verdict")}</span>
+                      <h5 className="font-serif text-lg text-[#fdfbf7] mt-0.5">{t("dm.tiedTitle")}</h5>
                       <p className="text-[10px] text-[#fdfbf7]/50 mt-1">
-                        Adjust criteria sliders to emphasize specific dimension priorities and break the tie.
+                        {t("dm.tiedDesc")}
                       </p>
                     </div>
                   </>
@@ -395,11 +397,11 @@ export const DecisionMatrixPanel = ({
 
           {/* Save Form */}
           <form onSubmit={handleSaveMatrix} className="mt-8 border-t border-[#1f1f1f] pt-6 space-y-3">
-            <label className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">Save Current Weights Template</label>
+            <label className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">{t("dm.saveLabel")}</label>
             <div className="flex flex-col sm:flex-row gap-2">
               <input 
                 type="text"
-                placeholder="e.g. Developer Heavy"
+                placeholder={t("dm.savePlaceholder")}
                 value={matrixName}
                 onChange={(e) => setMatrixName(e.target.value)}
                 className="h-11 sm:h-9 flex-1 rounded-sm border border-[#333] bg-black px-3 text-base sm:text-xs text-[#fdfbf7] outline-none transition-colors placeholder:text-[#fdfbf7]/30 focus:border-orange-500"
@@ -413,7 +415,7 @@ export const DecisionMatrixPanel = ({
                   className="h-11 sm:h-9 px-4 flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-sm bg-orange-600 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700 disabled:opacity-50 shrink-0"
                 >
                   <Save className="h-3.5 w-3.5" />
-                  {isSaving ? "Saving" : "Save"}
+                  {isSaving ? t("dm.saving") : t("dm.save")}
                 </motion.button>
                 <motion.button 
                   whileHover={!isSaving ? { scale: 1.02 } : undefined}
@@ -423,7 +425,7 @@ export const DecisionMatrixPanel = ({
                   disabled={isSaving} 
                   className="h-11 sm:h-9 rounded-sm border border-orange-500/40 px-3 text-[9px] font-bold uppercase tracking-widest text-orange-300 transition-colors hover:bg-orange-500/10 disabled:opacity-50"
                 >
-                  Default
+                  {t("dm.default")}
                 </motion.button>
               </div>
             </div>
@@ -435,14 +437,14 @@ export const DecisionMatrixPanel = ({
       <div className="p-6 bg-[#090908] border-t border-[#1f1f1f]">
         {session && defaultProfiles.length > 0 && (
           <div className="mb-6">
-            <h4 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-orange-300">Your default criteria profiles</h4>
+            <h4 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-orange-300">{t("dm.defaultProfiles")}</h4>
             <div className="flex flex-wrap gap-2">
-              {defaultProfiles.map((matrix) => <button key={matrix.id} type="button" onClick={() => handleLoadMatrix(matrix)} className="rounded-sm border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-orange-200 hover:bg-orange-500/15">Use {matrix.name}</button>)}
+              {defaultProfiles.map((matrix) => <button key={matrix.id} type="button" onClick={() => handleLoadMatrix(matrix)} className="rounded-sm border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-orange-200 hover:bg-orange-500/15">{t("dm.useProfile", { name: matrix.name })}</button>)}
             </div>
           </div>
         )}
         <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 flex items-center gap-2 mb-4">
-          <FolderOpen className="h-3.5 w-3.5 text-cyan-400" /> Saved templates
+          <FolderOpen className="h-3.5 w-3.5 text-cyan-400" /> {t("dm.savedTemplates")}
         </h4>
 
         {!session ? (
@@ -450,21 +452,21 @@ export const DecisionMatrixPanel = ({
             <div className="flex items-center gap-3">
               <Lock className="h-5 w-5 text-orange-400 shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-[#fdfbf7]">Sign in to save templates</p>
-                <p className="text-[10px] text-[#fdfbf7]/50 mt-0.5">Create custom weight matrices, save configurations, and monitor comparison variations.</p>
+                <p className="text-xs font-semibold text-[#fdfbf7]">{t("dm.signInTitle")}</p>
+                <p className="text-[10px] text-[#fdfbf7]/50 mt-0.5">{t("dm.signInDesc")}</p>
               </div>
             </div>
             <a 
               href="/auth/sign-up" 
               className="px-4 py-1.5 bg-[#fdfbf7] hover:bg-[#fdfbf7]/90 text-black font-bold uppercase tracking-widest text-[9px] rounded-sm transition-colors shrink-0"
             >
-              Sign Up Free
+              {t("dm.signUpFree")}
             </a>
           </div>
         ) : isLoadingSaved ? (
-          <p className="text-xs text-[#fdfbf7]/30">Loading saved weight templates...</p>
+          <p className="text-xs text-[#fdfbf7]/30">{t("dm.loadingSaved")}</p>
         ) : savedMatrices.length === 0 ? (
-          <p className="text-xs text-[#fdfbf7]/30 italic">No saved weight templates for this comparison yet.</p>
+          <p className="text-xs text-[#fdfbf7]/30 italic">{t("dm.noSaved")}</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {savedMatrices.map((matrix) => (
@@ -480,7 +482,7 @@ export const DecisionMatrixPanel = ({
                     {matrix.name}
                   </span>
                   <span className="text-[9px] text-[#fdfbf7]/40 uppercase tracking-widest block mt-0.5">
-                    Scores: {matrix.result?.scoreA ?? 0} vs {matrix.result?.scoreB ?? 0}
+                    {t("dm.savedScores", { a: matrix.result?.scoreA ?? 0, b: matrix.result?.scoreB ?? 0 })}
                   </span>
                 </button>
                 <button

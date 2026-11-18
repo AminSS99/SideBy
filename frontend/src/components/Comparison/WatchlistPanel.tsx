@@ -7,6 +7,31 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import type { ComparisonData } from "./types";
 import { panelClass } from "./constants";
+import { formatDateTime, statusLabel, useI18n, type MessageKey } from "@/i18n";
+
+const AGENT_SIGNALS: readonly { icon: typeof Sparkles; titleKey: MessageKey; textKey: MessageKey }[] = [
+  {
+    icon: Sparkles,
+    titleKey: "dw.watch.signal.recrawlTitle",
+    textKey: "dw.watch.signal.recrawlText",
+  },
+  {
+    icon: AlertTriangle,
+    titleKey: "dw.watch.signal.driftTitle",
+    textKey: "dw.watch.signal.driftText",
+  },
+  {
+    icon: Calendar,
+    titleKey: "dw.watch.signal.historyTitle",
+    textKey: "dw.watch.signal.historyText",
+  },
+];
+
+const CADENCE_KEYS: Record<"daily" | "weekly" | "monthly", MessageKey> = {
+  daily: "dw.watch.cadence.daily",
+  weekly: "dw.watch.cadence.weekly",
+  monthly: "dw.watch.cadence.monthly",
+};
 
 type WatchlistRecord = {
   id: string;
@@ -28,6 +53,7 @@ export const WatchlistPanel = ({
   comparisonId: string;
 }) => {
   const { session } = useAuth();
+  const { t, lang } = useI18n();
   const [activeWatchlist, setActiveWatchlist] = useState<WatchlistRecord | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,30 +63,12 @@ export const WatchlistPanel = ({
   const [alertThreshold, setAlertThreshold] = useState<number>(0.1); // default 10%
   const monitorName = `${result.entities.a.name} vs ${result.entities.b.name}`;
 
-  const agentSignals = [
-    {
-      icon: Sparkles,
-      title: "Recrawl sources",
-      text: "Refreshes the cited sources behind this comparison on schedule.",
-    },
-    {
-      icon: AlertTriangle,
-      title: "Detect drift",
-      text: "Flags material score and fact changes before the decision gets stale.",
-    },
-    {
-      icon: Calendar,
-      title: "Keep history",
-      text: "Preserves the run cadence, last check, and next check for review.",
-    },
-  ];
-
   const fetchWatchlist = useCallback(async () => {
     if (!session) return;
     try {
       setIsLoading(true);
       const res = await apiFetch(buildApiUrl("/api/watchlists"));
-      if (!res.ok) throw new Error("Failed to load watchlists.");
+      if (!res.ok) throw new Error(t("dw.watch.err.load"));
       const data = (await res.json()) as { watchlists: WatchlistRecord[] };
       
       // Find if any watchlist is watching the current comparisonId
@@ -77,7 +85,7 @@ export const WatchlistPanel = ({
     } finally {
       setIsLoading(false);
     }
-  }, [comparisonId, session]);
+  }, [comparisonId, session, t]);
 
   useEffect(() => {
     if (session) {
@@ -88,7 +96,7 @@ export const WatchlistPanel = ({
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session) {
-      toast.error("Please sign in or create an account to monitor comparisons.");
+      toast.error(t("dw.watch.toast.signIn"));
       return;
     }
     try {
@@ -105,11 +113,11 @@ export const WatchlistPanel = ({
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to create watchlist.");
-      toast.success("Watchlist created. SideBy is now tracking this comparison.");
+      if (!res.ok) throw new Error(t("dw.watch.err.create"));
+      toast.success(t("dw.watch.toast.created"));
       void fetchWatchlist();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error subscribing to watchlist.");
+      toast.error(err instanceof Error ? err.message : t("dw.watch.err.subscribe"));
     } finally {
       setIsSubmitting(false);
     }
@@ -125,11 +133,11 @@ export const WatchlistPanel = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: nextStatus }),
       });
-      if (!res.ok) throw new Error("Failed to update status.");
-      toast.success(nextStatus === "active" ? "AI monitor resumed." : "AI monitor paused.");
+      if (!res.ok) throw new Error(t("dw.watch.err.updateStatus"));
+      toast.success(nextStatus === "active" ? t("dw.watch.toast.resumed") : t("dw.watch.toast.paused"));
       void fetchWatchlist();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error updating watchlist.");
+      toast.error(err instanceof Error ? err.message : t("dw.watch.err.update"));
     } finally {
       setIsSubmitting(false);
     }
@@ -142,11 +150,11 @@ export const WatchlistPanel = ({
       const res = await apiFetch(buildApiUrl(`/api/watchlists?id=${activeWatchlist.id}`), {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to delete watchlist.");
-      toast.success("Watchlist removed successfully.");
+      if (!res.ok) throw new Error(t("dw.watch.err.delete"));
+      toast.success(t("dw.watch.toast.removed"));
       setActiveWatchlist(null);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error removing watchlist.");
+      toast.error(err instanceof Error ? err.message : t("dw.watch.err.remove"));
     } finally {
       setIsSubmitting(false);
     }
@@ -165,32 +173,34 @@ export const WatchlistPanel = ({
             )}
           </div>
           <div>
-            <h3 className="font-serif text-2xl text-[#fdfbf7] tracking-tight">Competitive Monitoring</h3>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mt-1">AI Research Monitor</p>
+            <h3 className="font-serif text-2xl text-[#fdfbf7] tracking-tight">{t("dw.watch.title")}</h3>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mt-1">{t("dw.watch.subtitle")}</p>
           </div>
         </div>
         <span className="hidden sm:inline-flex h-7 items-center rounded-sm border border-cyan-500/20 bg-cyan-500/10 px-3 text-[9px] font-bold uppercase tracking-widest text-cyan-300">
-          Agent Mode
+          {t("dw.watch.agentMode")}
         </span>
       </div>
 
       <div className="p-6 md:p-8 space-y-6">
         {isLoading ? (
-          <div className="text-sm text-[#fdfbf7]/40 py-4 italic">Loading AI monitor configuration...</div>
+          <div className="text-sm text-[#fdfbf7]/40 py-4 italic">{t("dw.watch.loading")}</div>
         ) : activeWatchlist ? (
           // Active Watchlist Details
           <div className="space-y-6">
             <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 space-y-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-cyan-400">Monitor</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-cyan-400">{t("dw.watch.monitorLabel")}</span>
                   <h4 className="mt-1 font-serif text-lg text-[#fdfbf7]">{activeWatchlist.name}</h4>
                   <div className="flex items-center gap-2 mt-1">
                     <span className={cn(
                       "h-2 w-2 rounded-full",
                       activeWatchlist.status === "active" ? "bg-emerald-500 animate-pulse" : "bg-yellow-500"
                     )} />
-                    <span className="text-sm font-semibold text-[#fdfbf7] capitalize">{activeWatchlist.status}</span>
+                    <span className="text-sm font-semibold text-[#fdfbf7] capitalize">
+                      {activeWatchlist.status === "active" ? statusLabel(t, "active") : t("dw.watch.status.paused")}
+                    </span>
                   </div>
                 </div>
 
@@ -207,11 +217,11 @@ export const WatchlistPanel = ({
                   >
                     {activeWatchlist.status === "active" ? (
                       <>
-                        <Pause className="h-3 w-3" /> Pause
+                        <Pause className="h-3 w-3" /> {t("dw.watch.pause")}
                       </>
                     ) : (
                       <>
-                        <Play className="h-3 w-3" /> Resume
+                        <Play className="h-3 w-3" /> {t("dw.watch.resume")}
                       </>
                     )}
                   </button>
@@ -220,33 +230,35 @@ export const WatchlistPanel = ({
                     disabled={isSubmitting}
                     className="flex h-8 items-center gap-1.5 rounded-sm border border-red-500/20 bg-red-500/5 px-3 text-[9px] font-bold uppercase tracking-widest text-red-400 transition-colors hover:bg-red-500/10 disabled:opacity-50"
                   >
-                    <Trash2 className="h-3 w-3" /> Remove
+                    <Trash2 className="h-3 w-3" /> {t("dw.watch.remove")}
                   </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 border-t border-[#1f1f1f] pt-4">
                 <div>
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">Cadence</span>
-                  <span className="text-xs font-semibold text-[#fdfbf7] mt-1 block capitalize">{activeWatchlist.cadence}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">{t("dw.watch.cadence")}</span>
+                  <span className="text-xs font-semibold text-[#fdfbf7] mt-1 block capitalize">{t(CADENCE_KEYS[activeWatchlist.cadence])}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">Drift Alert Threshold</span>
-                  <span className="text-xs font-semibold text-[#fdfbf7] mt-1 block">{(Number(activeWatchlist.alertThreshold) * 100).toFixed(0)}% score change</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">{t("dw.watch.threshold")}</span>
+                  <span className="text-xs font-semibold text-[#fdfbf7] mt-1 block">
+                    {t("dw.watch.scoreChange", { percent: (Number(activeWatchlist.alertThreshold) * 100).toFixed(0) })}
+                  </span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 border-t border-[#1f1f1f] pt-4 text-[10px] text-[#fdfbf7]/40">
                 <div>
-                  <span>Last Evaluated: </span>
+                  <span>{t("dw.watch.lastEvaluated")} </span>
                   <span className="font-semibold text-[#fdfbf7]/60 block mt-0.5">
-                    {activeWatchlist.lastRunAt ? new Date(activeWatchlist.lastRunAt).toLocaleString() : "Never"}
+                    {activeWatchlist.lastRunAt ? formatDateTime(activeWatchlist.lastRunAt, lang) : t("dw.watch.never")}
                   </span>
                 </div>
                 <div>
-                  <span>Next Evaluation: </span>
+                  <span>{t("dw.watch.nextEvaluation")} </span>
                   <span className="font-semibold text-[#fdfbf7]/60 block mt-0.5">
-                    {activeWatchlist.nextRunAt ? new Date(activeWatchlist.nextRunAt).toLocaleString() : "Pending"}
+                    {activeWatchlist.nextRunAt ? formatDateTime(activeWatchlist.nextRunAt, lang) : t("dw.watch.pending")}
                   </span>
                 </div>
               </div>
@@ -255,38 +267,38 @@ export const WatchlistPanel = ({
             <div className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4 text-[10px] text-[#fdfbf7]/40 flex items-start gap-2.5">
               <Calendar className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-[#fdfbf7]/60 uppercase tracking-widest block mb-0.5">Automated Research Agent</span>
-                SideBy will recrawl sources and refresh this comparison on schedule. When fact or score drift exceeds {(Number(activeWatchlist.alertThreshold) * 100).toFixed(0)}%, the monitor can trigger email or webhook alerts.
+                <span className="font-bold text-[#fdfbf7]/60 uppercase tracking-widest block mb-0.5">{t("dw.watch.autoAgent")}</span>
+                {t("dw.watch.autoAgentDesc", { percent: (Number(activeWatchlist.alertThreshold) * 100).toFixed(0) })}
               </div>
             </div>
           </div>
         ) : !session ? (
           <div className="space-y-6">
             <p className="text-xs text-[#fdfbf7]/60 leading-relaxed">
-              Turn this comparison into a scheduled AI research agent. SideBy recrawls sources, refreshes scoring, and flags material changes before your decision goes stale.
+              {t("dw.watch.guestIntro")}
             </p>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              {agentSignals.map((signal) => (
-                <div key={signal.title} className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
+              {AGENT_SIGNALS.map((signal) => (
+                <div key={signal.titleKey} className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
                   <signal.icon className="mb-3 h-4 w-4 text-cyan-400" />
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/70">{signal.title}</div>
-                  <p className="mt-2 text-[10px] leading-relaxed text-[#fdfbf7]/45">{signal.text}</p>
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/70">{t(signal.titleKey)}</div>
+                  <p className="mt-2 text-[10px] leading-relaxed text-[#fdfbf7]/45">{t(signal.textKey)}</p>
                 </div>
               ))}
             </div>
             <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-6 text-center space-y-4">
               <Lock className="h-8 w-8 text-cyan-400 mx-auto" />
               <div>
-                <h5 className="font-serif text-base text-[#fdfbf7]">AI Research Monitors</h5>
+                <h5 className="font-serif text-base text-[#fdfbf7]">{t("dw.watch.guestCtaTitle")}</h5>
                 <p className="text-[10px] text-[#fdfbf7]/50 mt-1 max-w-xs mx-auto">
-                  Sign up to track this comparison, receive change alerts, and keep a version trail of refreshed research.
+                  {t("dw.watch.guestCtaDesc")}
                 </p>
               </div>
               <a
                 href="/auth/sign-up"
                 className="inline-flex h-10 items-center justify-center w-full rounded-sm bg-cyan-600 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-cyan-700 transition-colors"
               >
-                Sign Up Free
+                {t("dw.watch.signUpFree")}
               </a>
             </div>
           </div>
@@ -294,15 +306,15 @@ export const WatchlistPanel = ({
           // Watchlist Subscribing Form
           <form onSubmit={handleSubscribe} className="space-y-6">
             <p className="text-xs text-[#fdfbf7]/60 leading-relaxed">
-              Turn <span className="font-semibold text-[#fdfbf7]">{monitorName}</span> into a scheduled AI research monitor. SideBy recrawls sources, reruns scoring, and flags meaningful changes before your decision goes stale.
+              {t("dw.watch.formIntro", { name: monitorName })}
             </p>
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              {agentSignals.map((signal) => (
-                <div key={signal.title} className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
+              {AGENT_SIGNALS.map((signal) => (
+                <div key={signal.titleKey} className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
                   <signal.icon className="mb-3 h-4 w-4 text-cyan-400" />
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/70">{signal.title}</div>
-                  <p className="mt-2 text-[10px] leading-relaxed text-[#fdfbf7]/45">{signal.text}</p>
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/70">{t(signal.titleKey)}</div>
+                  <p className="mt-2 text-[10px] leading-relaxed text-[#fdfbf7]/45">{t(signal.textKey)}</p>
                 </div>
               ))}
             </div>
@@ -310,7 +322,7 @@ export const WatchlistPanel = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Cadence Selection */}
               <div className="space-y-2">
-                <label className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">Tracking Cadence</label>
+                <label className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">{t("dw.watch.trackingCadence")}</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(["daily", "weekly", "monthly"] as const).map((opt) => (
                     <button
@@ -324,7 +336,7 @@ export const WatchlistPanel = ({
                           : "border-[#333] bg-black text-[#fdfbf7]/60 hover:text-[#fdfbf7]"
                       )}
                     >
-                      {opt}
+                      {t(CADENCE_KEYS[opt])}
                     </button>
                   ))}
                 </div>
@@ -333,9 +345,9 @@ export const WatchlistPanel = ({
               {/* Alert Threshold Slider */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">Drift Alert Threshold</label>
+                  <label className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">{t("dw.watch.threshold")}</label>
                   <span className="text-xs font-mono font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
-                    {(alertThreshold * 100).toFixed(0)}% change
+                    {t("dw.watch.percentChange", { percent: (alertThreshold * 100).toFixed(0) })}
                   </span>
                 </div>
                 <div className="flex items-center gap-4 pt-2">
@@ -360,7 +372,7 @@ export const WatchlistPanel = ({
               className="w-full h-11 flex items-center justify-center gap-2 rounded-sm bg-cyan-600 text-xs font-bold uppercase tracking-widest text-white hover:bg-cyan-700 transition-colors disabled:opacity-50"
             >
               <Eye className="h-4 w-4" />
-              {isSubmitting ? "Starting Monitor..." : "Start AI Monitor"}
+              {isSubmitting ? t("dw.watch.starting") : t("dw.watch.start")}
             </button>
           </form>
         )}

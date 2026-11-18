@@ -18,6 +18,7 @@ import { buildApiUrl } from "@/config/env";
 import { useProjects } from "@/contexts/ProjectsContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { apiFetch, getClerkToken } from "@/lib/api";
+import { formatDate, statusLabel, tStatic, useI18n } from "@/i18n";
 
 type KnowledgeDocumentStatus = "uploading" | "indexing" | "indexed" | "error" | "deleted";
 
@@ -40,6 +41,7 @@ interface KnowledgeDocument {
 const ACCEPTED_EXTENSIONS = [".pdf", ".txt", ".csv"];
 
 const UploadsPage = () => {
+  const { t } = useI18n();
   const { activeWorkspace } = useWorkspace();
   const { activeProject } = useProjects();
   const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
@@ -72,12 +74,12 @@ const UploadsPage = () => {
       const data = (await res.json()) as { documents: KnowledgeDocument[] };
       setDocuments(data.documents);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to load documents.");
+      toast.error(error instanceof Error ? error.message : t("wsp.uploads.loadError"));
       setDocuments([]);
     } finally {
       setIsLoading(false);
     }
-  }, [activeProject, activeWorkspace]);
+  }, [activeProject, activeWorkspace, t]);
 
   useEffect(() => {
     void loadDocuments();
@@ -93,13 +95,13 @@ const UploadsPage = () => {
 
   const uploadFile = useCallback(async (file: File) => {
     if (!activeWorkspace) {
-      toast.error("Select a workspace before uploading documents.");
+      toast.error(t("wsp.uploads.selectWorkspace"));
       return;
     }
 
     const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
     if (!ACCEPTED_EXTENSIONS.includes(extension)) {
-      toast.error(`${file.name} is not supported. Upload PDF, TXT, or CSV files.`);
+      toast.error(t("wsp.uploads.unsupportedFile", { name: file.name }));
       return;
     }
 
@@ -148,12 +150,12 @@ const UploadsPage = () => {
       );
 
       if (uploadedDocument.status === "error") {
-        toast.error(uploadedDocument.errorMessage || "Document indexing failed.");
+        toast.error(uploadedDocument.errorMessage || t("wsp.uploads.indexFail"));
       } else {
-        toast.success(`${uploadedDocument.filename} indexed.`);
+        toast.success(t("wsp.uploads.indexedToast", { name: uploadedDocument.filename }));
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Upload failed.";
+      const message = error instanceof Error ? error.message : t("wsp.uploads.uploadFail");
       setDocuments((current) =>
         current.map((document) =>
           document.id === localId
@@ -163,7 +165,7 @@ const UploadsPage = () => {
       );
       toast.error(message);
     }
-  }, [activeProject, activeWorkspace]);
+  }, [activeProject, activeWorkspace, t]);
 
   const handleFiles = useCallback(async (newFiles: FileList | File[]) => {
     await Promise.allSettled(Array.from(newFiles).map((file) => uploadFile(file)));
@@ -189,7 +191,7 @@ const UploadsPage = () => {
 
   const deleteDocument = async (id: string) => {
     const document = documents.find((item) => item.id === id);
-    if (!window.confirm(`Delete “${document?.filename ?? "this document"}”? This cannot be undone.`)) return;
+    if (!window.confirm(t("wsp.uploads.deleteConfirm", { name: document?.filename ?? t("wsp.uploads.thisDocument") }))) return;
     if (document?.isLocal) {
       setDocuments((current) => current.filter((item) => item.id !== id));
       return;
@@ -200,11 +202,11 @@ const UploadsPage = () => {
       const res = await apiFetch(buildApiUrl(`/api/knowledge/documents/${id}`), {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("The document could not be deleted. Try again.");
+      if (!res.ok) throw new Error(t("wsp.uploads.deleteFailMsg"));
       setDocuments((current) => current.filter((document) => document.id !== id));
-      toast.success("Document removed.");
+      toast.success(t("wsp.uploads.removedToast"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to delete document.");
+      toast.error(error instanceof Error ? error.message : t("wsp.uploads.deleteFail"));
     } finally {
       setDeletingId(null);
     }
@@ -215,15 +217,15 @@ const UploadsPage = () => {
       <div className="up-header flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-            Workspace Context
+            {t("wsp.uploads.kicker")}
           </p>
           <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
-            Knowledge Base
+            {t("wsp.uploads.title")}
           </h1>
           <p className="mt-4 max-w-3xl text-sm text-[#fdfbf7]/60 leading-relaxed">
             {activeProject
-              ? `Indexing documents for ${activeProject.name}.`
-              : "Indexing documents across the active workspace."}
+              ? t("wsp.uploads.subtitleProject", { name: activeProject.name })
+              : t("wsp.uploads.subtitleWorkspace")}
           </p>
         </div>
         <button
@@ -231,7 +233,7 @@ const UploadsPage = () => {
           className="inline-flex h-10 items-center gap-2 rounded-sm border border-[#333] bg-[#111] px-4 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-[#555] hover:text-[#fdfbf7]"
         >
           <RefreshCw className="h-3.5 w-3.5" />
-          Refresh
+          {t("wsp.uploads.refresh")}
         </button>
       </div>
 
@@ -246,10 +248,10 @@ const UploadsPage = () => {
         <div className={`mb-6 flex h-20 w-20 items-center justify-center rounded-sm border transition-colors ${isDragging ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-[#1a1a1a] text-[#fdfbf7]/40 border-[#333]"}`}>
           <UploadCloud className="h-8 w-8" />
         </div>
-        <h3 className="font-serif text-2xl text-[#fdfbf7]">Upload knowledge files</h3>
-        <p className="mt-2 text-sm text-[#fdfbf7]/40">PDF, TXT, and CSV up to 50MB</p>
+        <h3 className="font-serif text-2xl text-[#fdfbf7]">{t("wsp.uploads.dropTitle")}</h3>
+        <p className="mt-2 text-sm text-[#fdfbf7]/40">{t("wsp.uploads.dropHint")}</p>
         <label className="mt-8 cursor-pointer rounded-sm bg-[#fdfbf7] px-8 py-3.5 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]">
-          Browse Files
+          {t("wsp.uploads.browse")}
           <input
             type="file"
             multiple
@@ -267,23 +269,23 @@ const UploadsPage = () => {
         <div className="mb-8 flex items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
           <div className="flex items-center gap-3">
             <Database className="h-5 w-5 text-orange-500" />
-            <h2 className="font-serif text-2xl text-[#fdfbf7]">Indexed Documents</h2>
+            <h2 className="font-serif text-2xl text-[#fdfbf7]">{t("wsp.uploads.listHeading")}</h2>
           </div>
           <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">
-            {documents.length} total
+            {t("wsp.common.totalCount", { count: documents.length })}
           </span>
         </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center gap-3 py-14 text-sm text-[#fdfbf7]/50">
             <Loader2 className="h-4 w-4 animate-spin text-orange-400" />
-            Loading documents...
+            {t("wsp.uploads.loading")}
           </div>
         ) : documents.length === 0 ? (
           <EmptyState
             icon={Database}
-            title="No documents yet"
-            description="Upload a PDF, TXT, or CSV file to create searchable workspace context."
+            title={t("wsp.uploads.emptyTitle")}
+            description={t("wsp.uploads.emptyDesc")}
             glowColor="blue"
           />
         ) : (
@@ -313,6 +315,7 @@ interface DocumentRowProps {
 }
 
 const DocumentRow = ({ document, isDeleting, formatSize, onDelete }: DocumentRowProps) => {
+  const { t, lang } = useI18n();
   const status = getStatusMeta(document.status);
 
   return (
@@ -326,13 +329,13 @@ const DocumentRow = ({ document, isDeleting, formatSize, onDelete }: DocumentRow
           <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
             <span>{formatSize(document.sizeBytes)}</span>
             <span className="h-1 w-1 rounded-full bg-[#444]" />
-            <span>{new Date(document.createdAt).toLocaleDateString()}</span>
+            <span>{formatDate(document.createdAt, lang)}</span>
             <span className="h-1 w-1 rounded-full bg-[#444]" />
-            <span>{status.label}</span>
+            <span>{statusLabel(t, document.status)}</span>
             {document.status === "indexed" && (
               <>
                 <span className="h-1 w-1 rounded-full bg-[#444]" />
-                <span>{document.chunkCount} chunks</span>
+                <span>{t("wsp.uploads.chunks", { count: document.chunkCount })}</span>
               </>
             )}
           </div>
@@ -354,7 +357,7 @@ const DocumentRow = ({ document, isDeleting, formatSize, onDelete }: DocumentRow
               />
             </div>
             <span className="text-[10px] font-bold tabular-nums text-[#fdfbf7]/50">
-              {document.status === "indexing" ? "Indexing" : `${document.progress ?? 0}%`}
+              {document.status === "indexing" ? t("wsp.uploads.indexingStatus") : `${document.progress ?? 0}%`}
             </span>
           </div>
         )}
@@ -363,7 +366,8 @@ const DocumentRow = ({ document, isDeleting, formatSize, onDelete }: DocumentRow
           onClick={onDelete}
           disabled={document.status === "uploading" || isDeleting}
           className="flex h-9 w-9 items-center justify-center rounded-sm border border-transparent text-[#fdfbf7]/30 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40 sm:opacity-0 sm:group-hover:opacity-100"
-          title="Delete document"
+          title={t("wsp.uploads.deleteTitle")}
+          aria-label={t("wsp.uploads.deleteTitle")}
         >
           {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
         </button>
@@ -375,7 +379,6 @@ const DocumentRow = ({ document, isDeleting, formatSize, onDelete }: DocumentRow
 function getStatusMeta(status: KnowledgeDocumentStatus) {
   if (status === "indexed") {
     return {
-      label: "Indexed",
       icon: <CheckCircle2 className="h-5 w-5" />,
       className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
     };
@@ -383,7 +386,6 @@ function getStatusMeta(status: KnowledgeDocumentStatus) {
 
   if (status === "error") {
     return {
-      label: "Error",
       icon: <AlertCircle className="h-5 w-5" />,
       className: "bg-red-500/10 text-red-400 border-red-500/20",
     };
@@ -391,14 +393,12 @@ function getStatusMeta(status: KnowledgeDocumentStatus) {
 
   if (status === "uploading") {
     return {
-      label: "Uploading",
       icon: <UploadCloud className="h-5 w-5" />,
       className: "bg-blue-500/10 text-blue-400 border-blue-500/20",
     };
   }
 
   return {
-    label: "Indexing",
     icon: <Loader2 className="h-5 w-5 animate-spin" />,
     className: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   };
@@ -440,11 +440,11 @@ function uploadWithProgress(
         return;
       }
 
-      reject(new Error(payload.error || `Upload failed with status ${xhr.status}.`));
+      reject(new Error(payload.error || tStatic("wsp.uploads.uploadStatusFail", { status: xhr.status })));
     };
 
-    xhr.onerror = () => reject(new Error("Network error while uploading document."));
-    xhr.onabort = () => reject(new Error("Upload was cancelled."));
+    xhr.onerror = () => reject(new Error(tStatic("wsp.uploads.networkError")));
+    xhr.onabort = () => reject(new Error(tStatic("wsp.uploads.uploadCancelled")));
     getClerkToken()
       .then((token) => {
         if (token) {
@@ -453,7 +453,7 @@ function uploadWithProgress(
         xhr.send(formData);
       })
       .catch((error) => {
-        reject(error instanceof Error ? error : new Error("Unable to authenticate upload."));
+        reject(error instanceof Error ? error : new Error(tStatic("wsp.uploads.authError")));
       });
   });
 }

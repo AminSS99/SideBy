@@ -26,22 +26,24 @@ import type { WorkspaceRecord } from "@/contexts/WorkspaceContext";
 import { GlowCard } from "@/components/GlowCard";
 import { copyText } from "@/lib/clipboard";
 import { NotificationsSettings } from "@/components/settings/NotificationsSettings";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
+import { formatDate, formatDateTime, useI18n, useT, type MessageKey } from "@/i18n";
 
 type Tab = "general" | "preferences" | "providers" | "api-keys" | "webhooks" | "notifications";
 
 const SETTINGS_TABS: Array<{
   id: Tab;
-  label: string;
+  labelKey: MessageKey;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
-  { id: "general", label: "General", icon: Settings2 },
-  { id: "preferences", label: "Preferences", icon: SlidersHorizontal },
-  { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "providers", label: "AI Providers", icon: Bot },
-  { id: "api-keys", label: "Developer API", icon: Key },
-  { id: "webhooks", label: "Webhooks", icon: Webhook },
+  { id: "general", labelKey: "settings.tabs.general", icon: Settings2 },
+  { id: "preferences", labelKey: "settings.tabs.preferences", icon: SlidersHorizontal },
+  { id: "notifications", labelKey: "settings.tabs.notifications", icon: Bell },
+  { id: "providers", labelKey: "settings.tabs.providers", icon: Bot },
+  { id: "api-keys", labelKey: "settings.tabs.apiKeys", icon: Key },
+  { id: "webhooks", labelKey: "settings.tabs.webhooks", icon: Webhook },
 ];
 
 const isSettingsTab = (value: string | null): value is Tab =>
@@ -73,6 +75,7 @@ const providerStyles = {
 } as const;
 
 const SettingsPage = () => {
+  const t = useT();
   const { activeWorkspace } = useWorkspace();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>(() => {
@@ -101,13 +104,13 @@ const SettingsPage = () => {
     <div ref={containerRef} className="space-y-8 max-w-6xl">
       <div className="set-header">
         <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-          Configuration
+          {t("settings.header.kicker")}
         </p>
         <h1 className="mt-3 font-serif text-4xl text-[#fdfbf7] tracking-tight">
-          Workspace Settings
+          {t("settings.header.title")}
         </h1>
         <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[#fdfbf7]/60">
-          Manage your workspace preferences, configure custom AI provider credentials, and generate API keys for orchestration access.
+          {t("settings.header.subtitle")}
         </p>
       </div>
 
@@ -126,7 +129,7 @@ const SettingsPage = () => {
               }`}
             >
               <tab.icon className="h-4 w-4" />
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </aside>
@@ -144,7 +147,7 @@ const SettingsPage = () => {
 
       <div className="mt-12 pt-6 border-t border-[#1f1f1f] text-center text-xs text-[#fdfbf7]/30">
         <a href="https://sideby.ink" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
-          Made by SnapSolve Ink
+          {t("settings.footer.madeBy")}
         </a>
       </div>
     </div>
@@ -152,6 +155,7 @@ const SettingsPage = () => {
 };
 
 const GeneralSettings = ({ workspace }: { workspace: WorkspaceRecord | null }) => {
+  const t = useT();
   const [name, setName] = useState(workspace?.name || "");
   const [slug, setSlug] = useState(workspace?.slug || "");
 
@@ -167,18 +171,26 @@ const GeneralSettings = ({ workspace }: { workspace: WorkspaceRecord | null }) =
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ workspaceId: workspace.id, name, slug }),
     });
-    toast.success("Workspace profile saved.");
+    toast.success(t("settings.general.saved"));
   };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <GlowCard className="p-8">
+        <div className="mb-5">
+          <h2 className="font-serif text-2xl text-[#fdfbf7]">{t("settings.language.title")}</h2>
+          <p className="mt-1 text-sm text-[#fdfbf7]/50">{t("settings.language.description")}</p>
+        </div>
+        <LanguageSwitcher variant="list" />
+      </GlowCard>
+
+      <GlowCard className="p-8">
         <h2 className="font-serif text-2xl text-[#fdfbf7] border-b border-[#2a2a2a] pb-4 mb-6">
-          Workspace Profile
+          {t("settings.general.profileTitle")}
         </h2>
         <div className="space-y-6 max-w-xl">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">Workspace Name</label>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">{t("settings.general.workspaceName")}</label>
             <input 
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -186,7 +198,7 @@ const GeneralSettings = ({ workspace }: { workspace: WorkspaceRecord | null }) =
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">URL Slug</label>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">{t("settings.general.urlSlug")}</label>
             <div className="flex rounded-sm border border-[#333] bg-[#0c0b0a] overflow-hidden focus-within:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500/50 transition-all">
               <span className="flex items-center px-4 bg-[#111] border-r border-[#333] text-sm text-[#fdfbf7]/40">
                 sideby.ink/
@@ -198,9 +210,9 @@ const GeneralSettings = ({ workspace }: { workspace: WorkspaceRecord | null }) =
               />
             </div>
           </div>
-          <button onClick={() => void save().catch((error) => toast.error("Unable to save workspace", { description: error instanceof Error ? error.message : "Try again shortly." }))} className="flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]">
+          <button onClick={() => void save().catch((error) => toast.error(t("settings.general.saveError"), { description: error instanceof Error ? error.message : t("settings.common.tryAgain") }))} className="flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]">
             <Save className="h-3.5 w-3.5" />
-            Save Changes
+            {t("settings.general.saveChanges")}
           </button>
         </div>
       </GlowCard>
@@ -208,19 +220,19 @@ const GeneralSettings = ({ workspace }: { workspace: WorkspaceRecord | null }) =
       <div className="rounded-sm border border-red-500/30 bg-red-500/5 p-8">
         <h2 className="font-serif text-2xl text-red-400 border-b border-red-500/20 pb-4 mb-6 flex items-center gap-3">
           <AlertTriangle className="h-5 w-5" />
-          Danger Zone
+          {t("settings.general.dangerTitle")}
         </h2>
         <p className="text-sm text-red-400/70 mb-6 leading-relaxed max-w-2xl">
-          Permanently delete this workspace, all of its projects, comparison data, uploaded knowledge base documents, and API keys. This action cannot be undone.
+          {t("settings.general.dangerDesc")}
         </p>
         <button
-          onClick={() => toast.warning("Workspace deletion is locked.", {
-            description: "Contact the workspace owner before permanently deleting production data.",
+          onClick={() => toast.warning(t("settings.general.deleteLocked"), {
+            description: t("settings.general.deleteLockedDesc"),
           })}
           className="flex items-center gap-2 rounded-sm border border-red-500/40 bg-red-500/10 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-red-400 transition-colors hover:bg-red-500/20"
         >
           <Trash2 className="h-3.5 w-3.5" />
-          Delete Workspace
+          {t("settings.general.deleteWorkspace")}
         </button>
       </div>
     </div>
@@ -236,6 +248,7 @@ const defaultPreferences: PreferencesState = {
 };
 
 const PreferenceSettings = ({ workspaceId }: { workspaceId?: string }) => {
+  const t = useT();
   const [preferences, setPreferences] = useState<PreferencesState>(defaultPreferences);
 
   useEffect(() => {
@@ -253,11 +266,11 @@ const PreferenceSettings = ({ workspaceId }: { workspaceId?: string }) => {
       });
     };
     void load().catch((error) => {
-      toast.error("Unable to load preferences", {
-        description: error instanceof Error ? error.message : "Try again shortly.",
+      toast.error(t("settings.preferences.loadError"), {
+        description: error instanceof Error ? error.message : t("settings.common.tryAgain"),
       });
     });
-  }, [workspaceId]);
+  }, [workspaceId, t]);
 
   const update = (next: PreferencesState) => {
     setPreferences(next);
@@ -274,8 +287,8 @@ const PreferenceSettings = ({ workspaceId }: { workspaceId?: string }) => {
         defaultVisibility: next.defaultVisibility,
       }),
     }).catch((error) => {
-      toast.error("Preference sync failed", {
-        description: error instanceof Error ? error.message : "Try again shortly.",
+      toast.error(t("settings.preferences.syncError"), {
+        description: error instanceof Error ? error.message : t("settings.common.tryAgain"),
       });
     });
   };
@@ -283,35 +296,57 @@ const PreferenceSettings = ({ workspaceId }: { workspaceId?: string }) => {
   const toggle = (key: keyof Omit<PreferencesState, "defaultVisibility">) => {
     const next = { ...preferences, [key]: !preferences[key] };
     update(next);
-    toast.success("Preference updated.");
+    toast.success(t("settings.preferences.updated"));
   };
+
+  const preferenceItems: Array<{
+    key: keyof Omit<PreferencesState, "defaultVisibility">;
+    title: string;
+    desc: string;
+  }> = [
+    {
+      key: "emailDigest",
+      title: t("settings.preferences.emailDigest.title"),
+      desc: t("settings.preferences.emailDigest.desc"),
+    },
+    {
+      key: "jobAlerts",
+      title: t("settings.preferences.jobAlerts.title"),
+      desc: t("settings.preferences.jobAlerts.desc"),
+    },
+    {
+      key: "publicLinkWarnings",
+      title: t("settings.preferences.publicLinkWarnings.title"),
+      desc: t("settings.preferences.publicLinkWarnings.desc"),
+    },
+    {
+      key: "compactMode",
+      title: t("settings.preferences.compactMode.title"),
+      desc: t("settings.preferences.compactMode.desc"),
+    },
+  ];
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <GlowCard className="p-8">
         <div className="mb-6 flex items-center gap-3 border-b border-[#2a2a2a] pb-5">
           <Bell className="h-5 w-5 text-orange-400" />
-          <h2 className="font-serif text-2xl text-[#fdfbf7]">Product Preferences</h2>
+          <h2 className="font-serif text-2xl text-[#fdfbf7]">{t("settings.preferences.title")}</h2>
         </div>
         <div className="space-y-4">
-          {[
-            ["emailDigest", "Daily research digest", "Send a summary of completed comparisons and changed facts."],
-            ["jobAlerts", "Job completion alerts", "Notify when long-running research finishes or fails."],
-            ["publicLinkWarnings", "Public link warnings", "Ask before publishing private research to a public URL."],
-            ["compactMode", "Compact dashboard mode", "Use denser dashboard rows for repeated daily work."],
-          ].map(([key, title, desc]) => (
+          {preferenceItems.map(({ key, title, desc }) => (
             <button
               key={key}
               type="button"
-            onClick={() => toggle(key as keyof Omit<PreferencesState, "defaultVisibility">)}
+            onClick={() => toggle(key)}
               className="flex w-full items-center justify-between gap-4 rounded-sm border border-[#333] bg-[#0c0b0a] p-5 text-left transition-colors hover:border-[#555]"
             >
               <span>
                 <span className="block text-sm font-bold text-[#fdfbf7]">{title}</span>
                 <span className="mt-1 block text-xs text-[#fdfbf7]/45">{desc}</span>
               </span>
-              <span className={`relative h-6 w-11 rounded-full border transition-colors ${preferences[key as keyof Omit<PreferencesState, "defaultVisibility">] ? "border-emerald-500/40 bg-emerald-500/20" : "border-[#444] bg-[#111]"}`}>
-                <span className={`absolute top-1 h-4 w-4 rounded-full bg-[#fdfbf7] transition-transform ${preferences[key as keyof Omit<PreferencesState, "defaultVisibility">] ? "translate-x-5" : "translate-x-1"}`} />
+              <span className={`relative h-6 w-11 rounded-full border transition-colors ${preferences[key] ? "border-emerald-500/40 bg-emerald-500/20" : "border-[#444] bg-[#111]"}`}>
+                <span className={`absolute top-1 h-4 w-4 rounded-full bg-[#fdfbf7] transition-transform ${preferences[key] ? "translate-x-5" : "translate-x-1"}`} />
               </span>
             </button>
           ))}
@@ -321,7 +356,7 @@ const PreferenceSettings = ({ workspaceId }: { workspaceId?: string }) => {
       <GlowCard className="p-8" glowColor="rgba(16, 185, 129, 0.12)">
         <div className="mb-6 flex items-center gap-3 border-b border-[#2a2a2a] pb-5">
           <ShieldCheck className="h-5 w-5 text-emerald-400" />
-          <h2 className="font-serif text-2xl text-[#fdfbf7]">Workspace Defaults</h2>
+          <h2 className="font-serif text-2xl text-[#fdfbf7]">{t("settings.preferences.defaultsTitle")}</h2>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {(["private", "public"] as const).map((visibility) => (
@@ -330,7 +365,7 @@ const PreferenceSettings = ({ workspaceId }: { workspaceId?: string }) => {
               type="button"
               onClick={() => {
                 update({ ...preferences, defaultVisibility: visibility });
-                toast.success(`${visibility === "private" ? "Private" : "Public"} default selected.`);
+                toast.success(t(visibility === "private" ? "settings.preferences.privateSelected" : "settings.preferences.publicSelected"));
               }}
               className={`rounded-sm border p-5 text-left transition-colors ${
                 preferences.defaultVisibility === visibility
@@ -338,11 +373,11 @@ const PreferenceSettings = ({ workspaceId }: { workspaceId?: string }) => {
                   : "border-[#333] bg-[#0c0b0a] hover:border-[#555]"
               }`}
             >
-              <p className="text-sm font-bold capitalize text-[#fdfbf7]">{visibility} by default</p>
+              <p className="text-sm font-bold capitalize text-[#fdfbf7]">
+                {t(visibility === "private" ? "settings.preferences.visibility.private.title" : "settings.preferences.visibility.public.title")}
+              </p>
               <p className="mt-2 text-xs leading-relaxed text-[#fdfbf7]/45">
-                {visibility === "private"
-                  ? "New comparisons stay inside the workspace until published."
-                  : "Completed comparisons are prepared for share links faster."}
+                {t(visibility === "private" ? "settings.preferences.visibility.private.desc" : "settings.preferences.visibility.public.desc")}
               </p>
             </button>
           ))}
@@ -353,18 +388,25 @@ const PreferenceSettings = ({ workspaceId }: { workspaceId?: string }) => {
 };
 
 const ProviderSettings = () => {
+  const t = useT();
   const [customProvider, setCustomProvider] = useState<string | null>(() => localStorage.getItem("sideby.customProvider"));
   const [keyPromptProvider, setKeyPromptProvider] = useState<string | null>(null);
   const [providerKeyDraft, setProviderKeyDraft] = useState("");
   const [keyError, setKeyError] = useState<string | null>(null);
   const keyInputRef = useRef<HTMLInputElement>(null);
 
-  const providers = [
-    { name: "DeepSeek", model: "deepseek-v4-pro", desc: "Used for high-speed logic, extraction, and source normalization.", connected: true, color: "blue" },
-    { name: "Gemini", model: "gemini-3.1-pro", desc: "Used for synthesis, tradeoff reasoning, and executive verdicts.", connected: true, color: "purple" },
-    { name: "OpenAI", model: "gpt-4o-mini", desc: "Fallback general reasoning.", connected: false, color: "emerald" },
-    { name: "Anthropic", model: "claude-3-5-haiku", desc: "Nuanced prose generation.", connected: false, color: "orange" },
-    { name: "MiniMax", model: "abab6.5s-chat", desc: "Latency-optimized alternate route.", connected: false, color: "cyan" }
+  const providers: Array<{
+    name: string;
+    model: string;
+    descKey: MessageKey;
+    connected: boolean;
+    color: keyof typeof providerStyles;
+  }> = [
+    { name: "DeepSeek", model: "deepseek-v4-pro", descKey: "settings.providers.deepseek.desc", connected: true, color: "blue" },
+    { name: "Gemini", model: "gemini-3.1-pro", descKey: "settings.providers.gemini.desc", connected: true, color: "purple" },
+    { name: "OpenAI", model: "gpt-4o-mini", descKey: "settings.providers.openai.desc", connected: false, color: "emerald" },
+    { name: "Anthropic", model: "claude-3-5-haiku", descKey: "settings.providers.anthropic.desc", connected: false, color: "orange" },
+    { name: "MiniMax", model: "abab6.5s-chat", descKey: "settings.providers.minimax.desc", connected: false, color: "cyan" }
   ];
 
   const openKeyForm = (providerName: string) => {
@@ -378,7 +420,7 @@ const ProviderSettings = () => {
     if (!keyPromptProvider) return;
     const trimmed = providerKeyDraft.trim();
     if (!trimmed) {
-      setKeyError("Enter an API key before saving.");
+      setKeyError(t("settings.providers.keyRequired"));
       keyInputRef.current?.focus();
       return;
     }
@@ -386,8 +428,8 @@ const ProviderSettings = () => {
     localStorage.setItem("sideby.customProvider", keyPromptProvider);
     setKeyPromptProvider(null);
     setProviderKeyDraft("");
-    toast.success(`${keyPromptProvider} route saved.`, {
-      description: "The route is registered. Store the secret itself in Vercel before production traffic uses it.",
+    toast.success(t("settings.providers.routeSaved", { provider: keyPromptProvider }), {
+      description: t("settings.providers.routeSavedDesc"),
     });
   };
 
@@ -395,17 +437,17 @@ const ProviderSettings = () => {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-8">
         <h2 className="font-serif text-2xl text-[#fdfbf7] mb-2">
-          Model Registry & Routing
+          {t("settings.providers.title")}
         </h2>
         <p className="text-sm text-[#fdfbf7]/50 mb-8 max-w-2xl leading-relaxed">
-          SideBy dynamically routes comparison tasks to the most optimal model. If you provide your own API keys, we will use your quota instead of the platform allowance.
+          {t("settings.providers.subtitle")}
         </p>
 
         <div className="space-y-4">
           {providers.map((p) => (
             <div key={p.name} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-sm border border-[#333] bg-[#0c0b0a] p-5 hover:border-[#444] transition-colors">
               <div className="flex items-center gap-4">
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm ${providerStyles[p.color as keyof typeof providerStyles]}`}>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm ${providerStyles[p.color]}`}>
                   <Cpu className="h-5 w-5" />
                 </div>
                 <div>
@@ -415,14 +457,14 @@ const ProviderSettings = () => {
                       {p.model}
                     </span>
                   </div>
-                  <p className="text-xs text-[#fdfbf7]/40 mt-1">{p.desc}</p>
+                  <p className="text-xs text-[#fdfbf7]/40 mt-1">{t(p.descKey)}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 {p.connected ? (
                   <span className="flex items-center gap-1.5 rounded-sm border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-emerald-400">
-                    <Check className="h-3 w-3" /> Connected
+                    <Check className="h-3 w-3" /> {t("settings.providers.connected")}
                   </span>
                 ) : (
                   <button
@@ -430,11 +472,11 @@ const ProviderSettings = () => {
                     aria-expanded={keyPromptProvider === p.name}
                     className="rounded-sm border border-[#333] bg-[#111] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 hover:text-[#fdfbf7] hover:border-[#555] transition-colors"
                   >
-                    {customProvider === p.name ? "Saved" : "Add Key"}
+                    {customProvider === p.name ? t("settings.providers.saved") : t("settings.providers.addKey")}
                   </button>
                 )}
                 <button
-                  onClick={() => toast.info(`${p.name} routing`, { description: `${p.model} is visible in the model registry.` })}
+                  onClick={() => toast.info(t("settings.providers.routingToastTitle", { provider: p.name }), { description: t("settings.providers.routingToastDesc", { model: p.model }) })}
                   className="p-2 text-[#fdfbf7]/30 hover:text-[#fdfbf7] transition-colors rounded-sm border border-transparent hover:border-[#333] hover:bg-[#1a1a1a]"
                 >
                   <Settings2 className="h-4 w-4" />
@@ -449,7 +491,7 @@ const ProviderSettings = () => {
                   }}
                 >
                   <label htmlFor={`provider-key-${p.name}`} className="block text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
-                    {p.name} API key
+                    {t("settings.providers.apiKeyLabel", { provider: p.name })}
                   </label>
                   <div className="mt-2 flex flex-col sm:flex-row gap-2">
                     <input
@@ -464,11 +506,11 @@ const ProviderSettings = () => {
                       }}
                       aria-invalid={!!keyError}
                       aria-describedby={`provider-key-error-${p.name}`}
-                      placeholder="Paste your secret key"
+                      placeholder={t("settings.providers.apiKeyPlaceholder")}
                       className="flex-1 rounded-sm border border-[#333] bg-black px-4 py-2.5 text-sm text-[#fdfbf7] outline-none transition-colors focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50"
                     />
                     <button type="submit" className="rounded-sm bg-orange-600 px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700">
-                      Confirm Key
+                      {t("settings.providers.confirmKey")}
                     </button>
                     <button
                       type="button"
@@ -479,7 +521,7 @@ const ProviderSettings = () => {
                       }}
                       className="rounded-sm border border-[#333] bg-[#0c0b0a] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:text-[#fdfbf7]"
                     >
-                      Cancel
+                      {t("settings.common.cancel")}
                     </button>
                   </div>
                   {keyError && (
@@ -488,7 +530,7 @@ const ProviderSettings = () => {
                     </p>
                   )}
                   <p className="mt-2 text-xs text-[#fdfbf7]/35">
-                    The key is only registered for this session's routing preference. Store the real secret in Vercel environment variables.
+                    {t("settings.providers.sessionNote")}
                   </p>
                 </form>
               )}
@@ -501,6 +543,7 @@ const ProviderSettings = () => {
 };
 
 const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
+  const { t, lang } = useI18n();
   const [keys, setKeys] = useState<ApiKeyRecord[]>([]);
   const [newSecret, setNewSecret] = useState<string | null>(null);
 
@@ -512,11 +555,11 @@ const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
 
   useEffect(() => {
     void loadKeys().catch((error) => {
-      toast.error("Unable to load API keys", {
-        description: error instanceof Error ? error.message : "Try again shortly.",
+      toast.error(t("settings.apiKeys.loadError"), {
+        description: error instanceof Error ? error.message : t("settings.common.tryAgain"),
       });
     });
-  }, []);
+  }, [t]);
 
   const createKey = async () => {
     const response = await apiFetch(buildApiUrl("/api/api-keys"), {
@@ -530,8 +573,8 @@ const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
     const data = (await response.json()) as { key: ApiKeyRecord; secret: string };
     setKeys((current) => [data.key, ...current]);
     setNewSecret(data.secret);
-    toast.success("API key created.", {
-      description: "Copy the full secret now. It will not be shown again.",
+    toast.success(t("settings.apiKeys.created"), {
+      description: t("settings.apiKeys.createdDesc"),
     });
   };
 
@@ -540,19 +583,19 @@ const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
       <GlowCard className="p-8" glowColor="rgba(8, 145, 178, 0.15)">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6 mb-6">
           <div>
-            <h2 className="font-serif text-2xl text-[#fdfbf7] mb-1">Developer API Keys</h2>
-            <p className="text-sm text-[#fdfbf7]/50">Use these keys to access the SideBy Orchestration API programmatically.</p>
+            <h2 className="font-serif text-2xl text-[#fdfbf7] mb-1">{t("settings.apiKeys.title")}</h2>
+            <p className="text-sm text-[#fdfbf7]/50">{t("settings.apiKeys.subtitle")}</p>
           </div>
           <button onClick={createKey} className="flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] shrink-0">
             <Plus className="h-3.5 w-3.5" />
-            Create Key
+            {t("settings.apiKeys.createKey")}
           </button>
         </div>
 
         {newSecret && (
           <div className="mb-4 rounded-sm border border-emerald-500/25 bg-emerald-500/10 p-4">
             <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-300">
-              New key secret
+              {t("settings.apiKeys.newSecret")}
             </p>
             <div className="mt-2 flex items-center gap-2">
               <code className="min-w-0 flex-1 truncate rounded-sm border border-emerald-500/20 bg-black/30 px-3 py-2 text-xs text-emerald-100">
@@ -561,11 +604,11 @@ const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
               <button
                 onClick={async () => {
                   const ok = await copyText(newSecret);
-                  toast[ok ? "success" : "error"](ok ? "Secret copied." : "Clipboard permission is blocked.");
+                  toast[ok ? "success" : "error"](ok ? t("settings.common.secretCopied") : t("settings.common.clipboardBlocked"));
                 }}
                 className="rounded-sm border border-emerald-500/25 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-300"
               >
-                Copy
+                {t("settings.common.copy")}
               </button>
             </div>
           </div>
@@ -581,20 +624,20 @@ const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
                     {key.prefix}
                   </code>
                   <span className="text-[10px] text-[#fdfbf7]/30 uppercase tracking-widest">
-                    Created {new Date(key.createdAt).toLocaleDateString()}
+                    {t("settings.common.createdAt", { date: formatDate(key.createdAt, lang) })}
                   </span>
                 </div>
               </div>
               <div className="flex items-center gap-6">
                 <div className="text-right hidden sm:block">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-0.5">Last Used</p>
-                  <p className="text-xs text-[#fdfbf7]/60">{key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString() : "Never"}</p>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-0.5">{t("settings.apiKeys.lastUsed")}</p>
+                  <p className="text-xs text-[#fdfbf7]/60">{key.lastUsedAt ? formatDateTime(key.lastUsedAt, lang) : t("settings.apiKeys.never")}</p>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={async () => {
                       const ok = await copyText(key.prefix);
-                      toast[ok ? "success" : "error"](ok ? "Key prefix copied." : "Clipboard permission is blocked.");
+                      toast[ok ? "success" : "error"](ok ? t("settings.apiKeys.prefixCopied") : t("settings.common.clipboardBlocked"));
                     }}
                     className="p-2 text-[#fdfbf7]/40 hover:text-cyan-400 transition-colors rounded-sm hover:bg-cyan-500/10"
                   >
@@ -607,11 +650,11 @@ const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
                       })
                         .then(() => {
                           setKeys((current) => current.filter((item) => item.id !== key.id));
-                          toast.success("API key revoked.");
+                          toast.success(t("settings.apiKeys.revoked"));
                         })
                         .catch((error) => {
-                          toast.error("Unable to revoke API key", {
-                            description: error instanceof Error ? error.message : "Try again shortly.",
+                          toast.error(t("settings.apiKeys.revokeError"), {
+                            description: error instanceof Error ? error.message : t("settings.common.tryAgain"),
                           });
                         });
                     }}
@@ -641,6 +684,7 @@ type WebhookRecord = {
 };
 
 const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
+  const { t, lang } = useI18n();
   const [subs, setSubs] = useState<WebhookRecord[]>([]);
   const [url, setUrl] = useState("");
   const [selectedEvents, setSelectedEvents] = useState<string[]>(["comparison.completed", "comparison.failed"]);
@@ -649,14 +693,14 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
   const urlInputRef = useRef<HTMLInputElement>(null);
 
   const validateUrl = (value: string): string | null => {
-    if (!value.trim()) return "Endpoint URL is required.";
+    if (!value.trim()) return t("settings.webhooks.urlRequired");
     try {
       const parsed = new URL(value.trim());
       if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-        return "Endpoint must start with https:// (or http:// for local testing).";
+        return t("settings.webhooks.urlProtocol");
       }
     } catch {
-      return "Enter a valid absolute URL, e.g. https://yourdomain.com/webhooks/sideby.";
+      return t("settings.webhooks.urlInvalid");
     }
     return null;
   };
@@ -678,11 +722,11 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
 
   useEffect(() => {
     void loadSubs().catch((error) => {
-      toast.error("Unable to load webhooks", {
-        description: error instanceof Error ? error.message : "Try again shortly.",
+      toast.error(t("settings.webhooks.loadError"), {
+        description: error instanceof Error ? error.message : t("settings.common.tryAgain"),
       });
     });
-  }, []);
+  }, [t]);
 
   const createSub = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -710,10 +754,10 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
       setUrl("");
       setUrlError(null);
       setIsCreating(false);
-      toast.success("Webhook subscription created successfully.");
+      toast.success(t("settings.webhooks.created"));
     } catch (error) {
-      toast.error("Unable to create webhook subscription", {
-        description: error instanceof Error ? error.message : "Try again shortly.",
+      toast.error(t("settings.webhooks.createError"), {
+        description: error instanceof Error ? error.message : t("settings.common.tryAgain"),
       });
     }
   };
@@ -731,10 +775,10 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
       setSubs((current) =>
         current.map((item) => (item.id === sub.id ? data.subscription : item))
       );
-      toast.success(nextActive ? "Webhook activated." : "Webhook deactivated.");
+      toast.success(t(nextActive ? "settings.webhooks.activated" : "settings.webhooks.deactivated"));
     } catch (error) {
-      toast.error("Failed to update status", {
-        description: error instanceof Error ? error.message : "Try again shortly.",
+      toast.error(t("settings.webhooks.statusError"), {
+        description: error instanceof Error ? error.message : t("settings.common.tryAgain"),
       });
     }
   };
@@ -745,10 +789,10 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
         method: "DELETE",
       });
       setSubs((current) => current.filter((item) => item.id !== id));
-      toast.success("Webhook subscription deleted.");
+      toast.success(t("settings.webhooks.deleted"));
     } catch (error) {
-      toast.error("Unable to delete webhook subscription", {
-        description: error instanceof Error ? error.message : "Try again shortly.",
+      toast.error(t("settings.webhooks.deleteError"), {
+        description: error instanceof Error ? error.message : t("settings.common.tryAgain"),
       });
     }
   };
@@ -764,24 +808,24 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
       <GlowCard className="p-8" glowColor="rgba(249, 115, 22, 0.15)">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6 mb-6">
           <div>
-            <h2 className="font-serif text-2xl text-[#fdfbf7] mb-1">Webhook Subscriptions</h2>
-            <p className="text-sm text-[#fdfbf7]/50">Receive real-time notifications on comparison jobs directly in your server.</p>
+            <h2 className="font-serif text-2xl text-[#fdfbf7] mb-1">{t("settings.webhooks.title")}</h2>
+            <p className="text-sm text-[#fdfbf7]/50">{t("settings.webhooks.subtitle")}</p>
           </div>
           <button
             onClick={openCreateForm}
             aria-expanded={isCreating}
             className="flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] shrink-0"
           >
-            {isCreating ? "Cancel" : <><Plus className="h-3.5 w-3.5" /> Add Endpoint</>}
+            {isCreating ? t("settings.common.cancel") : <><Plus className="h-3.5 w-3.5" /> {t("settings.webhooks.addEndpoint")}</>}
           </button>
         </div>
 
         {isCreating && (
           <form onSubmit={createSub} noValidate className="mb-8 rounded-sm border border-[#333] bg-[#0c0b0a] p-6 space-y-4 animate-in fade-in duration-300">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-orange-400">New Webhook Subscription</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-orange-400">{t("settings.webhooks.newTitle")}</h3>
 
             <div className="space-y-2">
-              <label htmlFor="webhook-endpoint-url" className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">Endpoint URL</label>
+              <label htmlFor="webhook-endpoint-url" className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">{t("settings.webhooks.endpointUrl")}</label>
               <input
                 id="webhook-endpoint-url"
                 ref={urlInputRef}
@@ -805,7 +849,7 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 block">Event Subscriptions</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 block">{t("settings.webhooks.eventSubscriptions")}</label>
               <div className="flex flex-col sm:flex-row gap-6">
                 <label className="flex items-center gap-3 cursor-pointer text-sm text-[#fdfbf7]/70 hover:text-[#fdfbf7] transition-colors">
                   <input 
@@ -830,14 +874,14 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
 
             <button type="submit" className="flex items-center gap-2 rounded-sm bg-orange-600 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700">
               <Save className="h-3.5 w-3.5" />
-              Save Endpoint
+              {t("settings.webhooks.saveEndpoint")}
             </button>
           </form>
         )}
 
         <div className="space-y-4">
           {subs.length === 0 ? (
-            <p className="text-sm text-[#fdfbf7]/30 text-center py-6">No active webhook subscriptions configured.</p>
+            <p className="text-sm text-[#fdfbf7]/30 text-center py-6">{t("settings.webhooks.empty")}</p>
           ) : (
             subs.map((sub) => (
               <div key={sub.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-sm border border-[#333] bg-[#0c0b0a] p-5">
@@ -852,7 +896,7 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
                           : "bg-zinc-500/10 border-zinc-500/20 text-zinc-400 hover:bg-zinc-500/20"
                       }`}
                     >
-                      {sub.active ? "Active" : "Inactive"}
+                      {sub.active ? t("settings.webhooks.active") : t("settings.webhooks.inactive")}
                     </button>
                   </div>
                   <div className="flex items-center gap-3 flex-wrap">
@@ -862,12 +906,12 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
                       </span>
                     ))}
                     <span className="text-[10px] text-[#fdfbf7]/30 uppercase tracking-widest">
-                      Created {new Date(sub.createdAt).toLocaleDateString()}
+                      {t("settings.common.createdAt", { date: formatDate(sub.createdAt, lang) })}
                     </span>
                   </div>
                   
                   <div className="flex items-center gap-2 pt-1">
-                    <span className="text-[10px] text-[#fdfbf7]/40 uppercase tracking-widest">Secret:</span>
+                    <span className="text-[10px] text-[#fdfbf7]/40 uppercase tracking-widest">{t("settings.webhooks.secretLabel")}</span>
                     {sub.secret ? (
                       <>
                         <code className="text-xs font-mono text-cyan-400 bg-cyan-500/5 px-2 py-0.5 rounded">
@@ -876,17 +920,17 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
                         <button
                           onClick={async () => {
                             const ok = await copyText(sub.secret || "");
-                            toast[ok ? "success" : "error"](ok ? "Secret copied." : "Clipboard permission is blocked.");
+                            toast[ok ? "success" : "error"](ok ? t("settings.common.secretCopied") : t("settings.common.clipboardBlocked"));
                           }}
                           className="text-[#fdfbf7]/40 hover:text-cyan-400 transition-colors p-1"
-                          title="Copy signing secret"
+                          title={t("settings.webhooks.copySecretTitle")}
                         >
                           <Copy className="h-3.5 w-3.5" />
                         </button>
                       </>
                     ) : (
                       <span className="text-xs text-[#fdfbf7]/30">
-                        Hidden after creation
+                        {t("settings.webhooks.hiddenAfterCreation")}
                       </span>
                     )}
                   </div>

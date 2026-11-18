@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -7,6 +7,7 @@ import { MarketingNav } from "@/components/brand/MarketingNav";
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { captureEvent } from "@/lib/posthog";
+import { useT, type MessageKey } from "@/i18n";
 import {
   ArrowRight,
   Bell,
@@ -19,6 +20,7 @@ import {
   Zap,
 } from "@/components/icons";
 
+// Sample product output: kept in English on purpose (it depicts a comparison, not site copy).
 const PREVIEW_COMPARISONS = [
   {
     id: "linear-jira",
@@ -48,32 +50,37 @@ const PREVIEW_COMPARISONS = [
   },
 ] as const;
 
-const MILESTONES = [
+const MILESTONES: { icon: typeof Zap; title: MessageKey; description: MessageKey; status: MessageKey }[] = [
   {
     icon: Zap,
-    title: "Native Swift & Offline Briefs",
-    description:
-      "Your verified comparisons, citations, and decision matrices cached locally so you can review them on flights or in meetings.",
-    status: "In design",
+    title: "mkt.ios.m1.title",
+    description: "mkt.ios.m1.body",
+    status: "mkt.ios.m1.status",
   },
   {
     icon: Bell,
-    title: "Instant Research Push Alerts",
-    description:
-      "Start a deep comparison from anywhere and get a crisp notification the moment sources are extracted and scored.",
-    status: "Web Push live now",
+    title: "mkt.ios.m2.title",
+    description: "mkt.ios.m2.body",
+    status: "mkt.ios.m2.status",
   },
   {
     icon: Share,
-    title: "iOS Share Sheet & Spotlight",
-    description:
-      "Send any two links or product pages directly from Safari into SideBy and pull up past verdicts from Spotlight.",
-    status: "Planned",
+    title: "mkt.ios.m3.title",
+    description: "mkt.ios.m3.body",
+    status: "mkt.ios.m3.status",
   },
 ];
 
+/** Swap `{name}` tokens in a translated sentence for styled nodes, keeping the word order of each language. */
+const withParts = (template: string, parts: Record<string, ReactNode>) =>
+  template.split(/(\{\w+\})/).map((piece, index) => {
+    const match = /^\{(\w+)\}$/.exec(piece);
+    return match && match[1] in parts ? <Fragment key={index}>{parts[match[1]]}</Fragment> : piece;
+  });
+
 export default function IosApp() {
-  usePageTitle("SideBy for iOS — Coming Soon");
+  const t = useT();
+  usePageTitle(t("mkt.ios.pageTitle"));
   const containerRef = useRef<HTMLDivElement>(null);
   const [activePreview, setActivePreview] = useState(0);
   const [email, setEmail] = useState("");
@@ -123,7 +130,7 @@ export default function IosApp() {
     event.preventDefault();
     const trimmed = email.trim();
     if (!trimmed || !trimmed.includes("@")) {
-      toast.error("Please enter a valid email address.");
+      toast.error(t("mkt.ios.invalidEmail"));
       return;
     }
     try {
@@ -133,7 +140,7 @@ export default function IosApp() {
     }
     captureEvent("ios_waitlist_joined", { domain: trimmed.split("@")[1] || "unknown" });
     setSubmitted(true);
-    toast.success("You're on the iOS early-access list! We'll notify you as soon as TestFlight opens.");
+    toast.success(t("mkt.ios.joinedToast"));
   };
 
   return (
@@ -153,20 +160,18 @@ export default function IosApp() {
             <div>
               <div className="ios-hero-stagger inline-flex items-center gap-2 rounded-full border border-orange-400/25 bg-orange-500/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-orange-200">
                 <Smartphone className="h-3.5 w-3.5 text-orange-300" />
-                <span>iOS &amp; iPadOS · Coming Soon</span>
+                <span>{t("mkt.ios.badge")}</span>
               </div>
 
               <h1 className="ios-hero-stagger mt-6 font-serif text-4xl leading-[1.06] tracking-[-0.03em] text-[#fffaf1] sm:text-6xl">
-                SideBy for iOS is{" "}
+                {t("mkt.ios.heroTitle")}{" "}
                 <span className="bg-gradient-to-r from-orange-300 via-amber-200 to-rose-300 bg-clip-text text-transparent">
-                  on the way.
+                  {t("mkt.ios.heroAccent")}
                 </span>
               </h1>
 
               <p className="ios-hero-stagger mt-5 max-w-xl text-base leading-7 text-white/70 sm:text-lg">
-                We&apos;re crafting the native iPhone and iPad experience from the ground up — offline
-                comparison briefs, instant push alerts when deep research finishes, and
-                Spotlight-fast verdict lookup. Don&apos;t worry, we&apos;re building it right.
+                {t("mkt.ios.heroBody")}
               </p>
 
               {/* Notify me / early access */}
@@ -176,32 +181,33 @@ export default function IosApp() {
                     <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
                     <div>
                       <p className="text-sm font-semibold text-[#fffaf1]">
-                        You&apos;re on the TestFlight list
+                        {t("mkt.ios.joinedTitle")}
                       </p>
                       <p className="mt-1 text-xs leading-5 text-white/65">
-                        We saved <span className="text-orange-200">{email}</span> and will invite you
-                        before the App Store launch.
+                        {withParts(t("mkt.ios.joinedBody"), {
+                          email: <span className="text-orange-200">{email}</span>,
+                        })}
                       </p>
                     </div>
                   </div>
                 ) : (
                   <form onSubmit={handleWaitlistSubmit} className="flex flex-col gap-2.5 sm:flex-row">
                     <label htmlFor="ios-waitlist-email" className="sr-only">
-                      Email for iOS TestFlight invite
+                      {t("mkt.ios.waitlistLabel")}
                     </label>
                     <input
                       id="ios-waitlist-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@company.com"
+                      placeholder={t("mkt.ios.waitlistPlaceholder")}
                       className="min-h-11 flex-1 rounded-xl border border-white/[0.12] bg-black/40 px-3.5 text-sm text-white placeholder:text-white/40 focus:border-orange-400/60 focus:outline-none"
                     />
                     <button
                       type="submit"
                       className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(249,115,22,0.28)] transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
                     >
-                      <span>Notify me</span>
+                      <span>{t("mkt.ios.notify")}</span>
                       <ArrowRight className="h-4 w-4" />
                     </button>
                   </form>
@@ -211,11 +217,11 @@ export default function IosApp() {
               <div className="ios-hero-stagger mt-5 flex flex-wrap items-center gap-4 text-xs text-white/60">
                 <span className="inline-flex items-center gap-1.5">
                   <ShieldCheck className="h-4 w-4 text-orange-300" />
-                  Syncs with your SideBy workspace
+                  {t("mkt.ios.syncs")}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Sparkles className="h-4 w-4 text-orange-300" />
-                  PWA installable on iOS Safari today
+                  {t("mkt.ios.pwaToday")}
                 </span>
               </div>
             </div>
@@ -242,7 +248,7 @@ export default function IosApp() {
                   <div className="mt-4 flex items-center justify-between">
                     <div>
                       <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-orange-300/80">
-                        SideBy iOS Preview
+                        {t("mkt.ios.previewEyebrow")}
                       </p>
                       <h2 className="mt-0.5 font-serif text-lg text-[#fffaf1]">{preview.query}</h2>
                     </div>
@@ -251,7 +257,7 @@ export default function IosApp() {
                       onClick={() => setActivePreview((prev) => (prev + 1) % PREVIEW_COMPARISONS.length)}
                       className="rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-1 text-[10px] font-medium text-white/80 transition-colors hover:border-orange-300/40 hover:text-white"
                     >
-                      Switch
+                      {t("mkt.ios.switch")}
                     </button>
                   </div>
 
@@ -259,7 +265,7 @@ export default function IosApp() {
                   <div className="mt-3 flex items-center gap-2 rounded-2xl border border-orange-400/20 bg-orange-500/10 px-3 py-2">
                     <Bell className="h-3.5 w-3.5 shrink-0 text-orange-300" />
                     <p className="truncate text-[11px] text-orange-100">
-                      Research finished · {preview.sources} sources verified
+                      {t("mkt.ios.pushPill", { count: preview.sources })}
                     </p>
                   </div>
 
@@ -267,10 +273,10 @@ export default function IosApp() {
                   <div className="mt-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] uppercase tracking-wider text-white/50">
-                        Top Pick
+                        {t("mkt.ios.topPick")}
                       </span>
                       <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
-                        {preview.confidence}% confidence
+                        {t("mkt.ios.confidence", { value: preview.confidence })}
                       </span>
                     </div>
                     <p className="mt-1 font-serif text-xl text-[#fffaf1]">{preview.winner}</p>
@@ -318,11 +324,11 @@ export default function IosApp() {
                       <Icon className="h-5 w-5" />
                     </span>
                     <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-white/70">
-                      {item.status}
+                      {t(item.status)}
                     </span>
                   </div>
-                  <h3 className="mt-4 font-serif text-xl text-[#fffaf1]">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-white/65">{item.description}</p>
+                  <h3 className="mt-4 font-serif text-xl text-[#fffaf1]">{t(item.title)}</h3>
+                  <p className="mt-2 text-sm leading-6 text-white/65">{t(item.description)}</p>
                 </article>
               );
             })}
@@ -334,23 +340,23 @@ export default function IosApp() {
               <div className="max-w-xl">
                 <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-orange-300">
                   <Download className="h-4 w-4" />
-                  <span>Available today on iPhone</span>
+                  <span>{t("mkt.ios.pwaEyebrow")}</span>
                 </div>
                 <h2 className="mt-2 font-serif text-2xl text-[#fffaf1] sm:text-3xl">
-                  Add SideBy to your iPhone Home Screen right now
+                  {t("mkt.ios.pwaTitle")}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-white/70">
-                  While the native App Store build is in progress, SideBy already runs as a full-screen
-                  installable web app with Web Push notifications on iOS Safari: tap{" "}
-                  <strong className="text-white">Share</strong> →{" "}
-                  <strong className="text-white">Add to Home Screen</strong>.
+                  {withParts(t("mkt.ios.pwaBody"), {
+                    share: <strong className="text-white">{t("mkt.ios.pwaShare")}</strong>,
+                    addToHome: <strong className="text-white">{t("mkt.ios.pwaAddToHome")}</strong>,
+                  })}
                 </p>
               </div>
               <Link
                 to="/app"
                 className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-orange-300/30 bg-orange-500/15 px-5 text-sm font-semibold text-orange-100 transition-colors hover:bg-orange-500/25"
               >
-                <span>Open SideBy Web App</span>
+                <span>{t("mkt.ios.openWeb")}</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

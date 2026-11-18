@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { VideoPlayer } from "@/components/ui/video-player";
+import { useT } from "@/i18n";
 
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -9,6 +10,7 @@ const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)"
  * autoplays for visitors who prefer reduced motion.
  */
 export function ProductDemo() {
+  const t = useT();
   const [portrait, setPortrait] = useState(() => window.matchMedia("(max-width: 639px)").matches);
   const [started, setStarted] = useState(false);
   const [autoPlay] = useState(() => !reducedMotion());
@@ -38,10 +40,10 @@ export function ProductDemo() {
 
   return <figure className="mx-auto w-full max-w-md sm:max-w-none" aria-labelledby="product-demo-title">
     <div className="mb-3 flex items-center justify-between gap-3 px-1">
-      <h2 id="product-demo-title" className="text-sm font-medium text-[#fffaf1]">See a decision come together</h2>
-      <span className="shrink-0 text-xs text-white/60">30-second tour</span>
+      <h2 id="product-demo-title" className="text-sm font-medium text-[#fffaf1]">{t("mkt.demo.title")}</h2>
+      <span className="shrink-0 text-xs text-white/60">{t("mkt.demo.tour")}</span>
     </div>
-    <VideoPlayer ref={video} key={portrait ? "portrait" : "wide"} size="full" label="How SideBy works"
+    <VideoPlayer ref={video} key={portrait ? "portrait" : "wide"} size="full" label={t("mkt.demo.videoLabel")}
       src={portrait ? "/media/sideby-demo-mobile.mp4?v=3" : "/media/sideby-demo-wide.mp4?v=3"}
       poster={portrait ? "/media/sideby-poster-mobile.jpg?v=3" : "/media/sideby-poster-wide.jpg?v=3"}
       autoPlay={autoPlay} loop muted playsInline preload="metadata"
@@ -52,8 +54,8 @@ export function ProductDemo() {
       <track kind="captions" src="/media/sideby-demo.en.vtt?v=3" srcLang="en" label="English"/>
     </VideoPlayer>
     <figcaption className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1 text-[11px] leading-5 text-white/60">
-      <span>Example comparison: iPhone vs Galaxy · On-screen text in Russian</span>
-      <a href="#start-comparing" className="inline-flex min-h-11 items-center text-orange-200 underline decoration-orange-200/30 underline-offset-4 hover:text-orange-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-300">Try your own comparison</a>
+      <span>{t("mkt.demo.caption")}</span>
+      <a href="#start-comparing" className="inline-flex min-h-11 items-center text-orange-200 underline decoration-orange-200/30 underline-offset-4 hover:text-orange-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-300">{t("mkt.demo.ownLink")}</a>
     </figcaption>
   </figure>;
 }

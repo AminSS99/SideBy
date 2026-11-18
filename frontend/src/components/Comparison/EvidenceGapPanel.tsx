@@ -6,6 +6,7 @@ import { buildApiUrl } from "@/config/env";
 import { toast } from "sonner";
 import { deriveEvidenceGaps, type Gap } from "./evidenceGaps";
 import type { ComparisonData } from "./types";
+import { useT, type MessageKey, type TFunction } from "@/i18n";
 
 /**
  * Evidence-gap planner.
@@ -23,13 +24,63 @@ import type { ComparisonData } from "./types";
  * usage contract, not a hardcoded plan limit.
  */
 
-const KIND_META = {
-  "missing-both": { label: "No evidence", icon: CircleHelp, tone: "text-amber-300 border-amber-400/25 bg-amber-400/[0.07]" },
-  missing: { label: "One-sided", icon: CircleHelp, tone: "text-amber-300 border-amber-400/25 bg-amber-400/[0.07]" },
-  weak: { label: "Weak support", icon: TriangleAlert, tone: "text-orange-300 border-orange-400/25 bg-orange-400/[0.07]" },
-  uncited: { label: "Uncited claims", icon: Info, tone: "text-sky-300 border-sky-400/25 bg-sky-400/[0.07]" },
-  contradiction: { label: "Contradiction", icon: Scale, tone: "text-rose-300 border-rose-400/25 bg-rose-400/[0.07]" },
-} as const;
+const KIND_META: Record<Gap["kind"], { labelKey: MessageKey; icon: typeof CircleHelp; tone: string }> = {
+  "missing-both": { labelKey: "dw.gaps.kind.missingBoth", icon: CircleHelp, tone: "text-amber-300 border-amber-400/25 bg-amber-400/[0.07]" },
+  missing: { labelKey: "dw.gaps.kind.missing", icon: CircleHelp, tone: "text-amber-300 border-amber-400/25 bg-amber-400/[0.07]" },
+  weak: { labelKey: "dw.gaps.kind.weak", icon: TriangleAlert, tone: "text-orange-300 border-orange-400/25 bg-orange-400/[0.07]" },
+  uncited: { labelKey: "dw.gaps.kind.uncited", icon: Info, tone: "text-sky-300 border-sky-400/25 bg-sky-400/[0.07]" },
+  contradiction: { labelKey: "dw.gaps.kind.contradiction", icon: Scale, tone: "text-rose-300 border-rose-400/25 bg-rose-400/[0.07]" },
+};
+
+function translateGap(t: TFunction, gap: Gap): { title: string; detail: string } {
+  const m = gap.i18n;
+  switch (gap.kind) {
+    case "missing-both":
+      return {
+        title: m?.category ? t("dw.gaps.missingBoth.title", { category: m.category }) : gap.title,
+        detail:
+          m?.entityA && m?.entityB
+            ? t("dw.gaps.missingBoth.detail", { a: m.entityA, b: m.entityB })
+            : gap.detail,
+      };
+    case "missing":
+      return {
+        title:
+          m?.category && m?.missing
+            ? t("dw.gaps.missing.title", { category: m.category, missing: m.missing })
+            : gap.title,
+        detail:
+          m?.present && m?.presentCount !== undefined && m?.missing
+            ? t("dw.gaps.missing.detail", {
+                present: m.present,
+                count: m.presentCount,
+                missing: m.missing,
+              })
+            : gap.detail,
+      };
+    case "uncited":
+      return {
+        title: m?.category ? t("dw.gaps.uncited.title", { category: m.category }) : gap.title,
+        detail:
+          m?.count !== undefined && m?.labels !== undefined
+            ? t("dw.gaps.uncited.detail", { count: m.count, labels: m.labels })
+            : gap.detail,
+      };
+    case "weak":
+      return {
+        title: m?.category ? t("dw.gaps.weak.title", { category: m.category }) : gap.title,
+        detail:
+          m?.count !== undefined && m?.threshold !== undefined && m?.labels !== undefined
+            ? t("dw.gaps.weak.detail", { count: m.count, threshold: m.threshold, labels: m.labels })
+            : gap.detail,
+      };
+    case "contradiction":
+      return {
+        title: t("dw.gaps.contradiction.title"),
+        detail: gap.detail,
+      };
+  }
+}
 
 type FollowUpResponse = { answer: string; type?: string; confidence?: number };
 type FollowUpAnswer = { text: string; type?: string; confidence?: number };
@@ -47,6 +98,7 @@ export function EvidenceGapPanel({
   result: ComparisonData;
   comparisonId: string;
 }) {
+  const t = useT();
   const gaps = useMemo(() => deriveEvidenceGaps(result), [result]);
   const quotaQuery = useQuery({
     queryKey: ["usage-followup"],
@@ -84,12 +136,10 @@ export function EvidenceGapPanel({
 
   if (gaps.length === 0 && result.categories.length > 0) {
     return (
-      <section aria-label="Evidence gaps" className="rounded-sm border border-[#2a2a2a] bg-[#111] p-6">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">Evidence gaps</p>
+      <section aria-label={t("dw.gaps.aria")} className="rounded-sm border border-[#2a2a2a] bg-[#111] p-6">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">{t("dw.gaps.kicker")}</p>
         <p className="mt-3 text-sm leading-relaxed text-[#fdfbf7]/60">
-          No decision-relevant gaps detected: both options have cited, supported claims in every category, and
-          no recorded contradictions remain unresolved. Silence here means "nothing found", not "everything
-          proven" — research only covers what the pipeline retrieved.
+          {t("dw.gaps.noneFound")}
         </p>
       </section>
     );
@@ -97,11 +147,10 @@ export function EvidenceGapPanel({
 
   if (result.categories.length === 0) {
     return (
-      <section aria-label="Evidence gaps" className="rounded-sm border border-[#2a2a2a] bg-[#111] p-6">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">Evidence gaps</p>
+      <section aria-label={t("dw.gaps.aria")} className="rounded-sm border border-[#2a2a2a] bg-[#111] p-6">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">{t("dw.gaps.kicker")}</p>
         <p className="mt-3 text-sm leading-relaxed text-[#fdfbf7]/60">
-          No categories were researched yet, so there is nothing to audit. Gaps will appear here once the
-          research record lands.
+          {t("dw.gaps.noCategories")}
         </p>
       </section>
     );
@@ -123,7 +172,7 @@ export function EvidenceGapPanel({
       });
       const data: unknown = await res.json();
       if (!isFollowUpResponse(data)) {
-        throw new Error("The follow-up came back in an unexpected shape. Please try again.");
+        throw new Error(t("dw.gaps.err.unexpectedShape"));
       }
       setAnswers((current) => ({
         ...current,
@@ -131,7 +180,7 @@ export function EvidenceGapPanel({
       }));
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
-      toast.error("Follow-up failed", { description: describeApiFailure(error) });
+      toast.error(t("dw.gaps.toast.failed"), { description: describeApiFailure(error) });
     } finally {
       if (askingRef.current === gap.question) askingRef.current = null;
       setAsking((current) => (current === gap.question ? null : current));
@@ -139,27 +188,24 @@ export function EvidenceGapPanel({
   };
 
   return (
-    <section aria-label="Evidence gaps" className="rounded-sm border border-[#2a2a2a] bg-[#111] p-6 sm:p-8">
+    <section aria-label={t("dw.gaps.aria")} className="rounded-sm border border-[#2a2a2a] bg-[#111] p-6 sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">Evidence gaps</p>
-          <h3 className="mt-2 font-serif text-2xl text-[#fdfbf7]">What could change this decision</h3>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">{t("dw.gaps.kicker")}</p>
+          <h3 className="mt-2 font-serif text-2xl text-[#fdfbf7]">{t("dw.gaps.title")}</h3>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#fdfbf7]/50">
-            Unknowns and contradictions found in this comparison's own evidence.
             {quota
-              ? ` ${quota.remaining} of ${quota.limit} daily follow-ups left.`
-              : " Follow-ups count toward your daily allowance."}{" "}
-            Asking is explicit — nothing runs automatically.
+              ? t("dw.gaps.subtitleWithQuota", { remaining: quota.remaining, limit: quota.limit })
+              : t("dw.gaps.subtitleNoQuota")}
           </p>
           {isIllustrative && (
             <p className="mt-2 max-w-xl text-xs leading-relaxed text-amber-300/90">
-              This record is marked illustrative (sample data), not live research. Gaps below describe the
-              sample, not a real evidence base.
+              {t("dw.gaps.illustrative")}
             </p>
           )}
         </div>
         <span className="rounded-sm border border-[#333] bg-[#0c0b0a] px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
-          {gaps.length} open
+          {t("dw.gaps.openCount", { count: gaps.length })}
         </span>
       </div>
 
@@ -169,28 +215,29 @@ export function EvidenceGapPanel({
           const Icon = meta.icon;
           const answer = answers[gap.question];
           const isAsking = asking === gap.question;
+          const translated = translateGap(t, gap);
           return (
             <li key={`${gap.kind}-${gap.title}`} className="rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`inline-flex items-center gap-1.5 rounded-sm border px-2 py-1 text-[9px] font-bold uppercase tracking-widest ${meta.tone}`}>
                   <Icon className="h-3 w-3" aria-hidden="true" />
-                  {meta.label}
+                  {t(meta.labelKey)}
                 </span>
-                <p className="text-sm font-semibold text-[#fdfbf7]">{gap.title}</p>
+                <p className="text-sm font-semibold text-[#fdfbf7]">{translated.title}</p>
               </div>
-              <p className="mt-2 text-xs leading-relaxed text-[#fdfbf7]/55">{gap.detail}</p>
+              <p className="mt-2 text-xs leading-relaxed text-[#fdfbf7]/55">{translated.detail}</p>
 
               {answer ? (
                 <div className="mt-3 border-t border-[#2a2a2a] pt-3">
                   <p className="text-sm leading-relaxed text-[#fdfbf7]/85">{answer.text}</p>
                   <p className="mt-2 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">
                     {answer.type === "grounded"
-                      ? "Source-backed"
+                      ? t("dw.gaps.answer.grounded")
                       : answer.type === "inference"
-                        ? "Inference"
-                        : "Insufficient data"}
+                        ? t("dw.gaps.answer.inference")
+                        : t("dw.gaps.answer.insufficient")}
                     {typeof answer.confidence === "number"
-                      ? ` · Support score ${Math.round(answer.confidence * 100)} (not a probability)`
+                      ? t("dw.gaps.answer.supportScore", { score: Math.round(answer.confidence * 100) })
                       : ""}
                   </p>
                 </div>
@@ -206,7 +253,7 @@ export function EvidenceGapPanel({
                   ) : (
                     <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                   )}
-                  {isAsking ? "Asking…" : "Ask follow-up"}
+                  {isAsking ? t("dw.gaps.asking") : t("dw.gaps.askFollowUp")}
                 </button>
               )}
             </li>

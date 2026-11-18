@@ -8,6 +8,7 @@ import { panelClass } from './constants';
 import { cn } from '@/lib/utils';
 import { ScoreDetailDrawer } from "./ScoreDetailDrawer";
 import type { ComparisonFact } from './types';
+import { useT } from '@/i18n';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -72,6 +73,7 @@ const getProcessedCategories = (categories: ComparisonData["categories"]): Proce
 };
 
 export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
+  const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -137,8 +139,8 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
             <Table2 className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="font-serif text-2xl tracking-tight text-[#fffaf1]">Feature Matrix</h3>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mt-1">Detailed Head-to-Head</p>
+            <h3 className="font-serif text-2xl tracking-tight text-[#fffaf1]">{t("res.toc.matrix")}</h3>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mt-1">{t("dm.feature.subtitle")}</p>
           </div>
         </div>
         
@@ -146,10 +148,10 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#fdfbf7]/30" />
           <input
             type="text"
-            aria-label="Filter comparison criteria"
+            aria-label={t("dm.feature.filterAria")}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter criteria..."
+            placeholder={t("dm.feature.filterPlaceholder")}
             className="h-11 w-full rounded-xl border border-white/10 bg-black/30 pl-9 pr-3 text-xs text-[#fdfbf7] outline-none transition-colors placeholder:text-white/25 focus:border-orange-400/40"
           />
         </div>
@@ -161,14 +163,14 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
           {/* Sticky Header */}
           <div className="grid grid-cols-[1.2fr_1fr_1fr] bg-[#0c0b0a] border-b border-[#2a2a2a] sticky top-0 z-30">
             <div className="p-6 font-bold uppercase tracking-widest text-[10px] text-[#fdfbf7]/40 self-end sticky left-0 z-40 bg-[#0c0b0a] border-r border-[#2a2a2a]">
-              Criteria
+              {t("dm.feature.criteria")}
             </div>
             <div className="p-6 border-l border-[#2a2a2a] bg-[#111]/50 backdrop-blur-md">
-              <span className="text-[10px] font-bold uppercase tracking-widest block mb-1 opacity-50" style={{ color: result.entities.a.hex }}>Entity A</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest block mb-1 opacity-50" style={{ color: result.entities.a.hex }}>{t("dm.feature.entityA")}</span>
               <span className="font-serif text-xl text-[#fdfbf7]">{result.entities.a.name}</span>
             </div>
             <div className="p-6 border-l border-[#2a2a2a] bg-[#111]/50 backdrop-blur-md">
-              <span className="text-[10px] font-bold uppercase tracking-widest block mb-1 opacity-50" style={{ color: result.entities.b.hex }}>Entity B</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest block mb-1 opacity-50" style={{ color: result.entities.b.hex }}>{t("dm.feature.entityB")}</span>
               <span className="font-serif text-xl text-[#fdfbf7]">{result.entities.b.name}</span>
             </div>
           </div>
@@ -176,7 +178,7 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
           {/* Matrix Body */}
           {matrixData.length === 0 ? (
             <div className="p-12 text-center text-sm text-[#fdfbf7]/40 font-serif italic">
-              No criteria matching "{filter}"
+              {t("dm.feature.noMatch", { filter })}
             </div>
           ) : (
             matrixData.map((cat) => (
@@ -186,7 +188,7 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
                   {cat.winner !== 'tie' && (
                     <span className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-orange-400 border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 rounded-sm">
                       <Trophy className="h-3 w-3" />
-                      Winner: {cat.winner === 'a' ? result.entities.a.name : result.entities.b.name}
+                      {t("res.cat.winner", { name: cat.winner === 'a' ? result.entities.a.name : result.entities.b.name })}
                     </span>
                   )}
                 </div>
@@ -220,13 +222,13 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
                         "p-5 border-l border-[#2a2a2a] text-sm text-[#fdfbf7]/60 group-hover:text-[#fdfbf7]/90 transition-colors leading-relaxed relative",
                         isAWinner && "bg-white/[0.02]"
                       )}>
-                        {row.factA?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}
+                        {row.factA?.value || <span className="text-[#fdfbf7]/20 italic">{t("dm.feature.notSpecified")}</span>}
                       </div>
                       <div className={cn(
                         "p-5 border-l border-[#2a2a2a] text-sm text-[#fdfbf7]/60 group-hover:text-[#fdfbf7]/90 transition-colors leading-relaxed relative",
                         isBWinner && "bg-white/[0.02]"
                       )}>
-                        {row.factB?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}
+                        {row.factB?.value || <span className="text-[#fdfbf7]/20 italic">{t("dm.feature.notSpecified")}</span>}
                       </div>
                     </div>
                   );
@@ -241,7 +243,7 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
       <div className="md:hidden">
         {matrixData.length === 0 ? (
           <div className="p-8 text-center text-sm text-[#fdfbf7]/40 font-serif italic">
-            No criteria matching "{filter}"
+            {t("dm.feature.noMatch", { filter })}
           </div>
         ) : (
           <div className="divide-y divide-white/[0.07]">
@@ -279,11 +281,11 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
                       <div className="grid gap-2.5">
                         <div className="rounded-lg border border-white/[0.06] bg-white/[0.025] p-3">
                           <p className="mb-1 text-[9px] font-bold uppercase tracking-widest" style={{ color: result.entities.a.hex }}>{result.entities.a.name}</p>
-                          <p className="text-xs leading-5 text-[#fdfbf7]/65">{row.factA?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}</p>
+                          <p className="text-xs leading-5 text-[#fdfbf7]/65">{row.factA?.value || <span className="text-[#fdfbf7]/20 italic">{t("dm.feature.notSpecified")}</span>}</p>
                         </div>
                         <div className="rounded-lg border border-white/[0.06] bg-white/[0.025] p-3">
                           <p className="mb-1 text-[9px] font-bold uppercase tracking-widest" style={{ color: result.entities.b.hex }}>{result.entities.b.name}</p>
-                          <p className="text-xs leading-5 text-[#fdfbf7]/65">{row.factB?.value || <span className="text-[#fdfbf7]/20 italic">Not specified</span>}</p>
+                          <p className="text-xs leading-5 text-[#fdfbf7]/65">{row.factB?.value || <span className="text-[#fdfbf7]/20 italic">{t("dm.feature.notSpecified")}</span>}</p>
                         </div>
                       </div>
                     </div>

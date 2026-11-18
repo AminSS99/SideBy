@@ -8,12 +8,13 @@ import {
   SearchCheck,
   ShieldCheck,
 } from "@/components/icons";
+import { useT, type MessageKey } from "@/i18n";
 
 interface PipelineStage {
   id: string;
   number: string;
-  label: string;
-  detail: string;
+  label: MessageKey;
+  detail: MessageKey;
   icon: typeof SearchCheck;
   sources: number;
   facts: number;
@@ -25,8 +26,8 @@ const STAGES: PipelineStage[] = [
   {
     id: "gather",
     number: "01",
-    label: "Gathering primary documentation",
-    detail: "Official pricing tables, SLA terms & changelogs",
+    label: "mkt.rpc.stage1.label",
+    detail: "mkt.rpc.stage1.detail",
     icon: SearchCheck,
     sources: 6,
     facts: 9,
@@ -36,8 +37,8 @@ const STAGES: PipelineStage[] = [
   {
     id: "verify",
     number: "02",
-    label: "Cross-checking benchmark & repo claims",
-    detail: "Deduplicating claims and binding source citations",
+    label: "mkt.rpc.stage2.label",
+    detail: "mkt.rpc.stage2.detail",
     icon: FileCheck2,
     sources: 12,
     facts: 24,
@@ -47,8 +48,8 @@ const STAGES: PipelineStage[] = [
   {
     id: "score",
     number: "03",
-    label: "Weighting dimensions for your brief",
-    detail: "Scoring branching, cold start, and predictable spend",
+    label: "mkt.rpc.stage3.label",
+    detail: "mkt.rpc.stage3.detail",
     icon: ChartNoAxesCombined,
     sources: 14,
     facts: 31,
@@ -57,28 +58,29 @@ const STAGES: PipelineStage[] = [
   },
 ];
 
-const EVIDENCE_ROWS = [
+const EVIDENCE_ROWS: { claim: string; source: string; verdict: MessageKey; accent: string }[] = [
   {
     claim: "Database branching with copy-on-write storage",
     source: "neon.tech/docs",
-    verdict: "Verified · Instant",
+    verdict: "mkt.rpc.verdictInstant",
     accent: "text-emerald-300 border-emerald-400/20 bg-emerald-400/[0.07]",
   },
   {
     claim: "Bundled Auth, Realtime, and Edge Functions",
     source: "supabase.com/docs",
-    verdict: "Verified · Built-in",
+    verdict: "mkt.rpc.verdictBuiltIn",
     accent: "text-orange-200 border-orange-300/20 bg-orange-400/[0.08]",
   },
   {
     claim: "Usage-based compute auto-suspend to zero",
     source: "neon.tech/pricing",
-    verdict: "Cited · Primary",
+    verdict: "mkt.rpc.verdictPrimary",
     accent: "text-amber-200 border-amber-300/20 bg-amber-400/[0.07]",
   },
 ];
 
 export function ResearchPreviewCard() {
+  const t = useT();
   const prefersReducedMotion = useReducedMotion() ?? false;
   const [activeIndex, setActiveIndex] = useState(1);
 
@@ -97,7 +99,7 @@ export function ResearchPreviewCard() {
 
   return (
     <div
-      aria-label="Interactive research pipeline preview"
+      aria-label={t("mkt.rpc.aria")}
       className="relative overflow-hidden rounded-[1.75rem] border border-white/[0.11] bg-[#0c0a09]/95 p-5 shadow-[0_32px_90px_rgba(0,0,0,.55),inset_0_1px_0_rgba(255,255,255,.07)] sm:p-7"
     >
       <div
@@ -119,10 +121,10 @@ export function ResearchPreviewCard() {
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-400" />
           </span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-200">
-            Research in progress
+            {t("mkt.rpc.inProgress")}
           </span>
           <span className="rounded-full border border-white/[0.1] bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] text-white/65">
-            Sample trace
+            {t("mkt.rpc.sampleTrace")}
           </span>
         </div>
 
@@ -130,7 +132,7 @@ export function ResearchPreviewCard() {
           aria-live="off"
           className="flex items-center gap-2 font-mono text-xs text-white/75"
         >
-          <span>Step {activeStage.number}/03</span>
+          <span>{t("mkt.rpc.step", { number: activeStage.number })}</span>
           <span className="text-white/30">·</span>
           <span className="text-orange-300 font-semibold">{progressPercent}%</span>
         </div>
@@ -139,7 +141,7 @@ export function ResearchPreviewCard() {
       {/* Brief title & live counters */}
       <div className="relative mt-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <p className="text-xs font-medium text-white/60">Active decision brief</p>
+          <p className="text-xs font-medium text-white/60">{t("mkt.rpc.brief")}</p>
           <p className="mt-0.5 font-serif text-xl text-[#fffaf1] sm:text-2xl">
             Supabase vs Neon for production Postgres
           </p>
@@ -148,7 +150,7 @@ export function ResearchPreviewCard() {
         <div className="grid grid-cols-3 gap-2 sm:min-w-[230px]">
           <div className="rounded-xl border border-white/[0.08] bg-black/40 px-3 py-2 text-center">
             <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/60">
-              Sources
+              {t("mkt.rpc.sources")}
             </span>
             <span className="mt-0.5 block font-mono text-base font-bold text-white tabular-nums">
               {activeStage.sources}
@@ -156,7 +158,7 @@ export function ResearchPreviewCard() {
           </div>
           <div className="rounded-xl border border-white/[0.08] bg-black/40 px-3 py-2 text-center">
             <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/60">
-              Facts
+              {t("mkt.rpc.facts")}
             </span>
             <span className="mt-0.5 block font-mono text-base font-bold text-white tabular-nums">
               {activeStage.facts}
@@ -164,7 +166,7 @@ export function ResearchPreviewCard() {
           </div>
           <div className="rounded-xl border border-white/[0.08] bg-black/40 px-3 py-2 text-center">
             <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/60">
-              Scores
+              {t("mkt.rpc.scores")}
             </span>
             <span className="mt-0.5 block font-mono text-base font-bold text-white tabular-nums">
               {activeStage.scores}
@@ -238,9 +240,9 @@ export function ResearchPreviewCard() {
                   isActive ? "text-[#fffaf1]" : "text-white/75"
                 }`}
               >
-                {stage.label}
+                {t(stage.label)}
               </p>
-              <p className="mt-1 text-[11px] leading-4 text-white/60">{stage.detail}</p>
+              <p className="mt-1 text-[11px] leading-4 text-white/60">{t(stage.detail)}</p>
             </motion.button>
           );
         })}
@@ -251,9 +253,9 @@ export function ResearchPreviewCard() {
         <div className="mb-2.5 flex items-center justify-between gap-2">
           <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/75">
             <ShieldCheck className="h-3.5 w-3.5 text-orange-300" />
-            Verified evidence ledger
+            {t("mkt.rpc.ledgerTitle")}
           </span>
-          <span className="font-mono text-[11px] text-white/60">Every claim keeps its URL</span>
+          <span className="font-mono text-[11px] text-white/60">{t("mkt.rpc.ledgerNote")}</span>
         </div>
 
         <div className="space-y-2">
@@ -272,7 +274,7 @@ export function ResearchPreviewCard() {
               <span
                 className={`inline-flex w-fit shrink-0 items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${row.accent}`}
               >
-                {row.verdict}
+                {t(row.verdict)}
               </span>
             </div>
           ))}
@@ -293,7 +295,7 @@ export function ResearchPreviewCard() {
             </motion.span>
           </AnimatePresence>
           <span className="shrink-0 text-[10px] uppercase tracking-wider text-white/55">
-            Live audit
+            {t("mkt.rpc.liveAudit")}
           </span>
         </div>
       </div>
