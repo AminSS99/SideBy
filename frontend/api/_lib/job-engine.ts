@@ -54,6 +54,7 @@ import {
 } from "./push.js";
 import { waitUntil as vercelWaitUntil } from "@vercel/functions";
 import { httpUrlOrNull } from "./safe-url.js";
+import { asciiSlug } from "../../src/lib/text.js";
 
 const safeWaitUntil = (promise: Promise<unknown>) => {
   if (process.env.VERCEL === "1") {
@@ -293,7 +294,7 @@ function parseQueryFallback(query: string): ParsedQuery {
   const cleanName = (value: string, fallback: string) =>
     value
       .replace(/\b(for|with|inside|on|because|when)\b.*$/i, "")
-      .replace(/[^a-z0-9\s+./-]/gi, "")
+      .replace(/[^\p{L}\p{M}\p{N}\s+./-]/gu, "")
       .replace(/\s+/g, " ")
       .trim() || fallback;
 
@@ -2098,10 +2099,7 @@ function entityHex(name: string): string {
 }
 
 function makeResultSlug(a: string, b: string): string {
-  return `${a}-vs-${b}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "") || "comparison";
+  return asciiSlug(`${a}-vs-${b}`, "comparison");
 }
 
 function buildVerdictSlots(

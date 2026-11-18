@@ -9,27 +9,29 @@ import { useAuth } from "@/contexts/AuthContext";
 import { envConfig } from "@/config/env";
 import { brand } from "@/config/brand";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useT } from "@/i18n";
 
 const SignIn = () => {
-  usePageTitle("Sign In");
+  const t = useT();
+  usePageTitle(t("auth.signin.title"));
   const [searchParams] = useSearchParams();
   const { isConfigured } = useAuth();
   const redirectUrl = authDestination(searchParams.get("redirect_url"));
   const signUpUrl = `/auth/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`;
   return (
     <AuthPageShell
-      eyebrow="Welcome back"
-      title={`Sign in to ${brand.productName}`}
-      description="Continue your research, revisit saved comparisons, and export cited results."
-      footerLabel="Need an account?"
-      footerLinkLabel="Create one"
+      eyebrow={t("auth.signin.eyebrow")}
+      title={t("auth.signin.heading", { product: brand.productName })}
+      description={t("auth.signin.desc")}
+      footerLabel={t("auth.signin.footer")}
+      footerLinkLabel={t("auth.signin.footerLink")}
       footerHref={signUpUrl}
     >
       <div className="space-y-6">
         <AuthComparisonBrief destination={redirectUrl} />
         {envConfig.canUseTestAuth && (
           <div className="rounded border border-orange-500/30 bg-orange-500/10 p-4 text-center">
-            <p className="text-orange-400 text-xs font-semibold uppercase tracking-wider mb-2">Test Environment</p>
+            <p className="text-orange-400 text-xs font-semibold uppercase tracking-wider mb-2">{t("auth.test.title")}</p>
             <button
               id="test-auth-btn"
               onClick={() => {
@@ -38,7 +40,7 @@ const SignIn = () => {
               }}
               className="w-full py-2 px-4 bg-[#fdfbf7] hover:bg-[#e0e0e0] text-[#0a0a0a] rounded font-bold transition-colors text-xs uppercase tracking-wider"
             >
-              Sign in with Mock Account
+              {t("auth.test.button")}
             </button>
           </div>
         )}

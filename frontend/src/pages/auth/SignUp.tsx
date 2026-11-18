@@ -8,20 +8,22 @@ import AuthPageShell from "@/components/auth/AuthPageShell";
 import { useAuth } from "@/contexts/AuthContext";
 import { brand } from "@/config/brand";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useT } from "@/i18n";
 
 const SignUp = () => {
-  usePageTitle("Sign Up");
+  const t = useT();
+  usePageTitle(t("auth.signup.title"));
   const [searchParams] = useSearchParams();
   const { isConfigured } = useAuth();
   const redirectUrl = authDestination(searchParams.get("redirect_url"));
   const signInUrl = `/auth/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`;
   return (
     <AuthPageShell
-      eyebrow="Start comparing"
-      title={`Create your ${brand.productName} account`}
-      description="Create an account to save workspaces, projects, and source-backed comparison runs."
-      footerLabel="Already have an account?"
-      footerLinkLabel="Sign in"
+      eyebrow={t("auth.signup.eyebrow")}
+      title={t("auth.signup.heading", { product: brand.productName })}
+      description={t("auth.signup.desc")}
+      footerLabel={t("auth.signup.footer")}
+      footerLinkLabel={t("auth.signup.footerLink")}
       footerHref={signInUrl}
     >
       <div className="space-y-6">

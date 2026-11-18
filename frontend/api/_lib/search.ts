@@ -3,6 +3,7 @@
  */
 import { redisGet, redisSet } from "./redis.js";
 import { logger } from "./log.js";
+import { transliterate } from "../../src/lib/text.js";
 import {
   getComparisonCategoryDefinition,
   type ComparisonCategory,
@@ -296,7 +297,7 @@ function sourcePriority(
   result: SearchResult,
   category: ComparisonCategory,
 ): number {
-  const normalizedEntity = entityName.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const normalizedEntity = transliterate(entityName).replace(/[^a-z0-9]+/g, "");
   const hints = OFFICIAL_DOMAIN_HINTS[normalizedEntity] || [];
   const url = result.url.toLowerCase();
   const title = result.title.toLowerCase();

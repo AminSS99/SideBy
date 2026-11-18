@@ -22,24 +22,27 @@ import {
   type DiscoverySource,
 } from "@/lib/onboardingAttribution";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useT, type MessageKey } from "@/i18n";
 
 const sources: Array<{
   id: DiscoverySource;
-  title: string;
-  description: string;
+  title: MessageKey;
+  description: MessageKey;
   icon: typeof Search;
 }> = [
-  { id: "search", title: "Search", description: "Google, Bing, or another search engine", icon: Search },
-  { id: "social", title: "Social", description: "LinkedIn, X, YouTube, or another network", icon: Globe2 },
-  { id: "friend", title: "A person", description: "A friend, teammate, or colleague", icon: Users },
-  { id: "community", title: "Community", description: "Reddit, Slack, Discord, or a forum", icon: MessageCircleMore },
-  { id: "product_directory", title: "Product directory", description: "A launch site, newsletter, or review directory", icon: Compass },
-  { id: "snap_ecosystem", title: "Another Snap product", description: "You already use something in the Snap ecosystem", icon: Layers3 },
-  { id: "other", title: "Something else", description: "Tell us in your own words", icon: Sparkles },
+  { id: "search", title: "ob.disc.s.search", description: "ob.disc.s.searchD", icon: Search },
+  { id: "social", title: "ob.disc.s.social", description: "ob.disc.s.socialD", icon: Globe2 },
+  { id: "friend", title: "ob.disc.s.friend", description: "ob.disc.s.friendD", icon: Users },
+  { id: "community", title: "ob.disc.s.community", description: "ob.disc.s.communityD", icon: MessageCircleMore },
+  { id: "product_directory", title: "ob.disc.s.directory", description: "ob.disc.s.directoryD", icon: Compass },
+  { id: "snap_ecosystem", title: "ob.disc.s.snap", description: "ob.disc.s.snapD", icon: Layers3 },
+  { id: "other", title: "ob.disc.s.other", description: "ob.disc.s.otherD", icon: Sparkles },
 ];
 
 const OnboardingDiscoveryPage = () => {
-  usePageTitle("How you found SideBy");
+  const t = useT();
+  usePageTitle(t("ob.disc.pageTitle"));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, isLoading } = useAuth();
@@ -75,7 +78,7 @@ const OnboardingDiscoveryPage = () => {
   );
 
   if (isLoading) {
-    return <div className="flex min-h-screen items-center justify-center bg-[#050505] text-sm text-white/50">Preparing your setup…</div>;
+    return <div className="flex min-h-screen items-center justify-center bg-[#050505] text-sm text-white/50">{t("ob.disc.preparing")}</div>;
   }
 
   if (!user) return <Navigate to="/auth/sign-in" replace />;
@@ -92,11 +95,11 @@ const OnboardingDiscoveryPage = () => {
 
   const continueSetup = () => {
     if (!selected) {
-      setError("Choose the closest answer to continue.");
+      setError(t("ob.disc.errChoose"));
       return;
     }
     if (selected === "other" && detail.trim().length < 2) {
-      setError("Add a short note so we know where you found us.");
+      setError(t("ob.disc.errNote"));
       detailRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
@@ -124,11 +127,12 @@ const OnboardingDiscoveryPage = () => {
             <img src="/sideby.ico?v=20260728-real" alt="SideBy" className="h-9 w-9 rounded-xl object-contain" />
             <div>
               <p className="font-serif text-lg leading-none text-[#fdfbf7]">{brand.productName}</p>
-              <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.22em] text-white/35">Workspace setup</p>
+              <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.22em] text-white/35">{t("ob.setup")}</p>
             </div>
           </Link>
-          <div className="flex items-center gap-3" aria-label="Step 1 of 3">
-            <span className="hidden text-[9px] font-bold uppercase tracking-[0.2em] text-white/35 sm:block">Step 1 of 3</span>
+          <div className="flex items-center gap-3" aria-label={t("ob.step", { n: 1 })}>
+            <LanguageSwitcher />
+            <span className="hidden text-[9px] font-bold uppercase tracking-[0.2em] text-white/35 sm:block">{t("ob.step", { n: 1 })}</span>
             <div className="flex gap-1.5">
               <span className="h-1.5 w-7 rounded-full bg-gradient-to-r from-orange-500 to-amber-300" />
               <span className="h-1.5 w-7 rounded-full bg-white/10" />
@@ -139,25 +143,25 @@ const OnboardingDiscoveryPage = () => {
 
         <main className="grid gap-5 lg:grid-cols-[0.72fr_1.28fr] lg:gap-7">
           <section className="discovery-heading rounded-[28px] border border-white/10 bg-white/[0.035] p-6 sm:p-8 lg:sticky lg:top-8 lg:h-fit lg:p-10">
-            <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-orange-300">A quick hello</p>
-            <h1 className="mt-4 font-serif text-4xl leading-[0.98] tracking-tight text-[#fdfbf7] sm:text-5xl">How did SideBy find its way to you?</h1>
-            <p className="mt-5 text-sm leading-6 text-white/50">One tap helps us understand which communities and products introduce people to source-backed comparison.</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-orange-300">{t("ob.disc.hello")}</p>
+            <h1 className="mt-4 font-serif text-4xl leading-[0.98] tracking-tight text-[#fdfbf7] sm:text-5xl">{t("ob.disc.title")}</h1>
+            <p className="mt-5 text-sm leading-6 text-white/50">{t("ob.disc.lede")}</p>
             <div className="mt-7 rounded-2xl border border-emerald-300/15 bg-emerald-400/[0.055] p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100"><Check className="h-4 w-4" /> This does not change your plan</div>
-              <p className="mt-2 text-xs leading-5 text-white/42">It is used only for product analytics and onboarding improvement.</p>
+              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100"><Check className="h-4 w-4" /> {t("ob.disc.noPlan")}</div>
+              <p className="mt-2 text-xs leading-5 text-white/42">{t("ob.disc.noPlanBody")}</p>
             </div>
           </section>
 
           <section className="rounded-[28px] border border-white/10 bg-[#0b0a0a]/90 p-5 shadow-[0_30px_100px_-40px_rgba(249,115,22,.45)] sm:p-8 lg:p-10">
             <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-orange-300">Choose one</p>
-                <h2 className="mt-3 font-serif text-3xl text-[#fdfbf7]">The closest answer is perfect.</h2>
+                <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-orange-300">{t("ob.disc.chooseOne")}</p>
+                <h2 className="mt-3 font-serif text-3xl text-[#fdfbf7]">{t("ob.disc.closest")}</h2>
               </div>
-              <span className="hidden text-xs text-white/30 sm:block">About 10 seconds</span>
+              <span className="hidden text-xs text-white/30 sm:block">{t("ob.disc.seconds")}</span>
             </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="How did you discover SideBy?">
+            <div className="mt-6 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label={t("ob.disc.radioAria")}>
               {sources.map((source) => {
                 const Icon = source.icon;
                 const active = selected === source.id;
@@ -172,8 +176,8 @@ const OnboardingDiscoveryPage = () => {
                   >
                     <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${active ? "border-orange-300/30 bg-orange-400/15 text-orange-200" : "border-white/10 bg-black/20 text-white/45 group-hover:text-white"}`}><Icon className="h-4.5 w-4.5" /></span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-white">{source.title}</span>
-                      <span className="mt-1 block text-xs leading-5 text-white/38">{source.description}</span>
+                      <span className="block text-sm font-semibold text-white">{t(source.title)}</span>
+                      <span className="mt-1 block text-xs leading-5 text-white/38">{t(source.description)}</span>
                     </span>
                     <span className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${active ? "border-orange-300 bg-orange-300 text-black" : "border-white/15 text-transparent"}`}><Check className="h-3 w-3" /></span>
                   </button>
@@ -183,15 +187,15 @@ const OnboardingDiscoveryPage = () => {
 
             {selected === "other" && (
               <div ref={detailRef} className="mt-5">
-                <label htmlFor="discovery-detail" className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-white/55">Where did you find us?</label>
-                <input id="discovery-detail" value={detail} onChange={(event) => { setDetail(event.target.value); setError(null); }} placeholder="A podcast, event, newsletter…" autoFocus className="min-h-12 w-full rounded-xl border border-white/10 bg-black/25 px-4 text-[16px] text-white outline-none transition placeholder:text-white/25 focus:border-orange-300/50 focus:ring-4 focus:ring-orange-500/10" />
+                <label htmlFor="discovery-detail" className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-white/55">{t("ob.disc.whereLabel")}</label>
+                <input id="discovery-detail" value={detail} onChange={(event) => { setDetail(event.target.value); setError(null); }} placeholder={t("ob.disc.wherePlaceholder")} autoFocus className="min-h-12 w-full rounded-xl border border-white/10 bg-black/25 px-4 text-[16px] text-white outline-none transition placeholder:text-white/25 focus:border-orange-300/50 focus:ring-4 focus:ring-orange-500/10" />
               </div>
             )}
 
             {error && <p role="alert" className="mt-4 rounded-xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{error}</p>}
 
             <button type="button" onClick={continueSetup} className="group mt-6 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white shadow-[0_16px_35px_-18px_rgba(244,63,94,.9)] transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-orange-300">
-              Continue setup <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              {t("ob.disc.continue")} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </button>
           </section>
         </main>

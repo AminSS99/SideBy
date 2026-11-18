@@ -89,6 +89,7 @@ import {
   type ComparisonTaxonomySummary,
 } from "../../src/lib/comparisonTaxonomy.js";
 import { validateComparisonQuery } from "./comparison-validator.js";
+import { asciiSlug } from "../../src/lib/text.js";
 
 export type EntityKey = "a" | "b";
 
@@ -1634,6 +1635,7 @@ export const parseQueryWithLlm = async (raw: string): Promise<ParsedComparison> 
   }
 };
 
-const normalizeEntity = (v: string) => v.replace(/\b(for|with|inside|on)\b.*$/i, "").replace(/[^a-z0-9\s+.-]/gi, "").trim();
-const slug = (a: string, b: string) => `${a}-vs-${b}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+const normalizeEntity = (v: string) => v.replace(/\b(for|with|inside|on)\b.*$/i, "").replace(/[^\p{L}\p{M}\p{N}\s+.-]/gu, "").trim();
+// URL slug: transliterate Cyrillic/Azerbaijani so a pair never degrades to a bare "vs".
+const slug = (a: string, b: string) => asciiSlug(`${a}-vs-${b}`, "comparison");
 const uniqueSlug = (base: string) => `${base}-${Date.now().toString(36)}`;

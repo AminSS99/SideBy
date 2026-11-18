@@ -5,6 +5,8 @@ import { useGSAP } from "@gsap/react";
 import { ArrowLeft, BookOpenCheck, CheckCircle2, FolderLock, Sparkles } from "@/components/icons";
 import { brand } from "@/config/brand";
 import InteractiveConstellation from "./InteractiveConstellation";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useT } from "@/i18n";
 
 interface AuthPageShellProps {
   eyebrow: string;
@@ -25,6 +27,7 @@ const AuthPageShell = ({
   footerLinkLabel,
   footerHref,
 }: AuthPageShellProps) => {
+  const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -120,7 +123,7 @@ const AuthPageShell = ({
             <img src="/sideby.ico?v=20260728-real" alt="SideBy" className="h-9 w-9 rounded-xl object-contain" />
             <span className="font-serif text-xl text-[#fdfbf7]">{brand.productName}</span>
           </Link>
-          <Link to="/" aria-label="Back to home" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/50">
+          <Link to="/" aria-label={t("auth.backHome")} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/50">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </div>
@@ -148,7 +151,7 @@ const AuthPageShell = ({
                     {brand.productName}
                   </span>
                   <span className="block text-[9px] uppercase tracking-[0.3em] text-[#fdfbf7]/60 mt-0.5">
-                    Operated by {brand.companyName}
+                    {t("auth.operatedBy", { company: brand.companyName })}
                   </span>
                 </div>
               </Link>
@@ -170,10 +173,10 @@ const AuthPageShell = ({
               </p>
 
               <div className="auth-operator grid gap-3 pt-4 sm:grid-cols-3">
-                {["Cited research", "Private workspace", "Export anytime"].map((item) => (
+                {(["auth.pill1", "auth.pill2", "auth.pill3"] as const).map((item) => (
                   <div key={item} className="rounded-2xl border border-white/[0.07] bg-black/20 p-3.5">
                     <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                    <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">{item}</p>
+                    <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">{t(item)}</p>
                   </div>
                 ))}
               </div>
@@ -222,15 +225,17 @@ const AuthPageShell = ({
               </div>
             </div>
 
+            <LanguageSwitcher variant="list" className="mx-auto mt-5 max-w-xs" />
+
             {/* trust/security badges below card */}
             <div className="auth-footer-features mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[9px] font-medium uppercase tracking-wider text-white/30">
               <div className="flex items-center gap-1.5 hover:text-white/40 transition-colors duration-200 cursor-default">
                 <BookOpenCheck className="h-3.5 w-3.5 stroke-[1.5]" />
-                <span>Cited sources</span>
+                <span>{t("auth.trust1")}</span>
               </div>
               <div className="flex items-center gap-1.5 hover:text-white/40 transition-colors duration-200 cursor-default">
                 <FolderLock className="h-3.5 w-3.5 stroke-[1.5]" />
-                <span>Private workspaces</span>
+                <span>{t("auth.trust2")}</span>
               </div>
             </div>
           </div>

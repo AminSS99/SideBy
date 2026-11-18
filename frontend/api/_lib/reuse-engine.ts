@@ -12,6 +12,7 @@ import {
   type DimensionTemplate,
 } from "../../src/lib/comparisonTaxonomy.js";
 import type { QueryCategory } from "./query-normalizer.js";
+import { unicodeSlug } from "../../src/lib/text.js";
 
 // ─── Freshness System ────────────────────────────────────────────────────────
 
@@ -330,9 +331,5 @@ export function isReusableFact(fact: { value: string; dimension: string }): bool
  * Normalize an entity name for cross-comparison matching
  */
 export function normalizeEntityForReuse(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/(^-|-$)/g, "");
+  return unicodeSlug(name.replace(/[^\p{L}\p{M}\p{N}\s]/gu, ""));
 }

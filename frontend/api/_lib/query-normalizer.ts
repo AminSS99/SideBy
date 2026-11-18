@@ -11,6 +11,7 @@ import {
   type ComparisonIntentStatus,
   type SafetyLevel,
 } from "../../src/lib/comparisonTaxonomy.js";
+import { unicodeSlug } from "../../src/lib/text.js";
 
 export type QueryCategory = ComparisonCategory;
 
@@ -34,18 +35,17 @@ export type NormalizedQuery = {
 function normalize(text: string): string {
   return text
     .toLowerCase()
+    .replace(/\u0307/g, "")
     .replace(/[\u2018\u2019]/g, "'")
     .replace(/[\u201C\u201D]/g, '"')
-    .replace(/[^a-z0-9\s+./&'-]/g, " ")
+    .replace(/[^\p{L}\p{M}\p{N}\s+./&'-]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+  // Identity key: keep every script so different Russian/Azerbaijani pairs never collide.
+  return unicodeSlug(text);
 }
 
 function canonicalEntityOrder(a: string, b: string): [string, string] {

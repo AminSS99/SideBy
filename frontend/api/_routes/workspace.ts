@@ -11,6 +11,7 @@ import { createOrLinkSnapSolveWorkspace } from "../_lib/snapsolve-core.js";
 import { logger } from "../_lib/log.js";
 import { createDbClient } from "../../src/db/index.js";
 import { memberships, projects, users, workspaces } from "../../src/db/schema.js";
+import { asciiSlug } from "../../src/lib/text.js";
 
 export const config = {
   runtime: "nodejs",
@@ -179,11 +180,7 @@ async function handleWorkspaces(
       const body = CreateWorkspaceSchema.parse(request.body || {});
       const name = body.name?.trim();
 
-      const slugBase = (body.slug || name)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 40);
+      const slugBase = asciiSlug(body.slug || name, "workspace").slice(0, 40);
 
       const slug = `${slugBase}-${Date.now().toString(36)}`;
       const ownerType = body.ownerType || "user";
@@ -308,11 +305,7 @@ async function handleWorkspaces(
       }
 
       const name = body.name?.trim();
-      const slug = body.slug
-        ?.toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 60);
+      const slug = body.slug ? asciiSlug(body.slug).slice(0, 60) : undefined;
 
       const [workspace] = await db
         .update(workspaces)

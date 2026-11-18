@@ -510,6 +510,9 @@ const personRoleTerms = [
   "person", "people", "celebrity", "politician", "candidate", "athlete", "singer",
   "actor", "actress", "influencer", "youtuber", "private individual", "named person",
   "employee", "coworker",
+  // Russian / Azerbaijani
+  "человек", "люди", "знаменитость", "политик", "актёр", "актер", "певец", "певица", "спортсмен", "блогер", "сотрудник",
+  "insan", "insanlar", "məşhur", "siyasətçi", "aktyor", "müğənni", "idmançı", "bloger", "işçi",
 ];
 
 const wellKnownPeople = [
@@ -522,6 +525,9 @@ const wellKnownPeople = [
   "churchill", "lenin", "mao", "kim jong un", "netanyahu", "modi", "macron",
   "michael jordan", "kobe bryant", "tiger woods", "mike tyson", "muhammad ali",
   "eminem", "rihanna", "kanye west", "mrbeast", "pewdiepie",
+  // Russian / Azerbaijani spellings
+  "путин", "зеленский", "трамп", "байден", "обама", "навальный", "лукашенко", "маск", "месси", "роналду",
+  "putin", "zelenski", "tramp", "bayden", "obama", "əliyev", "aliyev", "lukaşenko", "leo messi",
 ];
 
 // Wars, armed conflicts, atrocities, and violent extremist groups are out of
@@ -533,6 +539,12 @@ const warConflictTerms = [
   "bombing", "nuclear weapons", "isis", "al qaeda", "hamas", "hezbollah",
   "taliban", "nazi", "nazis", "israel palestine", "russia ukraine",
   "israel vs palestine", "russia vs ukraine", "india pakistan", "north korea",
+  // Russian
+  "война", "войны", "войне", "вторжение", "геноцид", "холокост", "теракт", "терроризм", "террорист", "террористы",
+  "мировая война", "мировой войны", "вооружённый конфликт", "вооруженный конфликт", "бомбардировка", "ядерное оружие",
+  // Azerbaijani
+  "müharibə", "muharibe", "müharibəsi", "işğal", "isgal", "soyqırım", "soyqirim", "terror", "terrorçu", "terrorcu",
+  "dünya müharibəsi", "dunya muharibesi", "silahlı münaqişə", "nüvə silahı",
 ];
 
 // Titles and idioms that contain war vocabulary but are ordinary products.
@@ -560,6 +572,9 @@ const politicalSubjectTerms = [
   "socialist", "socialism", "capitalist", "capitalism", "communism", "communist",
   "political party", "ideology", "government", "congress", "senate", "parliament",
   "immigration policy", "tax policy", "gun control", "abortion policy",
+  // Russian / Azerbaijani
+  "политика", "политический", "политики", "выборы", "голосование", "партия", "правительство", "президент", "кандидат",
+  "siyasət", "siyaset", "siyasi", "seçki", "seçkilər", "partiya", "hökumət", "prezident", "namizəd",
 ];
 
 const personalAttributeTerms = [
@@ -604,9 +619,10 @@ const harmfulTechnicalTerms = [
 const normalize = (value: string) =>
   value
     .toLowerCase()
+    .replace(/\u0307/g, "")
     .replace(/[\u2018\u2019]/g, "'")
     .replace(/[\u201C\u201D]/g, '"')
-    .replace(/[^a-z0-9\s+./&'-]/g, " ")
+    .replace(/[^\p{L}\p{M}\p{N}\s+./&'-]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -715,7 +731,7 @@ const DISTINCT_SIMILAR_ENTITY_PAIRS = new Set(["astra:astro"]);
 const cleanEntity = (value: string) =>
   value
     .replace(/\b(for|with|inside|on|because|when|as|to)\b.*$/i, "")
-    .replace(/[^a-z0-9\s+./&'-]/gi, " ")
+    .replace(/[^\p{L}\p{M}\p{N}\s+./&'-]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -774,7 +790,7 @@ export const extractComparisonEntities = (query: string) => {
 };
 
 export const hasExplicitContext = (query: string) =>
-  /\s+(for|as|when|inside|with)\s+[\w\s+./&'-]{3,}$/i.test(query.trim());
+  /\s+(for|as|when|inside|with)\s+[\p{L}\p{N}_\s+./&'-]{3,}$/iu.test(query.trim());
 
 const categoryScore = (
   query: string,
@@ -840,6 +856,15 @@ const detectPolicySignals = (query: string, entityA: string, entityB: string): P
     "food", "drink", "nutrition", "pizza", "sushi", "coffee", "tea",
     "chicken", "beef", "pasta", "rice", "salmon", "tuna", "burger",
     "bread", "milk", "cheese", "wine", "beer", "recipe", "recipes",
+    // Russian
+    "еда", "еды", "еду", "напиток", "напитки", "напитков", "питание", "пицца", "пиццу", "суши", "кофе", "чай",
+    "курица", "курицу", "говядина", "паста", "рис", "лосось", "тунец", "бургер", "хлеб", "молоко", "сыр",
+    "вино", "пиво", "рецепт", "рецепты", "плов", "шашлык", "борщ", "пельмени", "блины", "водка", "коньяк",
+    "мясо", "рыба", "сок", "шоколад", "мороженое", "торт", "десерт", "блюдо", "блюда", "ресторан",
+    // Azerbaijani
+    "yemək", "yemek", "içki", "içkilər", "qida", "piza", "çay", "tavuq", "mal əti", "makaron", "düyü",
+    "qızılbalıq", "burger", "çörək", "süd", "pendir", "şərab", "pivə", "resept", "plov", "kabab", "dolma",
+    "xörək", "şirniyyat", "tort", "dondurma", "şokolad", "restoran",
   ])) {
     signals.push({
       id: "food-drink",

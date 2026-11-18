@@ -9,6 +9,7 @@ import { panelClass } from "./constants";
 import { Terminal, Check } from "@/components/icons";
 import type { ComparisonActivityStep, ResearchStep } from "./types";
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "framer-motion";
+import { useT, type MessageKey } from "@/i18n";
 
 interface ResearchLoaderProps {
   query: string;
@@ -43,6 +44,15 @@ export const ResearchLoader = ({
   factsExtracted = 0,
   dimensionsScored = 0,
 }: ResearchLoaderProps) => {
+  const t = useT();
+  const stepKeys: Record<string, [MessageKey, MessageKey]> = {
+    "Classifying category": ["rl.s1", "rl.s1d"],
+    "Finding sources": ["rl.s2", "rl.s2d"],
+    "Checking freshness": ["rl.s3", "rl.s3d"],
+    "Reading evidence": ["rl.s4", "rl.s4d"],
+    "Extracting facts": ["rl.s5", "rl.s5d"],
+    "Building comparison": ["rl.s6", "rl.s6d"],
+  };
   const prefersReducedMotion = useReducedMotion() ?? false;
 
   // Honest elapsed time: a real clock from mount, never an invented ETA.
@@ -201,7 +211,7 @@ export const ResearchLoader = ({
   }, { dependencies: [progress, activeStep, prefersReducedMotion], scope: containerRef, revertOnUpdate: true });
 
   return (
-    <div ref={containerRef} role="status" aria-live="polite" aria-label={`Researching ${query}, ${progress}% complete`} className={cn(panelClass, "relative flex min-h-[560px] flex-col overflow-hidden rounded-[28px] shadow-2xl")}>
+    <div ref={containerRef} role="status" aria-live="polite" aria-label={t("rl.aria", { query, progress })} className={cn(panelClass, "relative flex min-h-[560px] flex-col overflow-hidden rounded-[28px] shadow-2xl")}>
       <BorderBeam colorFrom="#f97316" colorTo="#fb7185" duration={8} />
       {/* Ambient moving glow inside the loader */}
       <div 
@@ -234,7 +244,7 @@ export const ResearchLoader = ({
                 <span className={cn("absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75", !prefersReducedMotion && "animate-ping")} />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
               </span>
-              Research in progress
+              {t("rl.inProgress")}
             </p>
             <h2 className="max-w-3xl break-words font-serif text-2xl leading-[1.08] tracking-tight text-[#fdfbf7] sm:text-3xl lg:text-4xl xl:text-5xl">
               {query}
@@ -245,11 +255,11 @@ export const ResearchLoader = ({
                 return (
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 text-xs font-semibold text-orange-300">
-                      Option A: {parts[0].trim()}
+                      {t("rl.optionA", { name: parts[0].trim() })}
                     </span>
                     <span className="text-xs font-medium text-white/40">vs</span>
                     <span className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-300">
-                      Option B: {parts[1].trim()}
+                      {t("rl.optionB", { name: parts[1].trim() })}
                     </span>
                   </div>
                 );
@@ -257,26 +267,23 @@ export const ResearchLoader = ({
               return null;
             })()}
             <p className="mt-3 text-xs leading-relaxed text-[#fdfbf7]/45">
-              Elapsed {elapsedLabel}
-              {currentStep ? ` · Now: ${currentStep.task} — ${currentStep.stepName}` : ""}
+              {t("rl.elapsed", { time: elapsedLabel })}
+              {currentStep ? ` · ${t("rl.now", { task: currentStep.task, step: currentStep.stepName })}` : ""}
             </p>
             <p className="mt-1.5 text-xs leading-relaxed text-[#fdfbf7]/35">
-              Research runs on SideBy's servers. You can leave this page and come back — this view reconciles
-              with the job's recorded progress when you return. If a deployment or restart interrupts the run,
-              recovery is attempted; if recovery cannot complete, you'll be offered a retry with your gathered evidence preserved.
+              {t("rl.leave")}
             </p>
             {failedStep && (
               <p role="note" className="mt-3 inline-flex items-start gap-2 rounded-lg border border-red-400/25 bg-red-400/[0.06] px-3 py-2 text-xs leading-relaxed text-red-200/85">
-                A step hit a problem ({failedStep.task} — {failedStep.stepName}). Evidence gathered so far is
-                kept; if the job can't recover, you'll get a retry option with your sources preserved.
+                {t("rl.stepProblem", { task: failedStep.task, step: failedStep.stepName })}
               </p>
             )}
           </div>
           <div className="flex shrink-0 items-center justify-between gap-5 self-stretch rounded-2xl border border-orange-400/15 bg-orange-500/[0.06] px-4 py-3 sm:min-w-36 sm:self-start sm:flex-col sm:items-end sm:gap-1 sm:px-5 sm:py-4">
             <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-orange-200/50">
-              Progress
+              {t("rl.progress")}
             </span>
-            <AnimatedCircularProgressBar value={progress} label="Research progress"
+            <AnimatedCircularProgressBar value={progress} label={t("rl.progressAria")}
               gaugePrimaryColor="#fb923c" className="h-24 w-24 text-orange-300" />
           </div>
         </div>
@@ -295,7 +302,7 @@ export const ResearchLoader = ({
         <div className="mx-auto mb-8 grid w-full max-w-xl grid-cols-3 gap-2 sm:mb-10 sm:gap-4">
           <div className="rounded-2xl border border-white/[0.07] bg-black/30 p-3 text-center">
             <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1">
-              Sources
+              {t("rl.sources")}
             </span>
             <span className="text-xl font-mono font-bold text-white">
               <NumberTicker value={sourcesFound} reducedMotion={prefersReducedMotion} />
@@ -303,7 +310,7 @@ export const ResearchLoader = ({
           </div>
           <div className="rounded-2xl border border-white/[0.07] bg-black/30 p-3 text-center">
             <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1">
-              Facts
+              {t("rl.facts")}
             </span>
             <span className="text-xl font-mono font-bold text-white">
               <NumberTicker value={factsExtracted} reducedMotion={prefersReducedMotion} />
@@ -311,7 +318,7 @@ export const ResearchLoader = ({
           </div>
           <div className="rounded-2xl border border-white/[0.07] bg-black/30 p-3 text-center">
             <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1">
-              Scores
+              {t("rl.scores")}
             </span>
             <span className="text-xl font-mono font-bold text-white">
               <NumberTicker value={dimensionsScored} reducedMotion={prefersReducedMotion} />
@@ -350,11 +357,11 @@ export const ResearchLoader = ({
                 )}
                 <div className="flex-1 min-w-0">
                   <p className={cn("truncate", isActive ? "text-orange-400 font-bold tracking-wide" : "text-[#fdfbf7]/80")}>
-                    {step.label}
+                    {stepKeys[step.label] ? t(stepKeys[step.label][0]) : step.label}
                   </p>
                   {isActive && (
                     <p className="text-[10px] text-orange-500/60 uppercase tracking-widest mt-1 truncate">
-                      {step.detail}
+                      {stepKeys[step.label] ? t(stepKeys[step.label][1]) : step.detail}
                     </p>
                   )}
                 </div>
@@ -372,7 +379,7 @@ export const ResearchLoader = ({
         <div className="mb-4 flex items-center gap-2">
           <Terminal className="h-4 w-4 text-[#fdfbf7]/30" />
           <span className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
-            {liveLogs.length > 0 ? "Live research feed" : "Research activity"}
+            {liveLogs.length > 0 ? t("rl.liveFeed") : t("rl.activity")}
           </span>
         </div>
         
@@ -397,7 +404,7 @@ export const ResearchLoader = ({
           ))}
           </AnimatedList>
           {liveLogs.length === 0 && (
-            <p className="text-[#fdfbf7]/60">Waiting for the next recorded research update. Your comparison is still being processed.</p>
+            <p className="text-[#fdfbf7]/60">{t("rl.waiting")}</p>
           )}
           <div className="h-2 flex items-center gap-2">
             <span className={cn("text-emerald-500", !prefersReducedMotion && "animate-pulse")}>_</span>
