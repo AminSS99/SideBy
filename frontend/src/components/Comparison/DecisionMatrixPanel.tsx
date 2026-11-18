@@ -402,7 +402,7 @@ export const DecisionMatrixPanel = ({
                 placeholder="e.g. Developer Heavy"
                 value={matrixName}
                 onChange={(e) => setMatrixName(e.target.value)}
-                className="h-9 flex-1 rounded-sm border border-[#333] bg-black px-3 text-base sm:text-xs text-[#fdfbf7] outline-none transition-colors placeholder:text-[#fdfbf7]/30 focus:border-orange-500"
+                className="h-11 sm:h-9 flex-1 rounded-sm border border-[#333] bg-black px-3 text-base sm:text-xs text-[#fdfbf7] outline-none transition-colors placeholder:text-[#fdfbf7]/30 focus:border-orange-500"
               />
               <div className="flex gap-2">
                 <motion.button 
@@ -410,7 +410,7 @@ export const DecisionMatrixPanel = ({
                   whileTap={!isSaving ? { scale: 0.96 } : undefined}
                   type="submit" 
                   disabled={isSaving}
-                  className="h-9 px-4 flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-sm bg-orange-600 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700 disabled:opacity-50 shrink-0"
+                  className="h-11 sm:h-9 px-4 flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-sm bg-orange-600 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700 disabled:opacity-50 shrink-0"
                 >
                   <Save className="h-3.5 w-3.5" />
                   {isSaving ? "Saving" : "Save"}
@@ -421,7 +421,7 @@ export const DecisionMatrixPanel = ({
                   type="button" 
                   onClick={() => void handleSaveDefaultProfile()} 
                   disabled={isSaving} 
-                  className="h-9 rounded-sm border border-orange-500/40 px-3 text-[9px] font-bold uppercase tracking-widest text-orange-300 transition-colors hover:bg-orange-500/10 disabled:opacity-50"
+                  className="h-11 sm:h-9 rounded-sm border border-orange-500/40 px-3 text-[9px] font-bold uppercase tracking-widest text-orange-300 transition-colors hover:bg-orange-500/10 disabled:opacity-50"
                 >
                   Default
                 </motion.button>
@@ -442,7 +442,7 @@ export const DecisionMatrixPanel = ({
           </div>
         )}
         <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 flex items-center gap-2 mb-4">
-          <FolderOpen className="h-3.5 w-3.5 text-cyan-400" /> Saved Matrices Templates
+          <FolderOpen className="h-3.5 w-3.5 text-cyan-400" /> Saved templates
         </h4>
 
         {!session ? (
@@ -464,7 +464,7 @@ export const DecisionMatrixPanel = ({
         ) : isLoadingSaved ? (
           <p className="text-xs text-[#fdfbf7]/30">Loading saved weight templates...</p>
         ) : savedMatrices.length === 0 ? (
-          <p className="text-xs text-[#fdfbf7]/30 italic">No saved weight templates templates for this comparison yet.</p>
+          <p className="text-xs text-[#fdfbf7]/30 italic">No saved weight templates for this comparison yet.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {savedMatrices.map((matrix) => (
@@ -493,13 +493,6 @@ export const DecisionMatrixPanel = ({
             ))}
           </div>
         )}
-      </div>
-
-      {/* Clickable Brand Footer Link */}
-      <div className="mt-8 pt-4 border-t border-[#2a2a2a] text-center text-xs text-[#fdfbf7]/20 pb-4">
-        <a href="https://sideby.ink" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
-          Made by SnapSolve Ink
-        </a>
       </div>
 
       <ScoreDetailDrawer

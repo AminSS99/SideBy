@@ -3,8 +3,10 @@ import { cn } from '@/lib/utils';
 import { List } from "@/components/icons";
 import { panelClass } from './constants';
 import type { ComparisonData } from './types';
+import { useT, type MessageKey } from "@/i18n";
 
 export const TableOfContents = ({ result }: { result: ComparisonData }) => {
+  const t = useT();
   const [activeId, setActiveId] = useState<string>('');
 
   useEffect(() => {
@@ -54,20 +56,20 @@ export const TableOfContents = ({ result }: { result: ComparisonData }) => {
     <div className={cn(panelClass, "p-6 mb-6 hidden md:block")}>
       <div className="flex items-center gap-2 mb-4 text-[#fdfbf7]/50">
         <List className="h-4 w-4" />
-        <span className="text-[10px] font-bold uppercase tracking-widest">Contents</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest">{t("res.toc.title")}</span>
       </div>
       <div className="space-y-1 border-l border-[#333] ml-2 pl-4">
-        {[
-          ['executive-brief', 'Executive Brief'],
-          ['personalized-verdict', 'Weighted Verdict'],
-          ['changed-facts', 'Changed Facts'],
-          ['confidence-heatmap', 'Confidence'],
-          ['evidence-graph', 'Evidence Graph'],
-          ['research-replay', 'Research Replay'],
-          ['source-quality', 'Source Modes'],
-          ['decision-board', 'Decision Board'],
-          ['feature-matrix', 'Feature Matrix'],
-        ].map(([id, label]) => (
+        {([
+          ['executive-brief', 'res.toc.brief'],
+          ['personalized-verdict', 'res.toc.weighted'],
+          ['changed-facts', 'res.toc.changed'],
+          ['confidence-heatmap', 'res.toc.confidence'],
+          ['evidence-graph', 'res.toc.graph'],
+          ['research-replay', 'res.toc.replay'],
+          ['source-quality', 'res.toc.modes'],
+          ['decision-board', 'res.toc.board'],
+          ['feature-matrix', 'res.toc.matrix'],
+        ] as [string, MessageKey][]).map(([id, labelKey]) => (
           <button
             key={id}
             onClick={() => scrollTo(id)}
@@ -76,7 +78,7 @@ export const TableOfContents = ({ result }: { result: ComparisonData }) => {
               activeId === id ? "text-orange-400 font-bold" : "text-[#fdfbf7]/60"
             )}
           >
-            {label}
+            {t(labelKey)}
           </button>
         ))}
         {result.categories.map((cat, i) => (

@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { KeyboardSpacer } from "@/components/KeyboardSpacer";
 import type { FollowUpEvidence } from "./types";
 import { safeHref } from "@/lib/safe-url";
+import { useT, type MessageKey } from "@/i18n";
 
 interface Message {
   id: string;
@@ -20,17 +21,15 @@ interface Message {
   evidence?: FollowUpEvidence[];
 }
 
-const suggestedQuestions = [
-  "Which option is more cost-effective for an early-stage startup?",
-  "How do their security and compliance features compare?",
-  "What are the main differences in developer experience (DX)?",
-];
+const suggestedQuestionKeys: MessageKey[] = ["fu.q1", "fu.q2", "fu.q3"];
 
 interface FollowUpPanelProps {
   comparisonId: string;
 }
 
 export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
+  const t = useT();
+  const suggestedQuestions = suggestedQuestionKeys.map((key) => t(key));
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -130,9 +129,9 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Unable to get an answer. Please try again.";
+      const msg = err instanceof ApiError ? err.message : t("fu.error");
       setError(msg);
-      toast.error("Follow-up failed", { description: msg });
+      toast.error(t("fu.errorToast"), { description: msg });
     } finally {
       typingRef.current = false;
       setIsTyping(false);
@@ -151,14 +150,14 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-orange-500" />
             <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">
-              AI Deep Dive
+              {t("fu.kicker")}
             </p>
           </div>
           <h3 className="mt-2 font-serif text-2xl text-[#fdfbf7]">
-            Ask a follow-up question
+            {t("fu.title")}
           </h3>
           <p className="mt-2 text-sm text-[#fdfbf7]/50">
-            Need more context? Ask the orchestration engine to analyze specific aspects of this comparison.
+            {t("fu.lede")}
           </p>
         </div>
       </div>
@@ -166,7 +165,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
       {messages.length === 0 ? (
         <div className="mb-8 space-y-3">
           <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
-            Suggested Queries
+            {t("fu.suggested")}
           </p>
           <div className="flex flex-wrap gap-3">
             {suggestedQuestions.map((q, idx) => (
@@ -238,7 +237,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
                     {msg.evidence && msg.evidence.length > 0 && (
                       <div className="mt-4 space-y-2 border-t border-[#2a2a2a] pt-3">
                         <p className="text-[9px] font-bold uppercase tracking-widest text-orange-400/70">
-                          Highlighted evidence
+                          {t("fu.evidence")}
                         </p>
                         {msg.evidence.map((item) => (
                           <div
@@ -282,7 +281,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
               </div>
               <div className="flex items-center rounded-sm bg-[#0c0b0a] border border-[#333] px-4 py-3">
                 <Loader2 className="h-3 w-3 animate-spin text-orange-400" />
-                <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">Synthesizing...</span>
+                <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">{t("fu.synthesizing")}</span>
               </div>
             </div>
           )}
@@ -313,7 +312,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
                 void handleAsk(input);
               }
             }}
-            placeholder="Ask about this comparison..."
+            placeholder={t("fu.placeholder")}
             className="max-h-32 min-h-[44px] w-full resize-none bg-transparent px-3 py-3 text-sm text-[#fdfbf7] placeholder:text-[#fdfbf7]/30 outline-none font-serif"
             rows={1}
             disabled={isTyping}
@@ -327,8 +326,8 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
           </button>
         </div>
         <p className="mt-3 text-center text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
-          AI responses are grounded in comparison facts. Cross-reference with official documentation.
-          {quota ? ` ${quota.remaining} of ${quota.limit} daily follow-ups left.` : ""}
+          {t("fu.disclaimer")}
+          {quota ? ` ${t("fu.quota", { remaining: quota.remaining, limit: quota.limit })}` : ""}
         </p>
       </form>
     </div>

@@ -28,6 +28,7 @@ import { buildApiUrl } from "@/config/env";
 import { GlowCard } from "@/components/GlowCard";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { captureEvent } from "@/lib/posthog";
+import { statusLabel, useI18n } from "@/i18n";
 
 type ComparisonHistoryItem = {
   id: string;
@@ -43,8 +44,8 @@ type ComparisonHistoryItem = {
   entityB: string | null;
 };
 
-const formatTimestamp = (value: string) =>
-  new Date(value).toLocaleString([], {
+const formatTimestamp = (value: string, locale: string) =>
+  new Date(value).toLocaleString(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   });
@@ -58,6 +59,7 @@ const onboardingExamples = [
 ];
 
 const DashboardHome = () => {
+  const { t, locale } = useI18n();
   const navigate = useNavigate();
   const { user, isConfigured } = useAuth();
   const { activeWorkspace, error, isLoading, workspaces } = useWorkspace();
@@ -113,14 +115,14 @@ const DashboardHome = () => {
         setComparisonsLoading(true);
         setComparisonsError(null);
         const res = await apiFetch(buildApiUrl("/api/comparisons?limit=5"));
-        if (!res.ok) throw new Error("Unable to load comparison history.");
+        if (!res.ok) throw new Error(t("dash.loadError"));
 
         const data = (await res.json()) as { comparisons: ComparisonHistoryItem[] };
         if (mounted) setComparisons(data.comparisons);
       } catch (loadError) {
         if (mounted) {
           setComparisons([]);
-          setComparisonsError(loadError instanceof Error ? loadError.message : "Unable to load history.");
+          setComparisonsError(loadError instanceof Error ? loadError.message : t("dash.loadError"));
         }
       } finally {
         if (mounted) setComparisonsLoading(false);
@@ -129,13 +131,13 @@ const DashboardHome = () => {
 
     void loadComparisons();
     return () => { mounted = false; };
-  }, [activeWorkspaceId, isConfigured]);
+  }, [activeWorkspaceId, isConfigured, t]);
 
   const stats = [
-    { title: "Workspaces", value: isLoading ? "-" : workspaces.length, desc: activeWorkspace?.name || "None", icon: Layers3, color: "text-blue-400" },
-    { title: "Projects", value: projectsLoading ? "-" : projects.length, desc: activeProject?.name || "No active project", icon: FolderKanban, color: "text-emerald-400" },
-    { title: "Comparisons", value: comparisonsLoading ? "-" : comparisons.length, desc: "Total historical runs", icon: Workflow, color: "text-orange-400" },
-    { title: "Platform", value: isConfigured ? "Live" : "Setup", desc: isConfigured ? "Services connected" : "Missing config", icon: Sparkles, color: "text-purple-400" },
+    { title: t("dash.stat.workspaces"), value: isLoading ? "-" : workspaces.length, desc: activeWorkspace?.name || t("dash.stat.workspacesNone"), icon: Layers3, color: "text-blue-400" },
+    { title: t("dash.stat.projects"), value: projectsLoading ? "-" : projects.length, desc: activeProject?.name || t("dash.stat.projectsNone"), icon: FolderKanban, color: "text-emerald-400" },
+    { title: t("dash.stat.comparisons"), value: comparisonsLoading ? "-" : comparisons.length, desc: t("dash.stat.comparisonsDesc"), icon: Workflow, color: "text-orange-400" },
+    { title: t("dash.stat.platform"), value: isConfigured ? t("dash.stat.live") : t("dash.stat.setup"), desc: isConfigured ? t("dash.stat.connected") : t("dash.stat.missing"), icon: Sparkles, color: "text-purple-400" },
   ];
 
   return (
@@ -145,13 +147,13 @@ const DashboardHome = () => {
         <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-300">
-            Decision workspace
+            {t("dash.kicker")}
           </p>
           <h1 className="mt-3 max-w-2xl font-serif text-4xl tracking-tight text-[#fdfbf7] sm:text-5xl">
-            What are we deciding today, {user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'Researcher'}?
+            {t("dash.title", { name: user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || t("dash.fallbackName") })}
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-6 text-[#fdfbf7]/50">
-            Start with two options. SideBy researches the evidence, scores the tradeoffs, and gives your team a cited recommendation.
+            {t("dash.lede")}
           </p>
         </div>
         
@@ -160,15 +162,15 @@ const DashboardHome = () => {
           <InstallAppButton />
           <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur-sm">
             <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">Total Runs</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">{t("dash.totalRuns")}</p>
               <div className="flex items-center gap-2">
                 <Activity className="h-3.5 w-3.5 text-emerald-400" />
                 {comparisonsLoading ? (
-                  <span className="text-xs text-[#fdfbf7]/50">Loading...</span>
+                  <span className="text-xs text-[#fdfbf7]/50">{t("dash.loading")}</span>
                 ) : (
                   <>
                     <span className="font-serif text-xl text-[#fdfbf7]">{comparisons.length}</span>
-                    <span className="text-xs text-[#fdfbf7]/50">comparisons</span>
+                    <span className="text-xs text-[#fdfbf7]/50">{t("dash.comparisonsUnit")}</span>
                   </>
                 )}
               </div>
@@ -185,8 +187,8 @@ const DashboardHome = () => {
               <Plus className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-bold text-orange-200 transition-colors">New comparison</h3>
-              <p className="mt-1 text-[10px] uppercase tracking-widest text-[#fdfbf7]/40">Research two options</p>
+              <h3 className="text-sm font-bold text-orange-200 transition-colors">{t("dash.new")}</h3>
+              <p className="mt-1 text-[10px] uppercase tracking-widest text-[#fdfbf7]/40">{t("dash.newHint")}</p>
             </div>
             <ArrowRight className="h-4 w-4 text-orange-300 transition-transform group-hover:translate-x-1" />
           </Link>
@@ -196,8 +198,8 @@ const DashboardHome = () => {
               <UploadCloud className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[#fdfbf7] transition-colors group-hover:text-blue-300">Upload sources</h3>
-              <p className="mt-1 text-[9px] uppercase tracking-widest text-[#fdfbf7]/35">Build your evidence base</p>
+              <h3 className="text-sm font-bold text-[#fdfbf7] transition-colors group-hover:text-blue-300">{t("dash.upload")}</h3>
+              <p className="mt-1 text-[9px] uppercase tracking-widest text-[#fdfbf7]/35">{t("dash.uploadHint")}</p>
             </div>
           </Link>
 
@@ -206,8 +208,8 @@ const DashboardHome = () => {
               <UserPlus className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[#fdfbf7] transition-colors group-hover:text-fuchsia-300">Invite team</h3>
-              <p className="mt-1 text-[9px] uppercase tracking-widest text-[#fdfbf7]/35">Decide together</p>
+              <h3 className="text-sm font-bold text-[#fdfbf7] transition-colors group-hover:text-fuchsia-300">{t("dash.invite")}</h3>
+              <p className="mt-1 text-[9px] uppercase tracking-widest text-[#fdfbf7]/35">{t("dash.inviteHint")}</p>
             </div>
           </Link>
         </div>
@@ -240,16 +242,16 @@ const DashboardHome = () => {
       <div className="dash-card rounded-[28px] border border-white/[0.08] bg-white/[0.03] p-5 sm:p-8">
         <div className="flex items-center justify-between gap-4 border-b border-[#2a2a2a] pb-6">
           <div>
-            <h2 className="font-serif text-2xl text-[#fdfbf7]">Recent Comparisons</h2>
+            <h2 className="font-serif text-2xl text-[#fdfbf7]">{t("dash.recent")}</h2>
             <p className="mt-1 text-[10px] text-[#fdfbf7]/40 uppercase tracking-widest font-bold">
-              Your comparison history
+              {t("dash.recentHint")}
             </p>
           </div>
           <Link
             to="/app/comparisons"
             className="hidden sm:flex rounded-sm border border-[#333] bg-[#0c0b0a] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:border-[#555] hover:text-[#fdfbf7]"
           >
-            View all history
+            {t("dash.viewAll")}
           </Link>
         </div>
 
@@ -261,7 +263,7 @@ const DashboardHome = () => {
 
         {comparisonsLoading ? (
           <div className="mt-8 py-12 text-sm text-[#fdfbf7]/30 text-center font-serif italic animate-pulse">
-            Loading research records...
+            {t("dash.loadingRecords")}
           </div>
         ) : comparisons.length === 0 ? (
             <div className="mt-8 rounded-3xl border border-dashed border-white/10 bg-black/20 p-6 text-center sm:p-12">
@@ -270,16 +272,16 @@ const DashboardHome = () => {
                   <GitCompareArrows className="h-8 w-8" />
                 </div>
                 <h3 className="font-serif text-2xl text-[#fdfbf7] mb-3">
-                  Create your first comparison
+                  {t("dash.firstTitle")}
                 </h3>
               <p className="text-sm text-[#fdfbf7]/50 max-w-md mx-auto leading-relaxed">
-                Enter any two products, technologies, or topics and let SideBy research them side by side with cited sources.
+                {t("dash.firstBody")}
               </p>
             </div>
 
             <div className="mb-8">
               <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#fdfbf7]/30 mb-4">
-                Try an example
+                {t("dash.tryExample")}
               </p>
               <div className="flex flex-wrap justify-center gap-2 max-w-xl mx-auto">
                 {onboardingExamples.map((example) => (
@@ -300,18 +302,18 @@ const DashboardHome = () => {
             <div className="grid gap-4 sm:grid-cols-3 max-w-2xl mx-auto">
               <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 text-center">
                 <Scale className="h-5 w-5 text-[#fdfbf7]/30 mx-auto mb-3" />
-                <p className="text-xs font-bold text-[#fdfbf7] mb-1">How evidence works</p>
-                <p className="text-[10px] leading-relaxed text-[#fdfbf7]/40">Claims are extracted from sources and cited, so you can inspect any line before trusting it.</p>
+                <p className="text-xs font-bold text-[#fdfbf7] mb-1">{t("dash.tip1.title")}</p>
+                <p className="text-[10px] leading-relaxed text-[#fdfbf7]/40">{t("dash.tip1.body")}</p>
               </div>
               <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 text-center">
                 <Zap className="h-5 w-5 text-orange-400 mx-auto mb-3" />
-                <p className="text-xs font-bold text-[#fdfbf7] mb-1">Reading uncertainty</p>
-                <p className="text-[10px] leading-relaxed text-[#fdfbf7]/40">Confidence and evidence gaps are shown, not hidden — a close call stays visibly close.</p>
+                <p className="text-xs font-bold text-[#fdfbf7] mb-1">{t("dash.tip2.title")}</p>
+                <p className="text-[10px] leading-relaxed text-[#fdfbf7]/40">{t("dash.tip2.body")}</p>
               </div>
               <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5 text-center">
                 <ShieldCheck className="h-5 w-5 text-emerald-400 mx-auto mb-3" />
-                <p className="text-xs font-bold text-[#fdfbf7] mb-1">Your decision, saved</p>
-                <p className="text-[10px] leading-relaxed text-[#fdfbf7]/40">Record your own call alongside the recommendation and reopen the receipt any time.</p>
+                <p className="text-xs font-bold text-[#fdfbf7] mb-1">{t("dash.tip3.title")}</p>
+                <p className="text-[10px] leading-relaxed text-[#fdfbf7]/40">{t("dash.tip3.body")}</p>
               </div>
             </div>
 
@@ -319,7 +321,7 @@ const DashboardHome = () => {
               to="/app/comparisons"
               className="inline-flex items-center gap-2 mt-8 rounded-sm bg-[#fdfbf7] px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-black transition-colors hover:bg-[#e0e0e0]"
             >
-              Start comparing <ArrowRight className="h-3.5 w-3.5" />
+              {t("dash.start")} <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         ) : (
@@ -335,9 +337,9 @@ const DashboardHome = () => {
                       {[comparison.entityA, comparison.entityB].filter(Boolean).join(" vs ") || comparison.query}
                     </Link>
                     <div className="mt-2 flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
-                      <span>{comparison.visibility}</span>
+                      <span>{comparison.visibility === "public" || comparison.visibility === "private" ? t(`visibility.${comparison.visibility}`) : comparison.visibility}</span>
                       <span className="h-1 w-1 rounded-full bg-[#333]" />
-                      <span>{comparison.sourceCount} sources</span>
+                      <span>{t("dash.sourcesCount", { count: comparison.sourceCount })}</span>
                     </div>
                   </div>
 
@@ -353,11 +355,11 @@ const DashboardHome = () => {
                               : "bg-[#222] text-[#fdfbf7]/60 border-[#333]",
                         ].join(" ")}
                       >
-                        {comparison.status}
+                        {statusLabel(t, comparison.status)}
                       </span>
                       <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
                         <Clock3 className="h-3 w-3" />
-                        {formatTimestamp(comparison.updatedAt)}
+                        {formatTimestamp(comparison.updatedAt, locale)}
                       </div>
                     </div>
                     
@@ -366,7 +368,7 @@ const DashboardHome = () => {
                         <Link
                           to={`/compare/${comparison.slug}`}
                           className="flex h-8 w-8 items-center justify-center rounded-sm border border-[#333] bg-[#0c0b0a] text-[#fdfbf7]/50 hover:text-white hover:border-[#555] transition-colors"
-                          title="View Public Page"
+                          title={t("dash.publicPage")}
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                         </Link>

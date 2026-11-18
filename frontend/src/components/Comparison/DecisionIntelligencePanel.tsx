@@ -19,6 +19,7 @@ import {
   Trophy,
 } from "@/components/icons";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { copyText } from "@/lib/clipboard";
 import { panelClass } from "./constants";
 import type {
@@ -639,8 +640,8 @@ const ConfidenceHeatmapPanel = ({ result }: { result: ComparisonData }) => {
           const bConfidence = bCount > 0 ? bSum / bCount : 0;
 
           return (
-            <div key={category.name} className="grid grid-cols-[1fr_0.8fr_0.8fr] gap-2 text-xs">
-              <div className="flex min-h-14 items-center rounded-sm border border-[#2a2a2a] bg-[#111] px-3 font-serif text-[#fdfbf7]/80">
+            <div key={category.name} className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-[1fr_0.8fr_0.8fr]">
+              <div className="col-span-2 flex min-h-14 items-center sm:col-span-1 rounded-sm border border-[#2a2a2a] bg-[#111] px-3 font-serif text-[#fdfbf7]/80">
                 {category.name}
               </div>
               <HeatCell label={result.entities.a.name} confidence={aConfidence} count={aCount} />
@@ -656,7 +657,7 @@ const ConfidenceHeatmapPanel = ({ result }: { result: ComparisonData }) => {
 const HeatCell = ({ label, confidence, count }: { label: string; confidence: number; count: number }) => (
   <div className={cn("min-h-14 rounded-sm border p-3", confidenceColor(confidence))}>
     <div className="flex items-center justify-between gap-2">
-      <span className="truncate text-[9px] font-bold uppercase tracking-widest">{label}</span>
+      <span className="min-w-0 truncate text-[9px] font-bold uppercase tracking-widest" title={label}>{label}</span>
       <span className="font-mono text-xs">{formatPercent(confidence)}</span>
     </div>
     <p className="mt-1 text-[10px] uppercase tracking-widest opacity-70">
@@ -667,7 +668,8 @@ const HeatCell = ({ label, confidence, count }: { label: string; confidence: num
 
 const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
   const facts = useMemo(() => allFacts(result).slice(0, 8), [result]);
-  const graph = useMemo(() => buildGraph(result, facts), [facts, result]);
+  const compact = useIsMobile();
+  const graph = useMemo(() => buildGraph(result, facts, compact), [facts, result, compact]);
   const [selectedId, setSelectedId] = useState(graph.nodes[0]?.id || "");
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -743,7 +745,7 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
       </div>
 
       <div className="grid gap-0 border-t border-[#2a2a2a] xl:grid-cols-[1fr_300px]">
-        <div className="relative min-h-[540px] overflow-hidden bg-[#080807]">
+        <div className="relative min-h-[640px] overflow-hidden bg-[#080807] md:min-h-[540px]">
           <svg className="absolute inset-0 h-full w-full" role="presentation">
             {graph.edges.map((edge, index) => {
               const from = nodeMap.get(edge.from);
@@ -781,7 +783,7 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
                 type="button"
                 onClick={() => setSelectedId(node.id)}
                 className={cn(
-                  "absolute max-w-[170px] -translate-x-1/2 -translate-y-1/2 rounded-sm border bg-[#111]/95 px-3 py-2 text-left shadow-2xl transition-colors hover:z-20 hover:border-orange-500/50 graph-node-btn",
+                  "absolute max-w-[104px] -translate-x-1/2 -translate-y-1/2 rounded-sm border bg-[#111]/95 px-2 py-1.5 text-left sm:max-w-[170px] sm:px-3 sm:py-2 shadow-2xl transition-colors hover:z-20 hover:border-orange-500/50 graph-node-btn",
                   selectedId === node.id ? "z-20 border-orange-500/60 scale-105" : "z-10 border-[#333]",
                   isDimmed ? "opacity-35 hover:opacity-85 scale-95" : "opacity-100"
                 )}
@@ -790,7 +792,7 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
                 <span className="block text-[8px] font-bold uppercase tracking-widest" style={{ color: node.color }}>
                   {node.type}
                 </span>
-                <span className="mt-1 block truncate text-xs font-medium text-[#fdfbf7]">
+                <span className="mt-1 block line-clamp-2 break-words text-[11px] font-medium leading-tight text-[#fdfbf7] sm:truncate sm:text-xs">
                   {node.label}
                 </span>
               </button>
@@ -814,7 +816,7 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
   );
 };
 
-const buildGraph = (result: ComparisonData, facts: FactWithCategory[]) => {
+const buildGraph = (result: ComparisonData, facts: FactWithCategory[], compact = false) => {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
   const sourceMap = new Map<string, ComparisonSource>();
@@ -907,8 +909,8 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[]) => {
       type: "source",
       label: safeHostname(source.url),
       detail: source.summary || source.title || source.url,
-      x: 18 + index * 16,
-      y: 90,
+      x: compact ? 14 + index * 18 : 18 + index * 16,
+      y: compact ? (index % 2 === 0 ? 84 : 94) : 90,
       color: isOfficialSource(source) ? "#34d399" : "#fbbf24",
     });
   });

@@ -17,46 +17,49 @@ import { BrandFooter } from "@/components/brand/BrandFooter";
 
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { readOnboardingAttribution } from "@/lib/onboardingAttribution";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useT, type MessageKey } from "@/i18n";
 
 type NavItem = {
   to: string;
-  label: string;
+  label: MessageKey;
   icon: React.ComponentType<{ className?: string }>;
   end?: boolean;
 };
 
 const primaryNavItems: NavItem[] = [
-  { to: "/app/comparisons", label: "Compare", icon: GitCompareArrows },
-  { to: "/app", label: "History", icon: Clock3, end: true },
-  { to: "/app/uploads", label: "Sources", icon: Database },
-  { to: "/app/team", label: "Team", icon: Users },
-  { to: "/app/settings", label: "Settings", icon: Settings },
+  { to: "/app/comparisons", label: "app.nav.compare", icon: GitCompareArrows },
+  { to: "/app", label: "app.nav.history", icon: Clock3, end: true },
+  { to: "/app/uploads", label: "app.nav.sources", icon: Database },
+  { to: "/app/team", label: "app.nav.team", icon: Users },
+  { to: "/app/settings", label: "app.nav.settings", icon: Settings },
 ];
 
 const advancedNavItems: NavItem[] = [
-  { to: "/app/ecosystem", label: "Snap ecosystem", icon: Orbit },
-  { to: "/app/chat", label: "AI Chat", icon: MessageSquare },
-  { to: "/app/research", label: "Research", icon: Microscope },
-  { to: "/app/prompts", label: "Prompts", icon: Terminal },
-  { to: "/app/analytics", label: "Analytics", icon: Activity },
-  { to: "/app/billing", label: "Billing", icon: CreditCard },
-  { to: "/app/workspaces", label: "Workspaces", icon: Layers3 },
-  { to: "/app/projects", label: "Projects", icon: FolderKanban },
+  { to: "/app/ecosystem", label: "app.nav.ecosystem", icon: Orbit },
+  { to: "/app/chat", label: "app.nav.chat", icon: MessageSquare },
+  { to: "/app/research", label: "app.nav.research", icon: Microscope },
+  { to: "/app/prompts", label: "app.nav.prompts", icon: Terminal },
+  { to: "/app/analytics", label: "app.nav.analytics", icon: Activity },
+  { to: "/app/billing", label: "app.nav.billing", icon: CreditCard },
+  { to: "/app/workspaces", label: "app.nav.workspaces", icon: Layers3 },
+  { to: "/app/projects", label: "app.nav.projects", icon: FolderKanban },
 ];
 
-const routeTitle = (pathname: string) => {
-  if (/^\/app\/comparisons\/[^/]+/.test(pathname)) return "Comparison";
-  if (pathname === "/app" || pathname === "/app/") return "Dashboard";
+const routeTitle = (pathname: string): MessageKey => {
+  if (/^\/app\/comparisons\/[^/]+/.test(pathname)) return "app.shell.comparison";
+  if (pathname === "/app" || pathname === "/app/") return "app.shell.dashboard";
   const match = [...primaryNavItems, ...advancedNavItems]
     .filter((item) => item.to !== "/app" && (pathname === item.to || pathname.startsWith(`${item.to}/`)))
     .sort((a, b) => b.to.length - a.to.length)[0];
-  return match?.label ?? "Workspace";
+  return match?.label ?? "app.shell.workspace";
 };
 
 const AppShell = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  usePageTitle(routeTitle(location.pathname));
+  const t = useT();
+  usePageTitle(t(routeTitle(location.pathname)));
   const { signOut, user } = useAuth();
   const {
     activeWorkspace,
@@ -151,7 +154,7 @@ const AppShell = () => {
             <motion.aside
               role="dialog"
               aria-modal="true"
-              aria-label="Application navigation drawer"
+              aria-label={t("app.nav.drawer")}
               initial={prefersReducedMotion ? false : { x: "-100%" }}
               animate={{ x: 0 }}
               exit={prefersReducedMotion ? undefined : { x: "-100%" }}
@@ -165,7 +168,7 @@ const AppShell = () => {
                 </div>
                 <button
                   type="button"
-                  aria-label="Close navigation"
+                  aria-label={t("app.nav.close")}
                   onClick={() => setMobileMenuOpen(false)}
                   className="grid h-11 w-11 place-items-center rounded-xl text-white/70 hover:bg-white/[0.06] hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
                 >
@@ -175,10 +178,10 @@ const AppShell = () => {
 
               <div className="p-4 border-b border-[#2a2a2a] bg-[#111]/50">
                 <p className="text-sm font-semibold text-white truncate">
-                  {user?.email ?? "Guest"}
+                  {user?.email ?? t("app.shell.guest")}
                 </p>
                 <p className="truncate text-[10px] uppercase tracking-widest font-bold text-white/65 mt-1">
-                  {activeWorkspace?.name || "Workspace"}
+                  {activeWorkspace?.name || t("app.shell.workspace")}
                 </p>
               </div>
 
@@ -197,7 +200,7 @@ const AppShell = () => {
                     }
                   >
                     <item.icon className="h-4 w-4 shrink-0" />
-                    <span>{item.label}</span>
+                    <span>{t(item.label)}</span>
                   </NavLink>
                 ))}
 
@@ -207,7 +210,7 @@ const AppShell = () => {
                     aria-expanded={advancedOpen}
                     className="flex min-h-11 w-full items-center justify-between rounded-lg px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-white/70 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
                   >
-                    <span>Advanced</span>
+                    <span>{t("app.nav.advanced")}</span>
                     <ChevronDown className={`h-3.5 w-3.5 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
                   </button>
 
@@ -227,7 +230,7 @@ const AppShell = () => {
                           }
                         >
                           <item.icon className="h-3.5 w-3.5 shrink-0" />
-                          <span>{item.label}</span>
+                          <span>{t(item.label)}</span>
                         </NavLink>
                       ))}
                     </div>
@@ -236,13 +239,15 @@ const AppShell = () => {
               </nav>
 
               <div className="p-4 border-t border-[#2a2a2a]">
+                <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/45">{t("app.shell.language")}</p>
+                <LanguageSwitcher variant="list" className="mb-4" />
                 <Button
                   variant="ghost"
                   className="min-h-11 w-full justify-start rounded-lg border border-[#333] bg-[#111] text-white/80 hover:bg-[#1a1a1a] hover:border-[#444] hover:text-white transition-all mb-4"
                   onClick={handleSignOut}
                 >
                   <LogOut className="h-4 w-4 mr-2" />
-                  Sign out
+                  {t("app.nav.signOut")}
                 </Button>
                 <BrandFooter className="justify-center" />
               </div>
@@ -256,7 +261,7 @@ const AppShell = () => {
           <div className="flex items-center gap-4">
             <button
               type="button"
-              aria-label="Open navigation"
+              aria-label={t("app.nav.openNav")}
               aria-expanded={mobileMenuOpen}
               className="-ml-2 grid h-11 w-11 place-items-center rounded-xl text-white/75 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 lg:hidden"
               onClick={() => setMobileMenuOpen(true)}
@@ -277,13 +282,14 @@ const AppShell = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <LanguageSwitcher className="hidden sm:block" />
             <button
               onClick={() => setCommandOpen(true)}
-              aria-label="Open command search"
+              aria-label={t("app.nav.openSearch")}
               className="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-xs text-white/70 transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 sm:mr-4"
             >
               <Search className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Search...</span>
+              <span className="hidden sm:inline">{t("app.nav.search")}</span>
               <kbd className="pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[10px] font-medium text-white/60 ml-2">
                 <span className="text-xs">⌘</span>K
               </kbd>
@@ -291,11 +297,11 @@ const AppShell = () => {
 
             <div className="min-w-0 text-right border-l border-white/10 pl-6 hidden lg:block">
               <p className="text-sm font-semibold text-white">
-                {user?.email ?? "Guest"}
+                {user?.email ?? t("app.shell.guest")}
               </p>
               <p className="truncate text-xs text-white/65">
                 {workspaceLoading
-                  ? "Loading workspace..."
+                  ? t("app.shell.loadingWorkspace")
                   : activeWorkspace?.name || brand.operatedByLine}
               </p>
             </div>
@@ -305,7 +311,7 @@ const AppShell = () => {
               onClick={handleSignOut}
             >
               <LogOut className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Sign out</span>
+              <span className="hidden sm:inline">{t("app.nav.signOut")}</span>
             </Button>
           </div>
         </div>
@@ -336,7 +342,7 @@ const AppShell = () => {
                     )}
                     <div className="absolute inset-0 bg-white/[0.05] translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out z-0" />
                     <item.icon className="relative z-10 h-4 w-4 shrink-0" />
-                    <span className="relative z-10">{item.label}</span>
+                    <span className="relative z-10">{t(item.label)}</span>
                   </>
                 )}
               </NavLink>
@@ -348,7 +354,7 @@ const AppShell = () => {
                 aria-expanded={advancedOpen}
                 className="flex min-h-11 w-full items-center justify-between rounded-lg px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-white/65 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
               >
-                <span>Advanced</span>
+                <span>{t("app.nav.advanced")}</span>
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
               </button>
 
@@ -383,7 +389,7 @@ const AppShell = () => {
                               )}
                               <div className="absolute inset-0 bg-white/[0.03] translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out z-0" />
                               <item.icon className="relative z-10 h-3.5 w-3.5 shrink-0" />
-                              <span className="relative z-10">{item.label}</span>
+                              <span className="relative z-10">{t(item.label)}</span>
                             </>
                           )}
                         </NavLink>
@@ -416,7 +422,7 @@ const AppShell = () => {
       </div>
 
       {/* Floating PWA Mobile Bottom Navigation */}
-      <nav aria-label="App navigation" className="shell-bottom-nav fixed bottom-[max(.75rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex h-[68px] w-[calc(100%-1.5rem)] max-w-[430px] -translate-x-1/2 items-center justify-around rounded-2xl border border-white/[0.12] bg-[#0a0908]/95 px-1.5 shadow-[0_18px_55px_rgba(0,0,0,.7)] backdrop-blur-2xl lg:hidden">
+      <nav aria-label={t("app.nav.appNav")} className="shell-bottom-nav fixed bottom-[max(.75rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex h-[68px] w-[calc(100%-1.5rem)] max-w-[430px] -translate-x-1/2 items-center justify-around rounded-2xl border border-white/[0.12] bg-[#0a0908]/95 px-1.5 shadow-[0_18px_55px_rgba(0,0,0,.7)] backdrop-blur-2xl lg:hidden">
         <NavLink
           to="/app/comparisons"
           className={({ isActive }) =>
@@ -436,7 +442,7 @@ const AppShell = () => {
                 />
               )}
               <GitCompareArrows className="h-5 w-5" />
-              <span>Compare</span>
+              <span>{t("app.nav.compare")}</span>
             </>
           )}
         </NavLink>
@@ -461,7 +467,7 @@ const AppShell = () => {
                 />
               )}
               <Clock3 className="h-5 w-5" />
-              <span>History</span>
+              <span>{t("app.nav.history")}</span>
             </>
           )}
         </NavLink>
@@ -485,7 +491,7 @@ const AppShell = () => {
                 />
               )}
               <Database className="h-5 w-5" />
-              <span>Sources</span>
+              <span>{t("app.nav.sources")}</span>
             </>
           )}
         </NavLink>
@@ -509,18 +515,18 @@ const AppShell = () => {
                 />
               )}
               <Users className="h-5 w-5" />
-              <span>Team</span>
+              <span>{t("app.nav.team")}</span>
             </>
           )}
         </NavLink>
 
         <button
           onClick={() => setMobileMenuOpen(true)}
-          aria-label="More navigation"
+          aria-label={t("app.nav.moreAria")}
           className="flex min-h-12 min-w-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold text-white/60 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-95"
         >
           <Menu className="h-5 w-5" />
-          <span>More</span>
+          <span>{t("app.nav.more")}</span>
         </button>
       </nav>
     </div>

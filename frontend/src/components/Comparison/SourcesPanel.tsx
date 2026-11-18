@@ -7,18 +7,19 @@ import { useGSAP } from "@gsap/react";
 import { panelClass } from "./constants";
 import type { ComparisonSource } from "./types";
 import { safeHref } from "@/lib/safe-url";
+import { useT, type MessageKey } from "@/i18n";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const reliabilityConfig: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string; bg: string; label: string }> = {
-  official: { icon: Shield, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Official" },
-  docs: { icon: FileText, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20", label: "Docs" },
-  pricing: { icon: FileText, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20", label: "Pricing" },
-  statistics: { icon: Shield, color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20", label: "Stats" },
-  review: { icon: Newspaper, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20", label: "Review" },
-  news: { icon: Newspaper, color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20", label: "News" },
-  encyclopedia: { icon: Globe, color: "text-teal-400", bg: "bg-teal-500/10 border-teal-500/20", label: "Wiki" },
-  database: { icon: Shield, color: "text-indigo-400", bg: "bg-indigo-500/10 border-indigo-500/20", label: "Database" },
+const reliabilityConfig: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string; bg: string; label: string; labelKey: MessageKey }> = {
+  official: { icon: Shield, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Official", labelKey: "src.official" },
+  docs: { icon: FileText, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20", label: "Docs", labelKey: "src.docs" },
+  pricing: { icon: FileText, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20", label: "Pricing", labelKey: "src.pricing" },
+  statistics: { icon: Shield, color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20", label: "Stats", labelKey: "src.stats" },
+  review: { icon: Newspaper, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20", label: "Review", labelKey: "src.review" },
+  news: { icon: Newspaper, color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20", label: "News", labelKey: "src.news" },
+  encyclopedia: { icon: Globe, color: "text-teal-400", bg: "bg-teal-500/10 border-teal-500/20", label: "Wiki", labelKey: "src.wiki" },
+  database: { icon: Shield, color: "text-indigo-400", bg: "bg-indigo-500/10 border-indigo-500/20", label: "Database", labelKey: "src.database" },
 };
 
 function getReliabilityInfo(reliability?: string) {
@@ -55,6 +56,7 @@ export function getParsedSourceMeta(source: ComparisonSource): ParsedSourceMeta 
 }
 
 export const SourcesPanel = ({ sources }: { sources: ComparisonSource[] }) => {
+  const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
@@ -81,9 +83,9 @@ export const SourcesPanel = ({ sources }: { sources: ComparisonSource[] }) => {
     <div ref={containerRef} className={`${panelClass} p-5 sm:p-7`}>
       <div className="mb-5 flex items-center gap-3">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-300/15 bg-emerald-400/[0.07] text-emerald-300"><BookOpen className="h-4 w-4" /></span>
-        <div><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-300">Evidence library</p><h3 className="mt-0.5 font-serif text-2xl tracking-tight text-[#fffaf1]">Sources reviewed</h3></div>
+        <div><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-300">{t("src.kicker")}</p><h3 className="mt-0.5 font-serif text-2xl tracking-tight text-[#fffaf1]">{t("src.title")}</h3></div>
         <span className="ml-auto text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
-          {sources.length} source{sources.length !== 1 ? "s" : ""}
+          {t("src.count", { count: sources.length })}
         </span>
       </div>
 
@@ -110,7 +112,7 @@ export const SourcesPanel = ({ sources }: { sources: ComparisonSource[] }) => {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-sm border text-[9px] font-bold uppercase tracking-widest ${rel.bg} ${rel.color}`}>
                     <RelIcon className="h-3 w-3" />
-                    {rel.label}
+                    {t(rel.labelKey)}
                   </span>
                   {domain && (
                     <span className="text-[10px] text-[#fdfbf7]/30 uppercase tracking-widest truncate max-w-[150px]">

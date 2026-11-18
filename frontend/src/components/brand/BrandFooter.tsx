@@ -1,7 +1,9 @@
 import React from "react";
 import { brand } from "@/config/brand";
+import { useT } from "@/i18n";
 
 export const BrandFooter = ({ className = "" }: { className?: string }) => {
+  const t = useT();
   return (
     <a
       href={brand.companyUrl}
@@ -12,7 +14,7 @@ export const BrandFooter = ({ className = "" }: { className?: string }) => {
       <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-[#f4f1ea] shadow-[inset_0_1px_3px_rgba(255,255,255,0.75),0_2px_10px_rgba(0,0,0,0.35)]">
         <img src="/snapsolve.png" alt="" className="h-full w-full rounded-full object-cover" />
       </span>
-      <span>Made with love by SnapSolve</span>
+      <span>{t("brand.madeWithLove")}</span>
     </a>
   );
 };

@@ -365,13 +365,6 @@ export const WatchlistPanel = ({
           </form>
         )}
       </div>
-
-      {/* Brand Footer */}
-      <div className="mt-8 pt-4 border-t border-[#2a2a2a] text-center text-xs text-[#fdfbf7]/20 pb-4">
-        <a href="https://sideby.ink" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">
-          Made by SnapSolve Ink
-        </a>
-      </div>
     </div>
   );
 };

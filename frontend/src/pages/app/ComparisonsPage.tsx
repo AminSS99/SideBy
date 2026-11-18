@@ -32,6 +32,7 @@ import { GlowCard } from "@/components/GlowCard";
 import { ComparisonComposer } from "@/components/ComparisonComposer";
 import { MultiOptionBracketComposer, type BracketRun } from "@/components/MultiOptionBracketComposer";
 import { SUPPORTED_COMPARISON_CATEGORIES } from "@/lib/comparisonTaxonomy";
+import { statusLabel, useI18n, type MessageKey } from "@/i18n";
 
 type ComparisonStatus = "running" | "completed" | "failed";
 type ComparisonVisibility = "private" | "team" | "public";
@@ -85,18 +86,18 @@ const examples = SUPPORTED_COMPARISON_CATEGORIES
   .flatMap((category) => category.examples.slice(0, 1))
   .slice(0, 6);
 
-const filters: Array<{ key: FilterKey; label: string }> = [
-  { key: "all", label: "All" },
-  { key: "favorites", label: "Favorites" },
-  { key: "completed", label: "Completed" },
-  { key: "running", label: "Running" },
-  { key: "failed", label: "Failed" },
-  { key: "public", label: "Public" },
-  { key: "private", label: "Private" },
+const filters: Array<{ key: FilterKey; label: MessageKey }> = [
+  { key: "all", label: "cmp.filter.all" },
+  { key: "favorites", label: "cmp.filter.favorites" },
+  { key: "completed", label: "cmp.filter.completed" },
+  { key: "running", label: "cmp.filter.running" },
+  { key: "failed", label: "cmp.filter.failed" },
+  { key: "public", label: "cmp.filter.public" },
+  { key: "private", label: "cmp.filter.private" },
 ];
 
-const formatTimestamp = (value: string) =>
-  new Date(value).toLocaleString([], {
+const formatTimestamp = (value: string, locale: string) =>
+  new Date(value).toLocaleString(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   });
@@ -120,6 +121,7 @@ const visibilityIcon = {
 } satisfies Record<ComparisonVisibility, React.ComponentType<{ className?: string }>>;
 
 const ComparisonsPage = () => {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -171,11 +173,11 @@ const ComparisonsPage = () => {
       setItems(data.comparisons);
     } catch (loadError) {
       setItems([]);
-      setError(loadError instanceof Error ? loadError.message : "Unable to load saved comparisons.");
+      setError(loadError instanceof Error ? loadError.message : t("cmp.loadError"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -319,12 +321,12 @@ const ComparisonsPage = () => {
             : candidate,
         ),
       );
-      toast.success("Comparison published.", {
-        description: "The public compare page is now available.",
+      toast.success(t("cmp.toast.published"), {
+        description: t("cmp.toast.publishedBody"),
       });
     } catch (publishError) {
-      toast.error("Unable to publish this comparison.", {
-        description: publishError instanceof Error ? publishError.message : "Please try again.",
+      toast.error(t("cmp.toast.publishFail"), {
+        description: publishError instanceof Error ? publishError.message : t("cmp.toast.tryAgain"),
       });
     } finally {
       setPublishingId(null);
@@ -357,8 +359,8 @@ const ComparisonsPage = () => {
         tag_count: data.comparison.tags.length,
       });
     } catch (organizeError) {
-      toast.error("Unable to save organization.", {
-        description: organizeError instanceof Error ? organizeError.message : "Please try again.",
+      toast.error(t("cmp.toast.orgFail"), {
+        description: organizeError instanceof Error ? organizeError.message : t("cmp.toast.tryAgain"),
       });
       throw organizeError;
     } finally {
@@ -398,8 +400,8 @@ const ComparisonsPage = () => {
         workspace_id: activeWorkspace?.id,
         project_id: activeProject?.id,
       });
-      toast.success("Research started.", {
-        description: "Opening the live comparison workbench.",
+      toast.success(t("cmp.toast.started"), {
+        description: t("cmp.toast.opening"),
       });
       if (isFirstComparisonFlow && user?.id) markFirstComparisonStarted(user.id, job.id);
       navigate(`/app/comparisons/${job.id}${isFirstComparisonFlow ? "?first=1" : ""}`);
@@ -410,16 +412,16 @@ const ComparisonsPage = () => {
         status: creationError instanceof ApiError ? creationError.status : undefined,
       });
       if (creationError instanceof ApiError && creationError.status === 429) {
-        toast.error("Daily limit reached.", {
-          description: creationError.message || "Try again tomorrow.",
+        toast.error(t("cmp.toast.limit"), {
+          description: creationError.message || t("cmp.toast.limitTry"),
         });
       } else if (creationError instanceof ApiError && creationError.status === 422) {
-        toast.error("Comparison needs a clearer shape.", {
+        toast.error(t("cmp.toast.shape"), {
           description: creationError.message,
         });
       } else {
-        toast.error("Unable to start comparison research.", {
-          description: creationError instanceof Error ? creationError.message : "Please try again.",
+        toast.error(t("cmp.toast.startFail"), {
+          description: creationError instanceof Error ? creationError.message : t("cmp.toast.tryAgain"),
         });
       }
     } finally {
@@ -466,7 +468,7 @@ const ComparisonsPage = () => {
       }
 
       if (failedQueries.length > 0) {
-        toast.error(`Failed to start ${failedQueries.length} comparisons.`, {
+        toast.error(t("cmp.toast.batchFail", { count: failedQueries.length }), {
           description: failedQueries[0],
         });
       }
@@ -486,18 +488,18 @@ const ComparisonsPage = () => {
         <section className="first-flow-step relative overflow-hidden rounded-[28px] border border-orange-300/20 bg-[radial-gradient(circle_at_90%_0%,rgba(217,70,239,.14),transparent_36%),linear-gradient(135deg,rgba(249,115,22,.12),rgba(255,255,255,.025))] p-5 sm:p-7">
           <div className="relative z-10 grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
             <div>
-              <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-orange-200"><Sparkles className="h-3.5 w-3.5" /> Your first decision</div>
-              <h2 className="mt-3 max-w-2xl font-serif text-3xl leading-tight text-white sm:text-4xl">Start with two real options. Add the context that could change the winner.</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/50">SideBy will research both sides, surface the evidence, and carry the completed decision into your Snap workspace.</p>
+              <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-orange-200"><Sparkles className="h-3.5 w-3.5" /> {t("cmp.first.kicker")}</div>
+              <h2 className="mt-3 max-w-2xl font-serif text-3xl leading-tight text-white sm:text-4xl">{t("cmp.first.title")}</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/50">{t("cmp.first.body")}</p>
             </div>
             <button type="button" onClick={() => document.getElementById("comparison-builder")?.scrollIntoView({ behavior: "smooth", block: "center" })} className="group inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/15 bg-white px-5 text-xs font-bold text-black transition hover:bg-orange-100">
-              Build comparison <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              {t("cmp.first.build")} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </button>
           </div>
           <div className="relative z-10 mt-6 grid grid-cols-3 gap-2">
-            {["Discover", "Create", "Compare"].map((label, index) => (
-              <div key={label} className={`first-flow-step rounded-xl border px-2 py-3 text-center text-[9px] font-bold uppercase tracking-[0.14em] ${index < 2 ? "border-emerald-300/15 bg-emerald-400/[0.055] text-emerald-200" : "border-orange-300/25 bg-orange-400/10 text-orange-100"}`}>
-                {index < 2 ? <CheckCircle2 className="mx-auto mb-1.5 h-3.5 w-3.5" /> : <GitCompareArrows className="mx-auto mb-1.5 h-3.5 w-3.5" />}{label}
+            {(["cmp.first.step1", "cmp.first.step2", "cmp.first.step3"] as const).map((labelKey, index) => (
+              <div key={labelKey} className={`first-flow-step rounded-xl border px-2 py-3 text-center text-[9px] font-bold uppercase tracking-[0.14em] ${index < 2 ? "border-emerald-300/15 bg-emerald-400/[0.055] text-emerald-200" : "border-orange-300/25 bg-orange-400/10 text-orange-100"}`}>
+                {index < 2 ? <CheckCircle2 className="mx-auto mb-1.5 h-3.5 w-3.5" /> : <GitCompareArrows className="mx-auto mb-1.5 h-3.5 w-3.5" />}{t(labelKey)}
               </div>
             ))}
           </div>
@@ -507,13 +509,13 @@ const ComparisonsPage = () => {
       <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300">
-            Comparisons
+            {t("cmp.kicker")}
           </p>
           <h1 className="mt-2 font-serif text-3xl tracking-tight text-[#fffaf1] sm:text-4xl">
-            Your decision library
+            {t("cmp.title")}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[#fdfbf7]/55">
-            Review every authenticated comparison job, publish completed reports, and reopen public pages without digging through browser history.
+            {t("cmp.lede")}
           </p>
         </div>
 
@@ -529,9 +531,9 @@ const ComparisonsPage = () => {
       </div>
 
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
-        <Metric label="Total" value={counts.all} />
-        <Metric label="Completed" value={counts.completed} />
-        <Metric label="Favorites" value={counts.favorites} />
+        <Metric label={t("cmp.metric.total")} value={counts.all} />
+        <Metric label={t("cmp.metric.completed")} value={counts.completed} />
+        <Metric label={t("cmp.metric.favorites")} value={counts.favorites} />
       </div>
 
       <MultiOptionBracketComposer onStart={startMultiOptionBracket} isCreating={isCreating} />
@@ -542,10 +544,10 @@ const ComparisonsPage = () => {
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#fdfbf7]/30" />
             <input
               id="filter-comparisons-input"
-              aria-label="Search previous comparisons"
+              aria-label={t("cmp.searchAria")}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by query or entity"
+              placeholder={t("cmp.searchPlaceholder")}
               className="h-12 w-full rounded-xl border border-white/10 bg-black/30 pl-11 pr-4 text-sm text-[#fdfbf7] outline-none transition-colors placeholder:text-white/25 focus:border-orange-400/40"
             />
           </div>
@@ -565,7 +567,7 @@ const ComparisonsPage = () => {
                       : "border-white/[0.08] bg-black/20 text-white/45 hover:border-white/15 hover:text-white",
                   ].join(" ")}
                 >
-                  {item.label}
+                  {t(item.label)}
                 </button>
               );
             })}
@@ -581,20 +583,20 @@ const ComparisonsPage = () => {
             onClick={() => void load()}
             className="mt-4 rounded-sm border border-amber-500/40 px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors hover:bg-amber-500/20"
           >
-            Retry
+            {t("cmp.retry")}
           </button>
         </div>
       )}
 
       {isLoading ? (
         <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-12 text-center text-sm text-[#fdfbf7]/50 animate-pulse">
-          Loading saved comparisons...
+          {t("cmp.loading")}
         </div>
       ) : filteredItems.length === 0 ? (
         <EmptyState 
           icon={Sparkles}
-          title="No matching comparisons"
-          description="Run a comparison from the homepage, then return here to manage its visibility and public report."
+          title={t("cmp.emptyTitle")}
+          description={t("cmp.emptyBody")}
           glowColor="orange"
         />
       ) : (
@@ -616,7 +618,7 @@ const ComparisonsPage = () => {
                 onClick={() => setVisibleCount((prev) => prev + 12)}
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-6 text-xs font-bold uppercase tracking-wider text-white transition hover:border-white/20 hover:bg-white/[0.08]"
               >
-                Show more comparisons ({filteredItems.length - visibleCount} remaining)
+                {t("cmp.showMore", { count: filteredItems.length - visibleCount })}
               </button>
             </div>
           )}
@@ -681,6 +683,7 @@ const ComparisonRow = ({
   onPublish: () => void;
   onOrganize: (updates: Pick<ComparisonHistoryItem, "isFavorited" | "folder" | "tags">) => Promise<void>;
 }) => {
+  const { t, locale } = useI18n();
   const StatusIcon = statusIcon[item.status];
   const VisibilityIcon = visibilityIcon[item.visibility];
   const title = [item.entityA, item.entityB].filter(Boolean).join(" vs ") || item.query;
@@ -699,7 +702,7 @@ const ComparisonRow = ({
       tags,
     });
     setIsEditingOrganization(false);
-    toast.success("Organization saved.");
+    toast.success(t("cmp.toast.orgSaved"));
   };
 
   return (
@@ -709,11 +712,11 @@ const ComparisonRow = ({
           <div className="flex flex-wrap items-center gap-3">
             <span className={`inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest ${statusClass[item.status]}`}>
               <StatusIcon className={`h-3 w-3 ${item.status === "running" ? "animate-spin" : ""}`} />
-              {item.status}
+              {statusLabel(t, item.status)}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-sm border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
               <VisibilityIcon className="h-3 w-3" />
-              {item.visibility}
+              {t(`visibility.${item.visibility}`)}
             </span>
             {categoryLabel && (
               <span className="inline-flex items-center gap-1.5 rounded-sm border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-orange-300">
@@ -748,12 +751,12 @@ const ComparisonRow = ({
           <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[9px] font-bold uppercase tracking-wider text-[#fdfbf7]/40">
             <span className="flex items-center gap-2">
               <Clock3 className="h-3 w-3" />
-              {formatTimestamp(item.updatedAt)}
+              {formatTimestamp(item.updatedAt, locale)}
             </span>
             <span className="h-1 w-1 rounded-full bg-[#333]" />
-            <span>{item.sourceCount} sources</span>
+            <span>{t("cmp.row.sources", { count: item.sourceCount })}</span>
             <span className="h-1 w-1 rounded-full bg-[#333]" />
-            <span>{item.progress}% complete</span>
+            <span>{t("cmp.row.complete", { percent: item.progress })}</span>
           </div>
         </div>
 
@@ -762,11 +765,11 @@ const ComparisonRow = ({
             to={`/app/comparisons/${item.id}`}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-5 text-[10px] font-bold uppercase tracking-wider text-white transition hover:brightness-110"
           >
-            Review
+            {t("cmp.row.review")}
           </Link>
           <button
             type="button"
-            aria-label={item.isFavorited ? "Remove from favorites" : "Add to favorites"}
+            aria-label={item.isFavorited ? t("cmp.row.unfav") : t("cmp.row.fav")}
             aria-pressed={item.isFavorited}
             onClick={() => void onOrganize({
               isFavorited: !item.isFavorited,
@@ -785,14 +788,14 @@ const ComparisonRow = ({
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/20 px-4 text-[10px] font-bold uppercase tracking-wider text-white/65 transition-colors hover:border-white/20"
           >
             <Folder className="h-3.5 w-3.5" />
-            {isEditingOrganization ? "Close" : "Organize"}
+            {isEditingOrganization ? t("cmp.row.close") : t("cmp.row.organize")}
           </button>
           {item.visibility === "public" ? (
             <Link
               to={`/compare/${item.slug}`}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/20 px-5 text-[10px] font-bold uppercase tracking-wider text-white transition-colors hover:border-white/20"
             >
-              Open Link
+              {t("cmp.row.openLink")}
               <ExternalLink className="h-3.5 w-3.5" />
             </Link>
           ) : (
@@ -807,7 +810,7 @@ const ComparisonRow = ({
               ) : (
                 <Share2 className="h-3.5 w-3.5" />
               )}
-              Publish
+              {t("cmp.row.publish")}
             </button>
           )}
         </div>
@@ -815,16 +818,16 @@ const ComparisonRow = ({
       {isEditingOrganization && (
         <div className="mt-6 grid gap-3 border-t border-[#2a2a2a] pt-5 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] md:items-end">
           <label className="grid gap-2 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
-            Folder
-            <input value={folderDraft} onChange={(event) => setFolderDraft(event.target.value)} maxLength={80} placeholder="e.g. Infrastructure" className="h-10 rounded-sm border border-[#333] bg-[#0c0b0a] px-3 text-sm font-normal normal-case tracking-normal text-[#fdfbf7] outline-none focus:border-orange-500" />
+            {t("cmp.row.folder")}
+            <input value={folderDraft} onChange={(event) => setFolderDraft(event.target.value)} maxLength={80} placeholder={t("cmp.row.folderPlaceholder")} className="h-10 rounded-sm border border-[#333] bg-[#0c0b0a] px-3 text-sm font-normal normal-case tracking-normal text-[#fdfbf7] outline-none focus:border-orange-500" />
           </label>
           <label className="grid gap-2 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
-            Tags
-            <input value={tagsDraft} onChange={(event) => setTagsDraft(event.target.value)} placeholder="e.g. q3, migration (up to 8)" className="h-10 rounded-sm border border-[#333] bg-[#0c0b0a] px-3 text-sm font-normal normal-case tracking-normal text-[#fdfbf7] outline-none focus:border-orange-500" />
+            {t("cmp.row.tags")}
+            <input value={tagsDraft} onChange={(event) => setTagsDraft(event.target.value)} placeholder={t("cmp.row.tagsPlaceholder")} className="h-10 rounded-sm border border-[#333] bg-[#0c0b0a] px-3 text-sm font-normal normal-case tracking-normal text-[#fdfbf7] outline-none focus:border-orange-500" />
           </label>
           <div className="flex gap-2 md:col-span-3 md:justify-end lg:col-span-1">
             <button type="button" onClick={() => void saveOrganization()} disabled={isOrganizing} className="h-10 rounded-sm bg-orange-500 px-4 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-400 disabled:opacity-50">
-              {isOrganizing ? "Saving" : "Save"}
+              {isOrganizing ? t("cmp.row.saving") : t("cmp.row.save")}
             </button>
             <button
               type="button"
@@ -836,7 +839,7 @@ const ComparisonRow = ({
               disabled={isOrganizing}
               className="h-10 rounded-sm border border-[#333] bg-[#0c0b0a] px-4 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:text-[#fdfbf7] disabled:opacity-50"
             >
-              Cancel
+              {t("cmp.row.cancel")}
             </button>
           </div>
         </div>

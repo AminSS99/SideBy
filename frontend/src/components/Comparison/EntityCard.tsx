@@ -5,13 +5,17 @@ import { colors } from "@/config/brand";
 import { resolveLogo } from "@/lib/logos";
 import { panelClass } from "./constants";
 import type { Entity } from "./types";
+import { useT } from "@/i18n";
 
 interface EntityCardProps {
   entity: Entity;
   side: "a" | "b";
+  /** Real, per-entity figures derived from the result (never decorative). */
+  stats: { facts: number; confidence: number | null; wins: number };
 }
 
-export const EntityCard = ({ entity, side }: EntityCardProps) => {
+export const EntityCard = ({ entity, side, stats }: EntityCardProps) => {
+  const t = useT();
   const cardRef = useRef<HTMLDivElement>(null);
   const [logoFailed, setLogoFailed] = useState(false);
   const accentColor = side === "a" ? colors.entityA : colors.entityB;
@@ -100,14 +104,18 @@ export const EntityCard = ({ entity, side }: EntityCardProps) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-px overflow-hidden border border-[#2a2a2a] bg-[#2a2a2a] transform-translate-z-10">
-        {["Pricing", "Docs", "Capabilities", "Ecosystem"].map((label) => (
+      <div className="grid grid-cols-3 gap-px overflow-hidden border border-[#2a2a2a] bg-[#2a2a2a] transform-translate-z-10">
+        {([
+          [t("res.entity.facts"), String(stats.facts)],
+          [t("res.entity.confidence"), stats.confidence === null ? "—" : `${stats.confidence}%`],
+          [t("res.entity.wins"), String(stats.wins)],
+        ] as const).map(([label, value]) => (
           <div key={label} className="bg-[#0c0b0a] p-3 sm:p-4 text-center transition-colors hover:bg-[#111]">
-            <p className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1">
+            <p className="mb-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
               {label}
             </p>
-            <p className="text-[10px] sm:text-xs font-semibold text-emerald-500">
-              Verified
+            <p className="text-sm sm:text-base font-semibold tabular-nums text-[#fdfbf7]">
+              {value}
             </p>
           </div>
         ))}

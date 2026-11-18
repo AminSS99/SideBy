@@ -5,6 +5,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { FactCard } from './FactCard';
 import type { Category, Entity, ComparisonFact } from './types';
+import { useT } from "@/i18n";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -15,6 +16,7 @@ interface CategorySectionProps {
 }
 
 export const CategorySection = ({ category, entities, index }: CategorySectionProps) => {
+  const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
@@ -107,20 +109,20 @@ export const CategorySection = ({ category, entities, index }: CategorySectionPr
         {category.winner !== 'tie' && winnerEntity && (
           <div className="cat-header-item flex items-center gap-2 rounded-sm border border-orange-500/30 bg-[#1a110a] px-5 py-2 text-sm font-bold uppercase tracking-widest text-orange-500">
             <Trophy className="h-4 w-4" />
-            Winner: {winnerEntity.name}
+            {t("res.cat.winner", { name: winnerEntity.name })}
           </div>
         )}
         
         {category.winner === 'tie' && (
           <div className="cat-header-item flex items-center gap-2 rounded-sm border border-[#444] bg-[#1a1a1a] px-5 py-2 text-sm font-bold uppercase tracking-widest text-[#fdfbf7]/60">
-            Tie
+            {t("res.cat.tie")}
           </div>
         )}
       </div>
 
       {category.verdict && (
         <div className="cat-takeaway mb-10 rounded-sm bg-[#111] p-6 border-l-2 border-orange-500 relative z-10">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500 block mb-3">Key Takeaway</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500 block mb-3">{t("res.cat.takeaway")}</span>
           <p className="text-lg text-[#fdfbf7]/90 italic font-serif leading-relaxed">"{category.verdict}"</p>
         </div>
       )}

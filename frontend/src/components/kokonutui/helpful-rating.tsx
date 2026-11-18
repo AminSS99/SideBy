@@ -14,6 +14,7 @@ import { Check } from "@/components/icons";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { type KeyboardEvent, useId, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useT, type MessageKey } from "@/i18n";
 
 export interface HelpfulRatingProps {
   question?: string;
@@ -44,6 +45,7 @@ const LEVELS: Level[] = [
   { label: "Love it", color: "#10b981", mouth: 17, brow: 0, eye: 3 },
 ];
 
+// English strings double as stable analytics ids; the UI translates them at render time.
 const LOW_REASONS = [
   "Missing a key factor",
   "Weak sources",
@@ -52,17 +54,36 @@ const LOW_REASONS = [
 ];
 const HIGH_REASONS = ["Clear verdict", "Good sources", "Found it fast"];
 
+const LEVEL_KEYS: Record<string, MessageKey> = {
+  Awful: "rate.level.awful",
+  Meh: "rate.level.meh",
+  Okay: "rate.level.okay",
+  Good: "rate.level.good",
+  "Love it": "rate.level.love",
+};
+const REASON_KEYS: Record<string, MessageKey> = {
+  "Missing a key factor": "rate.reason.missing",
+  "Weak sources": "rate.reason.weak",
+  "Verdict unclear": "rate.reason.unclear",
+  "Out of date": "rate.reason.old",
+  "Clear verdict": "rate.reason.clear",
+  "Good sources": "rate.reason.good",
+  "Found it fast": "rate.reason.fast",
+};
+
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 const FACE = { type: "spring", stiffness: 400, damping: 30 } as const;
 const SLIDE = { type: "spring", stiffness: 500, damping: 38 } as const;
 const MIDDLE = 2;
 
 export default function HelpfulRating({
-  question = "Was this page helpful?",
+  question,
   onSubmit,
   className,
 }: HelpfulRatingProps) {
   const uid = useId();
+  const t = useT();
+  const prompt = question ?? t("rate.defaultQuestion");
   const [rating, setRating] = useState<number | null>(null);
   const [preview, setPreview] = useState<number | null>(null);
   const [reasons, setReasons] = useState<string[]>([]);
@@ -133,7 +154,7 @@ export default function HelpfulRating({
                 key={sent ? "sent" : "ask"}
                 transition={{ duration: 0.22, ease: EASE_OUT }}
               >
-                {sent ? "Thanks, that helps" : question}
+                {sent ? t("rate.thanks") : prompt}
               </motion.p>
             </AnimatePresence>
           </div>
@@ -146,7 +167,7 @@ export default function HelpfulRating({
                 key={sent ? "sent" : level.label}
                 transition={{ duration: 0.15, ease: EASE_OUT }}
               >
-                {sent ? "We read every note." : level.label}
+                {sent ? t("rate.readNotes") : t(LEVEL_KEYS[level.label])}
               </motion.p>
             </AnimatePresence>
           </div>
@@ -169,7 +190,7 @@ export default function HelpfulRating({
               transition={{ duration: 0.3, ease: EASE_OUT }}
             >
               <div
-                aria-label={question}
+                aria-label={prompt}
                 className="mt-4 grid grid-cols-5 gap-1.5"
                 onPointerLeave={() => setPreview(null)}
                 role="radiogroup"
@@ -180,7 +201,7 @@ export default function HelpfulRating({
                     // biome-ignore lint/a11y/useSemanticElements: face buttons acting as a radio group, with arrow keys handled here
                     <button
                       aria-checked={selected}
-                      aria-label={l.label}
+                      aria-label={t(LEVEL_KEYS[l.label])}
                       className={cn(
                         "relative flex h-10 items-center justify-center rounded-xl bg-zinc-100 outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-zinc-400/50 dark:bg-zinc-900",
                         selected
@@ -266,10 +287,10 @@ export default function HelpfulRating({
                       ))}
                     </motion.div>
                     <textarea
-                      aria-label="Anything else?"
+                      aria-label={t("rate.anything")}
                       className="mt-1 block h-20 w-full resize-none rounded-xl bg-zinc-100 px-3 py-2 text-[16px] outline-none placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400/50 sm:text-[14px] dark:bg-zinc-900 dark:placeholder:text-zinc-500"
                       onChange={(event) => setNote(event.target.value)}
-                      placeholder="Anything else? (optional)"
+                      placeholder={t("rate.anythingOptional")}
                       value={note}
                     />
                     <button
@@ -281,7 +302,7 @@ export default function HelpfulRating({
                       }}
                       type="button"
                     >
-                      Send feedback
+                      {t("rate.send")}
                     </button>
                   </motion.div>
                 )}
@@ -301,7 +322,7 @@ export default function HelpfulRating({
               transition={{ duration: 0.2, delay: 0.3 }}
               type="button"
             >
-              Change my answer
+              {t("rate.change")}
             </motion.button>
           )}
         </AnimatePresence>
@@ -329,6 +350,8 @@ function Chip({
   on: boolean;
   onClick: () => void;
 }) {
+  const t = useT();
+  const label = REASON_KEYS[reason] ? t(REASON_KEYS[reason]) : reason;
   return (
     <motion.button
       aria-pressed={on}
@@ -358,7 +381,7 @@ function Chip({
           </motion.span>
         )}
       </AnimatePresence>
-      <motion.span layout="position">{reason}</motion.span>
+      <motion.span layout="position">{label}</motion.span>
     </motion.button>
   );
 }

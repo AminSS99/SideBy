@@ -36,6 +36,7 @@
   "dependencies": {
     "@clerk/backend": "^3.8.5",
     "@clerk/clerk-react": "^5.61.6",
+    "@clerk/localizations": "^4.25.0",
     "@gsap/react": "^2.1.2",
     "@hookform/resolvers": "^3.9.0",
     "@logtail/node": "^0.5.8",

@@ -5,10 +5,12 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import type { ComparisonData } from './types';
 import { panelClass } from './constants';
+import { useT } from "@/i18n";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export const ConsensusPanel = ({ result }: { result: ComparisonData }) => {
+  const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
@@ -40,8 +42,8 @@ export const ConsensusPanel = ({ result }: { result: ComparisonData }) => {
             <CheckCircle2 className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="font-serif text-2xl text-[#fdfbf7]">Consensus</h3>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-500/60">Where sources agree</p>
+            <h3 className="font-serif text-2xl text-[#fdfbf7]">{t("res.cons.title")}</h3>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-500/60">{t("res.cons.sub")}</p>
           </div>
         </div>
         <ul className="space-y-4">
@@ -61,8 +63,8 @@ export const ConsensusPanel = ({ result }: { result: ComparisonData }) => {
             <Zap className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="font-serif text-2xl text-[#fdfbf7]">Contradictions</h3>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500/60">Conflicting signals</p>
+            <h3 className="font-serif text-2xl text-[#fdfbf7]">{t("res.contra.title")}</h3>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500/60">{t("res.contra.sub")}</p>
           </div>
         </div>
         <ul className="space-y-4">

@@ -20,6 +20,7 @@ import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { researchSteps } from "@/lib/comparisonUtils";
 import { captureEvent } from "@/lib/posthog";
+import { useI18n } from "@/i18n";
 import HelpfulRating from "@/components/kokonutui/helpful-rating";
 import { useAuth } from "@/contexts/AuthContext";
 import { completeFirstComparison, isFirstComparison as isStoredFirstComparison } from "@/lib/onboardingAttribution";
@@ -87,6 +88,7 @@ type ComparisonVersion = {
 };
 
 const ComparisonDetailPage = () => {
+  const { t } = useI18n();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -238,20 +240,20 @@ const ComparisonDetailPage = () => {
         body: JSON.stringify({ action: "refresh" }),
       });
       if (!res.ok) {
-        throw new Error("Unable to refresh this comparison.");
+        throw new Error(t("det.toast.refreshFail"));
       }
       await comparisonQuery.refetch();
       captureEvent("comparison_refresh_succeeded", { comparison_id: id });
-      toast.success("Comparison refreshed.", {
-        description: "The source-backed matrix has been regenerated.",
+      toast.success(t("det.toast.refreshed"), {
+        description: t("det.toast.refreshedBody"),
       });
     } catch (refreshError) {
       captureEvent("comparison_refresh_failed", {
         comparison_id: id,
         error: refreshError instanceof Error ? refreshError.message : "unknown",
       });
-      toast.error("Unable to refresh this comparison.", {
-        description: refreshError instanceof Error ? refreshError.message : "Please try again.",
+      toast.error(t("det.toast.refreshFail"), {
+        description: refreshError instanceof Error ? refreshError.message : t("det.toast.tryAgain"),
       });
     } finally {
       setIsRefreshing(false);
@@ -274,16 +276,16 @@ const ComparisonDetailPage = () => {
       }
       await comparisonQuery.refetch();
       captureEvent("comparison_retry_succeeded", { comparison_id: id });
-      toast.success("Research restarted.", {
-        description: "The comparison is being reprocessed from the beginning.",
+      toast.success(t("det.toast.restarted"), {
+        description: t("det.toast.restartedBody"),
       });
     } catch (retryError) {
       captureEvent("comparison_retry_failed", {
         comparison_id: id,
         error: retryError instanceof Error ? retryError.message : "unknown",
       });
-      toast.error("Unable to restart research.", {
-        description: retryError instanceof Error ? retryError.message : "Please try again.",
+      toast.error(t("det.toast.restartFail"), {
+        description: retryError instanceof Error ? retryError.message : t("det.toast.tryAgain"),
       });
     } finally {
       setIsRetrying(false);
@@ -305,19 +307,19 @@ const ComparisonDetailPage = () => {
       if (!res.ok) {
         throw new Error(
           nextAction === "publish"
-            ? "Unable to publish this comparison."
-            : "Unable to make this comparison private.",
+            ? t("det.toast.publishFailErr")
+            : t("det.toast.privateFailErr"),
         );
       }
       await comparisonQuery.refetch();
       captureEvent(`comparison_${nextAction}_succeeded`, { comparison_id: id });
       toast.success(
-        nextAction === "publish" ? "Comparison published." : "Comparison made private.",
+        nextAction === "publish" ? t("det.toast.published") : t("det.toast.madePrivate"),
         {
           description:
             nextAction === "publish"
-              ? "The public compare page is now available."
-              : "The public compare page is no longer visible.",
+              ? t("det.toast.publishedBody")
+              : t("det.toast.privateBody"),
         },
       );
     } catch (visibilityError) {
@@ -326,9 +328,9 @@ const ComparisonDetailPage = () => {
         error: visibilityError instanceof Error ? visibilityError.message : "unknown",
       });
       toast.error(
-        nextAction === "publish" ? "Unable to publish." : "Unable to make private.",
+        nextAction === "publish" ? t("det.toast.publishFail") : t("det.toast.privateFail"),
         {
-          description: visibilityError instanceof Error ? visibilityError.message : "Please try again.",
+          description: visibilityError instanceof Error ? visibilityError.message : t("det.toast.tryAgain"),
         }
       );
     } finally {
@@ -381,10 +383,10 @@ const ComparisonDetailPage = () => {
           <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] p-3 px-4">
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center rounded bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
-                Development Preview
+                {t("det.preview.badge")}
               </span>
               <span className="text-xs text-white/50 hidden sm:inline">
-                Experience SideBy’s adaptive decision canvas
+                {t("det.preview.body")}
               </span>
             </div>
             <button
@@ -393,16 +395,16 @@ const ComparisonDetailPage = () => {
               className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-300 hover:bg-orange-500/20 transition-colors"
             >
               <Sparkles className="h-3.5 w-3.5" />
-              Preview Adaptive Canvas
+              {t("det.preview.button")}
             </button>
           </div>
         )}
         {/* Tab Selector on Mobile */}
-        <div role="tablist" aria-label="Comparison result sections" className="sticky top-[calc(72px+env(safe-area-inset-top,0px))] z-30 -mx-4 grid grid-cols-3 gap-1 border-y border-white/[0.07] bg-[#0b0a09]/90 px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,.25)] backdrop-blur-2xl lg:hidden">
+        <div role="tablist" aria-label={t("det.tabs.aria")} className="sticky top-[calc(72px+env(safe-area-inset-top,0px))] z-30 -mx-4 grid grid-cols-3 gap-1 border-y border-white/[0.07] bg-[#0b0a09]/90 px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,.25)] backdrop-blur-2xl lg:hidden">
           {[
-            { id: "overview", label: "Overview", shortLabel: "Overview" },
-            { id: "intelligence", label: "Intelligence Matrix", shortLabel: "Matrix" },
-            { id: "metadata", label: "Sources & Tech", shortLabel: "Sources" }
+            { id: "overview", label: t("det.tabs.overview"), shortLabel: t("det.tabs.overview") },
+            { id: "intelligence", label: t("det.tabs.matrix"), shortLabel: t("det.tabs.matrixShort") },
+            { id: "metadata", label: t("det.tabs.sources"), shortLabel: t("det.tabs.sourcesShort") }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -582,13 +584,13 @@ const ComparisonDetailPage = () => {
             className="inline-flex min-h-10 items-center gap-2 rounded-lg text-[11px] font-semibold text-white/45 transition-colors hover:text-white"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Comparisons
+            {t("det.back")}
           </Link>
           <h1 className="mt-2 font-serif text-3xl tracking-tight text-[#fffaf1] sm:text-4xl">
-            Comparison workbench
+            {t("det.title")}
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">
-            Reopen private research, watch running jobs, refresh facts, publish links, and ask follow-up questions from one place.
+            {t("det.lede")}
           </p>
         </div>
 
@@ -606,10 +608,10 @@ const ComparisonDetailPage = () => {
                 <Globe2 className="h-4 w-4" />
               )}
               {isChangingVisibility
-                ? "Updating..."
+                ? t("det.updating")
                 : job.visibility === "public"
-                  ? "Make private"
-                  : "Publish"}
+                  ? t("det.makePrivate")
+                  : t("det.publish")}
             </button>
             <button
               type="button"
@@ -617,7 +619,7 @@ const ComparisonDetailPage = () => {
               disabled={isRefreshing}
               className="inline-flex min-h-11 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 text-[10px] font-bold uppercase tracking-wider text-white transition hover:brightness-110 disabled:opacity-50"
             >
-              {isRefreshing ? "Refreshing..." : "Refresh facts"}
+              {isRefreshing ? t("det.refreshing") : t("det.refreshFacts")}
             </button>
             <button
               type="button"
@@ -625,7 +627,7 @@ const ComparisonDetailPage = () => {
               className="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-orange-500/30 hover:text-orange-300 sm:col-auto"
             >
               <Clock className="h-4 w-4" />
-              History
+              {t("det.history")}
             </button>
           </div>
         )}
@@ -636,8 +638,8 @@ const ComparisonDetailPage = () => {
           <div className="flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-orange-400 shrink-0" />
             <div>
-              <p className="text-sm font-bold text-white">Viewing historical Snapshot V{viewedHistoricalVersionNumber}</p>
-              <p className="text-xs text-white/55">This displays research facts and scores captured during a past execution.</p>
+              <p className="text-sm font-bold text-white">{t("det.historicalTitle", { version: viewedHistoricalVersionNumber })}</p>
+              <p className="text-xs text-white/55">{t("det.historicalBody")}</p>
             </div>
           </div>
           <button
@@ -648,7 +650,7 @@ const ComparisonDetailPage = () => {
             }}
             className="rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-orange-400 hover:bg-orange-500/20 transition-colors"
           >
-            Return to latest
+            {t("det.returnLatest")}
           </button>
         </div>
       )}
@@ -661,9 +663,9 @@ const ComparisonDetailPage = () => {
         >
           <GitCompare className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
           <span>
-            <span className="block text-sm font-bold text-white">What changed since the last refresh</span>
+            <span className="block text-sm font-bold text-white">{t("det.changedTitle")}</span>
             <span className="mt-1 block text-xs leading-relaxed text-white/60">
-              V{latestRefreshChange.versionNumber}: {latestRefreshChange.scores} score change{latestRefreshChange.scores === 1 ? "" : "s"}, {latestRefreshChange.addedFacts} fact{latestRefreshChange.addedFacts === 1 ? "" : "s"} added, and {latestRefreshChange.removedFacts} removed.
+              {t("det.changedBody", { version: latestRefreshChange.versionNumber, scores: latestRefreshChange.scores, added: latestRefreshChange.addedFacts, removed: latestRefreshChange.removedFacts })}
               {latestRefreshChange.alert?.message ? ` ${latestRefreshChange.alert.message}` : ""}
             </span>
           </span>
@@ -674,23 +676,23 @@ const ComparisonDetailPage = () => {
         <div className="flex items-center justify-center rounded-[28px] border border-white/10 bg-black/30 py-24">
           <div className="text-center">
             <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-orange-500/60" />
-            <p className="text-sm text-white/45">Loading comparison...</p>
+            <p className="text-sm text-white/45">{t("det.loading")}</p>
           </div>
         </div>
       ) : comparisonQuery.error || !job ? (
         <div className="rounded-[28px] border border-amber-400/25 bg-amber-400/10 p-8">
-          <h2 className="text-xl font-bold text-white">Comparison unavailable</h2>
+          <h2 className="text-xl font-bold text-white">{t("det.unavailable")}</h2>
           <p className="mt-2 text-sm text-amber-100/80">
             {comparisonQuery.error instanceof Error
               ? comparisonQuery.error.message
-              : "This comparison could not be loaded."}
+              : t("det.couldNotLoad")}
           </p>
           <button
             type="button"
             onClick={() => void comparisonQuery.refetch()}
             className="mt-5 rounded-full border border-amber-300/30 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-100 transition-colors hover:bg-amber-300/10"
           >
-            Retry
+            {t("det.retry")}
           </button>
         </div>
       ) : job.status === "failed" ? (
@@ -700,17 +702,17 @@ const ComparisonDetailPage = () => {
             <div className="flex items-center gap-3 mb-3">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-red-300">
                 <XCircle className="h-3 w-3" />
-                Failed
+                {t("det.failedBadge")}
               </span>
               {job.failedStep && (
                 <span className="text-[10px] font-bold uppercase tracking-widest text-red-300/60">
-                  at {job.failedStep} step
+                  {t("det.failedAt", { step: job.failedStep })}
                 </span>
               )}
             </div>
-            <h2 className="text-xl font-bold text-white">Research failed</h2>
+            <h2 className="text-xl font-bold text-white">{t("det.failedTitle")}</h2>
             <p className="mt-2 text-sm text-red-100/75">
-              {job.error || latestActivityError || "The comparison job failed before a result was saved."}
+              {job.error || latestActivityError || t("det.failedDefault")}
             </p>
             {latestActivityError && latestActivityError !== job.error && (
               <p className="mt-3 rounded-2xl border border-red-300/15 bg-black/20 p-3 font-mono text-xs leading-relaxed text-red-100/65">
@@ -728,12 +730,12 @@ const ComparisonDetailPage = () => {
                   {isRetrying ? (
                     <>
                       <Loader2 className="h-3 w-3 animate-spin" />
-                      Restarting...
+                      {t("det.restarting")}
                     </>
                   ) : (
                     <>
                       <RefreshCw className="h-3 w-3" />
-                      Retry research
+                      {t("det.retryResearch")}
                     </>
                   )}
                 </button>
@@ -742,7 +744,7 @@ const ComparisonDetailPage = () => {
                 to="/app/comparisons"
                 className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/60 transition-colors hover:bg-white/5"
               >
-                New comparison
+                {t("det.newComparison")}
               </Link>
             </div>
           </div>
@@ -754,10 +756,10 @@ const ComparisonDetailPage = () => {
                 <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-xs text-amber-400 font-bold uppercase tracking-widest mb-1">
-                    Partial Result Available
+                    {t("det.partialTitle")}
                   </p>
                   <p className="text-sm text-amber-100/70">
-                    Some data was saved before the failure. You can review it below, but note that some sections may be missing or incomplete.
+                    {t("det.partialBody")}
                   </p>
                 </div>
               </div>
@@ -783,13 +785,13 @@ const ComparisonDetailPage = () => {
           resetKey={activeRecordKey}
           fallback={
             <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 text-center">
-              <p className="text-sm text-white/70">The adaptive canvas could not be rendered.</p>
+              <p className="text-sm text-white/70">{t("det.canvasFail")}</p>
               <button
                 type="button"
                 onClick={() => setUseAdaptiveCanvas(false)}
                 className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/20"
               >
-                Return to Classic Workbench
+                {t("det.classic")}
               </button>
             </div>
           }
@@ -824,9 +826,9 @@ const ComparisonDetailPage = () => {
       )}
 
       {id && result && job?.status === "completed" && (
-        <section className="dark mx-auto mt-10 flex w-full max-w-sm justify-center px-4 pb-4" aria-label="Rate this comparison">
+        <section className="dark mx-auto mt-10 flex w-full max-w-sm justify-center px-4 pb-4" aria-label={t("det.rate.aria")}>
           <HelpfulRating
-            question="Was this comparison helpful?"
+            question={t("det.rate.question")}
             onSubmit={({ rating, reasons, note }) => {
               captureEvent("comparison_feedback", {
                 comparison_id: id,
@@ -834,7 +836,7 @@ const ComparisonDetailPage = () => {
                 reasons,
                 has_note: note.trim().length > 0,
               });
-              toast.success("Thanks — your feedback helps us improve SideBy.");
+              toast.success(t("det.rate.thanks"));
             }}
           />
         </section>

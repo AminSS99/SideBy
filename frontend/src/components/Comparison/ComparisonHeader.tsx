@@ -6,6 +6,7 @@ import { ShareButton } from "@/components/ShareModal";
 import { ExportModal } from "./ExportModal";
 import { EntityCard } from "./EntityCard";
 import type { ComparisonData } from "./types";
+import { useI18n, type TFunction } from "@/i18n";
 
 interface ComparisonHeaderProps {
   result: ComparisonData;
@@ -39,14 +40,31 @@ const fallbackSlug = (a: string, b: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "") || "comparison";
 
-const formatUpdatedAt = (value: string) => {
+const formatUpdatedAt = (value: string, locale: string, t: TFunction) => {
   const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "Update date unavailable";
-  return `Updated ${new Intl.DateTimeFormat("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(date)}`;
+  if (!Number.isFinite(date.getTime())) return t("res.updatedUnavailable");
+  return t("res.updatedOn", {
+    date: new Intl.DateTimeFormat(locale, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).format(date),
+  });
+};
+
+const entityStats = (result: ComparisonData, side: "a" | "b") => {
+  let facts = 0;
+  let sum = 0;
+  let wins = 0;
+  for (const category of result.categories) {
+    if (category.winner === side) wins++;
+    for (const fact of category.facts) {
+      if (fact.entity !== side) continue;
+      facts++;
+      sum += fact.confidence;
+    }
+  }
+  return { facts, confidence: facts > 0 ? Math.round((sum / facts) * 100) : null, wins };
 };
 
 export const ComparisonHeader = ({
@@ -57,6 +75,7 @@ export const ComparisonHeader = ({
   publishReasons,
   publishClassification,
 }: ComparisonHeaderProps) => {
+  const { t, locale } = useI18n();
   const container = useRef<HTMLDivElement>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const shareSlug = result.slug || fallbackSlug(result.entities.a.name, result.entities.b.name);
@@ -137,10 +156,10 @@ export const ComparisonHeader = ({
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            {result.provenance === "illustrative" ? "Illustrative sample" : formatUpdatedAt(result.updatedAt)}
+            {result.provenance === "illustrative" ? t("res.illustrative") : formatUpdatedAt(result.updatedAt, locale, t)}
           </span>
           <span className="ch-top-item text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
-            {result.sources.length} {result.provenance === "illustrative" ? "reference" : "verified"} sources
+            {t(result.provenance === "illustrative" ? "res.refSourcesCount" : "res.sourcesCount", { count: result.sources.length })}
           </span>
           {result.taxonomy && (
             <span className="ch-top-item inline-flex items-center gap-1.5 rounded-sm border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-orange-300">
@@ -153,12 +172,12 @@ export const ComparisonHeader = ({
           <button
             type="button"
             onClick={() => setExportOpen(true)}
-            aria-label="Export comparison"
+            aria-label={t("res.exportAria")}
             className="ch-top-item flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-orange-300/20 hover:text-orange-300"
-            title="Export Report"
+            title={t("res.exportTitle")}
           >
             <Download className="h-3 w-3" />
-            <span className="hidden sm:inline">Export</span>
+            <span className="hidden sm:inline">{t("res.export")}</span>
           </button>
           <div className="ch-top-item">
             <ShareButton
@@ -176,13 +195,13 @@ export const ComparisonHeader = ({
           <button
             type="button"
             onClick={onRefresh}
-            aria-label="Refresh comparison facts"
+            aria-label={t("res.refreshAria")}
             className="ch-top-item flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-orange-300/20 hover:text-orange-300"
           >
             <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
             </svg>
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{t("res.refresh")}</span>
           </button>
         </div>
       </div>
@@ -209,7 +228,7 @@ export const ComparisonHeader = ({
         <div className="ch-verdict-content">
           <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300">
             <span className="h-px w-6 bg-orange-400/50"></span>
-            Executive Verdict
+            {t("res.execVerdict")}
           </p>
           <p className="max-w-4xl font-serif text-lg leading-7 text-[#fffaf1]/85 sm:text-xl sm:leading-8 md:text-2xl">
             {result.verdict.summary}
@@ -225,8 +244,8 @@ export const ComparisonHeader = ({
       )}
 
       <div className="mb-8 grid grid-cols-1 gap-3 break-inside-avoid sm:mb-10 sm:gap-5 md:grid-cols-2">
-        <div className="ch-card perspective-1000"><EntityCard entity={result.entities.a} side="a" /></div>
-        <div className="ch-card perspective-1000"><EntityCard entity={result.entities.b} side="b" /></div>
+        <div className="ch-card perspective-1000"><EntityCard entity={result.entities.a} side="a" stats={entityStats(result, "a")} /></div>
+        <div className="ch-card perspective-1000"><EntityCard entity={result.entities.b} side="b" stats={entityStats(result, "b")} /></div>
       </div>
 
       <ExportModal 

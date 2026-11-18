@@ -6,6 +6,7 @@ import { Copy, Check } from "@/components/icons";
 import type { ComparisonFact, Entity } from "./types";
 import { copyText } from "@/lib/clipboard";
 import { safeHref } from "@/lib/safe-url";
+import { useT } from "@/i18n";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -17,6 +18,7 @@ interface FactCardProps {
 }
 
 export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps) => {
+  const t = useT();
   const cardRef = useRef<HTMLDivElement>(null);
   const gaugeRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
@@ -89,8 +91,8 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
       <button
         type="button"
         onClick={handleCopy}
-        title="Copy Fact"
-        aria-label={`Copy ${fact.label} for ${entity.name}`}
+        title={t("res.fact.copy")}
+        aria-label={t("res.fact.copyAria", { label: fact.label, entity: entity.name })}
         className="absolute top-4 right-4 p-1.5 rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7]/65 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 transition-opacity hover:text-[#fdfbf7] z-20"
       >
         {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
@@ -106,7 +108,7 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
         
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <span className="text-[10px] font-bold tabular-nums text-[#fdfbf7]/50 uppercase tracking-widest">
-            {Math.round(fact.confidence * 100)}% Conf
+            {t("res.fact.conf", { percent: Math.round(fact.confidence * 100) })}
           </span>
           <div className="h-0.5 w-16 bg-[#2a2a2a] relative overflow-hidden">
             <div
@@ -122,7 +124,7 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
 
       {fact.changed && fact.previousValue && (
         <div className="relative z-10 mb-6 border-l-2 border-[#444] pl-4 py-1">
-          <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1.5">Previously</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 mb-1.5">{t("res.fact.previously")}</p>
           <p className="text-xs text-[#fdfbf7]/40 line-through">{fact.previousValue}</p>
         </div>
       )}
@@ -151,7 +153,7 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
         </span>
         {fact.changed && (
           <span className="inline-flex items-center gap-1.5 border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-orange-400">
-            Updated
+            {t("res.fact.updated")}
           </span>
         )}
       </div>

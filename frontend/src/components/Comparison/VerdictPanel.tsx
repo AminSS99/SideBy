@@ -4,6 +4,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { panelClass } from "./constants";
 import type { ComparisonData } from "./types";
+import { useT, type MessageKey } from "@/i18n";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -11,7 +12,22 @@ interface VerdictPanelProps {
   result: ComparisonData;
 }
 
+const GUIDE_KEYS: Record<string, MessageKey> = {
+  "Daily Use": "res.guide.dailyUse", "Shared Use": "res.guide.sharedUse", "Budget Buyers": "res.guide.budget",
+  "Power Users": "res.guide.powerUsers", "Support": "res.guide.support", "Work Setup": "res.guide.workSetup",
+  "Relocation": "res.guide.relocation", "Students": "res.guide.students", "Long Stays": "res.guide.longStays",
+  "Community": "res.guide.community", "Caveat": "res.guide.caveat", "Account Rules": "res.guide.accountRules",
+  "Risk Fit": "res.guide.riskFit", "Tax Notes": "res.guide.taxNotes", "Official Rules": "res.guide.officialRules",
+  "Training Goal": "res.guide.trainingGoal", "Beginner Fit": "res.guide.beginnerFit", "Advanced Use": "res.guide.advancedUse",
+  "Safety": "res.guide.safety", "Skill Fit": "res.guide.skillFit", "Employer Signal": "res.guide.employerSignal",
+  "Learners": "res.guide.learners", "Long-Term Path": "res.guide.longTerm", "Market Demand": "res.guide.marketDemand",
+  "Entry Path": "res.guide.entryPath", "Developers": "res.guide.developers", "Teams": "res.guide.teams",
+  "Ecosystem": "res.guide.ecosystem",
+};
+
 export const VerdictPanel = ({ result }: VerdictPanelProps) => {
+  const t = useT();
+  const guideLabel = (label: string) => (GUIDE_KEYS[label] ? t(GUIDE_KEYS[label]) : label);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
@@ -89,21 +105,21 @@ export const VerdictPanel = ({ result }: VerdictPanelProps) => {
   };
   const categoryLabels = labelsByCategory[result.taxonomy?.category || ""] || {};
   const rows = [
-    { label: "Best Overall", value: result.verdict.bestOverall, key: "bestOverall", highlight: true },
-    { label: "Best Value", value: result.verdict.bestValue, key: "bestValue" },
-    { label: categoryLabels.developers || "Developers", value: result.verdict.developers, key: "developers" },
-    { label: categoryLabels.teams || "Teams", value: result.verdict.teams, key: "teams" },
-    { label: categoryLabels.students || "Students", value: result.verdict.students, key: "students" },
-    { label: categoryLabels.powerUsers || "Power Users", value: result.verdict.powerUsers, key: "powerUsers" },
-    { label: categoryLabels.ecosystem || "Ecosystem", value: result.verdict.ecosystem || "Depends on stack", key: "ecosystem" },
+    { label: t("res.guide.overall"), value: result.verdict.bestOverall, key: "bestOverall", highlight: true },
+    { label: t("res.guide.value"), value: result.verdict.bestValue, key: "bestValue" },
+    { label: guideLabel(categoryLabels.developers || "Developers"), value: result.verdict.developers, key: "developers" },
+    { label: guideLabel(categoryLabels.teams || "Teams"), value: result.verdict.teams, key: "teams" },
+    { label: guideLabel(categoryLabels.students || "Students"), value: result.verdict.students, key: "students" },
+    { label: guideLabel(categoryLabels.powerUsers || "Power Users"), value: result.verdict.powerUsers, key: "powerUsers" },
+    { label: guideLabel(categoryLabels.ecosystem || "Ecosystem"), value: result.verdict.ecosystem || t("res.guide.dependsStack"), key: "ecosystem" },
   ];
 
   return (
     <div ref={containerRef} className={`${panelClass} relative overflow-hidden p-5 sm:p-7`}>
       <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-orange-500/[0.08] blur-3xl" />
       <div className="relative mb-5 flex items-center justify-between gap-3">
-        <div><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-orange-300">Decision guide</p><h3 className="mt-1 font-serif text-2xl tracking-tight text-[#fffaf1]">Best fit by need</h3></div>
-        <span className="rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-[9px] font-semibold text-white/45">7 scenarios</span>
+        <div><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-orange-300">{t("res.guide.kicker")}</p><h3 className="mt-1 font-serif text-2xl tracking-tight text-[#fffaf1]">{t("res.guide.title")}</h3></div>
+        <span className="rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-[9px] font-semibold text-white/45">{t("res.guide.scenarios", { count: rows.length })}</span>
       </div>
       <div className="relative space-y-1">
         {rows.map((row) => (

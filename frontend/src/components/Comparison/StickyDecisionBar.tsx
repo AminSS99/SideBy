@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { Trophy, ArrowDown, X, ShieldCheck, Globe, Clock } from "@/components/icons";
 import { motion } from "framer-motion";
 import type { ComparisonData } from "./types";
+import { useT } from "@/i18n";
 
 interface StickyDecisionBarProps {
   result: ComparisonData;
@@ -14,6 +15,7 @@ export function StickyDecisionBar({
   onScrollToEvidence,
   onDismiss,
 }: StickyDecisionBarProps) {
+  const t = useT();
   // Compute average confidence score
   const avgConfidence = useMemo(() => {
     let sum = 0;
@@ -32,10 +34,10 @@ export function StickyDecisionBar({
   const freshnessLabel = useMemo(() => {
     // Map database taxonomy/freshness metrics
     const classVal = result.taxonomy?.freshnessClass || "medium";
-    if (classVal === "volatile") return "Real-time";
-    if (classVal === "medium") return "Recent";
-    return "Stable";
-  }, [result]);
+    if (classVal === "volatile") return t("res.bar.realtime");
+    if (classVal === "medium") return t("res.bar.recent");
+    return t("res.bar.stable");
+  }, [result, t]);
 
   return (
     <motion.aside
@@ -43,7 +45,7 @@ export function StickyDecisionBar({
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 40, opacity: 0 }}
       transition={{ type: "spring", stiffness: 380, damping: 28 }}
-      aria-label="Decision summary"
+      aria-label={t("res.bar.aria")}
       className="fixed bottom-[calc(var(--bottom-overlay-clearance,calc(env(safe-area-inset-bottom,0px)+1rem))+var(--sideby-toast-offset,0px)+0.5rem)] left-3 right-3 z-40 flex items-center justify-between gap-2 rounded-2xl border border-orange-500/25 bg-[#0b0908]/95 p-2.5 shadow-[0_20px_55px_rgba(0,0,0,.75)] backdrop-blur-2xl lg:bottom-6 sm:left-1/2 sm:right-auto sm:min-w-[700px] sm:max-w-3xl sm:-translate-x-1/2 sm:p-3.5 sm:px-5 md:z-[60]"
     >
       {/* Metrics Section */}
@@ -55,7 +57,7 @@ export function StickyDecisionBar({
           </div>
           <div>
             <span className="text-[8px] font-bold uppercase tracking-widest text-orange-500/80 block">
-              Best Overall
+              {t("res.bar.best")}
             </span>
             <span className="block max-w-[130px] truncate font-serif text-sm font-bold leading-none text-white sm:max-w-[180px]">
               {result.verdict.bestOverall}
@@ -68,7 +70,7 @@ export function StickyDecisionBar({
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
           <div>
             <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">
-              Confidence
+              {t("res.bar.confidence")}
             </span>
             <span className="text-xs font-mono font-bold text-white leading-none block mt-0.5">
               {avgConfidence}%
@@ -81,10 +83,10 @@ export function StickyDecisionBar({
           <Globe className="h-3.5 w-3.5 text-cyan-400" />
           <div>
             <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">
-              Sources
+              {t("res.bar.sources")}
             </span>
             <span className="text-xs font-mono font-bold text-white leading-none block mt-0.5">
-              {result.sourceCount || result.sources.length} check
+              {t("res.bar.checked", { count: result.sourceCount || result.sources.length })}
             </span>
           </div>
         </div>
@@ -94,7 +96,7 @@ export function StickyDecisionBar({
           <Clock className="h-3.5 w-3.5 text-orange-400" />
           <div>
             <span className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">
-              Freshness
+              {t("res.bar.freshness")}
             </span>
             <span className="text-xs font-sans font-bold text-white leading-none block mt-0.5">
               {freshnessLabel}
@@ -112,16 +114,16 @@ export function StickyDecisionBar({
           onClick={onScrollToEvidence}
           className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-3 text-[9px] font-bold uppercase tracking-wider text-white shadow-md shadow-orange-500/20 transition hover:brightness-110 sm:flex-initial sm:px-4 sm:text-[10px]"
         >
-          <span className="sm:hidden">Evidence</span><span className="hidden sm:inline">Scroll to evidence</span>
+          <span className="sm:hidden">{t("res.bar.evidence")}</span><span className="hidden sm:inline">{t("res.bar.scroll")}</span>
           <ArrowDown className="h-3 w-3" />
         </motion.button>
 
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={onDismiss}
-          aria-label="Dismiss decision bar"
+          aria-label={t("res.bar.dismiss")}
           className="grid h-11 w-11 place-items-center rounded-xl border border-white/[0.08] bg-transparent text-white/40 transition-colors hover:bg-white/5 hover:text-white"
-          title="Dismiss decision bar"
+          title={t("res.bar.dismiss")}
         >
           <X className="h-3.5 w-3.5" />
         </motion.button>

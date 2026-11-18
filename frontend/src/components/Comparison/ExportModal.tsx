@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Download, FileSpreadsheet, FileText, Code, FileJson, CheckCircle2 } from "@/components/icons";
 import type { ComparisonData } from "./types";
+import { useT } from "@/i18n";
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ interface ExportOptionProps {
 }
 
 export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
+  const t = useT();
   const [downloading, setDownloading] = useState<string | null>(null);
   const filenameSlug = result.slug || "sideby-comparison";
 
@@ -120,7 +122,7 @@ export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
       <DialogContent className="print-hidden w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border-white/[0.08] bg-[#0d0d0d] p-6 text-white motion-reduce:animate-none">
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <DialogTitle className="font-serif text-xl text-white">Export Report</DialogTitle>
+                <DialogTitle className="font-serif text-xl text-white">{t("exp.title")}</DialogTitle>
                 <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-white/40 mt-1">
                   {result.entities.a.name} vs {result.entities.b.name}
                 </DialogDescription>
@@ -131,33 +133,33 @@ export const ExportModal = ({ isOpen, onClose, result }: ExportModalProps) => {
             <div className="space-y-3">
               <ExportOption
                 icon={FileSpreadsheet}
-                title="CSV Decision Sheet"
-                description="Criteria, evidence, and option values for spreadsheets."
+                title={t("exp.csv")}
+                description={t("exp.csvDesc")}
                 onClick={handleExportCsv}
                 isDownloading={downloading === "csv"}
               />
               <ExportOption 
                 icon={FileText}
-                title="PDF Document"
-                description="Optimized print layout for reading."
+                title={t("exp.pdf")}
+                description={t("exp.pdfDesc")}
                 onClick={handleExportPDF}
                 isDownloading={downloading === "pdf"}
               />
               <ExportOption 
                 icon={Code}
-                title="Markdown"
-                description="Perfect for Notion or GitHub wikis."
+                title={t("exp.md")}
+                description={t("exp.mdDesc")}
                 onClick={handleExportMarkdown}
                 isDownloading={downloading === "markdown"}
-                badge="Pro"
+                badge={t("exp.pro")}
               />
               <ExportOption 
                 icon={FileJson}
-                title="Raw JSON"
-                description="Raw data for API integrations."
+                title={t("exp.json")}
+                description={t("exp.jsonDesc")}
                 onClick={handleExportJSON}
                 isDownloading={downloading === "json"}
-                badge="Pro"
+                badge={t("exp.pro")}
               />
             </div>
       </DialogContent>

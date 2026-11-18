@@ -22,6 +22,7 @@ import { BorderBeam } from "@/components/ui/border-beam";
 import { pwaUpdates } from "@/lib/pwa/register";
 import { useDraftScope } from "@/hooks/useDraftScope";
 import { KeyboardSpacer } from "@/components/KeyboardSpacer";
+import { useT, type MessageKey } from "@/i18n";
 
 interface ComparisonComposerProps {
   onStart: (query: string) => void | Promise<void>;
@@ -38,12 +39,13 @@ const SUGGESTIONS = [
   "Portugal vs Spain for remote work",
 ];
 
-const COMPARISON_TEMPLATES = [
-  { label: "Phones", context: "photography and daily use" },
-  { label: "Cars", context: "daily commuting" },
-  { label: "AI tools", context: "an AI workflow" },
-  { label: "Laptops", context: "software development" },
-  { label: "Cities", context: "remote work" },
+// `context` is sent to the research engine, so it stays English; only the chip label is translated.
+const COMPARISON_TEMPLATES: { label: MessageKey; context: string }[] = [
+  { label: "composer.tpl.phones", context: "photography and daily use" },
+  { label: "composer.tpl.cars", context: "daily commuting" },
+  { label: "composer.tpl.ai", context: "an AI workflow" },
+  { label: "composer.tpl.laptops", context: "software development" },
+  { label: "composer.tpl.cities", context: "remote work" },
 ];
 
 export function ComparisonComposer({
@@ -52,6 +54,7 @@ export function ComparisonComposer({
   initialQuery = "",
   className = "",
 }: ComparisonComposerProps) {
+  const t = useT();
   const {
     entityA,
     setEntityA,
@@ -91,9 +94,9 @@ export function ComparisonComposer({
       if (!response.ok || !data.context) throw new Error(data.error || "Unable to import URL context.");
       setContext(data.context);
       setShowContextInput(true);
-      toast.success("Requirements imported.", { description: `Grounded in ${data.source?.title || "the supplied URL"}.` });
+      toast.success(t("composer.importOk"), { description: t("composer.importGrounded", { title: data.source?.title || t("composer.importFallbackTitle") }) });
     } catch (error) {
-      toast.error("Unable to import URL context.", { description: error instanceof Error ? error.message : "Try a public HTTPS URL." });
+      toast.error(t("composer.importFail"), { description: error instanceof Error ? error.message : t("composer.importTry") });
     } finally { setIsImportingUrl(false); }
   };
 
@@ -152,9 +155,9 @@ export function ComparisonComposer({
         setShowContextInput(true);
       }
       pwaUpdates.clearPreservedDraft("composer");
-      toast.info("Restored your unsaved comparison draft.");
+      toast.info(t("composer.restored"));
     }
-  }, [isDraftScopeReady, draftScope, setEntityA, setEntityB, setContext]);
+  }, [isDraftScopeReady, draftScope, setEntityA, setEntityB, setContext, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,11 +224,11 @@ export function ComparisonComposer({
       <div className="pointer-events-none absolute -bottom-28 -left-20 h-64 w-64 rounded-full bg-fuchsia-500/[0.07] blur-[100px]" />
       <div className="relative mb-5 flex items-center justify-between gap-4 px-1">
         <div className="min-w-0 text-left">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-300">Build your comparison</p>
-          <p className="mt-1 text-xs text-white/65">Two options in. A defensible answer out.</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-300">{t("composer.title")}</p>
+          <p className="mt-1 text-xs text-white/65">{t("composer.subtitle")}</p>
         </div>
         <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-emerald-400/15 bg-emerald-400/[0.07] px-2.5 py-1.5 text-[8px] font-bold uppercase tracking-widest text-emerald-300 sm:px-3 sm:text-[9px]">
-          <Sparkles className="h-3 w-3" /> Source backed
+          <Sparkles className="h-3 w-3" /> {t("composer.sourceBacked")}
         </span>
       </div>
 
@@ -234,16 +237,16 @@ export function ComparisonComposer({
         <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-end sm:gap-x-2">
           <div className="relative w-full">
             <label htmlFor="hero-comparison-input" className="mb-2 block px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/65">
-              First option
+              {t("composer.first")}
             </label>
             <div className="relative">
               <Input
                 id="hero-comparison-input"
-                aria-label="First option"
+                aria-label={t("composer.firstAria")}
                 type="text"
                 value={entityA}
                 onChange={(e) => setEntityA(e.target.value)}
-                placeholder="e.g. iPhone 16"
+                placeholder={t("composer.firstPlaceholder")}
                 autoComplete="off"
                 className="h-14 rounded-xl border-white/[0.09] bg-black/50 pl-4 pr-11 text-base font-medium text-white shadow-inner placeholder:text-white/25 focus-visible:border-orange-400/40 focus-visible:ring-orange-500/25"
               />
@@ -251,7 +254,7 @@ export function ComparisonComposer({
                 <button
                   type="button"
                   onClick={() => setEntityA("")}
-                  aria-label="Clear first option"
+                  aria-label={t("composer.clearFirst")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 grid h-10 w-10 place-items-center rounded-lg text-white/40 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -268,7 +271,7 @@ export function ComparisonComposer({
             <motion.button
               type="button"
               onClick={swapEntities}
-              aria-label="Swap comparison options"
+              aria-label={t("composer.swapAria")}
               disabled={!entityA.trim() && !entityB.trim()}
               whileTap={{ scale: 0.93 }}
               className="relative inline-flex min-h-[38px] items-center gap-1.5 rounded-full border border-white/[0.12] bg-[#141210] px-3.5 py-1.5 text-[11px] font-semibold text-white/80 shadow-[0_4px_18px_rgba(0,0,0,.5)] backdrop-blur-md transition-all hover:border-orange-300/30 hover:bg-[#1a1714] hover:text-orange-300 disabled:cursor-not-allowed disabled:opacity-30"
@@ -280,7 +283,7 @@ export function ComparisonComposer({
               >
                 <ArrowLeftRight className="h-3.5 w-3.5 rotate-90 text-orange-400" />
               </motion.span>
-              <span>Swap</span>
+              <span>{t("composer.swap")}</span>
             </motion.button>
           </div>
 
@@ -288,7 +291,7 @@ export function ComparisonComposer({
           <motion.button
             type="button"
             onClick={swapEntities}
-            aria-label="Swap comparison options"
+            aria-label={t("composer.swapAria")}
             disabled={!entityA.trim() && !entityB.trim()}
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.92 }}
@@ -305,16 +308,16 @@ export function ComparisonComposer({
 
           <div className="relative w-full">
             <label htmlFor="hero-comparison-input-b" className="mb-2 block px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/65">
-              Compare against
+              {t("composer.second")}
             </label>
             <div className="relative">
               <Input
                 id="hero-comparison-input-b"
                 type="text"
-                aria-label="Second option"
+                aria-label={t("composer.secondAria")}
                 value={entityB}
                 onChange={(e) => setEntityB(e.target.value)}
-                placeholder="e.g. Google Pixel 9"
+                placeholder={t("composer.secondPlaceholder")}
                 autoComplete="off"
                 className="h-14 rounded-xl border-white/[0.09] bg-black/50 pl-4 pr-11 text-base font-medium text-white shadow-inner placeholder:text-white/25 focus-visible:border-orange-400/40 focus-visible:ring-orange-500/25"
               />
@@ -322,7 +325,7 @@ export function ComparisonComposer({
                 <button
                   type="button"
                   onClick={() => setEntityB("")}
-                  aria-label="Clear second option"
+                  aria-label={t("composer.clearSecond")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 grid h-10 w-10 place-items-center rounded-lg text-white/40 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -337,40 +340,40 @@ export function ComparisonComposer({
           <div className="space-y-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3.5 animate-in fade-in slide-in-from-top-1 duration-200 sm:p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-orange-300">Decision context</p>
-                <p className="mt-1 text-[11px] text-white/60">Optional, but it sharpens scoring.</p>
+                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-orange-300">{t("composer.context")}</p>
+                <p className="mt-1 text-[11px] text-white/60">{t("composer.contextHint")}</p>
               </div>
-              <button type="button" onClick={() => { setContext(""); setShowContextInput(false); }} aria-label="Remove comparison context" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white/40 transition-colors hover:bg-white/5 hover:text-white"><X className="h-4 w-4" /></button>
+              <button type="button" onClick={() => { setContext(""); setShowContextInput(false); }} aria-label={t("composer.contextRemove")} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white/40 transition-colors hover:bg-white/5 hover:text-white"><X className="h-4 w-4" /></button>
             </div>
-            <Input aria-label="Comparison context" type="text" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Use case, budget, or top priority" className="h-12 rounded-xl border-white/[0.09] bg-black/50 text-base sm:text-sm text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
+            <Input aria-label={t("composer.contextAria")} type="text" value={context} onChange={(e) => setContext(e.target.value)} placeholder={t("composer.contextPlaceholder")} className="h-12 rounded-xl border-white/[0.09] bg-black/50 text-base sm:text-sm text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label htmlFor="composer-priorities" className="mb-1.5 block text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">
-                  Priorities <span className="text-white/25">(optional)</span>
+                  {t("composer.priorities")} <span className="text-white/25">{t("composer.optional")}</span>
                 </label>
-                <Input id="composer-priorities" aria-label="What matters most" type="text" value={priorities} onChange={(e) => setPriorities(e.target.value)} placeholder="e.g. Price, then battery life" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-base sm:text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
+                <Input id="composer-priorities" aria-label={t("composer.prioritiesAria")} type="text" value={priorities} onChange={(e) => setPriorities(e.target.value)} placeholder={t("composer.prioritiesPlaceholder")} className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-base sm:text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
               </div>
               <div>
                 <label htmlFor="composer-nonnegotiables" className="mb-1.5 block text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">
-                  Non-negotiables <span className="text-white/25">(optional)</span>
+                  {t("composer.nonNegotiables")} <span className="text-white/25">{t("composer.optional")}</span>
                 </label>
-                <Input id="composer-nonnegotiables" aria-label="Hard requirements" type="text" value={nonNegotiables} onChange={(e) => setNonNegotiables(e.target.value)} placeholder="e.g. Under $800, available in my country" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-base sm:text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
+                <Input id="composer-nonnegotiables" aria-label={t("composer.nonNegotiablesAria")} type="text" value={nonNegotiables} onChange={(e) => setNonNegotiables(e.target.value)} placeholder={t("composer.nonNegotiablesPlaceholder")} className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-base sm:text-xs text-white placeholder:text-white/25 focus-visible:ring-orange-500/25" />
               </div>
             </div>
-            <p className="text-[9px] leading-4 text-[#fdfbf7]/35">Priorities weight the scoring; non-negotiables are recorded verbatim in your brief. SideBy never invents requirements you didn't state.</p>
+            <p className="text-[9px] leading-4 text-[#fdfbf7]/35">{t("composer.constraintsNote")}</p>
             <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">Quick templates</p>
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">{t("composer.templates")}</p>
               <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 no-scrollbar sm:flex-wrap">
                 {COMPARISON_TEMPLATES.map((template) => {
                   const isSelected = context.trim().toLowerCase() === template.context.toLowerCase();
                   return (
-                    <button key={template.label} type="button" onClick={() => setContext(template.context)} className={cn("min-h-10 shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all active:scale-95", isSelected ? "border-orange-500/50 bg-orange-500/10 text-orange-300 shadow-[0_0_12px_rgba(249,115,22,.15)]" : "border-white/[0.08] bg-black/30 text-white/70 hover:border-orange-500/30 hover:text-orange-300")}>{template.label}</button>
+                    <button key={template.label} type="button" onClick={() => setContext(template.context)} className={cn("min-h-10 shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all active:scale-95", isSelected ? "border-orange-500/50 bg-orange-500/10 text-orange-300 shadow-[0_0_12px_rgba(249,115,22,.15)]" : "border-white/[0.08] bg-black/30 text-white/70 hover:border-orange-500/30 hover:text-orange-300")}>{t(template.label)}</button>
                   );
                 })}
               </div>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Requirements URL" type="url" value={contextUrl} onChange={(event) => setContextUrl(event.target.value)} placeholder="Import requirements from a public URL" className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-base sm:text-xs text-white placeholder:text-white/25" /><button type="button" onClick={() => void importUrlContext()} disabled={!contextUrl.trim() || isImportingUrl} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-orange-500/30 px-4 text-xs font-semibold text-orange-300 disabled:opacity-40 transition-colors hover:bg-orange-500/10"><Link2 className="h-3.5 w-3.5" />{isImportingUrl ? "Importing" : "Import URL"}</button></div>
-            <p className="text-[9px] leading-4 text-[#fdfbf7]/35">Public URLs are imported and source-attributed automatically.</p>
+            <div className="flex flex-col gap-2 sm:flex-row"><Input aria-label={t("composer.urlAria")} type="url" value={contextUrl} onChange={(event) => setContextUrl(event.target.value)} placeholder={t("composer.urlPlaceholder")} className="h-11 rounded-xl border-white/[0.09] bg-black/50 text-base sm:text-xs text-white placeholder:text-white/25" /><button type="button" onClick={() => void importUrlContext()} disabled={!contextUrl.trim() || isImportingUrl} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-orange-500/30 px-4 text-xs font-semibold text-orange-300 disabled:opacity-40 transition-colors hover:bg-orange-500/10"><Link2 className="h-3.5 w-3.5" />{isImportingUrl ? t("composer.importing") : t("composer.import")}</button></div>
+            <p className="text-[9px] leading-4 text-[#fdfbf7]/35">{t("composer.urlNote")}</p>
           </div>
         ) : (
           <div className="flex justify-start">
@@ -379,7 +382,7 @@ export function ComparisonComposer({
               onClick={() => setShowContextInput(true)}
               className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-1 text-[10px] font-bold uppercase tracking-widest text-orange-300/80 transition-colors hover:text-orange-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
             >
-              <Plus className="h-3 w-3" /> Add decision context
+              <Plus className="h-3 w-3" /> {t("composer.addContext")}
             </button>
           </div>
         )}
@@ -401,18 +404,18 @@ export function ComparisonComposer({
                 {isValidating ? (
                   <>
                     <Loader2 className="h-3 w-3 animate-spin text-orange-500" />
-                    Checking Comparison Fit...
+                    {t("composer.checking")}
                   </>
                 ) : isBlocked ? (
                   <>
                     <ShieldAlert className="h-3.5 w-3.5 text-red-500" />
-                    Comparison Blocked
+                    {t("composer.blocked")}
                   </>
                 ) : isIncomplete ? (
-                  <>One more option</>
+                  <>{t("composer.oneMore")}</>
                 ) : (
                   <>
-                    Brief ready — {Math.round(queryIntent.confidence * 100)}% fit
+                    {t("composer.ready", { percent: Math.round(queryIntent.confidence * 100) })}
                   </>
                 )}
               </span>
@@ -426,15 +429,15 @@ export function ComparisonComposer({
 
             <p className="mt-2 text-[#fdfbf7]/75 font-sans leading-normal">
               {isValidating
-                ? "Validating target options against category taxonomy..."
+                ? t("composer.validating")
                 : isIncomplete
-                  ? "Enter both options to check whether they are a meaningful comparison."
+                  ? t("composer.enterBoth")
                   : queryIntent.message}
             </p>
 
             {isBlocked && queryIntent.resolvedEntity && !isValidating && !isIncomplete && (
               <p className="mt-3 inline-flex items-center rounded-md border border-orange-500/20 bg-orange-500/[0.06] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-orange-200">
-                Resolved identity: {queryIntent.resolvedEntity}
+                {t("composer.resolved", { name: queryIntent.resolvedEntity })}
               </p>
             )}
 
@@ -446,8 +449,8 @@ export function ComparisonComposer({
                 className="mt-3 text-left text-xs font-medium leading-5 text-orange-300 underline decoration-orange-500/20 underline-offset-4 transition-colors hover:text-orange-200"
               >
                 {queryIntent.policyNote === "Duplicate entity"
-                  ? "Compare distinct variants: "
-                  : "Suggested formulation: "}
+                  ? t("composer.distinct")
+                  : t("composer.suggested")}
                 {queryIntent.suggestion}
               </button>
             )}
@@ -467,11 +470,11 @@ export function ComparisonComposer({
             {isCreating || localSubmitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Opening research room...
+                {t("composer.opening")}
               </>
             ) : (
               <>
-                Research this decision
+                {t("composer.submit")}
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </>
             )}
@@ -485,7 +488,7 @@ export function ComparisonComposer({
       {/* Suggested chips list */}
       <div className="relative mt-5 border-t border-white/[0.07] pt-4">
         <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#fdfbf7]/60 mb-3 text-left">
-          Try an example
+          {t("composer.examples")}
         </p>
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 no-scrollbar sm:flex-wrap">
           {SUGGESTIONS.map((suggestion) => (

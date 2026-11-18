@@ -5,9 +5,40 @@ import { useGSAP } from "@gsap/react";
 import type { ComparisonData } from './types';
 import { panelClass } from './constants';
 import { Layers } from "@/components/icons";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+const wrapLabel = (text: string, max: number) => {
+  const words = String(text).split(/\s+/);
+  const lines: string[] = [];
+  let line = "";
+  for (const w of words) {
+    if ((line + " " + w).trim().length > max && line) {
+      lines.push(line);
+      line = w;
+    } else {
+      line = (line + " " + w).trim();
+    }
+  }
+  if (line) lines.push(line);
+  return lines.slice(0, 3);
+};
+
+const RadarTick = ({ x, y, cx, payload, compact }: { x?: number; y?: number; cx?: number; payload?: { value: string }; compact: boolean }) => {
+  if (x === undefined || y === undefined || !payload) return null;
+  const lines = wrapLabel(payload.value, compact ? 9 : 18);
+  const anchor = cx !== undefined && Math.abs(x - cx) < 6 ? "middle" : x > (cx ?? 0) ? "start" : "end";
+  return (
+    <text x={x} y={y - ((lines.length - 1) * 6)} textAnchor={anchor} fill="#fdfbf7" fillOpacity={0.65} fontSize={compact ? 10 : 11}>
+      {lines.map((l, i) => (
+        <tspan key={i} x={x} dy={i === 0 ? 0 : 12}>{l}</tspan>
+      ))}
+    </text>
+  );
+};
 
 export const RadarChartPanel = ({ result }: { result: ComparisonData }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const compact = useIsMobile();
 
   useGSAP(() => {
     if (!containerRef.current) return;
@@ -63,13 +94,13 @@ export const RadarChartPanel = ({ result }: { result: ComparisonData }) => {
           </div>
         </div>
 
-        <div className="w-full md:w-2/3 h-[350px] z-10">
+        <div className="w-full md:w-2/3 h-[340px] z-10">
           <ResponsiveContainer width="100%" height="100%">
-            <RadarChart cx="50%" cy="50%" outerRadius="75%" data={result.dimensions}>
+            <RadarChart cx="50%" cy="50%" outerRadius={compact ? "58%" : "75%"} data={result.dimensions} margin={{ top: 16, right: 24, bottom: 16, left: 24 }}>
               <PolarGrid stroke="#333" />
               <PolarAngleAxis 
                 dataKey="subject" 
-                tick={{ fill: '#fdfbf7', fontSize: 11, fontFamily: "ui-sans-serif, system-ui, sans-serif", opacity: 0.6 }} 
+                tick={(props: object) => <RadarTick {...(props as React.ComponentProps<typeof RadarTick>)} compact={compact} />}
               />
               <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
               <Tooltip 
