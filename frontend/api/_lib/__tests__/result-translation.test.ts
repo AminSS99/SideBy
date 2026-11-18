@@ -5,7 +5,7 @@ import {
   collectTranslatableSlots,
   isTranslationLanguage,
   translationCacheKey,
-} from "../result-translation";
+} from "../result-translation.js";
 
 const result = {
   slug: "a-vs-b",
