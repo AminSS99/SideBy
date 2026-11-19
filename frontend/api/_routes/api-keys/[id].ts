@@ -26,6 +26,10 @@ export default async function handler(
     }
 
     const db = createDbClient();
+    const isOrgAdmin =
+      Boolean(auth.orgId) &&
+      (auth.orgRole === "owner" || auth.orgRole === "admin" || auth.orgRole === "org:admin");
+
     const [row] = await db
       .update(apiKeys)
       .set({ revokedAt: new Date(), updatedAt: new Date() })
@@ -35,7 +39,7 @@ export default async function handler(
           isNull(apiKeys.revokedAt),
           or(
             eq(apiKeys.userId, auth.userId),
-            auth.orgId ? eq(apiKeys.organizationId, auth.orgId) : eq(apiKeys.userId, auth.userId),
+            isOrgAdmin && auth.orgId ? eq(apiKeys.organizationId, auth.orgId) : eq(apiKeys.userId, auth.userId),
           ),
         ),
       )

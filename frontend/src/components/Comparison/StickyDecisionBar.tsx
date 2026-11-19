@@ -46,7 +46,7 @@ export function StickyDecisionBar({
       exit={{ y: 40, opacity: 0 }}
       transition={{ type: "spring", stiffness: 380, damping: 28 }}
       aria-label={t("res.bar.aria")}
-      className="fixed bottom-[calc(var(--bottom-overlay-clearance,calc(env(safe-area-inset-bottom,0px)+1rem))+var(--sideby-toast-offset,0px)+0.5rem)] left-3 right-3 z-40 flex items-center justify-between gap-2 rounded-2xl border border-orange-500/25 bg-[#0b0908]/95 p-2.5 shadow-[0_20px_55px_rgba(0,0,0,.75)] backdrop-blur-2xl lg:bottom-6 sm:left-1/2 sm:right-auto sm:min-w-[700px] sm:max-w-3xl sm:-translate-x-1/2 sm:p-3.5 sm:px-5 md:z-[60]"
+      className="fixed bottom-[calc(var(--sideby-toast-offset,var(--bottom-overlay-clearance,1rem))+0.5rem)] left-3 right-3 z-40 flex items-center justify-between gap-2 rounded-2xl border border-orange-500/25 bg-[#0b0908]/95 p-2.5 shadow-[0_20px_55px_rgba(0,0,0,.75)] backdrop-blur-2xl lg:bottom-6 sm:left-1/2 sm:right-auto sm:w-[min(700px,calc(100vw-2rem))] sm:max-w-3xl sm:-translate-x-1/2 sm:p-3.5 sm:px-5 md:z-[60]"
     >
       {/* Metrics Section */}
       <div className="flex min-w-0 items-center gap-x-4 text-left">
@@ -114,7 +114,7 @@ export function StickyDecisionBar({
           onClick={onScrollToEvidence}
           className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-3 text-[9px] font-bold uppercase tracking-wider text-white shadow-md shadow-orange-500/20 transition hover:brightness-110 sm:flex-initial sm:px-4 sm:text-[10px]"
         >
-          <span className="sm:hidden">{t("res.bar.evidence")}</span><span className="hidden sm:inline">{t("res.bar.scroll")}</span>
+          <span className="max-w-[96px] truncate sm:hidden">{t("res.bar.evidence")}</span><span className="hidden sm:inline">{t("res.bar.scroll")}</span>
           <ArrowDown className="h-3 w-3" />
         </motion.button>
 

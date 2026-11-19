@@ -77,20 +77,18 @@ const providerStyles = {
 const SettingsPage = () => {
   const t = useT();
   const { activeWorkspace } = useWorkspace();
-  const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<Tab>(() => {
-    const tabParam = new URLSearchParams(window.location.search).get("tab");
-    return isSettingsTab(tabParam) ? tabParam : "general";
-  });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab: Tab = isSettingsTab(tabParam) ? tabParam : "general";
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Keep the URL shareable when navigating directly to a tab (e.g. from a
   // notification deep-link to /app/settings?tab=notifications).
   useEffect(() => {
     if (searchParams.get("tab") !== activeTab) {
-      window.history.replaceState(null, "", `/app/settings?tab=${activeTab}`);
+      setSearchParams({ tab: activeTab }, { replace: true });
     }
-  }, [activeTab, searchParams]);
+  }, [activeTab, searchParams, setSearchParams]);
 
   useGSAP(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -120,7 +118,8 @@ const SettingsPage = () => {
           {SETTINGS_TABS.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              type="button"
+              onClick={() => setSearchParams({ tab: tab.id }, { replace: true })}
               aria-current={activeTab === tab.id ? "page" : undefined}
               className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-widest rounded-sm transition-all ${
                 activeTab === tab.id
@@ -156,8 +155,10 @@ const SettingsPage = () => {
 
 const GeneralSettings = ({ workspace }: { workspace: WorkspaceRecord | null }) => {
   const t = useT();
+  const { refresh } = useWorkspace();
   const [name, setName] = useState(workspace?.name || "");
   const [slug, setSlug] = useState(workspace?.slug || "");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setName(workspace?.name || "");
@@ -165,13 +166,19 @@ const GeneralSettings = ({ workspace }: { workspace: WorkspaceRecord | null }) =
   }, [workspace?.name, workspace?.slug]);
 
   const save = async () => {
-    if (!workspace?.id) return;
-    await apiFetch(buildApiUrl("/api/workspaces"), {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workspaceId: workspace.id, name, slug }),
-    });
-    toast.success(t("settings.general.saved"));
+    if (!workspace?.id || isSaving) return;
+    try {
+      setIsSaving(true);
+      await apiFetch(buildApiUrl("/api/workspaces"), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId: workspace.id, name, slug }),
+      });
+      await refresh();
+      toast.success(t("settings.general.saved"));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -210,8 +217,13 @@ const GeneralSettings = ({ workspace }: { workspace: WorkspaceRecord | null }) =
               />
             </div>
           </div>
-          <button onClick={() => void save().catch((error) => toast.error(t("settings.general.saveError"), { description: error instanceof Error ? error.message : t("settings.common.tryAgain") }))} className="flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]">
-            <Save className="h-3.5 w-3.5" />
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => void save().catch((error) => toast.error(t("settings.general.saveError"), { description: error instanceof Error ? error.message : t("settings.common.tryAgain") }))}
+            className="flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Save className="h-3.5 w-3.5" aria-hidden="true" />
             {t("settings.general.saveChanges")}
           </button>
         </div>
@@ -338,7 +350,9 @@ const PreferenceSettings = ({ workspaceId }: { workspaceId?: string }) => {
             <button
               key={key}
               type="button"
-            onClick={() => toggle(key)}
+              role="switch"
+              aria-checked={preferences[key]}
+              onClick={() => toggle(key)}
               className="flex w-full items-center justify-between gap-4 rounded-sm border border-[#333] bg-[#0c0b0a] p-5 text-left transition-colors hover:border-[#555]"
             >
               <span>
@@ -389,49 +403,21 @@ const PreferenceSettings = ({ workspaceId }: { workspaceId?: string }) => {
 
 const ProviderSettings = () => {
   const t = useT();
-  const [customProvider, setCustomProvider] = useState<string | null>(() => localStorage.getItem("sideby.customProvider"));
-  const [keyPromptProvider, setKeyPromptProvider] = useState<string | null>(null);
-  const [providerKeyDraft, setProviderKeyDraft] = useState("");
-  const [keyError, setKeyError] = useState<string | null>(null);
-  const keyInputRef = useRef<HTMLInputElement>(null);
 
   const providers: Array<{
     name: string;
     model: string;
+    envVar: string;
     descKey: MessageKey;
     connected: boolean;
     color: keyof typeof providerStyles;
   }> = [
-    { name: "DeepSeek", model: "deepseek-v4-pro", descKey: "settings.providers.deepseek.desc", connected: true, color: "blue" },
-    { name: "Gemini", model: "gemini-3.1-pro", descKey: "settings.providers.gemini.desc", connected: true, color: "purple" },
-    { name: "OpenAI", model: "gpt-4o-mini", descKey: "settings.providers.openai.desc", connected: false, color: "emerald" },
-    { name: "Anthropic", model: "claude-3-5-haiku", descKey: "settings.providers.anthropic.desc", connected: false, color: "orange" },
-    { name: "MiniMax", model: "abab6.5s-chat", descKey: "settings.providers.minimax.desc", connected: false, color: "cyan" }
+    { name: "DeepSeek", model: "deepseek-v4-pro", envVar: "DEEPSEEK_API_KEY", descKey: "settings.providers.deepseek.desc", connected: true, color: "blue" },
+    { name: "Gemini", model: "gemini-3.1-pro", envVar: "GEMINI_API_KEY", descKey: "settings.providers.gemini.desc", connected: true, color: "purple" },
+    { name: "OpenAI", model: "gpt-4o-mini", envVar: "OPENAI_API_KEY", descKey: "settings.providers.openai.desc", connected: false, color: "emerald" },
+    { name: "Anthropic", model: "claude-3-5-haiku", envVar: "ANTHROPIC_API_KEY", descKey: "settings.providers.anthropic.desc", connected: false, color: "orange" },
+    { name: "MiniMax", model: "abab6.5s-chat", envVar: "MINIMAX_API_KEY", descKey: "settings.providers.minimax.desc", connected: false, color: "cyan" }
   ];
-
-  const openKeyForm = (providerName: string) => {
-    setKeyPromptProvider(providerName);
-    setProviderKeyDraft("");
-    setKeyError(null);
-    window.setTimeout(() => keyInputRef.current?.focus(), 0);
-  };
-
-  const confirmProviderKey = () => {
-    if (!keyPromptProvider) return;
-    const trimmed = providerKeyDraft.trim();
-    if (!trimmed) {
-      setKeyError(t("settings.providers.keyRequired"));
-      keyInputRef.current?.focus();
-      return;
-    }
-    setCustomProvider(keyPromptProvider);
-    localStorage.setItem("sideby.customProvider", keyPromptProvider);
-    setKeyPromptProvider(null);
-    setProviderKeyDraft("");
-    toast.success(t("settings.providers.routeSaved", { provider: keyPromptProvider }), {
-      description: t("settings.providers.routeSavedDesc"),
-    });
-  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -439,16 +425,20 @@ const ProviderSettings = () => {
         <h2 className="font-serif text-2xl text-[#fdfbf7] mb-2">
           {t("settings.providers.title")}
         </h2>
-        <p className="text-sm text-[#fdfbf7]/50 mb-8 max-w-2xl leading-relaxed">
+        <p className="text-sm text-[#fdfbf7]/50 mb-4 max-w-2xl leading-relaxed">
           {t("settings.providers.subtitle")}
         </p>
+        <div role="note" className="mb-8 flex items-start gap-3 rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] p-4 text-xs leading-relaxed text-[#fdfbf7]/55">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
+          <p>{t("settings.providers.sessionNote")}</p>
+        </div>
 
         <div className="space-y-4">
           {providers.map((p) => (
             <div key={p.name} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-sm border border-[#333] bg-[#0c0b0a] p-5 hover:border-[#444] transition-colors">
               <div className="flex items-center gap-4">
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm ${providerStyles[p.color]}`}>
-                  <Cpu className="h-5 w-5" />
+                  <Cpu className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -464,76 +454,22 @@ const ProviderSettings = () => {
               <div className="flex items-center gap-3">
                 {p.connected ? (
                   <span className="flex items-center gap-1.5 rounded-sm border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-emerald-400">
-                    <Check className="h-3 w-3" /> {t("settings.providers.connected")}
+                    <Check className="h-3 w-3" aria-hidden="true" /> {t("settings.providers.connected")}
                   </span>
                 ) : (
-                  <button
-                    onClick={() => openKeyForm(p.name)}
-                    aria-expanded={keyPromptProvider === p.name}
-                    className="rounded-sm border border-[#333] bg-[#111] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/50 hover:text-[#fdfbf7] hover:border-[#555] transition-colors"
-                  >
-                    {customProvider === p.name ? t("settings.providers.saved") : t("settings.providers.addKey")}
-                  </button>
+                  <span className="inline-flex items-center gap-1.5 rounded-sm border border-[#333] bg-[#161616] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
+                    {t("dash.stat.missing")} · <code className="font-mono normal-case text-[#fdfbf7]/70">{p.envVar}</code>
+                  </span>
                 )}
                 <button
+                  type="button"
+                  aria-label={t("settings.providers.routingToastTitle", { provider: p.name })}
                   onClick={() => toast.info(t("settings.providers.routingToastTitle", { provider: p.name }), { description: t("settings.providers.routingToastDesc", { model: p.model }) })}
-                  className="p-2 text-[#fdfbf7]/30 hover:text-[#fdfbf7] transition-colors rounded-sm border border-transparent hover:border-[#333] hover:bg-[#1a1a1a]"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 text-[#fdfbf7]/30 hover:text-[#fdfbf7] transition-colors rounded-sm border border-transparent hover:border-[#333] hover:bg-[#1a1a1a]"
                 >
-                  <Settings2 className="h-4 w-4" />
+                  <Settings2 className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
-              {keyPromptProvider === p.name && (
-                <form
-                  className="w-full border-t border-[#2a2a2a] pt-4"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    confirmProviderKey();
-                  }}
-                >
-                  <label htmlFor={`provider-key-${p.name}`} className="block text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60">
-                    {t("settings.providers.apiKeyLabel", { provider: p.name })}
-                  </label>
-                  <div className="mt-2 flex flex-col sm:flex-row gap-2">
-                    <input
-                      id={`provider-key-${p.name}`}
-                      ref={keyInputRef}
-                      type="password"
-                      autoComplete="off"
-                      value={providerKeyDraft}
-                      onChange={(event) => {
-                        setProviderKeyDraft(event.target.value);
-                        if (keyError) setKeyError(null);
-                      }}
-                      aria-invalid={!!keyError}
-                      aria-describedby={`provider-key-error-${p.name}`}
-                      placeholder={t("settings.providers.apiKeyPlaceholder")}
-                      className="flex-1 rounded-sm border border-[#333] bg-black px-4 py-2.5 text-sm text-[#fdfbf7] outline-none transition-colors focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50"
-                    />
-                    <button type="submit" className="rounded-sm bg-orange-600 px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700">
-                      {t("settings.providers.confirmKey")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setKeyPromptProvider(null);
-                        setProviderKeyDraft("");
-                        setKeyError(null);
-                      }}
-                      className="rounded-sm border border-[#333] bg-[#0c0b0a] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/60 transition-colors hover:text-[#fdfbf7]"
-                    >
-                      {t("settings.common.cancel")}
-                    </button>
-                  </div>
-                  {keyError && (
-                    <p id={`provider-key-error-${p.name}`} role="alert" className="mt-2 text-xs text-red-400">
-                      {keyError}
-                    </p>
-                  )}
-                  <p className="mt-2 text-xs text-[#fdfbf7]/35">
-                    {t("settings.providers.sessionNote")}
-                  </p>
-                </form>
-              )}
             </div>
           ))}
         </div>
@@ -546,36 +482,56 @@ const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
   const { t, lang } = useI18n();
   const [keys, setKeys] = useState<ApiKeyRecord[]>([]);
   const [newSecret, setNewSecret] = useState<string | null>(null);
-
-  const loadKeys = async () => {
-    const response = await apiFetch(buildApiUrl("/api/api-keys"));
-    const data = (await response.json()) as { keys: ApiKeyRecord[] };
-    setKeys(data.keys);
-  };
+  const [isCreatingKey, setIsCreatingKey] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const loadKeys = async () => {
+      const query = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : "";
+      const response = await apiFetch(buildApiUrl(`/api/api-keys${query}`), {
+        signal: controller.signal,
+      });
+      const data = (await response.json()) as { keys: ApiKeyRecord[] };
+      if (controller.signal.aborted) return;
+      setKeys(data.keys);
+      setNewSecret(null);
+    };
+
     void loadKeys().catch((error) => {
+      if (controller.signal.aborted || (error instanceof Error && error.name === "AbortError")) {
+        return;
+      }
       toast.error(t("settings.apiKeys.loadError"), {
         description: error instanceof Error ? error.message : t("settings.common.tryAgain"),
       });
     });
-  }, [t]);
+
+    return () => controller.abort();
+  }, [workspaceId, t]);
 
   const createKey = async () => {
-    const response = await apiFetch(buildApiUrl("/api/api-keys"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: `Workspace key ${keys.length + 1}`,
-        workspaceId,
-      }),
-    });
-    const data = (await response.json()) as { key: ApiKeyRecord; secret: string };
-    setKeys((current) => [data.key, ...current]);
-    setNewSecret(data.secret);
-    toast.success(t("settings.apiKeys.created"), {
-      description: t("settings.apiKeys.createdDesc"),
-    });
+    if (isCreatingKey) return;
+    try {
+      setIsCreatingKey(true);
+      const response = await apiFetch(buildApiUrl("/api/api-keys"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `Workspace key ${keys.length + 1}`,
+          workspaceId,
+        }),
+      });
+      const data = (await response.json()) as { key: ApiKeyRecord; secret: string };
+      setKeys((current) => [data.key, ...current]);
+      setNewSecret(data.secret);
+      toast.success(t("settings.apiKeys.created"), {
+        description: t("settings.apiKeys.createdDesc"),
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("settings.common.tryAgain"));
+    } finally {
+      setIsCreatingKey(false);
+    }
   };
 
   return (
@@ -586,8 +542,13 @@ const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
             <h2 className="font-serif text-2xl text-[#fdfbf7] mb-1">{t("settings.apiKeys.title")}</h2>
             <p className="text-sm text-[#fdfbf7]/50">{t("settings.apiKeys.subtitle")}</p>
           </div>
-          <button onClick={createKey} className="flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] shrink-0">
-            <Plus className="h-3.5 w-3.5" />
+          <button
+            type="button"
+            disabled={isCreatingKey}
+            onClick={() => void createKey()}
+            className="flex items-center gap-2 rounded-sm bg-[#fdfbf7] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] disabled:cursor-not-allowed disabled:opacity-50 shrink-0"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
             {t("settings.apiKeys.createKey")}
           </button>
         </div>
@@ -602,6 +563,7 @@ const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
                 {newSecret}
               </code>
               <button
+                type="button"
                 onClick={async () => {
                   const ok = await copyText(newSecret);
                   toast[ok ? "success" : "error"](ok ? t("settings.common.secretCopied") : t("settings.common.clipboardBlocked"));
@@ -635,15 +597,19 @@ const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
                 </div>
                 <div className="flex gap-2">
                   <button
+                    type="button"
+                    aria-label={`${t("settings.common.copy")} ${key.name}`}
                     onClick={async () => {
                       const ok = await copyText(key.prefix);
                       toast[ok ? "success" : "error"](ok ? t("settings.apiKeys.prefixCopied") : t("settings.common.clipboardBlocked"));
                     }}
-                    className="p-2 text-[#fdfbf7]/40 hover:text-cyan-400 transition-colors rounded-sm hover:bg-cyan-500/10"
+                    className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 text-[#fdfbf7]/40 hover:text-cyan-400 transition-colors rounded-sm hover:bg-cyan-500/10"
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className="h-4 w-4" aria-hidden="true" />
                   </button>
                   <button
+                    type="button"
+                    aria-label={`${t("dw.watch.remove")} ${key.name}`}
                     onClick={() => {
                       apiFetch(buildApiUrl(`/api/api-keys/${key.id}`), {
                         method: "DELETE",
@@ -658,9 +624,9 @@ const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
                           });
                         });
                     }}
-                    className="p-2 text-[#fdfbf7]/40 hover:text-red-400 transition-colors rounded-sm hover:bg-red-500/10"
+                    className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 text-[#fdfbf7]/40 hover:text-red-400 transition-colors rounded-sm hover:bg-red-500/10"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -714,19 +680,29 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
     }
   };
 
-  const loadSubs = async () => {
-    const response = await apiFetch(buildApiUrl("/api/webhooks/subscriptions"));
-    const data = (await response.json()) as { subscriptions: WebhookRecord[] };
-    setSubs(data.subscriptions);
-  };
-
   useEffect(() => {
+    const controller = new AbortController();
+    const loadSubs = async () => {
+      const query = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : "";
+      const response = await apiFetch(buildApiUrl(`/api/webhooks/subscriptions${query}`), {
+        signal: controller.signal,
+      });
+      const data = (await response.json()) as { subscriptions: WebhookRecord[] };
+      if (controller.signal.aborted) return;
+      setSubs(data.subscriptions);
+    };
+
     void loadSubs().catch((error) => {
+      if (controller.signal.aborted || (error instanceof Error && error.name === "AbortError")) {
+        return;
+      }
       toast.error(t("settings.webhooks.loadError"), {
         description: error instanceof Error ? error.message : t("settings.common.tryAgain"),
       });
     });
-  }, [t]);
+
+    return () => controller.abort();
+  }, [workspaceId, t]);
 
   const createSub = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -918,14 +894,16 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
                           {sub.secret}
                         </code>
                         <button
+                          type="button"
                           onClick={async () => {
                             const ok = await copyText(sub.secret || "");
                             toast[ok ? "success" : "error"](ok ? t("settings.common.secretCopied") : t("settings.common.clipboardBlocked"));
                           }}
-                          className="text-[#fdfbf7]/40 hover:text-cyan-400 transition-colors p-1"
+                          aria-label={t("settings.webhooks.copySecretTitle")}
+                          className="inline-flex min-h-11 min-w-11 items-center justify-center text-[#fdfbf7]/40 hover:text-cyan-400 transition-colors p-1"
                           title={t("settings.webhooks.copySecretTitle")}
                         >
-                          <Copy className="h-3.5 w-3.5" />
+                          <Copy className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                       </>
                     ) : (
@@ -938,10 +916,12 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
 
                 <div className="flex items-center gap-2 self-end md:self-center">
                   <button
+                    type="button"
+                    aria-label={`${t("dw.watch.remove")} ${sub.url}`}
                     onClick={() => deleteSub(sub.id)}
-                    className="p-2 text-[#fdfbf7]/40 hover:text-red-400 transition-colors rounded-sm hover:bg-red-500/10"
+                    className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 text-[#fdfbf7]/40 hover:text-red-400 transition-colors rounded-sm hover:bg-red-500/10"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
               </div>

@@ -7,7 +7,10 @@ import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { sendJson, getComparisonJob } from "../../../_lib/sideby.js";
 import { requireAuth } from "../../../_lib/auth.js";
-import { redisGet, redisIncrement, redisSet } from "../../../_lib/redis.js";
+import { assertRedisAvailable, redisGet, redisIncrement, redisSet } from "../../../_lib/redis.js";
+import { checkGlobalDailyBudget, checkRateLimit } from "../../../_lib/rate-limit.js";
+import { configuredQuota } from "../../../_lib/plan-limits.js";
+import { sendAtCapacityResponse } from "../../../_lib/route-guard.js";
 import { logger } from "../../../_lib/log.js";
 import {
   TRANSLATION_LANGUAGES,
@@ -20,6 +23,11 @@ import {
 export const config = {
   runtime: "nodejs",
   maxDuration: 60,
+  api: {
+    bodyParser: {
+      sizeLimit: "64kb",
+    },
+  },
 };
 
 const BodySchema = z.object({ language: z.enum(TRANSLATION_LANGUAGES) });
@@ -55,12 +63,43 @@ export default async function handler(request: VercelRequest, response: VercelRe
       return sendJson(response, { language, cached: true, result: applyTranslations(job.result, slots, cached) });
     }
 
-    const today = new Date().toISOString().slice(0, 10);
-    const used = await redisIncrement(`translate:${auth.userId}:${today}`, 1, 60 * 60 * 26);
-    if (used > dailyLimit()) {
-      response.setHeader("Retry-After", "3600");
-      return sendJson(response, { error: "Daily translation limit reached. Try again tomorrow." }, 429);
+    await assertRedisAvailable();
+
+    const burst = await checkRateLimit(
+      "user",
+      auth.userId,
+      "translate",
+      configuredQuota("TRANSLATE_RPM", 5),
+    );
+    if (!burst.allowed) {
+      response.setHeader("Retry-After", String(Math.max(1, Math.ceil((burst.resetAt - Date.now()) / 1000))));
+      response.setHeader("X-RateLimit-Limit", String(burst.limit));
+      response.setHeader("X-RateLimit-Remaining", "0");
+      return sendJson(response, { error: "Too many translation requests. Please wait a moment.", code: "RATE_LIMITED" }, 429);
     }
+
+    const cap = dailyLimit();
+    const today = new Date().toISOString().slice(0, 10);
+    const dailyKey = `translate:${auth.userId}:${today}`;
+    const used = await redisIncrement(dailyKey, 1, 60 * 60 * 26);
+    if (used > cap) {
+      response.setHeader("Retry-After", "3600");
+      response.setHeader("X-RateLimit-Limit", String(cap));
+      response.setHeader("X-RateLimit-Remaining", "0");
+      return sendJson(response, { error: "Daily translation limit reached. Try again tomorrow.", code: "RATE_LIMITED" }, 429);
+    }
+
+    const globalBudget = await checkGlobalDailyBudget(
+      "translations",
+      configuredQuota("GLOBAL_TRANSLATIONS_PER_DAY", 2000),
+    );
+    if (!globalBudget.allowed) {
+      await redisIncrement(dailyKey, -1, 60 * 60 * 26).catch(() => undefined);
+      return sendAtCapacityResponse(response, globalBudget.resetAt);
+    }
+
+    response.setHeader("X-RateLimit-Limit", String(cap));
+    response.setHeader("X-RateLimit-Remaining", String(Math.max(0, cap - used)));
 
     const translations = await translateStrings(slots.map((slot) => slot.value), language);
     const changed = translations.filter((text, index) => text !== slots[index].value).length;

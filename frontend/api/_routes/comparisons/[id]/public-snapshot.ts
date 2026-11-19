@@ -14,7 +14,8 @@
  */
 import { sendJobError, sendJson, createPublicSnapshotComparison } from "../../../_lib/sideby.js";
 import { requireAuth } from "../../../_lib/auth.js";
-import { withRateLimit } from "../../../_lib/route-guard.js";
+import { sendAtCapacityResponse, withRateLimit } from "../../../_lib/route-guard.js";
+import { checkGlobalDailyBudget, getGlobalComparisonsDailyCap, refundUsage } from "../../../_lib/rate-limit.js";
 import { waitUntil } from "@vercel/functions";
 import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -49,6 +50,12 @@ export default async function handler(
     }
 
     return await withRateLimit(request, response, "comparison", async () => {
+      const globalBudget = await checkGlobalDailyBudget("comparisons", getGlobalComparisonsDailyCap());
+      if (!globalBudget.allowed) {
+        await refundUsage("user", auth.userId, "comparison");
+        return sendAtCapacityResponse(response, globalBudget.resetAt);
+      }
+
       // Keep serverless execution alive past response using Vercel waitUntil,
       // matching comparison creation.
       const snapshot = await createPublicSnapshotComparison(id, auth.userId, waitUntil);

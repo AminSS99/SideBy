@@ -11,6 +11,7 @@ import { GlowCard } from "@/components/GlowCard";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { formatDate, statusLabel, useI18n, type MessageKey, type TFunction } from "@/i18n";
+import { localizeServerMessage } from "@/i18n/serverMessages";
 
 interface TeamMember {
   id: string;
@@ -57,7 +58,8 @@ const TeamPage = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
     tl.from(".team-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
       .from(".team-content", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.4");
   }, { scope: containerRef });
@@ -85,7 +87,7 @@ const TeamPage = () => {
     void loadTeam().catch((error) => {
       setMembers([]);
       setInvitations([]);
-      setTeamError(error instanceof Error ? error.message : t("wsp.team.loadError"));
+      setTeamError(error instanceof Error ? localizeServerMessage(t, error.message) : t("wsp.team.loadError"));
     });
   }, [loadTeam, t]);
 
@@ -170,7 +172,7 @@ const TeamPage = () => {
       });
     } catch (error) {
       toast.error(t("wsp.team.inviteFail"), {
-        description: error instanceof Error ? error.message : t("wsp.common.tryAgainShortly"),
+        description: error instanceof Error ? localizeServerMessage(t, error.message) : t("wsp.common.tryAgainShortly"),
       });
     } finally {
       setIsInviting(false);
@@ -189,7 +191,7 @@ const TeamPage = () => {
       });
       if (!response.ok) {
         const data = await response.json() as { error?: string };
-        throw new Error(data.error || t("wsp.team.roleUpdateFailMsg"));
+        throw new Error(data.error ? localizeServerMessage(t, data.error) : t("wsp.team.roleUpdateFailMsg"));
       }
       setMembers((prev) =>
         prev.map((m) => (m.id === memberId ? { ...m, role: newRole } : m))
@@ -198,7 +200,7 @@ const TeamPage = () => {
       toast.success(t("wsp.team.roleUpdated"));
     } catch (error) {
       toast.error(t("wsp.team.roleUpdateFail"), {
-        description: error instanceof Error ? error.message : t("wsp.common.tryAgainShortly"),
+        description: error instanceof Error ? localizeServerMessage(t, error.message) : t("wsp.common.tryAgainShortly"),
       });
     }
   };
@@ -218,14 +220,14 @@ const TeamPage = () => {
       });
       if (!response.ok) {
         const data = await response.json() as { error?: string };
-        throw new Error(data.error || t("wsp.team.removeFailMsg"));
+        throw new Error(data.error ? localizeServerMessage(t, data.error) : t("wsp.team.removeFailMsg"));
       }
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
       setInvitations((prev) => prev.filter((m) => m.id !== memberId));
       toast.success(t("wsp.team.memberRemoved"));
     } catch (error) {
       toast.error(t("wsp.team.removeFail"), {
-        description: error instanceof Error ? error.message : t("wsp.common.tryAgainShortly"),
+        description: error instanceof Error ? localizeServerMessage(t, error.message) : t("wsp.common.tryAgainShortly"),
       });
     }
   };
@@ -386,7 +388,7 @@ const TeamPage = () => {
                     </div>
 
                     {editingMember !== member.id && (
-                      <div className="flex items-center gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                         <button
                           disabled={member.role === "owner"}
                           aria-label={t("wsp.team.editRoleAria")}
@@ -394,7 +396,7 @@ const TeamPage = () => {
                             setEditingMember(member.id);
                             setEditRole(member.role === "owner" ? "admin" : member.role);
                           }}
-                          className="flex h-8 w-8 items-center justify-center rounded-sm border border-[#333] bg-[#0c0b0a] text-[#fdfbf7]/40 hover:text-orange-400 hover:border-orange-500/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          className="flex min-h-11 min-w-11 items-center justify-center rounded-sm border border-[#333] bg-[#0c0b0a] text-[#fdfbf7]/40 hover:text-orange-400 hover:border-orange-500/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed focus-visible:opacity-100 group-focus-within:opacity-100"
                         >
                           <Edit2 className="h-3.5 w-3.5" />
                         </button>
@@ -402,7 +404,7 @@ const TeamPage = () => {
                           disabled={member.role === "owner"}
                           aria-label={t("wsp.team.removeMemberAria")}
                           onClick={() => void handleRemoveMember(member.id, member.name || member.email)}
-                          className="flex h-8 w-8 items-center justify-center rounded-sm border border-[#333] bg-[#0c0b0a] text-[#fdfbf7]/40 hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          className="flex min-h-11 min-w-11 items-center justify-center rounded-sm border border-[#333] bg-[#0c0b0a] text-[#fdfbf7]/40 hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed focus-visible:opacity-100 group-focus-within:opacity-100"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>

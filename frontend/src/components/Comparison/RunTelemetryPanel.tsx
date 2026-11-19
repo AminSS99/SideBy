@@ -1,13 +1,10 @@
 import React, { useRef } from 'react';
 import { Activity, Cpu, CircleDollarSign, Zap } from "@/components/icons";
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import type { ComparisonData } from './types';
 import { panelClass } from './constants';
 import { useT } from "@/i18n";
-
-gsap.registerPlugin(ScrollTrigger);
 
 export const RunTelemetryPanel = ({ result }: { result: ComparisonData }) => {
   const t = useT();
@@ -19,11 +16,6 @@ export const RunTelemetryPanel = ({ result }: { result: ComparisonData }) => {
 
     mm.add("(prefers-reduced-motion: no-preference)", () => {
       gsap.from(".telemetry-item", {
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: "top 95%",
-          once: true,
-        },
         x: -20,
         opacity: 0,
         stagger: 0.08,

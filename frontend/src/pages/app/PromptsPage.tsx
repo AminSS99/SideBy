@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useCallback, useEffect, useState, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Terminal, Plus, Search, Play, Copy, Edit3, Trash2, X, Save, Variable } from "@/components/icons";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -23,25 +24,6 @@ interface PromptTemplate {
 
 const searchStringCache = new WeakMap<PromptTemplate, string>();
 
-const initialPrompts: PromptTemplate[] = [
-  {
-    id: "1",
-    name: "Executive Summary",
-    description: "Condenses detailed technical comparisons into business-focused executive summaries.",
-    content: "Act as a CTO. Summarize the following technical comparison focusing only on cost, time-to-market, and security implications: {{comparison_data}}",
-    variables: ["comparison_data"],
-    lastEdited: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    name: "Tone: Highly Technical",
-    description: "Forces the AI to use precise engineering terminology and ignore marketing fluff.",
-    content: "You are a principal systems engineer. Rewrite this content to be highly technical. Remove all marketing language. Focus on architecture, latency, and system constraints: {{input}}",
-    variables: ["input"],
-    lastEdited: new Date(Date.now() - 86400000).toISOString(),
-  }
-];
-
 // Helper to extract variables from prompt content e.g. {{my_var}}
 const extractVariables = (text: string): string[] => {
   const matches = text.match(/\{\{([^}]+)\}\}/g);
@@ -52,9 +34,12 @@ const extractVariables = (text: string): string[] => {
 
 const PromptsPage = () => {
   const { t, lang } = useI18n();
+  const navigate = useNavigate();
   const { activeWorkspace } = useWorkspace();
   const { activeProject } = useProjects();
   const [prompts, setPrompts] = useState<PromptTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   
   // Modal state
@@ -64,7 +49,8 @@ const PromptsPage = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
     tl.from(".prompt-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
       .from(".prompt-controls", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6");
 
@@ -73,10 +59,12 @@ const PromptsPage = () => {
     }
   }, { scope: containerRef });
 
-  useEffect(() => {
-    const loadPrompts = async () => {
-      const query = activeWorkspace?.id ? `?workspaceId=${activeWorkspace.id}` : "";
-      const response = await apiFetch(buildApiUrl(`/api/prompts${query}`));
+  const loadPrompts = useCallback(async (signal?: AbortSignal) => {
+    try {
+      setIsLoading(true);
+      setLoadError(null);
+      const query = activeWorkspace?.id ? `?workspaceId=${encodeURIComponent(activeWorkspace.id)}` : "";
+      const response = await apiFetch(buildApiUrl(`/api/prompts${query}`), { signal });
       const data = (await response.json()) as {
         prompts: Array<{
           id: string;
@@ -87,6 +75,7 @@ const PromptsPage = () => {
           updatedAt: string;
         }>;
       };
+      if (signal?.aborted) return;
       setPrompts(data.prompts.map((prompt) => ({
         id: prompt.id,
         name: prompt.name,
@@ -97,15 +86,28 @@ const PromptsPage = () => {
           : extractVariables(prompt.systemPrompt),
         lastEdited: prompt.updatedAt,
       })));
-    };
-
-    void loadPrompts().catch((error) => {
+    } catch (error) {
+      if (signal?.aborted || (error instanceof Error && error.name === "AbortError")) {
+        return;
+      }
+      const message = error instanceof Error ? error.message : t("wsp.common.tryAgainShortly");
+      setLoadError(message);
+      setPrompts([]);
       toast.error(t("wsp.prompts.loadError"), {
-        description: error instanceof Error ? error.message : t("wsp.common.tryAgainShortly"),
+        description: message,
       });
-      setPrompts(initialPrompts);
-    });
-  }, [activeWorkspace?.id, activeProject?.id, t]);
+    } finally {
+      if (!signal?.aborted) {
+        setIsLoading(false);
+      }
+    }
+  }, [activeWorkspace?.id, t]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadPrompts(controller.signal);
+    return () => controller.abort();
+  }, [loadPrompts, activeProject?.id]);
 
   const filteredPrompts = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -221,11 +223,30 @@ const PromptsPage = () => {
         </div>
       </div>
 
+      {loadError && (
+        <div
+          role="alert"
+          className="flex flex-col gap-4 rounded-sm border border-amber-500/30 bg-amber-500/10 p-6 text-sm text-amber-400 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p className="font-bold">{t("wsp.prompts.loadError")}</p>
+            <p className="mt-1 text-xs text-amber-300/80">{loadError}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadPrompts()}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-sm border border-amber-500/40 px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors hover:bg-amber-500/20"
+          >
+            {t("cmp.retry")}
+          </button>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
         {filteredPrompts.map((prompt) => (
           <GlowCard 
             key={prompt.id} 
-            containerClassName="prompt-card h-full" 
+            containerClassName="prompt-card group h-full" 
             className="flex flex-col h-full"
             glowColor="rgba(16, 185, 129, 0.15)"
           >
@@ -233,7 +254,7 @@ const PromptsPage = () => {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    <Terminal className="h-4 w-4" />
+                    <Terminal className="h-4 w-4" aria-hidden="true" />
                   </div>
                   <div>
                     <h3 className="font-serif text-xl text-[#fdfbf7]">{prompt.name}</h3>
@@ -248,16 +269,17 @@ const PromptsPage = () => {
                 {prompt.description}
               </p>
 
-              <div className="rounded-sm bg-[#0c0b0a] border border-[#2a2a2a] p-4 relative group/code flex-1">
+              <div className="rounded-sm bg-[#0c0b0a] border border-[#2a2a2a] p-4 relative group group/code flex-1">
                 <code className="text-xs text-[#fdfbf7]/80 font-mono block whitespace-pre-wrap">
                   {prompt.content}
                 </code>
                 <button 
+                  type="button"
                   onClick={() => copyToClipboard(prompt.content)}
                   aria-label={t("wsp.prompts.copyAria")}
-                  className="absolute top-2 right-2 p-1.5 rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7]/50 opacity-0 group-hover/code:opacity-100 transition-opacity hover:text-[#fdfbf7]"
+                  className="absolute top-2 right-2 inline-flex min-h-11 min-w-11 items-center justify-center p-1.5 rounded-sm bg-[#1a1a1a] border border-[#333] text-[#fdfbf7]/50 opacity-0 group-hover/code:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity hover:text-[#fdfbf7]"
                 >
-                  <Copy className="h-3 w-3" />
+                  <Copy className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </div>
 
@@ -275,31 +297,37 @@ const PromptsPage = () => {
             <div className="border-t border-[#2a2a2a] bg-[#0c0b0a] p-3 flex justify-between items-center px-6 mt-auto">
               <div className="flex gap-2">
                 <button 
+                  type="button"
                   onClick={() => handleOpenEditor(prompt)}
                   aria-label={t("wsp.prompts.editAria")}
-                  className="p-2 text-[#fdfbf7]/40 hover:text-emerald-400 transition-colors"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 text-[#fdfbf7]/40 hover:text-emerald-400 focus-visible:opacity-100 group-focus-within:opacity-100 transition-colors"
                 >
-                  <Edit3 className="h-4 w-4" />
+                  <Edit3 className="h-4 w-4" aria-hidden="true" />
                 </button>
                 <button 
+                  type="button"
                   onClick={() => void handleDelete(prompt.id).catch((error) => toast.error(t("wsp.prompts.deleteFail"), { description: error instanceof Error ? error.message : t("wsp.common.tryAgainShortly") }))}
                   aria-label={t("wsp.prompts.deleteAria")}
-                  className="p-2 text-[#fdfbf7]/40 hover:text-red-400 transition-colors"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 text-[#fdfbf7]/40 hover:text-red-400 focus-visible:opacity-100 group-focus-within:opacity-100 transition-colors"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
-              <button className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/70 hover:text-white transition-colors">
-                <Play className="h-3 w-3" />
+              <button
+                type="button"
+                onClick={() => navigate(`/app/chat?prompt=${encodeURIComponent(prompt.content)}`)}
+                className="flex min-h-11 items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/70 hover:text-white transition-colors"
+              >
+                <Play className="h-3 w-3" aria-hidden="true" />
                 {t("wsp.prompts.testPrompt")}
               </button>
             </div>
           </GlowCard>
         ))}
         
-        {filteredPrompts.length === 0 && (
+        {filteredPrompts.length === 0 && !loadError && !isLoading && (
           <div className="col-span-full py-16 text-center border border-dashed border-[#333] bg-[#0c0b0a] rounded-sm">
-            <Terminal className="mx-auto h-8 w-8 text-[#fdfbf7]/20 mb-4" />
+            <Terminal className="mx-auto h-8 w-8 text-[#fdfbf7]/20 mb-4" aria-hidden="true" />
             <p className="text-[#fdfbf7]/50 text-sm">{t("wsp.prompts.empty")}</p>
           </div>
         )}
@@ -334,6 +362,16 @@ const PromptEditorModal = ({
   // Real-time variable extraction
   const detectedVariables = useMemo(() => extractVariables(formData.content), [formData.content]);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.content) {
@@ -356,6 +394,9 @@ const PromptEditorModal = ({
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
       
       <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="prompt-editor-modal-title"
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -364,18 +405,19 @@ const PromptEditorModal = ({
         <div className="flex items-center justify-between border-b border-[#2a2a2a] p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <Terminal className="h-4 w-4" />
+              <Terminal className="h-4 w-4" aria-hidden="true" />
             </div>
-            <h2 className="font-serif text-xl text-[#fdfbf7]">
+            <h2 id="prompt-editor-modal-title" className="font-serif text-xl text-[#fdfbf7]">
               {prompt.name ? t("wsp.prompts.editTitle") : t("wsp.prompts.createTitle")}
             </h2>
           </div>
           <button
+            type="button"
             onClick={onClose}
             aria-label={t("wsp.prompts.closeAria")}
-            className="rounded-sm p-2 text-[#fdfbf7]/40 transition-colors hover:bg-[#1a1a1a] hover:text-[#fdfbf7]"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm p-2 text-[#fdfbf7]/40 transition-colors hover:bg-[#1a1a1a] hover:text-[#fdfbf7]"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 

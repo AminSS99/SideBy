@@ -29,7 +29,7 @@ export default async function handler(
     if (!id) return sendJson(response, { error: "Comparison id is required." }, 400);
 
     return withApiKeyRateLimit(request, response, "export", apiKey, async () => {
-      const result = await exportComparison(id, userId, format);
+      const result = await exportComparison(id, userId, format, apiKey.workspaceId || null);
       return sendJson(response, result);
     });
   } catch (error) {

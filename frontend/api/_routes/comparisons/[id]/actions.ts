@@ -8,6 +8,7 @@ import { withRateLimit } from "../../../_lib/route-guard.js";
 import { exportComparison } from "../../../_lib/export-engine.js";
 import { answerFollowUp } from "../../../_lib/followup-engine.js";
 import { captureServerEvent } from "../../../_lib/analytics.js";
+import { assertNoLikelySecrets } from "../../../_lib/secret-scan.js";
 import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
@@ -52,6 +53,7 @@ export default async function handler(
       if (!question) {
         return sendJson(response, { error: "Question is required." }, 400);
       }
+      assertNoLikelySecrets(question);
 
       return await withRateLimit(request, response, "followUp", async () => {
         const result = await answerFollowUp(id, auth.userId, question);

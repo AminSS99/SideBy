@@ -82,6 +82,8 @@ const Compare = () => {
     document.title = `${result.entities.a.name} vs ${result.entities.b.name} Scorecard & Comparison | SideBy`;
 
     // 2. Helper to set/create meta tag
+    const createdMetas: Element[] = [];
+    const restoredMetas: Array<{ element: Element; prevContent: string | null }> = [];
     const setMetaTag = (nameOrProperty: string, content: string, isProperty = false) => {
       const attribute = isProperty ? "property" : "name";
       let element = document.querySelector(`meta[${attribute}="${nameOrProperty}"]`);
@@ -89,6 +91,9 @@ const Compare = () => {
         element = document.createElement("meta");
         element.setAttribute(attribute, nameOrProperty);
         document.head.appendChild(element);
+        createdMetas.push(element);
+      } else {
+        restoredMetas.push({ element, prevContent: element.getAttribute("content") });
       }
       element.setAttribute("content", content);
       return element;
@@ -96,12 +101,12 @@ const Compare = () => {
 
     // Set standard metas
     const desc = `Detailed, source-backed comparison of ${result.entities.a.name} vs ${result.entities.b.name}. Explore key features, dimension scores, and consensus verdicts.`;
-    const metaDescription = setMetaTag("description", desc);
-    const ogTitle = setMetaTag("og:title", `${result.entities.a.name} vs ${result.entities.b.name} Scorecard`, true);
-    const ogDesc = setMetaTag("og:description", desc, true);
+    setMetaTag("description", desc);
+    setMetaTag("og:title", `${result.entities.a.name} vs ${result.entities.b.name} Scorecard`, true);
+    setMetaTag("og:description", desc, true);
     // og:url is now handled globally by RouteMetaUpdater
-    const twitterTitle = setMetaTag("twitter:title", `${result.entities.a.name} vs ${result.entities.b.name} Scorecard`);
-    const twitterDesc = setMetaTag("twitter:description", desc);
+    setMetaTag("twitter:title", `${result.entities.a.name} vs ${result.entities.b.name} Scorecard`);
+    setMetaTag("twitter:description", desc);
 
     // 3. Inject JSON-LD Schema
     let jsonLdScript = document.getElementById("jsonld-comparison") as HTMLScriptElement;
@@ -132,12 +137,16 @@ const Compare = () => {
     // Cleanup on unmount/re-run
     return () => {
       document.title = prevTitle;
-      metaDescription.remove();
-      ogTitle.remove();
-      ogDesc.remove();
-      // ogUrl.remove();
-      twitterTitle.remove();
-      twitterDesc.remove();
+      for (const el of createdMetas) {
+        el.remove();
+      }
+      for (const { element, prevContent } of restoredMetas) {
+        if (prevContent === null) {
+          element.removeAttribute("content");
+        } else {
+          element.setAttribute("content", prevContent);
+        }
+      }
       jsonLdScript.remove();
     };
   }, [isLoading, result]);
@@ -201,7 +210,7 @@ const Compare = () => {
           <>
             <section className="mb-10">
               <div className="compare-hero-badge mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-500">
-                <Sparkles className="h-3.5 w-3.5" /> Public Comparison
+                <Sparkles className="h-3.5 w-3.5" /> {t("pub.badge")}
               </div>
               <h1 className="compare-hero-title font-serif text-4xl text-white sm:text-5xl">
                 <span className="bg-gradient-to-b from-orange-400 to-orange-600 bg-clip-text text-transparent">{result.entities.a.name}</span>
@@ -236,7 +245,7 @@ const Compare = () => {
                   ))}
                 </div>
               </div>
-              <aside className="space-y-6 lg:col-span-4 sticky top-24 self-start pb-8 h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar">
+              <aside className="space-y-6 lg:col-span-4 lg:sticky lg:top-24 self-start pb-8 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto no-scrollbar">
                 <TableOfContents result={result} />
                 <VerdictPanel result={result} />
                 <WatchlistPanel result={result} comparisonId={jobData.id} />

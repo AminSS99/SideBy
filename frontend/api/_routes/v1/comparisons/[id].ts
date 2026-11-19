@@ -20,7 +20,7 @@ export default async function handler(
     assertApiKeyScope(apiKey, "comparisons:read");
     const id = Array.isArray(request.query.id) ? request.query.id[0] : request.query.id;
     if (!id) return sendJson(response, { error: "Comparison id is required." }, 400);
-    return sendJson(response, await getComparisonJob(id, apiKey.userId));
+    return sendJson(response, await getComparisonJob(id, apiKey.userId, apiKey.workspaceId || null));
   } catch (error) {
     const status =
       error instanceof Error && "statusCode" in error

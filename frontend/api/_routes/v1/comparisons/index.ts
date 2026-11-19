@@ -38,16 +38,26 @@ export default async function handler(
     if (request.method === "GET") {
       assertApiKeyScope(apiKey, "comparisons:read");
       return sendJson(response, {
-        comparisons: await listComparisonHistory(userId, 50),
+        comparisons: await listComparisonHistory(userId, 50, apiKey.workspaceId || null),
       });
     }
 
     if (request.method === "POST") {
       assertApiKeyScope(apiKey, "comparisons:write");
-      return withApiKeyRateLimit(request, response, "comparison", apiKey, async () => {
-        const body = CreateBodySchema.parse(request.body || {});
-        assertNoLikelySecrets(body.query);
+      const body = CreateBodySchema.parse(request.body || {});
+      assertNoLikelySecrets(body.query);
 
+      // A workspace-scoped API key must never write outside its bound workspace.
+      if (apiKey.workspaceId && body.workspaceId && body.workspaceId !== apiKey.workspaceId) {
+        return sendJson(
+          response,
+          { error: "API key is restricted to a different workspace." },
+          403,
+        );
+      }
+      const effectiveWorkspaceId = apiKey.workspaceId || body.workspaceId || undefined;
+
+      return withApiKeyRateLimit(request, response, "comparison", apiKey, async () => {
         const globalCap = getGlobalComparisonsDailyCap();
         const globalBudget = await checkGlobalDailyBudget("comparisons", globalCap);
         if (!globalBudget.allowed) {
@@ -61,7 +71,7 @@ export default async function handler(
           query: body.query,
           userId,
           orgId: apiKey.orgId || undefined,
-          workspaceId: body.workspaceId || apiKey.workspaceId || undefined,
+          workspaceId: effectiveWorkspaceId,
           projectId: body.projectId,
         }, waitUntil);
 

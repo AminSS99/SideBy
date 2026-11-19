@@ -1,9 +1,11 @@
 import { useMemo, useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { GitCompareArrows, Loader2 } from "@/components/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { pwaUpdates } from "@/lib/pwa/register";
 import { useDraftScope } from "@/hooks/useDraftScope";
+import { useT } from "@/i18n";
 
 export type BracketRun = { id: string; query: string; status: "running" | "completed" | "failed" };
 
@@ -14,6 +16,7 @@ export function MultiOptionBracketComposer({
   onStart: (options: string[], context: string) => Promise<BracketRun[]>;
   isCreating: boolean;
 }) {
+  const t = useT();
   const [rawOptions, setRawOptions] = useState("");
   const [context, setContext] = useState("");
   const [runs, setRuns] = useState<BracketRun[]>([]);
@@ -47,13 +50,13 @@ export function MultiOptionBracketComposer({
       if (draft.rawOptions) setRawOptions(draft.rawOptions);
       if (draft.context) setContext(draft.context);
       pwaUpdates.clearPreservedDraft("bracket_composer");
-      toast.info("Restored your unsaved bracket options.");
+      toast.info(t("bracket.restoredDraft"));
     }
-  }, [isDraftScopeReady, draftScope]);
+  }, [isDraftScopeReady, draftScope, t]);
 
   const start = async () => {
     if (options.length < 3) {
-      toast.error("Add 3 or 4 distinct options.");
+      toast.error(t("bracket.needThreeOptions"));
       return;
     }
     if (isCreating || isLocalStarting) return;
@@ -62,9 +65,9 @@ export function MultiOptionBracketComposer({
     try {
       const nextRuns = await onStart(options, context);
       setRuns(nextRuns);
-      toast.success("Bracket research started.", { description: `${nextRuns.length} evidence-backed pair comparisons are running.` });
+      toast.success(t("bracket.startedTitle"), { description: t("bracket.startedDesc", { count: nextRuns.length }) });
     } catch (error) {
-      toast.error("Unable to start the bracket.", { description: error instanceof Error ? error.message : "Please try again." });
+      toast.error(t("bracket.startErrorTitle"), { description: error instanceof Error ? error.message : t("bracket.startErrorFallback") });
     } finally {
       setTimeout(() => setIsLocalStarting(false), 600);
     }
@@ -75,36 +78,36 @@ export function MultiOptionBracketComposer({
       <div className="flex items-start gap-3">
         <GitCompareArrows className="mt-0.5 h-5 w-5 text-orange-400 shrink-0" />
         <div>
-          <h2 className="font-serif text-xl text-white">3–4 option bracket</h2>
+          <h2 className="font-serif text-xl text-white">{t("bracket.title")}</h2>
           <p className="mt-1 text-xs leading-relaxed text-white/50">
-            SideBy creates every pairwise research run, so each matchup keeps its sources, confidence, and verdict.
+            {t("bracket.subtitle")}
           </p>
         </div>
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
         <div>
           <label htmlFor="bracket-options" className="mb-1.5 block text-[9px] font-bold uppercase tracking-widest text-white/40">
-            Options (3–4, one per line)
+            {t("bracket.optionsLabel")}
           </label>
           <textarea
             id="bracket-options"
             value={rawOptions}
             onChange={(event) => setRawOptions(event.target.value)}
             maxLength={320}
-            placeholder={"Supabase\nFirebase\nAppwrite"}
+            placeholder={t("bracket.optionsPlaceholder")}
             className="min-h-20 w-full rounded-lg border border-white/[0.1] bg-[#0c0b0a] p-3 text-base md:text-sm text-white outline-none placeholder:text-white/25 focus:border-orange-500 transition-colors"
           />
         </div>
         <div className="md:self-center">
           <label htmlFor="bracket-context" className="mb-1.5 block text-[9px] font-bold uppercase tracking-widest text-white/40">
-            Shared context <span className="text-white/25">(optional)</span>
+            {t("bracket.contextLabel")} <span className="text-white/25">{t("bracket.optional")}</span>
           </label>
           <input
             id="bracket-context"
             value={context}
             onChange={(event) => setContext(event.target.value)}
             maxLength={200}
-            placeholder="Optional shared use case"
+            placeholder={t("bracket.contextPlaceholder")}
             className="h-11 w-full rounded-lg border border-white/[0.1] bg-[#0c0b0a] px-3 text-base md:text-sm text-white outline-none placeholder:text-white/25 focus:border-orange-500 transition-colors"
           />
         </div>
@@ -117,11 +120,11 @@ export function MultiOptionBracketComposer({
           disabled={isCreating || isLocalStarting || options.length < 3}
           className="inline-flex min-h-11 items-center justify-center rounded-lg bg-orange-500 px-5 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-colors hover:bg-orange-400 disabled:opacity-40 md:self-end focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
         >
-          {isCreating || isLocalStarting ? <Loader2 className="h-4 w-4 animate-spin" /> : `Research ${pairCount} pairs`}
+          {isCreating || isLocalStarting ? <Loader2 className="h-4 w-4 animate-spin" /> : t("bracket.researchPairs", { count: pairCount })}
         </motion.button>
       </div>
       <p className="mt-2 text-[9px] font-bold uppercase tracking-widest text-white/35">
-        {options.length}/4 options · {pairCount || 0} pairwise research runs
+        {t("bracket.summary", { options: options.length, pairs: pairCount || 0 })}
       </p>
       <AnimatePresence>
         {runs.length > 0 && (
@@ -135,20 +138,20 @@ export function MultiOptionBracketComposer({
             <table className="w-full min-w-[460px] text-left text-xs">
               <thead className="bg-[#0c0b0a] text-[9px] uppercase tracking-widest text-white/40">
                 <tr>
-                  <th className="px-3 py-2">Matchup</th>
-                  <th className="px-3 py-2">Research status</th>
-                  <th className="px-3 py-2">Evidence</th>
+                  <th className="px-3 py-2">{t("bracket.colMatchup")}</th>
+                  <th className="px-3 py-2">{t("bracket.colStatus")}</th>
+                  <th className="px-3 py-2">{t("bracket.colEvidence")}</th>
                 </tr>
               </thead>
               <tbody>
                 {runs.map((run) => (
                   <tr key={run.id} className="border-t border-white/[0.06] hover:bg-white/[0.02] transition-colors">
                     <td className="px-3 py-3 text-white/80 font-medium">{run.query}</td>
-                    <td className="px-3 py-3 capitalize text-orange-300">{run.status}</td>
+                    <td className="px-3 py-3 capitalize text-orange-300">{t(`bracket.status.${run.status}`)}</td>
                     <td className="px-3 py-3">
-                      <a href={`/app/comparisons/${run.id}`} className="font-bold uppercase tracking-widest text-orange-400 hover:text-orange-300">
-                        Open
-                      </a>
+                      <Link to={`/app/comparisons/${run.id}`} className="font-bold uppercase tracking-widest text-orange-400 hover:text-orange-300">
+                        {t("bracket.open")}
+                      </Link>
                     </td>
                   </tr>
                 ))}

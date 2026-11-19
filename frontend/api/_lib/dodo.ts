@@ -28,8 +28,9 @@ export async function dodoRequest<T>(
   });
 
   if (!response.ok) {
+    await response.text().catch(() => "");
     throw Object.assign(
-      new Error(`Dodo Payments API error ${response.status}: ${await response.text()}`),
+      new Error(`Dodo Payments API request failed (${response.status}).`),
       { statusCode: 502 },
     );
   }
@@ -37,10 +38,18 @@ export async function dodoRequest<T>(
   return (await response.json()) as T;
 }
 
-export async function readRawBody(request: VercelRequest): Promise<string> {
+const MAX_RAW_BODY_BYTES = 1024 * 1024; // 1 MiB
+
+export async function readRawBody(request: VercelRequest, maxBytes = MAX_RAW_BODY_BYTES): Promise<string> {
   const chunks: Buffer[] = [];
+  let totalBytes = 0;
   for await (const chunk of request) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    totalBytes += buffer.length;
+    if (totalBytes > maxBytes) {
+      throw Object.assign(new Error("Webhook payload too large."), { statusCode: 413 });
+    }
+    chunks.push(buffer);
   }
   return Buffer.concat(chunks).toString("utf8");
 }

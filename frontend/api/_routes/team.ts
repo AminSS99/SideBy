@@ -5,6 +5,7 @@ import { canAccessWorkspace } from "../_lib/db-auth.js";
 import { configuredQuota } from "../_lib/plan-limits.js";
 import { checkRateLimit } from "../_lib/rate-limit.js";
 import { sendJson } from "../_lib/sideby.js";
+import { logger } from "../_lib/log.js";
 import { createDbClient } from "../../src/db/index.js";
 import { memberships, teamInvitations, users, workspaces } from "../../src/db/schema.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -113,8 +114,10 @@ async function createClerkInvitation(params: {
   );
 
   if (!response.ok) {
+    const upstreamBody = await response.text().catch(() => "");
+    logger.warn("Clerk invitation failed", { status: response.status, body: upstreamBody.slice(0, 300) });
     throw Object.assign(
-      new Error(`Clerk invitation failed: ${response.status} ${await response.text()}`),
+      new Error("Unable to send team invitation right now. Please try again."),
       { statusCode: 502 },
     );
   }
@@ -145,8 +148,10 @@ async function updateClerkMembership(params: {
   );
 
   if (!response.ok) {
+    const upstreamBody = await response.text().catch(() => "");
+    logger.warn("Clerk role update failed", { status: response.status, body: upstreamBody.slice(0, 300) });
     throw Object.assign(
-      new Error(`Clerk role update failed: ${response.status} ${await response.text()}`),
+      new Error("Unable to update member role right now. Please try again."),
       { statusCode: 502 },
     );
   }
@@ -174,8 +179,10 @@ async function removeClerkMember(params: {
   );
 
   if (!response.ok && response.status !== 404) {
+    const upstreamBody = await response.text().catch(() => "");
+    logger.warn("Clerk member removal failed", { status: response.status, body: upstreamBody.slice(0, 300) });
     throw Object.assign(
-      new Error(`Clerk member removal failed: ${response.status} ${await response.text()}`),
+      new Error("Unable to remove team member right now. Please try again."),
       { statusCode: 502 },
     );
   }

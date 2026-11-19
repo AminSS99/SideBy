@@ -15,7 +15,8 @@ export const LegalPageShell = ({ title, lastUpdated, children }: LegalPageShellP
   const pageRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
     tl.from(".legal-header", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" })
       .from(".legal-content", { y: 30, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.4");
   }, { scope: pageRef });

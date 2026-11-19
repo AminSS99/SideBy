@@ -320,7 +320,8 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
           <button
             type="submit"
             disabled={!input.trim() || isTyping}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-[#fdfbf7] text-black transition-colors hover:bg-[#e0e0e0] disabled:opacity-50 disabled:hover:bg-white"
+            aria-label={t("fu.sendAria")}
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-sm bg-[#fdfbf7] text-black transition-colors hover:bg-[#e0e0e0] disabled:opacity-50 disabled:hover:bg-white"
           >
             <Send className="h-4 w-4" />
           </button>

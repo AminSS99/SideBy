@@ -4,10 +4,14 @@ import { assertSafeWebhookUrl } from "../webhook-url.js";
 describe("webhook destination validation", () => {
   it.each([
     "https://[::ffff:127.0.0.1]/", "https://[::ffff:10.0.0.1]/",
-    "https://[::]/", "https://[fe90::1]/", "https://100.100.100.200/",
-    "https://192.0.0.1/", "https://224.0.0.1/", "https://255.255.255.255/",
+    "https://[::]/", "https://[fe90::1]/", "https://[fec0::1]/",
+    "https://100.100.100.200/", "https://192.0.0.1/", "https://192.88.99.1/",
+    "https://224.0.0.1/", "https://255.255.255.255/",
     "https://example.localhost./", "https://metadata.google.internal./",
-  ])("rejects non-public destination %s", (url) => {
+    "https://metadata.goog/computeMetadata/v1/",
+    "https://service.internal/admin", "https://printer.local/status",
+    `https://example.com/${"a".repeat(2050)}`,
+  ])("rejects non-public or invalid destination %s", (url) => {
     expect(() => assertSafeWebhookUrl(url)).toThrow();
   });
   it.each(["https://example.com/hook", "https://8.8.8.8/hook", "https://[2606:4700:4700::1111]/"]) (

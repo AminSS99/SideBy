@@ -52,4 +52,21 @@ describe("public eligibility safeguards", () => {
     expect(result.headers["Retry-After"]).toBe("60");
     expect(deps.validate).not.toHaveBeenCalled();
   });
+
+  it("infers language from Accept-Language when body language is omitted", async () => {
+    const res = {
+      setHeader: vi.fn(),
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    };
+    await handler(
+      {
+        method: "POST",
+        headers: { "x-forwarded-for": "192.0.2.1", "accept-language": "az-AZ,az;q=0.9" },
+        body: { query: "iPhone vs Pixel" },
+      } as unknown as VercelRequest,
+      res as unknown as VercelResponse,
+    );
+    expect(deps.validate).toHaveBeenCalledWith("iPhone vs Pixel", { allowAi: true, language: "az" });
+  });
 });

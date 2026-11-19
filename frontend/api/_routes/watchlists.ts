@@ -2,12 +2,13 @@ import { and, desc, eq } from "drizzle-orm";
 import { waitUntil } from "@vercel/functions";
 import { z } from "zod";
 import { requireAuth } from "../_lib/auth.js";
-import { canAccessWorkspace } from "../_lib/db-auth.js";
+import { canAccessWorkspace, canMutateComparison } from "../_lib/db-auth.js";
 import { createComparisonJob, sendJson } from "../_lib/sideby.js";
 import { assertNoLikelySecrets } from "../_lib/secret-scan.js";
+import { checkGlobalDailyBudget, getGlobalComparisonsDailyCap } from "../_lib/rate-limit.js";
 import { createDbClient } from "../../src/db/index.js";
 import { watchlists } from "../../src/db/schema.js";
-import { withRateLimit } from "../_lib/route-guard.js";
+import { sendAtCapacityResponse, withRateLimit } from "../_lib/route-guard.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
@@ -70,12 +71,18 @@ export default async function handler(
 
         let targetComparisonId = body.comparisonId;
         if (targetComparisonId) {
-          const { canAccessComparison } = await import("../_lib/db-auth.js");
-          const hasAccess = await canAccessComparison(db, auth.userId, targetComparisonId);
-          if (!hasAccess) {
+          // Watchlists periodically refresh their linked comparison, so the
+          // caller must have mutation rights (owner or workspace admin), not
+          // merely read access to someone else's public comparison.
+          const canMutate = await canMutateComparison(db, auth.userId, targetComparisonId);
+          if (!canMutate) {
             return sendJson(response, { error: "Comparison not found or unauthorized." }, 404);
           }
         } else {
+          const globalBudget = await checkGlobalDailyBudget("comparisons", getGlobalComparisonsDailyCap());
+          if (!globalBudget.allowed) {
+            return sendAtCapacityResponse(response, globalBudget.resetAt);
+          }
           // Each watchlist owns a dedicated comparison row
           const job = await createComparisonJob({
             query: body.query,

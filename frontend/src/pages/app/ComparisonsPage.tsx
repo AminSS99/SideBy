@@ -139,44 +139,69 @@ const ComparisonsPage = () => {
   }, [filter, query]);
 
 
-  const load = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const res = await apiFetch(buildApiUrl("/api/comparisons?limit=50"));
-      const contentType = res.headers.get("content-type");
-      if (!res.ok || !contentType?.includes("application/json")) {
-        throw new Error("Unable to load saved comparisons.");
+  const load = useCallback(
+    async ({ silent = false, signal }: { silent?: boolean; signal?: AbortSignal } = {}) => {
+      try {
+        if (!silent) {
+          setIsLoading(true);
+          setError(null);
+        }
+        const params = new URLSearchParams({ limit: "50" });
+        if (activeWorkspace?.id) params.set("workspaceId", activeWorkspace.id);
+        if (activeProject?.id) params.set("projectId", activeProject.id);
+
+        const res = await apiFetch(buildApiUrl(`/api/comparisons?${params.toString()}`), {
+          signal,
+        });
+        const contentType = res.headers.get("content-type");
+        if (!res.ok || !contentType?.includes("application/json")) {
+          throw new Error("Unable to load saved comparisons.");
+        }
+
+        const data = (await res.json()) as { comparisons: ComparisonHistoryItem[] };
+        if (signal?.aborted) return;
+
+        // Precompute search strings for all loaded comparisons to optimize the keystroke filter loop
+        for (const item of data.comparisons) {
+          const searchString = [
+            item.query,
+            item.entityA,
+            item.entityB,
+            item.folder,
+            ...item.tags,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          searchMapCache.set(item, searchString);
+        }
+
+        setItems(data.comparisons);
+        if (silent) setError(null);
+      } catch (loadError) {
+        if (
+          signal?.aborted ||
+          (loadError instanceof Error && loadError.name === "AbortError")
+        ) {
+          return;
+        }
+        if (!silent) {
+          setItems([]);
+          setError(loadError instanceof Error ? loadError.message : t("cmp.loadError"));
+        }
+      } finally {
+        if (!silent && !signal?.aborted) {
+          setIsLoading(false);
+        }
       }
-
-      const data = (await res.json()) as { comparisons: ComparisonHistoryItem[] };
-
-      // Precompute search strings for all loaded comparisons to optimize the keystroke filter loop
-      for (const item of data.comparisons) {
-        const searchString = [
-          item.query,
-          item.entityA,
-          item.entityB,
-          item.folder,
-          ...item.tags,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        searchMapCache.set(item, searchString);
-      }
-
-      setItems(data.comparisons);
-    } catch (loadError) {
-      setItems([]);
-      setError(loadError instanceof Error ? loadError.message : t("cmp.loadError"));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [t]);
+    },
+    [activeWorkspace?.id, activeProject?.id, t],
+  );
 
   useEffect(() => {
-    void load();
+    const controller = new AbortController();
+    void load({ signal: controller.signal });
+    return () => controller.abort();
   }, [load]);
 
   // Handle ?q= query param from landing page quick-start
@@ -198,16 +223,22 @@ const ComparisonsPage = () => {
   }, [items]);
 
   useEffect(() => {
+    let pollController: AbortController | null = null;
     const interval = window.setInterval(() => {
       if (
         hasRunningRef.current &&
         (typeof document === "undefined" || document.visibilityState === "visible")
       ) {
-        void load();
+        pollController?.abort();
+        pollController = new AbortController();
+        void load({ silent: true, signal: pollController.signal });
       }
     }, 4500);
 
-    return () => window.clearInterval(interval);
+    return () => {
+      window.clearInterval(interval);
+      pollController?.abort();
+    };
   }, [load]);
 
   const animatedRef = useRef(false);
@@ -221,10 +252,11 @@ const ComparisonsPage = () => {
         opacity: 0,
         duration: 0.6,
         stagger: 0.1,
-        ease: "power2.out"
+        ease: "power2.out",
+        clearProps: "transform,opacity",
       });
     }
-  }, [isLoading]);
+  }, { scope: containerRef, dependencies: [isLoading] });
 
   useGSAP(() => {
     if (!isFirstComparisonFlow || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -234,7 +266,7 @@ const ComparisonsPage = () => {
       duration: 0.6,
       stagger: 0.08,
       ease: "back.out(1.25)",
-      clearProps: "transform",
+      clearProps: "transform,opacity",
     });
   }, { scope: containerRef, dependencies: [isFirstComparisonFlow] });
 
@@ -356,6 +388,7 @@ const ComparisonsPage = () => {
       });
     } catch (organizeError) {
       toast.error(t("cmp.toast.orgFail"), {
+        id: `cmp-org-fail-${item.id}`,
         description: organizeError instanceof Error ? organizeError.message : t("cmp.toast.tryAgain"),
       });
       throw organizeError;
@@ -692,13 +725,20 @@ const ComparisonRow = ({
 
   const saveOrganization = async () => {
     const tags = [...new Set(tagsDraft.split(",").map((tag) => tag.trim()).filter(Boolean))].slice(0, 8);
-    await onOrganize({
-      isFavorited: item.isFavorited,
-      folder: folderDraft.trim() || null,
-      tags,
-    });
-    setIsEditingOrganization(false);
-    toast.success(t("cmp.toast.orgSaved"));
+    try {
+      await onOrganize({
+        isFavorited: item.isFavorited,
+        folder: folderDraft.trim() || null,
+        tags,
+      });
+      setIsEditingOrganization(false);
+      toast.success(t("cmp.toast.orgSaved"));
+    } catch (error) {
+      toast.error(t("cmp.toast.orgFail"), {
+        id: `cmp-org-fail-${item.id}`,
+        description: error instanceof Error ? error.message : t("cmp.toast.tryAgain"),
+      });
+    }
   };
 
   return (
@@ -771,7 +811,7 @@ const ComparisonRow = ({
               isFavorited: !item.isFavorited,
               folder: item.folder,
               tags: item.tags,
-            })}
+            }).catch(() => undefined)}
             disabled={isOrganizing}
             className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${item.isFavorited ? "border-orange-500 bg-orange-500 text-white" : "border-white/10 bg-black/20 text-white/60 hover:border-orange-500 hover:text-orange-400"}`}
           >

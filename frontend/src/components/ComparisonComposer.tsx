@@ -22,7 +22,7 @@ import { BorderBeam } from "@/components/ui/border-beam";
 import { pwaUpdates } from "@/lib/pwa/register";
 import { useDraftScope } from "@/hooks/useDraftScope";
 import { KeyboardSpacer } from "@/components/KeyboardSpacer";
-import { useT, type MessageKey } from "@/i18n";
+import { useI18n, type MessageKey, type TFunction } from "@/i18n";
 
 interface ComparisonComposerProps {
   onStart: (query: string) => void | Promise<void>;
@@ -48,13 +48,153 @@ const COMPARISON_TEMPLATES: { label: MessageKey; context: string }[] = [
   { label: "composer.tpl.cities", context: "remote work" },
 ];
 
+const POLICY_NOTE_TO_KEY: Record<string, MessageKey> = {
+  "Food and drink": "validation.reason.food_drink",
+  "Political subject": "validation.reason.political",
+  "War or armed conflict": "validation.reason.war_conflict",
+  "Personal attribute": "validation.reason.personal",
+  "Religion comparison": "validation.reason.religion",
+  "Protected-class comparison": "validation.reason.protected_class",
+  "People comparison": "validation.reason.people",
+  "Medical treatment": "validation.reason.medical",
+  "Personalized finance": "validation.reason.personalized_finance",
+  "Harmful technical request": "validation.reason.harmful_technical",
+  "Duplicate entity": "validation.reason.same_entity",
+};
+
+const REASON_CODE_TO_KEY: Record<string, MessageKey> = {
+  food_drink: "validation.reason.food_drink",
+  political: "validation.reason.political",
+  war_conflict: "validation.reason.war_conflict",
+  personal: "validation.reason.personal",
+  religion: "validation.reason.religion",
+  protected_class: "validation.reason.protected_class",
+  people: "validation.reason.people",
+  medical: "validation.reason.medical",
+  personalized_finance: "validation.reason.personalized_finance",
+  harmful_technical: "validation.reason.harmful_technical",
+  same_entity: "validation.reason.same_entity",
+  too_short: "validation.reason.too_short",
+  too_many_options: "validation.reason.too_many_options",
+  recommendation_request: "validation.reason.recommendation_request",
+  ai_busy: "validation.reason.ai_busy",
+  unverified_frame: "validation.reason.unverified_frame",
+};
+
+const CATEGORY_TO_KEY: Record<string, MessageKey> = {
+  software: "validation.category.software",
+  developer_tool: "validation.category.developer_tool",
+  ai_tool: "validation.category.ai_tool",
+  product: "validation.category.product",
+  company_service: "validation.category.company_service",
+  place: "validation.category.place",
+  education: "validation.category.education",
+  career: "validation.category.career",
+  finance_info: "validation.category.finance_info",
+  health_fitness: "validation.category.health_fitness",
+  method_framework: "validation.category.method_framework",
+  technical_standard: "validation.category.technical_standard",
+  politics_policy: "validation.category.politics_policy",
+  general_research: "validation.category.general_research",
+  unsupported: "validation.category.unsupported",
+  sensitive: "validation.category.sensitive",
+};
+
+function localizeCategoryLabel(t: TFunction, category: string | null | undefined, fallback?: string): string | undefined {
+  if (category && category in CATEGORY_TO_KEY) {
+    return t(CATEGORY_TO_KEY[category]);
+  }
+  if (fallback === "Sensitive or personal subject") {
+    return t("validation.category.sensitive");
+  }
+  return fallback;
+}
+
+function localizeIntentMessage(
+  t: TFunction,
+  lang: string,
+  intent: {
+    message: string;
+    policyNote?: string;
+    category?: string | null;
+    entityA?: string | null;
+    entityB?: string | null;
+    resolvedEntity?: string;
+    reasonCode?: string;
+  },
+): string {
+  const code = intent.reasonCode;
+  if (code && code in REASON_CODE_TO_KEY) {
+    return t(REASON_CODE_TO_KEY[code]);
+  }
+  if (code === "technical_mismatch_recovered" && intent.entityA && intent.entityB) {
+    const catLabel = localizeCategoryLabel(t, intent.category) ?? "";
+    return t("validation.reason.ready_with_context", {
+      entityA: intent.entityA,
+      entityB: intent.entityB,
+      category: catLabel.toLowerCase(),
+    });
+  }
+  if ((code === "unrelated" || code === "similar_only" || code === "unsafe") && lang !== "en") {
+    // Prefer AI's localized explanation when non-ASCII; otherwise use our localized fallback.
+    if (!/[^\u0020-\u007E\r\n\t]/.test(intent.message)) {
+      return t(`validation.reason.${code}` as MessageKey);
+    }
+    return intent.message;
+  }
+
+  if (intent.policyNote && intent.policyNote in POLICY_NOTE_TO_KEY) {
+    return t(POLICY_NOTE_TO_KEY[intent.policyNote]);
+  }
+  if (intent.resolvedEntity) {
+    return t("validation.reason.same_entity");
+  }
+
+  const msg = intent.message;
+  if (msg === "This is too short to compare confidently.") return t("validation.reason.too_short");
+  if (msg === "Compare exactly two options at a time.") return t("validation.reason.too_many_options");
+  if (msg === "This sounds like a recommendation request. Pick two concrete options first.") {
+    return t("validation.reason.recommendation_request");
+  }
+  if (msg === "SideBy will try to extract comparable options from your query.") {
+    return t("validation.reason.extract_options");
+  }
+  if (msg.startsWith("Ready to compare ") && msg.includes('Add "for ..."') && intent.entityA && intent.entityB) {
+    return t("validation.reason.ready_general", { entityA: intent.entityA, entityB: intent.entityB });
+  }
+  if (msg.startsWith("Ready to compare ") && intent.entityA && intent.entityB) {
+    const catLabel = localizeCategoryLabel(t, intent.category) ?? "";
+    return t("validation.reason.ready_with_context", {
+      entityA: intent.entityA,
+      entityB: intent.entityB,
+      category: catLabel.toLowerCase(),
+    });
+  }
+  if (msg.startsWith("Ready as ") && intent.category) {
+    const catLabel = localizeCategoryLabel(t, intent.category) ?? "";
+    return t("validation.reason.ready_no_context", { category: catLabel.toLowerCase() });
+  }
+  return msg;
+}
+
+function localizeSuggestionLabel(t: TFunction, suggestion: string): string {
+  if (suggestion === "Try a source-backed product, software, place, education, career, finance concept, fitness concept, or method comparison.") {
+    return t("validation.suggestion.default");
+  }
+  const match = suggestion.match(/^(.+) vs another option for your use case$/);
+  if (match) {
+    return t("validation.suggestion.withContext", { entityA: match[1] });
+  }
+  return suggestion;
+}
+
 export function ComparisonComposer({
   onStart,
   isCreating = false,
   initialQuery = "",
   className = "",
 }: ComparisonComposerProps) {
-  const t = useT();
+  const { t, lang } = useI18n();
   const {
     entityA,
     setEntityA,
@@ -422,7 +562,7 @@ export function ComparisonComposer({
 
               {queryIntent.categoryLabel && !isValidating && !isIncomplete && (
                 <Badge className="bg-[#1c1917] hover:bg-[#1c1917] border border-[#2e2a24] text-[#a8a29e] rounded-sm text-[9px] uppercase tracking-widest px-2 py-0.5 w-fit">
-                  {queryIntent.categoryLabel}
+                  {localizeCategoryLabel(t, queryIntent.category, queryIntent.categoryLabel)}
                 </Badge>
               )}
             </div>
@@ -432,7 +572,7 @@ export function ComparisonComposer({
                 ? t("composer.validating")
                 : isIncomplete
                   ? t("composer.enterBoth")
-                  : queryIntent.message}
+                  : localizeIntentMessage(t, lang, queryIntent)}
             </p>
 
             {isBlocked && queryIntent.resolvedEntity && !isValidating && !isIncomplete && (
@@ -451,7 +591,7 @@ export function ComparisonComposer({
                 {queryIntent.policyNote === "Duplicate entity"
                   ? t("composer.distinct")
                   : t("composer.suggested")}
-                {queryIntent.suggestion}
+                {localizeSuggestionLabel(t, queryIntent.suggestion)}
               </button>
             )}
           </div>

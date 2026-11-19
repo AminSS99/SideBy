@@ -19,10 +19,11 @@ const WorkspacesPage = () => {
   };
 
   useGSAP(() => {
-    const tl = gsap.timeline();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
     tl.from(".ws-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
       .from(".ws-card", { y: 20, opacity: 0, stagger: 0.15, duration: 0.8, ease: "power3.out" }, "-=0.6");
-  }, { scope: containerRef });
+  }, { scope: containerRef, dependencies: [isLoading] });
 
   return (
     <div ref={containerRef} className="space-y-8">

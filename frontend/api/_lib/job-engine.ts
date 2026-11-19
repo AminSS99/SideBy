@@ -38,7 +38,7 @@ import { sanitizeLlmText } from "./sanitize.js";
 import { sendComparisonCompleteEmail } from "./email.js";
 import { buildDimensionPrompt, calibrateConfidence, getFreshnessClass, isReusableFact, normalizeEntityForReuse } from "./reuse-engine.js";
 import { normalizeQuery } from "./query-normalizer.js";
-import { comparisonCache, hashPrompt } from "./cache-layer.js";
+import { comparisonCache, hashPrompt, userComparisonCacheKey } from "./cache-layer.js";
 import {
   analyzeComparisonQuery,
   getComparisonCategoryDefinition,
@@ -668,7 +668,9 @@ export async function runComparisonJob(
       })
       .where(eq(comparisons.id, comparisonId));
 
-    comparisonCache.set(normalized.canonicalSlug, result, 10 * 60 * 1000);
+    // Scope freshly completed private jobs to their owner so private research
+    // never leaks into another tenant's hot-cache lookup.
+    comparisonCache.set(userComparisonCacheKey(userId, normalized.canonicalSlug), result, 10 * 60 * 1000);
 
     // Notify the requesting user's devices that research finished. Only fired
     // on terminal states — never on progress updates.

@@ -2,7 +2,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../../../_lib/auth.js";
-import { canAccessComparison, canMutateComparison } from "../../../_lib/db-auth.js";
+import { canAccessComparisonAsMember, canMutateComparison } from "../../../_lib/db-auth.js";
 import { sendJson } from "../../../_lib/sideby.js";
 import { captureServerEvent } from "../../../_lib/analytics.js";
 import { createDbClient } from "../../../../src/db/index.js";
@@ -20,7 +20,9 @@ export default async function handler(request: VercelRequest, response: VercelRe
     const id = Array.isArray(request.query.id) ? request.query.id[0] : request.query.id;
     if (!id) return sendJson(response, { error: "Comparison id is required." }, 400);
     const db = createDbClient();
-    const canAccess = await canAccessComparison(db, auth.userId, id);
+    // Team notes and decision comments are strictly private to the owner and
+    // workspace members — never readable or writable by strangers on public links.
+    const canAccess = await canAccessComparisonAsMember(db, auth.userId, id);
     if (!canAccess) return sendJson(response, { error: "Comparison not found." }, 404);
 
     if (request.method === "GET") {
@@ -60,12 +62,26 @@ export default async function handler(request: VercelRequest, response: VercelRe
       if (!existing) return sendJson(response, { error: "Note not found." }, 404);
       const mayManage = existing.userId === auth.userId || await canMutateComparison(db, auth.userId, id);
       if (!mayManage) return sendJson(response, { error: "You cannot remove this note." }, 403);
-      await db.delete(comparisonNotes).where(eq(comparisonNotes.id, noteId));
+      await db.delete(comparisonNotes).where(and(eq(comparisonNotes.id, noteId), eq(comparisonNotes.comparisonId, id)));
       return sendJson(response, { success: true });
     }
 
     return sendJson(response, { error: "Method not allowed" }, 405);
   } catch (error) {
-    return sendJson(response, { error: error instanceof z.ZodError ? error.errors[0]?.message || "Invalid note." : error instanceof Error ? error.message : "Unable to manage notes." }, error instanceof z.ZodError ? 400 : 500);
+    const status =
+      error instanceof z.ZodError
+        ? 400
+        : error instanceof Error && "statusCode" in error
+          ? (error as Error & { statusCode: number }).statusCode
+          : 500;
+    return sendJson(
+      response,
+      {
+        error: error instanceof z.ZodError
+          ? error.errors[0]?.message || "Invalid note."
+          : error instanceof Error ? error.message : "Unable to manage notes.",
+      },
+      status,
+    );
   }
 }

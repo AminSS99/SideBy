@@ -86,14 +86,14 @@ export default function CookieConsent() {
           {gpcEnabled ? (
             <p className="mt-1 text-xs text-amber-300">{t("cookie.gpcBanner")}</p>
           ) : null}
-          <div className="mt-1.5 flex items-center gap-1.5 sm:mt-2 sm:gap-2">
-            <button type="button" onClick={() => save("accepted", "banner")} disabled={gpcEnabled} className="min-h-9 flex-1 rounded-xl bg-white px-2.5 text-xs font-semibold text-[#130d09] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:px-3">
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:mt-2 sm:gap-2">
+            <button type="button" onClick={() => save("accepted", "banner")} disabled={gpcEnabled} className="min-h-11 py-2 flex-1 rounded-xl bg-white px-2.5 text-xs font-semibold text-[#130d09] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 sm:px-3">
               {t("cookie.accept")}
             </button>
-            <button type="button" onClick={() => save("rejected", "banner")} className="min-h-9 flex-1 rounded-xl border border-white/20 px-2.5 text-xs font-medium text-white/85 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-[0.99] sm:min-h-11 sm:px-3">
+            <button type="button" onClick={() => save("rejected", "banner")} className="min-h-11 py-2 flex-1 rounded-xl border border-white/20 px-2.5 text-xs font-medium text-white/85 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 active:scale-[0.99] sm:px-3">
               {t("cookie.essential")}
             </button>
-            <button type="button" onClick={openSettings} className="min-h-9 rounded-xl px-2 text-xs text-white/80 underline underline-offset-2 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 sm:min-h-11 sm:px-2.5">
+            <button type="button" onClick={openSettings} className="min-h-11 py-2 rounded-xl px-2 text-xs text-white/80 underline underline-offset-2 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 sm:px-2.5">
               {t("cookie.settings")}
             </button>
           </div>

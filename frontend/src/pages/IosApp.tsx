@@ -20,19 +20,26 @@ import {
   Zap,
 } from "@/components/icons";
 
-// Sample product output: kept in English on purpose (it depicts a comparison, not site copy).
-const PREVIEW_COMPARISONS = [
+const PREVIEW_COMPARISONS: readonly {
+  id: string;
+  query: string;
+  winner: string;
+  confidence: number;
+  sources: number;
+  summary: MessageKey;
+  scores: readonly { label: MessageKey; a: number; b: number }[];
+}[] = [
   {
     id: "linear-jira",
     query: "Linear vs Jira",
     winner: "Linear",
     confidence: 92,
     sources: 14,
-    summary: "Faster keyboard-first triage and cleaner sprint velocity for product teams.",
+    summary: "mobile.ios.preview.linearJira.summary",
     scores: [
-      { label: "Speed & UX", a: 96, b: 64 },
-      { label: "Enterprise Controls", a: 78, b: 94 },
-      { label: "Developer Flow", a: 95, b: 72 },
+      { label: "mobile.ios.preview.linearJira.dim1", a: 96, b: 64 },
+      { label: "mobile.ios.preview.linearJira.dim2", a: 78, b: 94 },
+      { label: "mobile.ios.preview.linearJira.dim3", a: 95, b: 72 },
     ],
   },
   {
@@ -41,14 +48,14 @@ const PREVIEW_COMPARISONS = [
     winner: "React",
     confidence: 89,
     sources: 18,
-    summary: "Unmatched hiring ecosystem and TypeScript tooling; Vue wins on onboarding speed.",
+    summary: "mobile.ios.preview.reactVue.summary",
     scores: [
-      { label: "Ecosystem", a: 97, b: 82 },
-      { label: "Learning Curve", a: 76, b: 93 },
-      { label: "Bundle & Runtime", a: 84, b: 91 },
+      { label: "mobile.ios.preview.reactVue.dim1", a: 97, b: 82 },
+      { label: "mobile.ios.preview.reactVue.dim2", a: 76, b: 93 },
+      { label: "mobile.ios.preview.reactVue.dim3", a: 84, b: 91 },
     ],
   },
-] as const;
+];
 
 const MILESTONES: { icon: typeof Zap; title: MessageKey; description: MessageKey; status: MessageKey }[] = [
   {
@@ -280,7 +287,7 @@ export default function IosApp() {
                       </span>
                     </div>
                     <p className="mt-1 font-serif text-xl text-[#fffaf1]">{preview.winner}</p>
-                    <p className="mt-1 text-[11px] leading-4 text-white/65">{preview.summary}</p>
+                    <p className="mt-1 text-[11px] leading-4 text-white/65">{t(preview.summary)}</p>
                   </div>
 
                   {/* Dimension bars */}
@@ -288,7 +295,7 @@ export default function IosApp() {
                     {preview.scores.map((row) => (
                       <div key={row.label}>
                         <div className="flex items-center justify-between text-[10px] text-white/75">
-                          <span>{row.label}</span>
+                          <span>{t(row.label)}</span>
                           <span className="tabular-nums text-orange-200">
                             {row.a} / {row.b}
                           </span>

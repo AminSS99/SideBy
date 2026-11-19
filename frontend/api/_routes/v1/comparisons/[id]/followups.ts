@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { assertApiKeyScope, requireApiKey } from "../../../../_lib/api-key-auth.js";
 import { answerFollowUp } from "../../../../_lib/followup-engine.js";
+import { assertNoLikelySecrets } from "../../../../_lib/secret-scan.js";
 import { sendJson } from "../../../../_lib/sideby.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
@@ -36,9 +37,14 @@ export default async function handler(
     const id = Array.isArray(request.query.id) ? request.query.id[0] : request.query.id;
     if (!id) return sendJson(response, { error: "Comparison id is required." }, 400);
 
+    const body = BodySchema.parse(request.body || {});
+    assertNoLikelySecrets(body.question);
+
     return withApiKeyRateLimit(request, response, "followUp", apiKey, async () => {
-      const body = BodySchema.parse(request.body || {});
-      return sendJson(response, await answerFollowUp(id, userId, body.question));
+      return sendJson(
+        response,
+        await answerFollowUp(id, userId, body.question, apiKey.workspaceId || null),
+      );
     });
   } catch (error) {
     const status =

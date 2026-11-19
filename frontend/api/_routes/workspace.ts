@@ -8,6 +8,7 @@ import { and, eq } from "drizzle-orm";
 import { requireAuth } from "../_lib/auth.js";
 import { canAccessWorkspace, getAccessibleWorkspaces } from "../_lib/db-auth.js";
 import { createOrLinkSnapSolveWorkspace } from "../_lib/snapsolve-core.js";
+import { sendJson } from "../_lib/sideby.js";
 import { logger } from "../_lib/log.js";
 import { createDbClient } from "../../src/db/index.js";
 import { memberships, projects, users, workspaces } from "../../src/db/schema.js";
@@ -19,22 +20,22 @@ export const config = {
 };
 
 const CreateProjectSchema = z.object({
-  workspaceId: z.string().min(1, "workspaceId is required."),
-  name: z.string().trim().min(1, "Project name is required."),
-  description: z.string().optional(),
+  workspaceId: z.string().trim().min(1, "workspaceId is required.").max(128),
+  name: z.string().trim().min(1, "Project name is required.").max(160),
+  description: z.string().trim().max(2000).optional(),
 });
 
 const CreateWorkspaceSchema = z.object({
-  name: z.string().trim().min(1, "Workspace name is required."),
-  slug: z.string().trim().optional(),
+  name: z.string().trim().min(1, "Workspace name is required.").max(160),
+  slug: z.string().trim().max(80).optional(),
   ownerType: z.enum(["user", "org"]).optional(),
-  ownerId: z.string().optional(),
+  ownerId: z.string().trim().max(128).optional(),
 });
 
 const UpdateWorkspaceSchema = z.object({
-  workspaceId: z.string().min(1, "workspaceId is required."),
-  name: z.string().trim().optional(),
-  slug: z.string().optional(),
+  workspaceId: z.string().trim().min(1, "workspaceId is required.").max(128),
+  name: z.string().trim().min(1).max(160).optional(),
+  slug: z.string().trim().max(80).optional(),
 });
 
 function setCorsHeaders(res: VercelResponse, req: VercelRequest) {
@@ -152,14 +153,16 @@ async function handleProjects(
       return response.status(201).json({ project: inserted[0] });
     }
 
-    return response.status(405).json({ error: "Method not allowed" });
+    return sendJson(response, { error: "Method not allowed" }, 405);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return response.status(400).json({ error: error.errors[0]?.message || "Invalid request body." });
+      return sendJson(response, { error: error.errors[0]?.message || "Invalid request body." }, 400);
     }
-    return response.status(getErrorStatus(error)).json({
-      error: error instanceof Error ? error.message : "Internal server error.",
-    });
+    return sendJson(
+      response,
+      { error: error instanceof Error ? error.message : "Internal server error." },
+      getErrorStatus(error),
+    );
   }
 }
 
@@ -320,14 +323,16 @@ async function handleWorkspaces(
       return response.status(200).json({ workspace });
     }
 
-    return response.status(405).json({ error: "Method not allowed" });
+    return sendJson(response, { error: "Method not allowed" }, 405);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return response.status(400).json({ error: error.errors[0]?.message || "Invalid request body." });
+      return sendJson(response, { error: error.errors[0]?.message || "Invalid request body." }, 400);
     }
-    return response.status(getErrorStatus(error)).json({
-      error: error instanceof Error ? error.message : "Internal server error.",
-    });
+    return sendJson(
+      response,
+      { error: error instanceof Error ? error.message : "Internal server error." },
+      getErrorStatus(error),
+    );
   }
 }
 

@@ -29,9 +29,33 @@ const AiValidationSchema = z.object({
   suggestedQuery: z.string().max(180).nullable(),
 });
 
+export type ValidationReasonCode =
+  | "food_drink"
+  | "political"
+  | "war_conflict"
+  | "personal"
+  | "religion"
+  | "protected_class"
+  | "people"
+  | "medical"
+  | "personalized_finance"
+  | "harmful_technical"
+  | "same_entity"
+  | "too_short"
+  | "too_many_options"
+  | "recommendation_request"
+  | "ai_busy"
+  | "unverified_frame"
+  | "unrelated"
+  | "similar_only"
+  | "unsafe"
+  | "comparable"
+  | "technical_mismatch_recovered";
+
 export type ComparisonValidation = {
-  intent: ComparisonIntent;
+  intent: ComparisonIntent & { reasonCode?: ValidationReasonCode };
   relation: z.infer<typeof AiValidationSchema>["relation"];
+  reasonCode?: ValidationReasonCode;
   source: "rules" | "ai" | "rules_fallback" | "cache";
   model?: string;
 };
@@ -72,7 +96,7 @@ const LANGUAGE_NAMES: Record<ValidationLanguage, string> = {
 
 function cacheKey(normalized: string, language?: ValidationLanguage): string {
   const hash = createHash("sha256").update(normalized).digest("hex").slice(0, 16);
-  return `validation:v6:${hash}${language ? `:${language}` : ""}`;
+  return `validation:v7:${hash}${language ? `:${language}` : ""}`;
 }
 
 type EntityEvidence = Pick<SearchResult, "title" | "url" | "content">;
@@ -153,10 +177,51 @@ function emitValidationAnalytics(
   }
 }
 
+const SIGNAL_REASON_CODES: Record<string, ValidationReasonCode> = {
+  "food-drink": "food_drink",
+  "political-subject": "political",
+  "war-conflict": "war_conflict",
+  "personal-attribute": "personal",
+  "religion-ranking": "religion",
+  "protected-class-ranking": "protected_class",
+  "people-vs-people": "people",
+  "medical-treatment": "medical",
+  "personalized-finance": "personalized_finance",
+  "harmful-technical": "harmful_technical",
+};
+
+export function resolveDeterministicReasonCode(intent: ComparisonIntent): ValidationReasonCode {
+  const blockingSignal = intent.signals.find((signal) => signal.severity === "block");
+  if (blockingSignal && blockingSignal.id in SIGNAL_REASON_CODES) {
+    return SIGNAL_REASON_CODES[blockingSignal.id];
+  }
+  if (intent.status === "incomparable" || intent.resolvedEntity) {
+    return "same_entity";
+  }
+  if (intent.status === "needs_entities") {
+    if (intent.message.includes("too short")) return "too_short";
+    if (intent.message.includes("two options at a time")) return "too_many_options";
+    return "recommendation_request";
+  }
+  if (intent.policyNote === "Political subject") return "political";
+  if (intent.policyNote === "Personal attribute") return "personal";
+  if (intent.status === "sensitive") return "unsafe";
+  return "unrelated";
+}
+
+function rejectedReasonCode(relation: z.infer<typeof AiValidationSchema>["relation"]): ValidationReasonCode {
+  if (relation === "political") return "political";
+  if (relation === "personal") return "personal";
+  if (relation === "unsafe") return "unsafe";
+  if (relation === "similar_only") return "similar_only";
+  return "unrelated";
+}
+
 const rejectedIntent = (
   base: ComparisonIntent,
   result: z.infer<typeof AiValidationSchema>,
-): ComparisonIntent => ({
+  reasonCode: ValidationReasonCode,
+): ComparisonIntent & { reasonCode: ValidationReasonCode } => ({
   ...base,
   category: result.relation === "political" || result.relation === "personal" || result.relation === "unsafe"
     ? "sensitive"
@@ -179,12 +244,13 @@ const rejectedIntent = (
       : result.relation === "unsafe"
         ? "Unsafe comparison"
         : "Items do not share a meaningful comparison frame",
+  reasonCode,
 });
 
 const sameEntityIntent = (
   base: ComparisonIntent,
   result: z.infer<typeof AiValidationSchema>,
-): ComparisonIntent => {
+): ComparisonIntent & { reasonCode: ValidationReasonCode } => {
   const canonicalEntity = result.canonicalEntity || base.resolvedEntity || base.entityA || undefined;
   const isTechnicalProduct = base.category === "software" || base.category === "developer_tool";
   const includesCloudVariant = /\bcloud\b/i.test(`${base.entityA || ""} ${base.entityB || ""}`);
@@ -202,6 +268,7 @@ const sameEntityIntent = (
     message: "These names resolve to the same option. Choose two distinct products, projects, plans, versions, or regions to compare.",
     suggestion: result.suggestedDistinctQuery || fallbackVariantSuggestion,
     policyNote: "Duplicate entity",
+    reasonCode: "same_entity",
   };
 };
 
@@ -233,7 +300,13 @@ export async function validateComparisonQuery(
         : deterministic.status === "sensitive"
           ? "unsafe"
           : "unrelated";
-    const validation: ComparisonValidation = { intent: deterministic, relation, source: "rules" };
+    const reasonCode = resolveDeterministicReasonCode(deterministic);
+    const validation: ComparisonValidation = {
+      intent: { ...deterministic, reasonCode },
+      relation,
+      reasonCode,
+      source: "rules",
+    };
     emitValidationAnalytics(query, validation);
     await redisSet(key, validation, CACHE_TTL_SECONDS);
     return validation;
@@ -250,11 +323,18 @@ export async function validateComparisonQuery(
             canStart: false,
             safetyLevel: "blocked",
             message: "Validation is busy right now. Add a concrete use case or choose two catalog items, then try again shortly.",
+            reasonCode: "ai_busy",
           },
           relation: "unrelated",
+          reasonCode: "ai_busy",
           source: "rules_fallback",
         }
-      : { intent: deterministic, relation: "comparable", source: "rules_fallback" };
+      : {
+          intent: { ...deterministic, reasonCode: "comparable" },
+          relation: "comparable",
+          reasonCode: "comparable",
+          source: "rules_fallback",
+        };
   }
 
   try {
@@ -314,6 +394,7 @@ export async function validateComparisonQuery(
       const validation: ComparisonValidation = {
         intent: sameEntityIntent(deterministic, result.data),
         relation: "same_entity",
+        reasonCode: "same_entity",
         source: "ai",
         model: result.model,
       };
@@ -326,9 +407,11 @@ export async function validateComparisonQuery(
       (!result.data.comparable || result.data.relation !== "comparable")
       && !shouldAcceptTechnicalMismatch(deterministic, result.data)
     ) {
+      const reasonCode = rejectedReasonCode(result.data.relation);
       const validation: ComparisonValidation = {
-        intent: rejectedIntent(deterministic, result.data),
+        intent: rejectedIntent(deterministic, result.data, reasonCode),
         relation: result.data.relation,
+        reasonCode,
         source: "ai",
         model: result.model,
       };
@@ -337,25 +420,29 @@ export async function validateComparisonQuery(
       return validation;
     }
 
-    const category = shouldAcceptTechnicalMismatch(deterministic, result.data)
+    const technicalRecovered = shouldAcceptTechnicalMismatch(deterministic, result.data);
+    const category = technicalRecovered
       ? deterministic.category
       : result.data.category === "unsupported"
       ? deterministic.category
       : result.data.category as ComparisonCategory;
     const definition = getComparisonCategoryDefinition(category);
+    const reasonCode: ValidationReasonCode = technicalRecovered ? "technical_mismatch_recovered" : "comparable";
     const validation: ComparisonValidation = {
       intent: {
         ...deterministic,
         category,
         label: definition.label,
         confidence: Math.max(deterministic.confidence, result.data.confidence),
-        message: shouldAcceptTechnicalMismatch(deterministic, result.data)
+        message: technicalRecovered
           ? `Ready to compare ${deterministic.entityA} and ${deterministic.entityB} as ${definition.label.toLowerCase()}.`
           : result.data.reason,
         suggestion: result.data.suggestedQuery || deterministic.suggestion,
         sourceRequirements: definition.sourceRequirements,
+        reasonCode,
       },
       relation: "comparable",
+      reasonCode,
       source: "ai",
       model: result.model,
     };
@@ -378,12 +465,19 @@ export async function validateComparisonQuery(
           canStart: false,
           safetyLevel: "blocked",
           message: "We could not verify that these options share a meaningful comparison frame. Add a concrete use case or choose two catalog items.",
+          reasonCode: "unverified_frame",
         },
         relation: "unrelated",
+        reasonCode: "unverified_frame",
         source: "rules_fallback",
       };
     } else {
-      validation = { intent: deterministic, relation: "comparable", source: "rules_fallback" };
+      validation = {
+        intent: { ...deterministic, reasonCode: "comparable" },
+        relation: "comparable",
+        reasonCode: "comparable",
+        source: "rules_fallback",
+      };
     }
 
     emitValidationAnalytics(query, validation);

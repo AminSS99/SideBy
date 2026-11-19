@@ -153,6 +153,16 @@ export function hashPrompt(prompt: string): string {
   return crypto.createHash("sha256").update(prompt.slice(0, 500)).digest("hex").slice(0, 12);
 }
 
+/** Tenant-scoped in-memory cache key so private comparisons never leak across users. */
+export function userComparisonCacheKey(userId: string, canonicalSlug: string): string {
+  return `user:${userId}:${canonicalSlug}`;
+}
+
+/** Public-only in-memory cache key, populated strictly from visibility='public' records. */
+export function publicComparisonCacheKey(canonicalSlug: string): string {
+  return `public:${canonicalSlug}`;
+}
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
 export {

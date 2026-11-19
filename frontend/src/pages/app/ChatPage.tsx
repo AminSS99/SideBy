@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import AITextLoading from "@/components/kokonutui/ai-text-loading";
 import { Send, Bot, User, LoaderCircle, Sparkles, Database, FolderKanban, Check, ToggleRight, ToggleLeft, X } from "@/components/icons";
 import { motion, AnimatePresence } from "framer-motion";
@@ -33,6 +34,7 @@ interface ActiveKnowledgeFile {
 
 const ChatPage = () => {
   const t = useT();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { activeWorkspace } = useWorkspace();
   const { activeProject } = useProjects();
   const [messages, setMessages] = useState<Message[]>(() => [
@@ -44,10 +46,15 @@ const ChatPage = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [activeFiles, setActiveFiles] = useState<ActiveKnowledgeFile[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(true);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const streamAbortRef = useRef<AbortController | null>(null);
+  const welcomeTextRef = useRef(t("ins.chat.welcome"));
+  welcomeTextRef.current = t("ins.chat.welcome");
+  const isFirstScopeRenderRef = useRef(true);
 
   const { activeContextCount, availableChunksCount } = useMemo(() => {
     let activeContextCount = 0;
@@ -122,6 +129,41 @@ const ChatPage = () => {
     void loadKnowledgeFiles();
   }, [loadKnowledgeFiles]);
 
+  // Abort any active stream and reset conversation when workspace or project changes.
+  useEffect(() => {
+    if (isFirstScopeRenderRef.current) {
+      isFirstScopeRenderRef.current = false;
+    } else {
+      streamAbortRef.current?.abort();
+      streamAbortRef.current = null;
+      setIsLoading(false);
+      setIsStreaming(false);
+      setMessages([
+        {
+          id: "1",
+          role: "assistant",
+          content: welcomeTextRef.current,
+        },
+      ]);
+    }
+
+    return () => {
+      streamAbortRef.current?.abort();
+      streamAbortRef.current = null;
+    };
+  }, [activeWorkspace?.id, activeProject?.id]);
+
+  // Prefill composer input when navigated via /app/chat?prompt=... (e.g. from PromptsPage).
+  useEffect(() => {
+    const promptParam = searchParams.get("prompt");
+    if (promptParam) {
+      setInput(promptParam);
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("prompt");
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   const toggleFile = (id: string) => {
     setActiveFiles(files => 
       files.map(f => f.id === id ? { ...f, active: !f.active } : f)
@@ -130,7 +172,11 @@ const ChatPage = () => {
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || isStreaming) return;
+
+    const controller = new AbortController();
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = controller;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -150,6 +196,7 @@ const ChatPage = () => {
     ]);
     setInput("");
     setIsLoading(true);
+    setIsStreaming(true);
 
     try {
       const apiMessages = newMessages.map((m) => ({
@@ -164,6 +211,7 @@ const ChatPage = () => {
       const res = await apiFetch(buildApiUrl("/api/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+        signal: controller.signal,
         body: JSON.stringify({
           messages: apiMessages,
           workspaceId: activeWorkspace?.id,
@@ -173,8 +221,11 @@ const ChatPage = () => {
         }),
       });
 
+      if (controller.signal.aborted) return;
+
       if (!res.body) {
         const data = await res.json();
+        if (controller.signal.aborted) return;
         setMessages((prev) =>
           prev.map((message) =>
             message.id === assistantId
@@ -201,6 +252,7 @@ const ChatPage = () => {
       };
 
       const handleSseBlock = (block: string) => {
+        if (controller.signal.aborted) return;
         const event = block
           .split("\n")
           .find((line) => line.startsWith("event:"))
@@ -227,8 +279,12 @@ const ChatPage = () => {
       };
 
       while (true) {
+        if (controller.signal.aborted) {
+          await reader.cancel().catch(() => undefined);
+          break;
+        }
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done || controller.signal.aborted) break;
         buffer += decoder.decode(value, { stream: true });
         const blocks = buffer.split("\n\n");
         buffer = blocks.pop() || "";
@@ -241,7 +297,7 @@ const ChatPage = () => {
         }
       }
 
-      if (buffer.trim()) {
+      if (!controller.signal.aborted && buffer.trim()) {
         try {
           handleSseBlock(buffer);
         } catch {
@@ -249,6 +305,9 @@ const ChatPage = () => {
         }
       }
     } catch (err) {
+      if (controller.signal.aborted || (err instanceof Error && err.name === "AbortError")) {
+        return;
+      }
       console.error(err);
       setMessages((prev) =>
         prev.map((message) =>
@@ -261,7 +320,11 @@ const ChatPage = () => {
         ),
       );
     } finally {
-      setIsLoading(false);
+      if (streamAbortRef.current === controller) {
+        streamAbortRef.current = null;
+        setIsLoading(false);
+        setIsStreaming(false);
+      }
     }
   };
 
@@ -358,7 +421,9 @@ const ChatPage = () => {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    handleSend();
+                    if (!isLoading && !isStreaming) {
+                      void handleSend();
+                    }
                   }
                 }}
                 placeholder={t("ins.chat.inputPlaceholder")}
@@ -367,10 +432,11 @@ const ChatPage = () => {
               />
               <button
                 type="submit"
-                disabled={!input.trim() || isLoading}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-[#fdfbf7] text-black transition-colors hover:bg-[#e0e0e0] disabled:opacity-50 disabled:hover:bg-white"
+                aria-label={t("fu.sendAria")}
+                disabled={!input.trim() || isLoading || isStreaming}
+                className="flex h-11 w-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-sm bg-[#fdfbf7] text-black transition-colors hover:bg-[#e0e0e0] disabled:opacity-50 disabled:hover:bg-white"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-4 w-4" aria-hidden="true" />
               </button>
             </form>
             <div className="mt-3 text-center hidden sm:block">
@@ -498,10 +564,12 @@ const ChatPage = () => {
                   {t("ins.chat.mobileDrawerTitle")}
                 </h3>
                 <button
+                  type="button"
                   onClick={() => setSidebarOpen(false)}
-                  className="p-1 text-white/50 hover:text-white"
+                  aria-label={`${t("dm.drawer.close")} ${t("ins.chat.mobileDrawerTitle")}`}
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center p-1 text-white/50 hover:text-white"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-5 w-5" aria-hidden="true" />
                 </button>
               </div>
 

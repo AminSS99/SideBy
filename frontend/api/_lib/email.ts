@@ -3,6 +3,15 @@ import { createDbClient } from "../../src/db/index.js";
 import { users } from "../../src/db/schema.js";
 import { logger } from "./log.js";
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 type EmailPayload = {
   to: string;
   subject: string;
@@ -20,6 +29,7 @@ export async function sendEmail(payload: EmailPayload) {
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
+    signal: AbortSignal.timeout(10_000),
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
@@ -34,7 +44,9 @@ export async function sendEmail(payload: EmailPayload) {
   });
 
   if (!response.ok) {
-    throw new Error(`Resend API error ${response.status}: ${await response.text()}`);
+    const bodyText = await response.text().catch(() => "");
+    logger.warn("Resend API error", { status: response.status, body: bodyText.slice(0, 200) });
+    throw new Error(`Email delivery failed (${response.status}).`);
   }
 
   return response.json();
@@ -55,16 +67,16 @@ export async function sendComparisonCompleteEmail(params: {
 
   if (!user?.email) return { skipped: true };
 
-  const appUrl = process.env.VITE_APP_URL || "http://localhost:5173";
-  const url = `${appUrl}/app/comparisons/${params.comparisonId}`;
+  const appUrl = (process.env.VITE_APP_URL || "http://localhost:5173").replace(/\/+$/, "");
+  const url = `${appUrl}/app/comparisons/${encodeURIComponent(params.comparisonId)}`;
   return sendEmail({
     to: user.email,
-    subject: `SideBy comparison ready: ${params.query}`,
+    subject: `SideBy comparison ready: ${params.query.slice(0, 120)}`,
     html: [
-      `<p>Hi ${user.name || "there"},</p>`,
+      `<p>Hi ${escapeHtml(user.name || "there")},</p>`,
       `<p>Your SideBy comparison is ready:</p>`,
-      `<p><strong>${params.query}</strong></p>`,
-      `<p><a href="${url}">Open the comparison</a></p>`,
+      `<p><strong>${escapeHtml(params.query)}</strong></p>`,
+      `<p><a href="${escapeHtml(url)}">Open the comparison</a></p>`,
     ].join(""),
     text: `Your SideBy comparison is ready: ${params.query}\n${url}`,
   });
@@ -92,7 +104,7 @@ export async function sendBillingAlert(params: {
   return sendEmail({
     to: email,
     subject: params.subject,
-    html: `<p>${params.message}</p>`,
+    html: `<p>${escapeHtml(params.message)}</p>`,
     text: params.message,
   });
 }

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../_lib/auth.js";
 import { getAccessibleWorkspaces } from "../_lib/db-auth.js";
 import { sendJson } from "../_lib/sideby.js";
+import { logger } from "../_lib/log.js";
 import { createDbClient } from "../../src/db/index.js";
 import {
   apiKeys,
@@ -45,8 +46,13 @@ async function deleteClerkUser(userId: string) {
   });
 
   if (!response.ok && response.status !== 404) {
+    const upstreamBody = await response.text().catch(() => "");
+    logger.error("Clerk user deletion failed", undefined, {
+      status: response.status,
+      body: upstreamBody.slice(0, 300),
+    });
     throw Object.assign(
-      new Error(`Clerk user deletion failed: ${response.status} ${await response.text()}`),
+      new Error(`Clerk user deletion failed (${response.status}).`),
       { statusCode: 502 },
     );
   }

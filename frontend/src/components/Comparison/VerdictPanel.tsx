@@ -1,12 +1,9 @@
 import React, { useRef } from "react";
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { panelClass } from "./constants";
 import type { ComparisonData } from "./types";
 import { useT, type MessageKey } from "@/i18n";
-
-gsap.registerPlugin(ScrollTrigger);
 
 interface VerdictPanelProps {
   result: ComparisonData;
@@ -35,27 +32,21 @@ export const VerdictPanel = ({ result }: VerdictPanelProps) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     gsap.from(".vp-row", {
-      scrollTrigger: {
-        trigger: containerRef.current,
-        start: "top 85%",
-      },
       x: -30,
       opacity: 0,
       stagger: 0.08,
       duration: 0.8,
-      ease: "power3.out"
+      ease: "power3.out",
+      clearProps: "transform,opacity",
     });
-    
+
     // Highlight the "Best Overall" row specifically
     gsap.from(".vp-overall", {
-      scrollTrigger: {
-        trigger: containerRef.current,
-        start: "top 80%",
-      },
       backgroundColor: "rgba(234,88,12,0)",
       duration: 1,
       delay: 0.5,
-      ease: "power2.out"
+      ease: "power2.out",
+      clearProps: "transform,opacity",
     });
   }, { scope: containerRef });
 

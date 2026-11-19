@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { shouldAcceptTechnicalMismatch } from "../comparison-validator.js";
-import type { ComparisonIntent } from "../../../src/lib/comparisonTaxonomy.js";
+import { resolveDeterministicReasonCode, shouldAcceptTechnicalMismatch } from "../comparison-validator.js";
+import { analyzeComparisonQuery, type ComparisonIntent } from "../../../src/lib/comparisonTaxonomy.js";
 
 const technicalIntent: ComparisonIntent = {
   category: "software",
@@ -44,5 +44,20 @@ describe("comparison validator technical mismatch recovery", () => {
         severity: "block",
       }],
     }, aiMismatch)).toBe(false);
+  });
+});
+
+describe("deterministic reasonCode mapping", () => {
+  it.each([
+    ["pizza vs sushi", "food_drink"],
+    ["democrat vs republican", "political"],
+    ["World War I vs World War II", "war_conflict"],
+    ["React vs React", "same_entity"],
+    ["what is the best phone", "recommendation_request"],
+    ["a vs b", "too_short"],
+  ] as const)("maps %s to %s", (query, expectedCode) => {
+    const intent = analyzeComparisonQuery(query);
+    expect(intent.canStart).toBe(false);
+    expect(resolveDeterministicReasonCode(intent)).toBe(expectedCode);
   });
 });

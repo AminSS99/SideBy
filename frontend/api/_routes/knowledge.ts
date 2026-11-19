@@ -84,14 +84,14 @@ export default async function handler(
 
   if (action === "upload" && request.method === "POST") {
     try {
-      await requireAuth(request);
+      const auth = await requireAuth(request);
       return await withRateLimit(request, response, "contextImport", () =>
-        uploadDocument(request, response),
+        uploadDocument(request, response, auth.userId),
       );
     } catch (error) {
       return sendJson(
         response,
-        { error: error instanceof Error ? error.message : "Authentication required." },
+        { error: formatErrorMessage(error, "Authentication required.") },
         getErrorStatus(error),
       );
     }
@@ -166,7 +166,7 @@ async function searchDocuments(
   } catch (error) {
     return sendJson(
       response,
-      { error: error instanceof Error ? error.message : "Knowledge search failed." },
+      { error: formatErrorMessage(error, "Knowledge search failed.") },
       getErrorStatus(error),
     );
   }
@@ -227,14 +227,14 @@ async function deleteDocument(
 async function uploadDocument(
   request: VercelRequest,
   response: VercelResponse,
+  authenticatedUserId: string,
 ) {
   let documentId: string | null = null;
-  let authUserId: string | null = null;
+  const authUserId: string | null = authenticatedUserId;
   let eventBase: Record<string, unknown> = {};
 
   try {
-    const auth = await requireAuth(request);
-    authUserId = auth.userId;
+    const auth = { userId: authenticatedUserId };
     const parsed = await parseUploadRequest(request);
     const db = createDbClient();
 
@@ -320,32 +320,36 @@ async function uploadDocument(
 
       return sendJson(response, { document: indexedDocument }, 201);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Document indexing failed.";
-      const failedDocument = await markKnowledgeDocumentError(db, documentId, message);
+      const isUserFacingProcessingError = error instanceof KnowledgeProcessingError;
+      const safeMessage = isUserFacingProcessingError
+        ? error.message
+        : "Document indexing failed. Please try again later.";
+      const failedDocument = await markKnowledgeDocumentError(db, documentId, safeMessage);
       captureServerEvent(auth.userId, "knowledge_upload_failed", {
         ...eventBase,
-        error: message,
+        error: safeMessage,
       });
 
-      const status = error instanceof KnowledgeProcessingError ? 201 : 500;
+      const status = isUserFacingProcessingError ? 201 : 500;
       return sendJson(
         response,
         {
           document: failedDocument ?? toKnowledgeDocumentDto(document),
-          error: message,
+          error: safeMessage,
         },
         status,
       );
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Upload failed.";
+    const status = getErrorStatus(error);
+    const message = formatErrorMessage(error, "Upload failed.");
     if (documentId && authUserId) {
       captureServerEvent(authUserId, "knowledge_upload_failed", {
         ...eventBase,
-        error: message,
+        error: status >= 500 ? "Upload failed." : message,
       });
     }
-    return sendJson(response, { error: message }, getErrorStatus(error));
+    return sendJson(response, { error: status >= 500 ? "Upload failed." : message }, status);
   }
 }
 
@@ -384,7 +388,17 @@ function getQueryValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function formatErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof z.ZodError) {
+    return error.errors[0]?.message || "Invalid request body.";
+  }
+  return error instanceof Error ? error.message : fallback;
+}
+
 function getErrorStatus(error: unknown) {
+  if (error instanceof z.ZodError) {
+    return 400;
+  }
   if (error instanceof KnowledgeApiError || error instanceof KnowledgeProcessingError) {
     return error.statusCode;
   }

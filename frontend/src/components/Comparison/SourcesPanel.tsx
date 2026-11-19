@@ -2,14 +2,11 @@
 import React, { useRef } from 'react';
 import { BookOpen, ExternalLink, Shield, FileText, Newspaper, Globe } from "@/components/icons";
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { panelClass } from "./constants";
 import type { ComparisonSource } from "./types";
 import { safeHref } from "@/lib/safe-url";
 import { useT, type MessageKey } from "@/i18n";
-
-gsap.registerPlugin(ScrollTrigger);
 
 const reliabilityConfig: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string; bg: string; label: string; labelKey: MessageKey }> = {
   official: { icon: Shield, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Official", labelKey: "src.official" },
@@ -64,10 +61,6 @@ export const SourcesPanel = ({ sources }: { sources: ComparisonSource[] }) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     gsap.from(".sp-item", {
-      scrollTrigger: {
-        trigger: containerRef.current,
-        start: "top 90%",
-      },
       y: 20,
       opacity: 0,
       stagger: 0.1,

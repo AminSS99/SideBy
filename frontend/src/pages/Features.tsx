@@ -9,6 +9,7 @@ import {
   LockKeyhole,
   MessageCircleQuestion,
   RefreshCw,
+  RotateCcw,
   Scale,
   Sparkles,
   Users,
@@ -17,6 +18,8 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { MarketingNav } from "@/components/brand/MarketingNav";
+import { BentoSpotlight } from "@/components/kokonutui/bento-spotlight";
+import { CardFlip } from "@/components/kokonutui/card-flip";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useT, type MessageKey } from "@/i18n";
 
@@ -78,13 +81,75 @@ const Features = () => {
           <div className="mb-7 max-w-2xl"><p className="text-[9px] font-bold uppercase tracking-[0.2em] text-orange-300">{t("mkt.features.sectionEyebrow")}</p><h2 className="mt-3 font-serif text-4xl leading-tight text-white sm:text-5xl">{t("mkt.features.sectionTitle")}</h2><p className="mt-4 text-sm leading-6 text-white/45">{t("mkt.features.sectionBody")}</p></div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((feature) => (
-              <article key={feature.id} className="feat-card group relative overflow-hidden rounded-[28px] border border-white/[0.09] bg-gradient-to-br from-white/[0.05] to-transparent p-5 transition duration-300 hover:-translate-y-1 hover:border-orange-300/20 sm:p-7">
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-300/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-                <div className="flex items-start justify-between gap-4"><div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-300/15 bg-orange-400/[0.08] text-orange-300"><feature.icon className="h-5 w-5" /></div><span className="text-[8px] font-bold uppercase tracking-[0.18em] text-white/25">{t(feature.eyebrow)}</span></div>
-                <h3 className="mt-6 font-serif text-2xl leading-tight text-white">{t(feature.title)}</h3>
-                <p className="mt-3 text-sm leading-6 text-white/45">{t(feature.description)}</p>
-                <p className="mt-6 border-t border-white/[0.07] pt-4 text-[9px] font-bold uppercase tracking-[0.14em] text-orange-200/60">{t(feature.proof)}</p>
-              </article>
+              <CardFlip
+                key={feature.id}
+                ariaLabel={t(feature.title)}
+                className="feat-card h-full"
+                front={
+                  <BentoSpotlight
+                    as="article"
+                    tone="amber"
+                    className="group h-full rounded-[28px] border-white/[0.09] bg-gradient-to-br from-white/[0.05] to-[#0c0b0a] hover:border-orange-300/25"
+                    contentClassName="flex h-full flex-col p-5 sm:p-7"
+                  >
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-300/50 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-300/15 bg-orange-400/[0.08] text-orange-300">
+                        <feature.icon className="h-5 w-5" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[8px] font-bold uppercase tracking-[0.18em] text-white/25">
+                          {t(feature.eyebrow)}
+                        </span>
+                        <span
+                          aria-hidden="true"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.03] text-white/35 transition-colors group-hover:border-orange-300/25 group-hover:text-orange-200"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </span>
+                      </div>
+                    </div>
+                    <h3 className="mt-6 font-serif text-2xl leading-tight text-[#fffaf1]">
+                      {t(feature.title)}
+                    </h3>
+                    <p className="mt-3 flex-1 text-sm leading-6 text-white/45">
+                      {t(feature.description)}
+                    </p>
+                    <p className="mt-6 border-t border-white/[0.07] pt-4 text-[9px] font-bold uppercase tracking-[0.14em] text-orange-200/60">
+                      {t(feature.proof)}
+                    </p>
+                  </BentoSpotlight>
+                }
+                back={
+                  <article className="flex h-full flex-col justify-between rounded-[28px] border border-orange-300/25 bg-[radial-gradient(circle_at_15%_0%,rgba(249,115,22,.18),transparent_48%),radial-gradient(circle_at_90%_100%,rgba(244,63,94,.12),transparent_48%),#0c0b0a] p-5 sm:p-7">
+                    <div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-orange-300/25 bg-orange-500/10 px-3 py-1 text-[8px] font-bold uppercase tracking-[0.18em] text-orange-200">
+                          <feature.icon className="h-3 w-3" />
+                          {t(feature.eyebrow)}
+                        </span>
+                        <span
+                          aria-hidden="true"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-orange-300/25 bg-orange-500/10 text-orange-200"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </span>
+                      </div>
+                      <h3 className="mt-5 font-serif text-2xl leading-tight text-[#fffaf1]">
+                        {t(feature.title)}
+                      </h3>
+                      <div className="mt-4 rounded-2xl border border-orange-300/15 bg-black/35 p-4">
+                        <p className="font-serif text-base leading-6 text-orange-100/90">
+                          {t(feature.proof)}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="mt-5 text-xs leading-5 text-white/55">
+                      {t(feature.description)}
+                    </p>
+                  </article>
+                }
+              />
             ))}
           </div>
         </section>
@@ -97,7 +162,17 @@ const Features = () => {
         </section>
 
         <section className="mx-auto mt-12 grid max-w-4xl grid-cols-3 gap-2 sm:gap-4">
-          {TRUST.map(([TrustIcon, label]) => <div key={label} className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3 text-center sm:p-5"><TrustIcon className="mx-auto h-4 w-4 text-emerald-300" /><p className="mt-2 text-[8px] font-bold uppercase tracking-wider text-white/40 sm:text-[9px]">{t(label)}</p></div>)}
+          {TRUST.map(([TrustIcon, label]) => (
+            <BentoSpotlight
+              key={label}
+              tone="emerald"
+              className="rounded-2xl border-white/[0.08] bg-white/[0.025]"
+              contentClassName="p-3 text-center sm:p-5"
+            >
+              <TrustIcon className="mx-auto h-4 w-4 text-emerald-300" />
+              <p className="mt-2 text-[8px] font-bold uppercase tracking-wider text-white/40 sm:text-[9px]">{t(label)}</p>
+            </BentoSpotlight>
+          ))}
         </section>
       </main>
 

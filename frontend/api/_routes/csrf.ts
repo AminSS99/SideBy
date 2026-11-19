@@ -11,8 +11,10 @@ export default function handler(
   response: VercelResponse,
 ) {
   if (request.method !== "GET") {
+    response.setHeader("Cache-Control", "no-store");
     return response.status(405).json({ error: "Method not allowed" });
   }
 
+  response.setHeader("Cache-Control", "no-store");
   return response.status(200).json({ csrfToken: issueCsrfToken(response) });
 }

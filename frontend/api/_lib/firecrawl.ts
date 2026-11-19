@@ -3,6 +3,8 @@
  */
 import { redisGet, redisSet } from "./redis.js";
 import { logger } from "./log.js";
+import { httpUrlOrNull } from "./safe-url.js";
+import { assertSafeWebhookUrl } from "./webhook-url.js";
 
 const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
 const FIRECRAWL_API_URL = process.env.FIRECRAWL_API_URL || "https://api.firecrawl.dev/v2/scrape";
@@ -45,6 +47,13 @@ export async function extractPage(url: string): Promise<ExtractedPage | null> {
     return null;
   }
 
+  try {
+    assertSafeWebhookUrl(url);
+  } catch {
+    logger.warn("Blocked unsafe URL from Firecrawl extraction", { url: url.slice(0, 200) });
+    return null;
+  }
+
   const cache = cacheKey(url);
 
   // Try cache first
@@ -56,6 +65,7 @@ export async function extractPage(url: string): Promise<ExtractedPage | null> {
 
   const response = await fetch(FIRECRAWL_API_URL, {
     method: "POST",
+    signal: AbortSignal.timeout(30_000),
     headers: {
       Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
       "Content-Type": "application/json",
@@ -84,7 +94,8 @@ export async function extractPage(url: string): Promise<ExtractedPage | null> {
 
   const md = (data?.data?.markdown || "").slice(0, 12000);
   const title = data?.data?.metadata?.title || "";
-  const canonical = data?.data?.metadata?.sourceURL || data?.data?.metadata?.url || url;
+  const rawCanonical = data?.data?.metadata?.sourceURL || data?.data?.metadata?.url || url;
+  const canonical = httpUrlOrNull(rawCanonical) || url;
 
   const result: ExtractedPage = {
     url: canonical,

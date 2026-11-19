@@ -2,8 +2,9 @@ import crypto from "crypto";
 import { waitUntil } from "@vercel/functions";
 import { createComparisonJob, sendJson } from "../../_lib/sideby.js";
 import { logger } from "../../_lib/log.js";
-import { checkRateLimit } from "../../_lib/rate-limit.js";
+import { checkGlobalDailyBudget, checkRateLimit, getGlobalComparisonsDailyCap } from "../../_lib/rate-limit.js";
 import { getClientIp } from "../../_lib/route-guard.js";
+import { assertNoLikelySecrets } from "../../_lib/secret-scan.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = {
@@ -22,16 +23,21 @@ function parseUrlencoded(bodyStr: string): Record<string, string> {
 }
 
 // Verify Slack Request Signature
-function verifySlackSignature(
+export function verifySlackSignature(
   rawBody: string,
   timestamp: string,
   signature: string,
   signingSecret: string
 ): boolean {
   try {
-    // Prevent replay attacks (5 minute limit)
-    const fiveMinutesAgo = Math.floor(Date.now() / 1000) - 60 * 5;
-    if (parseInt(timestamp) < fiveMinutesAgo) return false;
+    // Reject non-numeric timestamps (NaN previously bypassed `< fiveMinutesAgo`)
+    // and prevent replay attacks in either direction (±5 minute window).
+    if (!/^\d+$/.test(timestamp)) return false;
+    const parsedTs = Number(timestamp);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    if (!Number.isSafeInteger(parsedTs) || Math.abs(nowSeconds - parsedTs) > 60 * 5) {
+      return false;
+    }
 
     const sigBaseString = `v0:${timestamp}:${rawBody}`;
     const calculatedSignature = "v0=" + crypto
@@ -39,11 +45,11 @@ function verifySlackSignature(
       .update(sigBaseString)
       .digest("hex");
 
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(calculatedSignature)
-    );
-  } catch (err) {
+    const sigBuf = Buffer.from(signature);
+    const calcBuf = Buffer.from(calculatedSignature);
+    if (sigBuf.length !== calcBuf.length) return false;
+    return crypto.timingSafeEqual(sigBuf, calcBuf);
+  } catch {
     return false;
   }
 }
@@ -111,6 +117,30 @@ export default async function handler(
     });
   }
 
+  if (query.length > 800) {
+    return sendJson(response, {
+      response_type: "ephemeral",
+      text: "❌ Comparison query is too long (maximum 800 characters)."
+    });
+  }
+
+  try {
+    assertNoLikelySecrets(query);
+  } catch {
+    return sendJson(response, {
+      response_type: "ephemeral",
+      text: "❌ This query looks like it may contain an API key or secret. Remove secrets before sending."
+    });
+  }
+
+  const globalBudget = await checkGlobalDailyBudget("comparisons", getGlobalComparisonsDailyCap());
+  if (!globalBudget.allowed) {
+    return sendJson(response, {
+      response_type: "ephemeral",
+      text: "⚠️ SideBy is at capacity right now. Please try again later."
+    });
+  }
+
   // 3. Jobs run as one explicitly configured owner. Never fall back to an
   // arbitrary user: any Slack workspace could otherwise write into that
   // person's account history and spend their quota.
@@ -126,7 +156,13 @@ export default async function handler(
   let safeResponseUrl: string | null = null;
   try {
     const parsedResponseUrl = new URL(responseUrl || "");
-    if (parsedResponseUrl.protocol === "https:" && parsedResponseUrl.hostname === "hooks.slack.com") {
+    if (
+      parsedResponseUrl.protocol === "https:" &&
+      parsedResponseUrl.hostname === "hooks.slack.com" &&
+      !parsedResponseUrl.port &&
+      !parsedResponseUrl.username &&
+      !parsedResponseUrl.password
+    ) {
       safeResponseUrl = parsedResponseUrl.toString();
     }
   } catch {
@@ -225,6 +261,8 @@ export default async function handler(
       // Post final results back to Slack
       await fetch(safeResponseUrl, {
         method: "POST",
+        redirect: "error",
+        signal: AbortSignal.timeout(10_000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           response_type: "in_channel",
@@ -239,6 +277,8 @@ export default async function handler(
       // Post error back to Slack responseUrl
       await fetch(safeResponseUrl, {
         method: "POST",
+        redirect: "error",
+        signal: AbortSignal.timeout(10_000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           response_type: "ephemeral",

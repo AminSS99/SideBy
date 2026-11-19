@@ -18,6 +18,16 @@ export const config = {
   },
 };
 
+const BoundedNumberMapSchema = z
+  .record(z.string().max(120), z.number().finite())
+  .refine((record) => Object.keys(record).length <= 50, "Too many score entries.");
+
+const BoundedWinnerMapSchema = z
+  .record(z.string().max(120), z.enum(["a", "b", "tie"]))
+  .refine((record) => Object.keys(record).length <= 50, "Too many category winner entries.");
+
+const UuidParamSchema = z.string().uuid();
+
 const SupportedChoiceEntitiesSchema = z.object({
   a: z.string().trim().min(1).max(200).optional(),
   b: z.string().trim().min(1).max(200).optional(),
@@ -29,17 +39,17 @@ const MatrixResultSchema = z.object({
   rationale: z.string().trim().max(2000).optional(),
   recordedAgainst: z.string().trim().max(100).optional(),
   choiceEntities: SupportedChoiceEntitiesSchema.optional(),
-  scores: z.record(z.number()).optional(),
-  normalizedScores: z.record(z.number()).optional(),
-  categoryWinners: z.record(z.enum(["a", "b", "tie"])).optional(),
-  scoreA: z.number().optional(),
-  scoreB: z.number().optional(),
+  scores: BoundedNumberMapSchema.optional(),
+  normalizedScores: BoundedNumberMapSchema.optional(),
+  categoryWinners: BoundedWinnerMapSchema.optional(),
+  scoreA: z.number().finite().optional(),
+  scoreB: z.number().finite().optional(),
 }).strict();
 
 const MatrixSchema = z.object({
   comparisonId: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(160),
-  weights: z.record(z.number()).default({}),
+  weights: BoundedNumberMapSchema.default({}),
   result: MatrixResultSchema.default({}),
 }).strict();
 
@@ -55,6 +65,9 @@ export default async function handler(
       const comparisonId = Array.isArray(request.query.comparisonId)
         ? request.query.comparisonId[0]
         : request.query.comparisonId;
+      if (comparisonId && !UuidParamSchema.safeParse(comparisonId).success) {
+        return sendJson(response, { error: "Invalid comparisonId." }, 400);
+      }
       const rows = await db
         .select()
         .from(decisionMatrices)
@@ -106,7 +119,9 @@ export default async function handler(
 
     if (request.method === "DELETE") {
       const id = Array.isArray(request.query.id) ? request.query.id[0] : request.query.id;
-      if (!id) return sendJson(response, { error: "Matrix id is required." }, 400);
+      if (!id || !UuidParamSchema.safeParse(id).success) {
+        return sendJson(response, { error: "Valid matrix id is required." }, 400);
+      }
       const [row] = await db
         .delete(decisionMatrices)
         .where(and(eq(decisionMatrices.id, id), eq(decisionMatrices.userId, auth.userId)))

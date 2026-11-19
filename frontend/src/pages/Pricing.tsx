@@ -17,6 +17,8 @@ import { MarketingFooter } from "@/components/brand/MarketingFooter";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { brand } from "@/config/brand";
 import BackgroundPaths from "@/components/kokonutui/background-paths";
+import { ParticleButton } from "@/components/kokonutui/particle-button";
+import { ShimmerText } from "@/components/kokonutui/shimmer-text";
 import { useT, type MessageKey } from "@/i18n";
 
 type TierDef = {
@@ -79,7 +81,8 @@ const Pricing = () => {
       <main className="relative z-10 mx-auto max-w-7xl px-4 pb-20 pt-12 sm:px-6 sm:pb-28 sm:pt-20">
         <header className="pricing-header mx-auto max-w-4xl text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-400/[0.08] px-3.5 py-2 text-[9px] font-bold uppercase tracking-[0.18em] text-orange-200">
-            <CircleDollarSign className="h-3.5 w-3.5" /> {t("pricing.kicker")}
+            <CircleDollarSign className="h-3.5 w-3.5" />{" "}
+            <ShimmerText tone="amber">{t("pricing.kicker")}</ShimmerText>
           </div>
           <h1 className="mt-6 font-serif text-5xl leading-[0.94] tracking-[-0.04em] text-[#fffaf1] sm:text-7xl">
             {t("pricing.title1")} <span className="bg-gradient-to-r from-orange-300 via-rose-300 to-fuchsia-300 bg-clip-text italic text-transparent">{t("pricing.title2")}</span>
@@ -102,7 +105,13 @@ const Pricing = () => {
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-300/60 to-transparent" />
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/25 text-orange-300"><tier.icon className="h-5 w-5" /></div>
-                  <span className={`rounded-full border px-3 py-1.5 text-[8px] font-bold uppercase tracking-[0.16em] ${tier.id === "flow" ? "border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-300" : "border-orange-300/20 bg-orange-400/[0.08] text-orange-200"}`}>{t(key(tier.id, "status"))}</span>
+                  <span className={`rounded-full border px-3 py-1.5 text-[8px] font-bold uppercase tracking-[0.16em] ${tier.id === "flow" ? "border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-300" : "border-orange-300/20 bg-orange-400/[0.08] text-orange-200"}`}>
+                    {isFeatured ? (
+                      <ShimmerText tone="amber">{t(key(tier.id, "status"))}</ShimmerText>
+                    ) : (
+                      t(key(tier.id, "status"))
+                    )}
+                  </span>
                 </div>
                 <div className="mt-6">
                   <h2 className="font-serif text-3xl capitalize text-white">{tier.id}</h2>
@@ -119,7 +128,16 @@ const Pricing = () => {
                     <li key={index} className="flex items-start gap-3 text-sm text-white/65"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" /><span>{t(key(tier.id, `f${index + 1}`))}</span></li>
                   ))}
                 </ul>
-                {tier.external ? (
+                {isFeatured ? (
+                  <ParticleButton
+                    tone="ember"
+                    href={tier.external ? tier.href : undefined}
+                    to={!tier.external ? tier.href : undefined}
+                    className={ctaClass}
+                  >
+                    {t(key(tier.id, "cta"))} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </ParticleButton>
+                ) : tier.external ? (
                   <a href={tier.href} className={ctaClass}>
                     {t(key(tier.id, "cta"))} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </a>

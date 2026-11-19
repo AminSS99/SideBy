@@ -32,11 +32,13 @@ export default async function handler(request: VercelRequest, response: VercelRe
     }
 
     const { query, language } = BodySchema.parse(request.body || {});
+    const headerLang = String(request.headers?.["accept-language"] || "").toLowerCase();
+    const inferredLanguage = language ?? (headerLang.startsWith("az") ? "az" : headerLang.startsWith("ru") ? "ru" : undefined);
     // Global spend breaker: unauthenticated validation fans out to Tavily +
     // the LLM, so cap total AI-backed validations per minute across all IPs.
     const globalCap = configuredQuota("VALIDATION_AI_GLOBAL_PER_MIN", 60);
     const global = await checkRateLimit("ip", "global", "comparison-validation-ai", globalCap);
-    const validation = await validateComparisonQuery(query, { allowAi: global.allowed, language });
+    const validation = await validateComparisonQuery(query, { allowAi: global.allowed, language: inferredLanguage });
     return sendJson(response, validation);
   } catch (error) {
     const unavailable = error instanceof Error && "statusCode" in error && error.statusCode === 503;

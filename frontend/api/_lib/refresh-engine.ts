@@ -15,7 +15,7 @@ export async function queueComparisonRefresh(
 
   const canMutate = await canMutateComparison(db, userId, comparisonId);
   if (!canMutate) {
-    throw new Error("Not authorized to refresh this comparison.");
+    throw Object.assign(new Error("Not authorized to refresh this comparison."), { statusCode: 403 });
   }
 
   const [comp] = await db
@@ -25,7 +25,7 @@ export async function queueComparisonRefresh(
     .limit(1);
 
   if (!comp) {
-    throw new Error("Comparison not found.");
+    throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
   }
 
   await db

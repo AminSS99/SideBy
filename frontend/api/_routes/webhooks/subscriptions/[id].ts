@@ -18,12 +18,16 @@ export const config = {
 };
 
 const UpdateSubscriptionSchema = z.object({
-  url: z.string().trim().url().optional(),
+  url: z.string().trim().url().max(2048).optional(),
   eventTypes: z.array(
     z.enum(["comparison.completed", "comparison.failed"])
-  ).min(1).optional(),
+  ).min(1).max(10).optional(),
   active: z.boolean().optional(),
 });
+
+function isOrgAdminRole(role?: string | null): boolean {
+  return role === "owner" || role === "admin" || role === "org:admin";
+}
 
 export default async function handler(
   request: VercelRequest,
@@ -61,6 +65,11 @@ export default async function handler(
       return sendJson(response, { error: "Subscription not found." }, 404);
     }
 
+    // Only the creator or an org admin/owner may mutate or delete an org webhook.
+    if (sub.userId !== auth.userId && !(auth.orgId && sub.organizationId === auth.orgId && isOrgAdminRole(auth.orgRole))) {
+      return sendJson(response, { error: "Only the creator or an organization admin can modify this webhook subscription." }, 403);
+    }
+
     if (request.method === "DELETE") {
       await db
         .delete(webhookSubscriptions)
@@ -79,7 +88,7 @@ export default async function handler(
         assertSafeWebhookUrl(body.url);
         updateData.url = body.url;
       }
-      if (body.eventTypes !== undefined) updateData.eventTypes = body.eventTypes;
+      if (body.eventTypes !== undefined) updateData.eventTypes = [...new Set(body.eventTypes)];
       if (body.active !== undefined) updateData.active = body.active;
 
       const [row] = await db

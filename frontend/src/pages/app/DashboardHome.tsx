@@ -26,6 +26,8 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { GlowCard } from "@/components/GlowCard";
+import { BentoSpotlight } from "@/components/kokonutui/bento-spotlight";
+import { ShimmerText } from "@/components/kokonutui/shimmer-text";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { captureEvent } from "@/lib/posthog";
 import { formatDateTime, statusLabel, useI18n, type Lang } from "@/i18n";
@@ -142,9 +144,13 @@ const DashboardHome = () => {
         <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-orange-500/10 blur-[70px]" />
         <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-300">
+          <ShimmerText
+            as="p"
+            tone="amber"
+            className="text-[10px] font-bold uppercase tracking-[0.2em]"
+          >
             {t("dash.kicker")}
-          </p>
+          </ShimmerText>
           <h1 className="mt-3 max-w-2xl font-serif text-4xl tracking-tight text-[#fdfbf7] sm:text-5xl">
             {t("dash.title", { name: user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || t("dash.fallbackName") })}
           </h1>
@@ -178,36 +184,51 @@ const DashboardHome = () => {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-[1.35fr_1fr_1fr]">
-          <Link to="/app/comparisons" className="dash-action group col-span-2 flex items-center justify-between gap-4 overflow-hidden rounded-3xl border border-orange-400/20 bg-gradient-to-r from-orange-500/15 via-rose-500/10 to-fuchsia-500/10 p-5 transition-[border-color,background-color,box-shadow] hover:border-orange-400/45 hover:shadow-[0_18px_45px_rgba(0,0,0,.2)] sm:p-6 lg:col-span-1">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-orange-400/25 bg-orange-400/15 text-orange-300 transition-colors group-hover:bg-orange-400/25">
-              <Plus className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-bold text-orange-200 transition-colors">{t("dash.new")}</h3>
-              <p className="mt-1 text-[10px] uppercase tracking-widest text-[#fdfbf7]/40">{t("dash.newHint")}</p>
-            </div>
-            <ArrowRight className="h-4 w-4 text-orange-300 transition-transform group-hover:translate-x-1" />
-          </Link>
+          <BentoSpotlight
+            tone="amber"
+            className="dash-action col-span-2 rounded-3xl border-orange-400/20 bg-gradient-to-r from-orange-500/15 via-rose-500/10 to-fuchsia-500/10 hover:border-orange-400/45 hover:shadow-[0_18px_45px_rgba(0,0,0,.2)] lg:col-span-1"
+          >
+            <Link to="/app/comparisons" className="group flex h-full w-full items-center justify-between gap-4 p-5 sm:p-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-orange-400/25 bg-orange-400/15 text-orange-300 transition-colors group-hover:bg-orange-400/25">
+                <Plus className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-bold text-orange-200 transition-colors">{t("dash.new")}</h3>
+                <p className="mt-1 text-[10px] uppercase tracking-widest text-[#fdfbf7]/40">{t("dash.newHint")}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-orange-300 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </BentoSpotlight>
 
-          <Link to="/app/uploads" className="dash-action group flex min-h-36 flex-col items-start justify-between gap-3 rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 transition-colors hover:border-blue-400/35 hover:bg-blue-500/[0.06]">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-[#fdfbf7] transition-colors group-hover:border-blue-400/30 group-hover:text-blue-300">
-              <UploadCloud className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-[#fdfbf7] transition-colors group-hover:text-blue-300">{t("dash.upload")}</h3>
-              <p className="mt-1 text-[9px] uppercase tracking-widest text-[#fdfbf7]/35">{t("dash.uploadHint")}</p>
-            </div>
-          </Link>
+          <BentoSpotlight
+            tone="sky"
+            className="dash-action rounded-3xl border-white/[0.08] bg-white/[0.035] hover:border-blue-400/35 hover:bg-blue-500/[0.06]"
+          >
+            <Link to="/app/uploads" className="group flex min-h-36 h-full w-full flex-col items-start justify-between gap-3 p-5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-[#fdfbf7] transition-colors group-hover:border-blue-400/30 group-hover:text-blue-300">
+                <UploadCloud className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-[#fdfbf7] transition-colors group-hover:text-blue-300">{t("dash.upload")}</h3>
+                <p className="mt-1 text-[9px] uppercase tracking-widest text-[#fdfbf7]/35">{t("dash.uploadHint")}</p>
+              </div>
+            </Link>
+          </BentoSpotlight>
 
-          <Link to="/app/team" className="dash-action group flex min-h-36 flex-col items-start justify-between gap-3 rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 transition-colors hover:border-fuchsia-400/35 hover:bg-fuchsia-500/[0.06]">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-[#fdfbf7] transition-colors group-hover:border-fuchsia-400/30 group-hover:text-fuchsia-300">
-              <UserPlus className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-[#fdfbf7] transition-colors group-hover:text-fuchsia-300">{t("dash.invite")}</h3>
-              <p className="mt-1 text-[9px] uppercase tracking-widest text-[#fdfbf7]/35">{t("dash.inviteHint")}</p>
-            </div>
-          </Link>
+          <BentoSpotlight
+            tone="fuchsia"
+            className="dash-action rounded-3xl border-white/[0.08] bg-white/[0.035] hover:border-fuchsia-400/35 hover:bg-fuchsia-500/[0.06]"
+          >
+            <Link to="/app/team" className="group flex min-h-36 h-full w-full flex-col items-start justify-between gap-3 p-5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-[#fdfbf7] transition-colors group-hover:border-fuchsia-400/30 group-hover:text-fuchsia-300">
+                <UserPlus className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-[#fdfbf7] transition-colors group-hover:text-fuchsia-300">{t("dash.invite")}</h3>
+                <p className="mt-1 text-[9px] uppercase tracking-widest text-[#fdfbf7]/35">{t("dash.inviteHint")}</p>
+              </div>
+            </Link>
+          </BentoSpotlight>
         </div>
 
       {/* Stats Grid */}

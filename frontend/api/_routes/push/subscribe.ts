@@ -94,8 +94,8 @@ const PUSH_HOST_SUFFIXES = [
 export function isKnownPushService(endpoint: string): boolean {
   try {
     const url = new URL(endpoint);
-    if (url.protocol !== "https:" || url.port) return false;
-    const host = url.hostname.toLowerCase();
+    if (url.protocol !== "https:" || url.port || url.username || url.password) return false;
+    const host = url.hostname.toLowerCase().replace(/\.$/, "");
     return PUSH_HOST_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
   } catch {
     return false;

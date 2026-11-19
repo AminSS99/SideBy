@@ -250,12 +250,12 @@ const UploadsPage = () => {
         </div>
         <h3 className="font-serif text-2xl text-[#fdfbf7]">{t("wsp.uploads.dropTitle")}</h3>
         <p className="mt-2 text-sm text-[#fdfbf7]/40">{t("wsp.uploads.dropHint")}</p>
-        <label className="mt-8 cursor-pointer rounded-sm bg-[#fdfbf7] px-8 py-3.5 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0]">
+        <label className="mt-8 inline-block cursor-pointer rounded-sm bg-[#fdfbf7] px-8 py-3.5 text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#e0e0e0] focus-within:ring-2 focus-within:ring-orange-400 peer-focus-visible:ring-2">
           {t("wsp.uploads.browse")}
           <input
             type="file"
             multiple
-            className="hidden"
+            className="sr-only peer"
             onChange={(e) => {
               if (e.target.files) void handleFiles(e.target.files);
               e.currentTarget.value = "";
@@ -365,7 +365,7 @@ const DocumentRow = ({ document, isDeleting, formatSize, onDelete }: DocumentRow
         <button
           onClick={onDelete}
           disabled={document.status === "uploading" || isDeleting}
-          className="flex h-9 w-9 items-center justify-center rounded-sm border border-transparent text-[#fdfbf7]/30 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40 sm:opacity-0 sm:group-hover:opacity-100"
+          className="flex min-h-11 min-w-11 items-center justify-center rounded-sm border border-transparent text-[#fdfbf7]/30 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 group-focus-within:opacity-100"
           title={t("wsp.uploads.deleteTitle")}
           aria-label={t("wsp.uploads.deleteTitle")}
         >

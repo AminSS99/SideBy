@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { requireAuth } from "../../../_lib/auth.js";
-import { canAccessComparison } from "../../../_lib/db-auth.js";
+import { canAccessComparisonAsMember } from "../../../_lib/db-auth.js";
 import { sendJson } from "../../../_lib/sideby.js";
 import { createDbClient } from "../../../../src/db/index.js";
 import { comparisonVersions } from "../../../../src/db/schema.js";
@@ -12,6 +12,13 @@ export const config = {
   runtime: "nodejs",
   maxDuration: 15,
 };
+
+function parsePositiveInt(raw: string | string[] | undefined): number | null {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (!value || !/^\d+$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 && parsed <= 1_000_000 ? parsed : null;
+}
 
 export default async function handler(
   request: VercelRequest,
@@ -26,14 +33,14 @@ export default async function handler(
     const id = Array.isArray(request.query.id) ? request.query.id[0] : request.query.id;
     if (!id) return sendJson(response, { error: "Comparison id is required." }, 400);
 
-    const fromVersion = request.query.fromVersion;
-    const toVersion = request.query.toVersion;
-    if (!fromVersion || !toVersion) {
-      return sendJson(response, { error: "Both fromVersion and toVersion query parameters are required." }, 400);
+    const fromVersion = parsePositiveInt(request.query.fromVersion);
+    const toVersion = parsePositiveInt(request.query.toVersion);
+    if (fromVersion === null || toVersion === null) {
+      return sendJson(response, { error: "Both fromVersion and toVersion must be positive integers." }, 400);
     }
 
     const db = createDbClient();
-    const hasAccess = await canAccessComparison(db, auth.userId, id);
+    const hasAccess = await canAccessComparisonAsMember(db, auth.userId, id);
     if (!hasAccess) return sendJson(response, { error: "Comparison not found." }, 404);
 
     const [fromVer] = await db
@@ -42,7 +49,7 @@ export default async function handler(
       .where(
         and(
           eq(comparisonVersions.comparisonId, id),
-          eq(comparisonVersions.versionNumber, Number(fromVersion)),
+          eq(comparisonVersions.versionNumber, fromVersion),
         ),
       )
       .limit(1);
@@ -53,7 +60,7 @@ export default async function handler(
       .where(
         and(
           eq(comparisonVersions.comparisonId, id),
-          eq(comparisonVersions.versionNumber, Number(toVersion)),
+          eq(comparisonVersions.versionNumber, toVersion),
         ),
       )
       .limit(1);
@@ -68,8 +75,8 @@ export default async function handler(
     );
 
     return sendJson(response, {
-      fromVersion: Number(fromVersion),
-      toVersion: Number(toVersion),
+      fromVersion,
+      toVersion,
       diff: diffResult.diff,
       thresholdBreached: diffResult.thresholdBreached,
     });

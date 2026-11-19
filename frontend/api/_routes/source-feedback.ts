@@ -3,6 +3,7 @@ import { requireAuth } from "../_lib/auth.js";
 import { withRateLimit } from "../_lib/route-guard.js";
 import { canAccessComparison } from "../_lib/db-auth.js";
 import { sendJson } from "../_lib/sideby.js";
+import { httpUrlOrNull } from "../_lib/safe-url.js";
 import { createDbClient } from "../../src/db/index.js";
 import { sourceFeedback } from "../../src/db/schema.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -19,7 +20,10 @@ export const config = {
 
 const FeedbackSchema = z.object({
   comparisonId: z.string().uuid().optional(),
-  sourceUrl: z.string().url().max(2000),
+  sourceUrl: z.string().trim().max(2000).refine(
+    (value) => httpUrlOrNull(value) !== null,
+    "Source URL must be a valid HTTP(S) URL.",
+  ),
   vote: z.number().int().min(-1).max(1),
   reason: z.string().trim().max(1000).optional(),
 });

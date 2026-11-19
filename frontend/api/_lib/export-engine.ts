@@ -14,19 +14,25 @@ import {
   comparisonVerdicts,
   comparisonQuestions,
 } from "../../src/db/schema.js";
-import { canAccessComparison } from "./db-auth.js";
+import { canAccessComparison, canAccessWorkspace } from "./db-auth.js";
+import { httpUrlOrNull } from "./safe-url.js";
 import { analyzeComparisonQuery, summarizeComparisonTaxonomy } from "../../src/lib/comparisonTaxonomy.js";
+
+function escapeMarkdownLinkText(text: string): string {
+  return text.replace(/[[\]()\\]/g, "\\$&");
+}
 
 export async function exportComparison(
   comparisonId: string,
   userId: string,
   format: "markdown" | "json",
+  requiredWorkspaceId: string | null = null,
 ) {
   const db = createDbClient();
 
   const hasAccess = await canAccessComparison(db, userId, comparisonId);
   if (!hasAccess) {
-    throw new Error("Comparison not found.");
+    throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
   }
 
   const [comp] = await db
@@ -35,9 +41,13 @@ export async function exportComparison(
     .where(eq(comparisons.id, comparisonId))
     .limit(1);
 
-  if (!comp) {
-    throw new Error("Comparison not found.");
+  if (!comp || (requiredWorkspaceId && comp.workspaceId !== requiredWorkspaceId)) {
+    throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
   }
+
+  const isMember =
+    comp.clerkUserId === userId ||
+    (comp.workspaceId ? await canAccessWorkspace(db, userId, comp.workspaceId) : false);
 
   const entities = await db
     .select()
@@ -70,18 +80,43 @@ export async function exportComparison(
     .where(eq(comparisonVerdicts.comparisonId, comparisonId))
     .limit(1);
 
-  const questions = await db
-    .select()
-    .from(comparisonQuestions)
-    .where(eq(comparisonQuestions.comparisonId, comparisonId));
+  const questions = isMember
+    ? await db
+        .select({
+          id: comparisonQuestions.id,
+          question: comparisonQuestions.question,
+          answer: comparisonQuestions.answer,
+          groundedIn: comparisonQuestions.groundedIn,
+          answeredAt: comparisonQuestions.answeredAt,
+          createdAt: comparisonQuestions.createdAt,
+        })
+        .from(comparisonQuestions)
+        .where(eq(comparisonQuestions.comparisonId, comparisonId))
+    : [];
 
   if (format === "json") {
+    const safeComparison = {
+      id: comp.id,
+      query: comp.query,
+      slug: comp.slug,
+      status: comp.status,
+      visibility: comp.visibility,
+      sourceCount: comp.sourceCount,
+      factsCount: comp.factsCount,
+      dimensionsCount: comp.dimensionsCount,
+      overallConfidence: comp.overallConfidence,
+      freshnessClass: comp.freshnessClass,
+      taxonomyCategory: comp.taxonomyCategory,
+      result: comp.result,
+      createdAt: comp.createdAt,
+      updatedAt: comp.updatedAt,
+    };
     return {
-      comparison: comp,
+      comparison: safeComparison,
       entities,
       dimensions,
       sources,
-      facts,
+      facts: facts.map(({ embedding: _embedding, ...rest }) => rest),
       scores,
       verdict,
       questions,
@@ -139,7 +174,13 @@ export async function exportComparison(
   if (sources.length > 0) {
     md += `## Sources\n\n`;
     for (const source of sources) {
-      md += `- [${source.title || "Untitled"}](${source.url}) — ${source.reliability || "unknown reliability"}\n`;
+      const safeTitle = escapeMarkdownLinkText(source.title || "Untitled");
+      const safeUrl = httpUrlOrNull(source.url);
+      if (safeUrl) {
+        md += `- [${safeTitle}](${safeUrl}) — ${source.reliability || "unknown reliability"}\n`;
+      } else {
+        md += `- ${safeTitle} — ${source.reliability || "unknown reliability"}\n`;
+      }
     }
     md += `\n`;
   }

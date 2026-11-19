@@ -85,7 +85,8 @@ export default async function handler(
           .from(workspaces)
           .where(eq(workspaces.id, body.workspaceId))
           .limit(1);
-        orgId = workspace?.ownerType === "org" ? workspace.ownerId : auth.orgId || null;
+        // Never leak a personal workspace API key into an active org scope.
+        orgId = workspace?.ownerType === "org" ? workspace.ownerId : null;
       }
 
       const activeKeys = await db

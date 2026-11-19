@@ -22,9 +22,11 @@ function isAuthorized(request: VercelRequest) {
 
   const header = request.headers.authorization;
   const raw = Array.isArray(header) ? header[0] : header;
-  const token = raw?.replace("Bearer ", "") || "";
-  if (token.length !== secret.length) return false;
-  return timingSafeEqual(Buffer.from(token), Buffer.from(secret));
+  const token = raw?.startsWith("Bearer ") ? raw.slice("Bearer ".length) : "";
+  const tokenBuf = Buffer.from(token);
+  const secretBuf = Buffer.from(secret);
+  if (tokenBuf.length !== secretBuf.length) return false;
+  return timingSafeEqual(tokenBuf, secretBuf);
 }
 
 export default async function handler(

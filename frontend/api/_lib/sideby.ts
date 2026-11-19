@@ -8,7 +8,12 @@ import { getPrimaryProvider } from "./providers/index.js";
 import { logger } from "./log.js";
 import { normalizeQuery } from "./query-normalizer.js";
 import { isFreshEnough, isStaleButUsable, getFreshnessClass, freshnessLabel } from "./reuse-engine.js";
-import { comparisonCache, trackCacheHit } from "./cache-layer.js";
+import {
+  comparisonCache,
+  publicComparisonCacheKey,
+  trackCacheHit,
+  userComparisonCacheKey,
+} from "./cache-layer.js";
 import {
   assessPublishEligibility,
   isRetrievableCitation,
@@ -228,7 +233,13 @@ type ComparisonSource = {
 
 // Server errors must never leak SQL, parameters, hostnames, or stack text.
 const INTERNAL_ERROR_PATTERN =
-  /failed query|params:|\b(select|insert|update|delete)\b[\s\S]*\b(from|into|set)\b|relation ".+" does not exist|column ".+"|\becon\w+|password|postgres|neon\.tech|at\s+\S+\s+\(.*:\d+:\d+\)/i;
+  /failed query|params:|\b(select|insert|update|delete)\b[\s\S]*\b(from|into|set)\b|relation ".+" does not exist|column ".+"|\becon\w+|\b(econnrefused|econnreset|enotfound|etimedout|epipe)\b|password|postgres|neon\.tech|bearer\s+\S+|api[_-]?key|at\s+\S+\s+\(.*:\d+:\d+\)/i;
+
+export const sanitizeErrorMessage = (message: string | null | undefined): string | null => {
+  if (!message) return null;
+  if (message.length <= 300 && !INTERNAL_ERROR_PATTERN.test(message)) return message;
+  return "Something went wrong on our side. Please try again in a moment.";
+};
 
 export const sanitizeErrorPayload = (payload: unknown, status: number): unknown => {
   if (status < 500 || !payload || typeof payload !== "object") return payload;
@@ -670,7 +681,12 @@ export const createComparisonJob = async (
     // ─── Phase 12: In-memory cache check ─────────────────────────────────────
     // Runs inside the lock so even instant cache hits serialize per scope and
     // never bypass the concurrency guarantee with unguarded inserts.
-    const memoryHit = comparisonCache.get<ComparisonResult>(normalized.canonicalSlug);
+    // Lookup is strictly tenant-scoped: check the caller's own bucket first,
+    // then the public-only bucket. Private results of other tenants are never
+    // placed in the public bucket.
+    const memoryHit =
+      comparisonCache.get<ComparisonResult>(userComparisonCacheKey(input.userId, normalized.canonicalSlug)) ??
+      comparisonCache.get<ComparisonResult>(publicComparisonCacheKey(normalized.canonicalSlug));
     if (memoryHit) {
       logger.info("Memory cache hit", { canonicalSlug: normalized.canonicalSlug });
       const result = materializeCachedResult(memoryHit, comparisonSlug, parsed.normalizedQuery);
@@ -897,8 +913,12 @@ export const createComparisonJob = async (
     if (isCached && reusedSource?.result) {
       const cachedResult = materializeCachedResult(reusedSource.result as ComparisonResult, comparisonSlug, parsed.normalizedQuery);
 
-      // Phase 12: Populate in-memory cache for next lookup
-      comparisonCache.set(normalized.canonicalSlug, cachedResult, 10 * 60 * 1000);
+      // Phase 12: Populate in-memory cache for next lookup — strictly scoped
+      // so private or team-only records are never served to unrelated tenants.
+      const cacheKey = reusedSource.visibility === "public"
+        ? publicComparisonCacheKey(normalized.canonicalSlug)
+        : userComparisonCacheKey(input.userId, normalized.canonicalSlug);
+      comparisonCache.set(cacheKey, cachedResult, 10 * 60 * 1000);
 
       // Track cache hit for analytics
       trackCacheHit(db, id, "db", 0).catch(() => {});
@@ -933,23 +953,27 @@ export const createComparisonJob = async (
       const staleResult = materializeCachedResult(reusedSource.result as ComparisonResult, comparisonSlug, parsed.normalizedQuery);
       trackCacheHit(db, id, "reuse", 0).catch(() => {});
 
-      // Serve the stale result immediately while refreshing the source record for future users.
-      if (process.env.DISABLE_IN_PROCESS_JOBS === "true") {
-        db.update(comparisons)
-          .set({ status: "queued", progress: 0, activeStep: 0, updatedAt: new Date() })
-          .where(eq(comparisons.id, reusedSource.id))
-          .catch((e) => {
-            logger.warn("Failed to queue background refresh", { error: String(e) });
+      // Only refresh the source record in place if the caller owns it.
+      // Never mutate another tenant's public/team comparison with this caller's query.
+      const canRefreshSourceInPlace = reusedSource.clerkUserId === input.userId;
+      if (canRefreshSourceInPlace) {
+        if (process.env.DISABLE_IN_PROCESS_JOBS === "true") {
+          db.update(comparisons)
+            .set({ status: "queued", progress: 0, activeStep: 0, updatedAt: new Date() })
+            .where(eq(comparisons.id, reusedSource.id))
+            .catch((e) => {
+              logger.warn("Failed to queue background refresh", { error: String(e) });
+            });
+          logger.info(`[DISABLE_IN_PROCESS_JOBS] Background refresh for source ${reusedSource.id} queued for external worker.`);
+        } else {
+          const bgRefresh = runComparisonJob(reusedSource.id, input.userId, input.query, input.orgId).catch((e) => {
+            logger.warn(`Background refresh failed for ${reusedSource!.id}`, { error: e instanceof Error ? e.message : String(e) });
           });
-        logger.info(`[DISABLE_IN_PROCESS_JOBS] Background refresh for source ${reusedSource.id} queued for external worker.`);
-      } else {
-        const bgRefresh = runComparisonJob(reusedSource.id, input.userId, input.query, input.orgId).catch((e) => {
-          logger.warn(`Background refresh failed for ${reusedSource!.id}`, { error: e instanceof Error ? e.message : String(e) });
-        });
-        if (scheduleResearch) scheduleResearch(bgRefresh);
-        else bgRefresh.catch((e) => {
-          logger.error("Unscheduled background refresh failed", e instanceof Error ? e : undefined);
-        });
+          if (scheduleResearch) scheduleResearch(bgRefresh);
+          else bgRefresh.catch((e) => {
+            logger.error("Unscheduled background refresh failed", e instanceof Error ? e : undefined);
+          });
+        }
       }
 
       logger.info("Serving stale comparison + enqueued background refresh", {
@@ -1123,6 +1147,7 @@ const getComparisonActivity = async (
 export const getComparisonJob = async (
   id: string,
   clerkUserId: string | null = null,
+  requiredWorkspaceId: string | null = null,
 ): Promise<ComparisonJob> => {
   const db = createDbClient();
   const rows = await db
@@ -1134,16 +1159,27 @@ export const getComparisonJob = async (
   if (!rows[0]) throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
 
   const d = rows[0];
+  if (requiredWorkspaceId && d.workspaceId !== requiredWorkspaceId) {
+    throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
+  }
   const hasAccess = await canAccessComparisonRecord(db, clerkUserId, id);
   if (!hasAccess) {
     throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
   }
 
+  const isMember = Boolean(
+    clerkUserId &&
+    (d.clerkUserId === clerkUserId ||
+      (d.workspaceId && await canAccessWorkspace(db, clerkUserId, d.workspaceId))),
+  );
+
   const isRunning = d.status === "running" || d.status === "queued";
 
-  // Fetch latest failed step for failed jobs
+  // Fetch latest failed step for failed jobs (members only — never leak internal
+  // error traces on public comparisons to unrelated tenants).
   let failedStep: string | null = null;
-  if (d.status === "failed") {
+  let safeErrorMessage: string | null = isMember ? sanitizeErrorMessage(d.errorMessage) : null;
+  if (isMember && d.status === "failed") {
     const failedSteps = await db
       .select({ stepName: aiRunSteps.stepName, errorTrace: aiRunSteps.errorTrace })
       .from(aiRunSteps)
@@ -1159,9 +1195,8 @@ export const getComparisonJob = async (
 
     if (failedSteps.length > 0) {
       failedStep = failedSteps[0].stepName;
-      // If no error message on comparison, use step error
-      if (!d.errorMessage && failedSteps[0].errorTrace) {
-        d.errorMessage = failedSteps[0].errorTrace;
+      if (!safeErrorMessage && failedSteps[0].errorTrace) {
+        safeErrorMessage = sanitizeErrorMessage(failedSteps[0].errorTrace);
       }
     }
   }
@@ -1169,7 +1204,9 @@ export const getComparisonJob = async (
   const status = isRunning || d.status === "queued" || d.status === "running"
     ? "running"
     : d.status as "completed" | "failed";
-  const activity = await getComparisonActivity(db, id);
+  // Internal pipeline telemetry (models, costs, snapshots, error traces) is
+  // visible only to the owner or workspace members.
+  const activity = isMember ? await getComparisonActivity(db, id) : [];
 
   const result = d.result
     ? ({
@@ -1188,9 +1225,9 @@ export const getComparisonJob = async (
     query: d.query,
     result,
     visibility: d.visibility,
-    error: d.errorMessage,
+    error: safeErrorMessage,
     failedStep,
-    retryable: d.status === "failed",
+    retryable: isMember && d.status === "failed",
     activity,
     sourcesFound: d.sourceCount,
     factsExtracted: d.factsCount,
@@ -1507,6 +1544,7 @@ export const createPublicSnapshotComparison = async (
 export const listComparisonHistory = async (
   clerkUserId: string | null = null,
   limit = 12,
+  workspaceId: string | null = null,
 ): Promise<ComparisonHistoryItem[]> => {
   if (!clerkUserId) {
     return [];
@@ -1514,6 +1552,10 @@ export const listComparisonHistory = async (
 
   const safeLimit = Math.max(1, Math.min(limit, 50));
   const db = createDbClient();
+
+  const whereCondition = workspaceId
+    ? and(eq(comparisons.clerkUserId, clerkUserId), eq(comparisons.workspaceId, workspaceId))
+    : eq(comparisons.clerkUserId, clerkUserId);
 
   const rows = await db
     .select({
@@ -1538,7 +1580,7 @@ export const listComparisonHistory = async (
     })
     .from(comparisons)
     .leftJoin(queryAnalytics, eq(comparisons.id, queryAnalytics.comparisonId))
-    .where(eq(comparisons.clerkUserId, clerkUserId))
+    .where(whereCondition)
     .orderBy(desc(comparisons.updatedAt))
     .limit(safeLimit);
 

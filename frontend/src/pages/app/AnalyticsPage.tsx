@@ -11,6 +11,8 @@ import {
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { GlowCard } from "@/components/GlowCard";
+import { BentoSpotlight } from "@/components/kokonutui/bento-spotlight";
+import { SmoothTab } from "@/components/kokonutui/smooth-tab";
 import { apiFetch } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { statusLabel, useT } from "@/i18n";
@@ -106,7 +108,8 @@ const AnalyticsPage = () => {
   }, []);
 
   useGSAP(() => {
-    const tl = gsap.timeline();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tl = gsap.timeline({ defaults: { clearProps: "transform,opacity" } });
     tl.from(".stat-header", { y: -20, opacity: 0, duration: 0.8, ease: "power3.out" })
       .from(".stat-nav", { y: 20, opacity: 0, duration: 0.6, ease: "power3.out" }, "-=0.6")
       .from(".stat-content", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.4");
@@ -153,12 +156,22 @@ const AnalyticsPage = () => {
         </button>
       </div>
 
-      <div className="stat-nav grid grid-cols-2 gap-1.5 border-b border-[#2a2a2a] pb-2 sm:flex sm:items-center sm:gap-2 sm:pb-px sm:overflow-x-auto sm:no-scrollbar">
-        <NavButton active={activeTab === "overview"} icon={Activity} label={t("ins.analytics.tab.overview")} onClick={() => setActiveTab("overview")} />
-        <NavButton active={activeTab === "taxonomy"} icon={ShieldCheck} label={t("ins.analytics.tab.taxonomy")} onClick={() => setActiveTab("taxonomy")} />
-        <NavButton active={activeTab === "costs"} icon={DollarSign} label={t("ins.analytics.tab.costs")} onClick={() => setActiveTab("costs")} />
-        <NavButton active={activeTab === "health"} icon={ActivitySquare} label={t("ins.analytics.tab.health")} onClick={() => setActiveTab("health")} />
-      </div>
+      <SmoothTab
+        className="stat-nav"
+        ariaLabel={t("ins.analytics.title")}
+        layoutId="analytics-section-tabs"
+        variant="underline"
+        mobileGridCols={2}
+        desktopLayout="flex"
+        value={activeTab}
+        onValueChange={setActiveTab}
+        items={[
+          { id: "overview", icon: Activity, label: t("ins.analytics.tab.overview") },
+          { id: "taxonomy", icon: ShieldCheck, label: t("ins.analytics.tab.taxonomy") },
+          { id: "costs", icon: DollarSign, label: t("ins.analytics.tab.costs") },
+          { id: "health", icon: ActivitySquare, label: t("ins.analytics.tab.health") },
+        ]}
+      />
 
       <div className="stat-content">
         {isLoading ? (
@@ -295,30 +308,6 @@ const AnalyticsPage = () => {
   );
 };
 
-const NavButton = ({
-  active,
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`flex shrink-0 items-center gap-2 px-4 py-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${
-      active ? "text-orange-400" : "text-[#fdfbf7]/50 hover:text-[#fdfbf7]"
-    }`}
-  >
-    <Icon className="h-4 w-4" />
-    {label}
-    {active && <span className="absolute bottom-0 left-0 h-[2px] w-full bg-orange-500" />}
-  </button>
-);
-
 const Metric = ({
   label,
   value,
@@ -328,10 +317,14 @@ const Metric = ({
   value: string | number;
   accent?: string;
 }) => (
-  <GlowCard className="p-6">
+  <BentoSpotlight
+    tone={accent.includes("red") ? "rose" : "amber"}
+    className="rounded-sm border-[#2a2a2a] bg-[#0c0b0a] hover:border-orange-400/25"
+    contentClassName="p-6"
+  >
     <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">{label}</p>
     <p className={`mt-3 font-serif text-4xl ${accent}`}>{value}</p>
-  </GlowCard>
+  </BentoSpotlight>
 );
 
 const StatePanel = ({

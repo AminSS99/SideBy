@@ -1,10 +1,7 @@
 import React, { useRef, useMemo } from "react";
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import type { ComparisonData } from "./types";
-
-gsap.registerPlugin(ScrollTrigger);
 
 interface EntityFactPanelProps {
   result: ComparisonData;
@@ -41,11 +38,6 @@ export const EntityFactPanel = ({ result, facts }: EntityFactPanelProps) => {
 
     mm.add("(prefers-reduced-motion: no-preference)", () => {
       gsap.from(".efp-item", {
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: "top 90%",
-          once: true,
-        },
         y: 20,
         opacity: 0,
         stagger: 0.12,

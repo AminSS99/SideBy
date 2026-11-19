@@ -23,6 +23,7 @@ import { captureEvent } from "@/lib/posthog";
 import { LANGS, useI18n } from "@/i18n";
 import { useResultTranslation } from "@/hooks/useResultTranslation";
 import HelpfulRating from "@/components/kokonutui/helpful-rating";
+import { SmoothTab } from "@/components/kokonutui/smooth-tab";
 import { useAuth } from "@/contexts/AuthContext";
 import { completeFirstComparison, isFirstComparison as isStoredFirstComparison } from "@/lib/onboardingAttribution";
 import {
@@ -101,10 +102,22 @@ const ComparisonDetailPage = () => {
   const [viewedHistoricalResult, setViewedHistoricalResult] = useState<ComparisonData | null>(null);
   const [viewedHistoricalVersionNumber, setViewedHistoricalVersionNumber] = useState<number | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<"overview" | "intelligence" | "metadata">("overview");
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : true,
+  );
   const [useAdaptiveCanvas, setUseAdaptiveCanvas] = useState(() => isAdaptiveCanvasEnabled());
   const [canvasWeights, setCanvasWeights] = useState<Record<string, number>>({});
   const [isDecisionBarDismissed, setIsDecisionBarDismissed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const onChange = (event: MediaQueryListEvent) => setIsDesktop(event.matches);
+    setIsDesktop(mql.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
   const activeRecordKey = `${id}:${viewedHistoricalVersionNumber ?? "live"}`;
   const prevActiveRecordKeyRef = useRef(activeRecordKey);
@@ -402,34 +415,44 @@ const ComparisonDetailPage = () => {
           </div>
         )}
         {/* Tab Selector on Mobile */}
-        <div role="tablist" aria-label={t("det.tabs.aria")} className="sticky top-[calc(72px+env(safe-area-inset-top,0px))] z-30 -mx-4 grid grid-cols-3 gap-1 border-y border-white/[0.07] bg-[#0b0a09]/90 px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,.25)] backdrop-blur-2xl lg:hidden">
-          {[
-            { id: "overview", label: t("det.tabs.overview"), shortLabel: t("det.tabs.overview") },
-            { id: "intelligence", label: t("det.tabs.matrix"), shortLabel: t("det.tabs.matrixShort") },
-            { id: "metadata", label: t("det.tabs.sources"), shortLabel: t("det.tabs.sourcesShort") }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              id={`comparison-tab-${tab.id}`}
-              type="button"
-              role="tab"
-              aria-controls={`comparison-panel-${tab.id}`}
-              aria-selected={activeTab === tab.id}
-              onClick={() => setActiveTab(tab.id as "overview" | "intelligence" | "metadata")}
-              className={`min-h-11 truncate rounded-xl px-2 text-center text-[11px] font-semibold transition-colors ${
-                activeTab === tab.id
-                  ? "border border-orange-300/20 bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-[0_10px_24px_rgba(249,115,22,.18)]"
-                  : "border border-transparent text-white/55 hover:bg-white/[0.05] hover:text-white"
-              }`}
-            >
-              <span className="sm:hidden">{tab.shortLabel}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          ))}
+        <div className="sticky top-[calc(72px+env(safe-area-inset-top,0px))] z-30 w-full lg:hidden">
+          <SmoothTab
+            ariaLabel={t("det.tabs.aria")}
+            layoutId="comparison-detail-mobile-tabs"
+            variant="pill"
+            mobileGridCols={3}
+            desktopLayout="grid"
+            value={activeTab}
+            onValueChange={setActiveTab}
+            items={[
+              {
+                id: "overview",
+                label: t("det.tabs.overview"),
+                shortLabel: t("det.tabs.overview"),
+                tabId: "comparison-tab-overview",
+                controlsId: "comparison-panel-overview",
+              },
+              {
+                id: "intelligence",
+                label: t("det.tabs.matrix"),
+                shortLabel: t("det.tabs.matrixShort"),
+                tabId: "comparison-tab-intelligence",
+                controlsId: "comparison-panel-intelligence",
+              },
+              {
+                id: "metadata",
+                label: t("det.tabs.sources"),
+                shortLabel: t("det.tabs.sourcesShort"),
+                tabId: "comparison-tab-metadata",
+                controlsId: "comparison-panel-metadata",
+              },
+            ]}
+          />
         </div>
 
-        {/* Desktop Grid Layout */}
-        <div className="hidden lg:grid grid-cols-12 gap-8 items-start wb-grid">
+        {/* Desktop Grid Layout — mounted exclusively at >= 1024px to prevent duplicate API calls and #id collisions */}
+        {isDesktop ? (
+        <div className="grid grid-cols-12 gap-8 items-start wb-grid">
           <div className="col-span-8 space-y-10">
             <ComparisonHeader
               result={resultData}
@@ -496,9 +519,9 @@ const ComparisonDetailPage = () => {
             </SafePanel>
           </aside>
         </div>
-
-        {/* Mobile Tab-based Layout */}
-        <div className="space-y-6 pb-28 lg:hidden sm:space-y-8">
+        ) : (
+        /* Mobile Tab-based Layout — mounted exclusively below 1024px */
+        <div className="space-y-6 pb-28 sm:space-y-8">
           {activeTab === "overview" && (
             <div id="comparison-panel-overview" role="tabpanel" aria-labelledby="comparison-tab-overview" className="space-y-6 animate-fadeIn sm:space-y-8">
               <ComparisonHeader
@@ -573,6 +596,7 @@ const ComparisonDetailPage = () => {
             </div>
           )}
         </div>
+        )}
       </div>
     );
   };
@@ -895,8 +919,18 @@ const ComparisonDetailPage = () => {
         <StickyDecisionBar
           result={result}
           onScrollToEvidence={() => {
-            const el = document.getElementById("feature-matrix") || document.getElementById("decision-matrix");
-            if (el) el.scrollIntoView({ behavior: "smooth" });
+            if (useAdaptiveCanvas) {
+              setUseAdaptiveCanvas(false);
+            }
+            if (!isDesktop && activeTab !== "intelligence") {
+              setActiveTab("intelligence");
+            }
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                const el = document.getElementById("feature-matrix") || document.getElementById("decision-matrix");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              });
+            });
           }}
           onDismiss={() => setIsDecisionBarDismissed(true)}
         />

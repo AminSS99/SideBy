@@ -19,12 +19,14 @@ export const config = {
   },
 };
 
+const MAX_WEBHOOK_SUBSCRIPTIONS = 20;
+
 const CreateSubscriptionSchema = z.object({
-  url: z.string().trim().url("Must be a valid URL"),
+  url: z.string().trim().url("Must be a valid URL").max(2048, "Webhook URL is too long"),
   workspaceId: z.string().uuid().optional(),
   eventTypes: z.array(
     z.enum(["comparison.completed", "comparison.failed"])
-  ).min(1, "At least one event type must be selected"),
+  ).min(1, "At least one event type must be selected").max(10),
 });
 
 function serializeSubscription(row: typeof webhookSubscriptions.$inferSelect, includeSecret = false) {
@@ -79,9 +81,30 @@ export default async function handler(
           .from(workspaces)
           .where(eq(workspaces.id, body.workspaceId))
           .limit(1);
-        orgId = workspace?.ownerType === "org" ? workspace.ownerId : auth.orgId || null;
+        // Never leak a personal workspace webhook into an active org scope.
+        orgId = workspace?.ownerType === "org" ? workspace.ownerId : null;
       }
 
+      const existingSubs = await db
+        .select({ id: webhookSubscriptions.id })
+        .from(webhookSubscriptions)
+        .where(
+          or(
+            eq(webhookSubscriptions.userId, auth.userId),
+            orgId ? eq(webhookSubscriptions.organizationId, orgId) : eq(webhookSubscriptions.userId, auth.userId),
+          ),
+        )
+        .limit(MAX_WEBHOOK_SUBSCRIPTIONS);
+
+      if (existingSubs.length >= MAX_WEBHOOK_SUBSCRIPTIONS) {
+        return sendJson(
+          response,
+          { error: `Maximum of ${MAX_WEBHOOK_SUBSCRIPTIONS} webhook subscriptions reached. Remove an existing subscription first.` },
+          400,
+        );
+      }
+
+      const uniqueEventTypes = [...new Set(body.eventTypes)];
       const secret = `whsec_${crypto.randomBytes(24).toString("hex")}`;
       const [row] = await db
         .insert(webhookSubscriptions)
@@ -91,7 +114,7 @@ export default async function handler(
           workspaceId: body.workspaceId || null,
           url: body.url,
           secret: secret,
-          eventTypes: body.eventTypes,
+          eventTypes: uniqueEventTypes,
           active: true,
         })
         .returning();

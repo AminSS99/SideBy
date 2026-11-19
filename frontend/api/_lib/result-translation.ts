@@ -25,8 +25,10 @@ export type TranslatableSlot = { path: Array<string | number>; value: string };
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
 const MAX_STRING_LENGTH = 1200;
+const MAX_TRANSLATABLE_SLOTS = 200;
 const CHUNK_CHAR_BUDGET = 5500;
 const CHUNK_MAX_ITEMS = 40;
+const MAX_CONCURRENT_CHUNKS = 3;
 
 const VERDICT_KEYS = ["developers", "teams", "students", "powerUsers", "ecosystem", "summary"] as const;
 
@@ -34,6 +36,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 const pushIfText = (slots: TranslatableSlot[], path: Array<string | number>, value: unknown) => {
+  if (slots.length >= MAX_TRANSLATABLE_SLOTS) return;
   if (typeof value === "string" && value.trim().length > 0) {
     slots.push({ path, value: value.slice(0, MAX_STRING_LENGTH) });
   }
@@ -165,21 +168,34 @@ const translateChunk = async (chunk: string[], language: TranslationLanguage): P
   return out.map((text, index) => sanitizeLlmText(text, MAX_STRING_LENGTH) || chunk[index]);
 };
 
-/** Translate every string; retries a chunk once, then falls back to the English original. */
+/** Translate every string with bounded concurrency; retries a chunk once, then falls back to English. */
 export const translateStrings = async (values: string[], language: TranslationLanguage): Promise<string[]> => {
   const chunks = chunkStrings(values);
-  const translated = await Promise.all(
-    chunks.map(async (chunk) => {
+  const translated: string[][] = new Array(chunks.length);
+  let nextIndex = 0;
+
+  const runWorker = async () => {
+    while (nextIndex < chunks.length) {
+      const currentIndex = nextIndex++;
+      const chunk = chunks[currentIndex];
+      let result: string[] = chunk;
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          return await translateChunk(chunk, language);
+          result = await translateChunk(chunk, language);
+          break;
         } catch {
-          /* retry once, then fall back below */
+          /* retry once, then fall back to original */
         }
       }
-      return chunk;
-    }),
+      translated[currentIndex] = result;
+    }
+  };
+
+  const workers = Array.from(
+    { length: Math.min(MAX_CONCURRENT_CHUNKS, chunks.length) },
+    () => runWorker(),
   );
+  await Promise.all(workers);
   return translated.flat();
 };
 

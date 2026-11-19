@@ -121,13 +121,14 @@ export async function answerFollowUp(
   comparisonId: string,
   userId: string,
   question: string,
+  requiredWorkspaceId: string | null = null,
 ) {
   const db = createDbClient();
 
   // Verify access
   const hasAccess = await canAccessComparison(db, userId, comparisonId);
   if (!hasAccess) {
-    throw new Error("Comparison not found.");
+    throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
   }
 
   // Fetch comparison
@@ -137,8 +138,8 @@ export async function answerFollowUp(
     .where(eq(comparisons.id, comparisonId))
     .limit(1);
 
-  if (comp.length === 0) {
-    throw new Error("Comparison not found.");
+  if (comp.length === 0 || (requiredWorkspaceId && comp[0].workspaceId !== requiredWorkspaceId)) {
+    throw Object.assign(new Error("Comparison not found."), { statusCode: 404 });
   }
 
   if (comp[0].status !== "completed") {
@@ -260,14 +261,19 @@ Return valid JSON only with this structure:
     temperature: 0.2,
   });
 
-  // Step 6: Store in comparison_questions
-  await db.insert(comparisonQuestions).values({
-    comparisonId,
-    question,
-    answer: result.data.answer,
-    groundedIn: result.data.type,
-    answeredAt: new Date(),
-  });
+  // Step 6: Store in comparison_questions only for the comparison's own tenant
+  // (never attach an unrelated user's question onto someone else's public record).
+  const isPublicByAnotherUser =
+    comp[0].visibility === "public" && Boolean(comp[0].clerkUserId) && comp[0].clerkUserId !== userId;
+  if (!isPublicByAnotherUser) {
+    await db.insert(comparisonQuestions).values({
+      comparisonId,
+      question,
+      answer: result.data.answer,
+      groundedIn: result.data.type,
+      answeredAt: new Date(),
+    });
+  }
 
   logger.info("Follow-up answered", {
     comparisonId,

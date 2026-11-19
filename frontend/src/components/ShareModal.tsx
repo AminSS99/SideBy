@@ -129,7 +129,7 @@ const ShareModal = ({ opens, onClose, entityA, entityB, slug, comparisonId, isPu
       // The snapshot is its own record: continue on its page, where the run
       // status and the (then-)publish step live.
       setSnapshotState("idle");
-      navigate(`/comparisons/${data.id}`);
+      navigate(`/app/comparisons/${data.id}`);
       onClose();
     } catch (error) {
       setSnapshotState("error");

@@ -170,13 +170,25 @@ export default async function handler(
       return sendJson(response, { answer: answerContent, retrievalCount });
     } catch (error) {
       logger.error("Chat API error", error instanceof Error ? error : undefined);
-      const status = error instanceof z.ZodError ? 400 : 500;
+      if (response.headersSent) {
+        writeSse(response, "error", { error: "Chat stream interrupted. Please try again." });
+        response.end();
+        return;
+      }
+      const status =
+        error instanceof z.ZodError
+          ? 400
+          : error instanceof Error && "statusCode" in error
+            ? (error as Error & { statusCode: number }).statusCode
+            : 500;
       return sendJson(
         response,
         {
           error: error instanceof z.ZodError
             ? error.errors[0]?.message || "Invalid request body."
-            : error instanceof Error ? error.message : "Chat request failed.",
+            : status >= 500
+              ? "Chat request failed."
+              : error instanceof Error ? error.message : "Chat request failed.",
         },
         status,
       );

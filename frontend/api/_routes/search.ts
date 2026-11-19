@@ -37,6 +37,10 @@ function getRows<T>(result: unknown): T[] {
   return [];
 }
 
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
 export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
@@ -74,7 +78,7 @@ export default async function handler(
           and status = 'completed'
           and (
             clerk_user_id = ${auth.userId}
-            ${auth.orgId ? sql`or clerk_org_id = ${auth.orgId}` : sql``}
+            ${auth.orgId ? sql`or (clerk_org_id = ${auth.orgId} and visibility = 'team')` : sql``}
             or visibility = 'public'
           )
         order by query_embedding <=> ${vectorLiteral}::vector
@@ -94,16 +98,19 @@ export default async function handler(
         })),
       });
     } catch {
+      const escapedPattern = `%${escapeLikePattern(parsed.q)}%`;
       const rows = await db
         .select()
         .from(comparisons)
         .where(
           and(
             eq(comparisons.status, "completed"),
-            ilike(comparisons.query, sql`'%' || ${parsed.q} || '%'`),
+            ilike(comparisons.query, escapedPattern),
             or(
               eq(comparisons.clerkUserId, auth.userId),
-              auth.orgId ? eq(comparisons.clerkOrgId, auth.orgId) : eq(comparisons.clerkUserId, auth.userId),
+              auth.orgId
+                ? and(eq(comparisons.clerkOrgId, auth.orgId), eq(comparisons.visibility, "team"))
+                : eq(comparisons.clerkUserId, auth.userId),
               eq(comparisons.visibility, "public"),
             ),
           ),

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../_lib/auth.js";
-import { canAccessWorkspace } from "../_lib/db-auth.js";
+import { canAccessWorkspace, canAdminWorkspace } from "../_lib/db-auth.js";
 import { sendJson } from "../_lib/sideby.js";
 import { createDbClient } from "../../src/db/index.js";
 import { userSettings, workspaceSettings } from "../../src/db/schema.js";
@@ -89,6 +89,10 @@ export default async function handler(
       if (body.workspaceId) {
         const hasAccess = await canAccessWorkspace(db, auth.userId, body.workspaceId);
         if (!hasAccess) return sendJson(response, { error: "Workspace not found." }, 404);
+        const canAdmin = await canAdminWorkspace(db, auth.userId, body.workspaceId, auth.orgId, auth.orgRole);
+        if (!canAdmin) {
+          return sendJson(response, { error: "Only workspace owners or organization admins can update workspace settings." }, 403);
+        }
 
         [savedWorkspaceSettings] = await db
           .insert(workspaceSettings)

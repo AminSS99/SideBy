@@ -125,7 +125,8 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
       y: 10,
       stagger: 0.05,
       duration: 0.5,
-      ease: "power2.out"
+      ease: "power2.out",
+      clearProps: "transform,opacity",
     });
   }, { scope: containerRef });
 

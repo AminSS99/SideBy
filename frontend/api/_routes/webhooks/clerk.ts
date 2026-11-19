@@ -16,6 +16,7 @@ import {
 import { eq } from "drizzle-orm";
 import { logger } from "../../_lib/log.js";
 import { captureServerEvent } from "../../_lib/analytics.js";
+import { sendJson } from "../../_lib/sideby.js";
 
 const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET || "";
 
@@ -37,28 +38,43 @@ export default async function handler(
     return response.status(405).json({ error: "Method not allowed" });
   }
 
+  let payload: WebhookPayload;
   try {
-    const payload = verifyWebhook(request);
+    payload = verifyWebhook(request);
+  } catch (error) {
+    logger.warn("Clerk webhook signature verification failed", {
+      provider: "clerk",
+      error: error instanceof Error ? error.message : "unknown",
+    });
+    const status =
+      error instanceof Error && "statusCode" in error
+        ? (error as Error & { statusCode: number }).statusCode
+        : 400;
+    return sendJson(response, { error: "Invalid webhook signature." }, status);
+  }
+
+  try {
     await processWebhook(payload);
-    return response.status(200).json({ received: true });
+    return sendJson(response, { received: true }, 200);
   } catch (error) {
     logger.error(
       "Webhook processing failed",
       error instanceof Error ? error : undefined,
       {
         provider: "clerk",
+        eventType: payload.type,
       },
     );
-    const message =
-      error instanceof Error ? error.message : "Webhook processing failed";
-    return response.status(400).json({ error: message });
+    return sendJson(response, { error: "Webhook processing failed." }, 500);
   }
 }
 
 function verifyWebhook(request: VercelRequest): WebhookPayload {
-  if (!WEBHOOK_SECRET) {
-    throw new Error(
-      "CLERK_WEBHOOK_SECRET is not configured. Set it in your environment variables.",
+  const secret = process.env.CLERK_WEBHOOK_SECRET || WEBHOOK_SECRET;
+  if (!secret) {
+    throw Object.assign(
+      new Error("CLERK_WEBHOOK_SECRET is not configured."),
+      { statusCode: 503 },
     );
   }
 
@@ -72,8 +88,8 @@ function verifyWebhook(request: VercelRequest): WebhookPayload {
     );
   }
 
-  const body = JSON.stringify(request.body);
-  const wh = new Webhook(WEBHOOK_SECRET);
+  const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body);
+  const wh = new Webhook(secret);
 
   try {
     const payload = wh.verify(body, {

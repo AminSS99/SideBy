@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { requireAuth } from "../../../_lib/auth.js";
-import { canAccessComparison } from "../../../_lib/db-auth.js";
+import { canAccessComparisonAsMember } from "../../../_lib/db-auth.js";
 import { sendJson } from "../../../_lib/sideby.js";
 import { createDbClient } from "../../../../src/db/index.js";
 import { comparisonVersions } from "../../../../src/db/schema.js";
@@ -25,7 +25,7 @@ export default async function handler(
     if (!id) return sendJson(response, { error: "Comparison id is required." }, 400);
 
     const db = createDbClient();
-    const hasAccess = await canAccessComparison(db, auth.userId, id);
+    const hasAccess = await canAccessComparisonAsMember(db, auth.userId, id);
     if (!hasAccess) return sendJson(response, { error: "Comparison not found." }, 404);
 
     const versions = await db
