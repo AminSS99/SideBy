@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   ActivitySquare,
@@ -11,6 +11,10 @@ import {
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { GlowCard } from "@/components/GlowCard";
+import {
+  AnimatedCounter,
+  type AnimatedCounterFormat,
+} from "@/components/kokonutui/animated-counter";
 import { BentoSpotlight } from "@/components/kokonutui/bento-spotlight";
 import { SmoothTab } from "@/components/kokonutui/smooth-tab";
 import { apiFetch } from "@/lib/api";
@@ -88,7 +92,7 @@ const AnalyticsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -101,11 +105,11 @@ const AnalyticsPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   useGSAP(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -186,7 +190,12 @@ const AnalyticsPage = () => {
               <Metric label={t("ins.analytics.metric.completed")} value={data.stats.totalCompleted} />
               <Metric label={t("ins.analytics.metric.failed")} value={data.stats.totalFailed} />
               <Metric label={t("ins.analytics.metric.blockedRejected")} value={data.stats.totalBlocked} accent="text-red-300" />
-              <Metric label={t("ins.analytics.metric.avgCost")} value={currency(data.stats.avgCost, t("ins.common.na"))} />
+              <Metric
+                label={t("ins.analytics.metric.avgCost")}
+                value={data.stats.avgCost}
+                format="currency"
+                fallback={t("ins.common.na")}
+              />
             </div>
             <div className="grid gap-6 xl:grid-cols-2">
               <ListPanel
@@ -249,7 +258,11 @@ const AnalyticsPage = () => {
             <div className="grid gap-4 md:grid-cols-3">
               <Metric label={t("ins.analytics.metric.cacheEntries")} value={data.cache.memorySize} />
               <Metric label={t("ins.analytics.metric.reusedResults")} value={data.cache.reusedCount} />
-              <Metric label={t("ins.analytics.metric.reuseRate")} value={`${data.cache.reuseRate}%`} />
+              <Metric
+                label={t("ins.analytics.metric.reuseRate")}
+                value={data.cache.reuseRate}
+                format="percent"
+              />
             </div>
             <div className="grid gap-6 xl:grid-cols-2">
               <ListPanel
@@ -311,10 +324,14 @@ const AnalyticsPage = () => {
 const Metric = ({
   label,
   value,
+  format = "integer",
+  fallback = "—",
   accent = "text-[#fdfbf7]",
 }: {
   label: string;
-  value: string | number;
+  value: string | number | null | undefined;
+  format?: AnimatedCounterFormat;
+  fallback?: string;
   accent?: string;
 }) => (
   <BentoSpotlight
@@ -323,7 +340,13 @@ const Metric = ({
     contentClassName="p-6"
   >
     <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">{label}</p>
-    <p className={`mt-3 font-serif text-4xl ${accent}`}>{value}</p>
+    <p className={`mt-3 font-serif text-4xl ${accent}`}>
+      {typeof value === "string" ? (
+        value
+      ) : (
+        <AnimatedCounter value={value} format={format} fallback={fallback} />
+      )}
+    </p>
   </BentoSpotlight>
 );
 

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useEffect, useState } from "react";
 import type React from "react";
 import { createRoot } from "react-dom/client";
@@ -52,7 +53,7 @@ const ClerkWithLanguage = ({ children }: { children: React.ReactNode }) => {
   const [ruPack, setRuPack] = useState<typeof clerkAz | undefined>();
   useEffect(() => {
     if (lang !== "ru" || ruPack) return;
-    void import("@clerk/localizations").then((mod) => setRuPack(mod.ruRU)).catch(() => undefined);
+    void import("@clerk/localizations/ru-RU").then((mod) => setRuPack(mod.ruRU)).catch(() => undefined);
   }, [lang, ruPack]);
   const localization = lang === "ru" ? ruPack : lang === "az" ? clerkAz : undefined;
   return (

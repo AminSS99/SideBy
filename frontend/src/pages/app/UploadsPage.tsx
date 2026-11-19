@@ -19,6 +19,7 @@ import { useProjects } from "@/contexts/ProjectsContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { apiFetch, getClerkToken } from "@/lib/api";
 import { formatDate, statusLabel, tStatic, useI18n } from "@/i18n";
+import { localizeServerMessage } from "@/i18n/serverMessages";
 
 type KnowledgeDocumentStatus = "uploading" | "indexing" | "indexed" | "error" | "deleted";
 
@@ -74,7 +75,7 @@ const UploadsPage = () => {
       const data = (await res.json()) as { documents: KnowledgeDocument[] };
       setDocuments(data.documents);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("wsp.uploads.loadError"));
+      toast.error(error instanceof Error ? localizeServerMessage(t, error.message) : t("wsp.uploads.loadError"));
       setDocuments([]);
     } finally {
       setIsLoading(false);
@@ -150,12 +151,17 @@ const UploadsPage = () => {
       );
 
       if (uploadedDocument.status === "error") {
-        toast.error(uploadedDocument.errorMessage || t("wsp.uploads.indexFail"));
+        toast.error(
+          uploadedDocument.errorMessage
+            ? localizeServerMessage(t, uploadedDocument.errorMessage)
+            : t("wsp.uploads.indexFail"),
+        );
       } else {
         toast.success(t("wsp.uploads.indexedToast", { name: uploadedDocument.filename }));
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : t("wsp.uploads.uploadFail");
+      const message =
+        error instanceof Error ? localizeServerMessage(t, error.message) : t("wsp.uploads.uploadFail");
       setDocuments((current) =>
         current.map((document) =>
           document.id === localId
@@ -206,7 +212,7 @@ const UploadsPage = () => {
       setDocuments((current) => current.filter((document) => document.id !== id));
       toast.success(t("wsp.uploads.removedToast"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("wsp.uploads.deleteFail"));
+      toast.error(error instanceof Error ? localizeServerMessage(t, error.message) : t("wsp.uploads.deleteFail"));
     } finally {
       setDeletingId(null);
     }
@@ -341,7 +347,7 @@ const DocumentRow = ({ document, isDeleting, formatSize, onDelete }: DocumentRow
           </div>
           {document.errorMessage && (
             <p className="mt-2 max-w-2xl text-xs leading-relaxed text-red-300/80">
-              {document.errorMessage}
+              {localizeServerMessage(t, document.errorMessage)}
             </p>
           )}
         </div>

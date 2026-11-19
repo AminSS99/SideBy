@@ -10,8 +10,10 @@ import { ShimmerText } from "../shimmer-text";
 import { ParticleButton } from "../particle-button";
 import { CardFlip } from "../card-flip";
 import { BentoSpotlight } from "../bento-spotlight";
+import { AnimatedCounter } from "../animated-counter";
+import { AiPrompt } from "../ai-prompt";
 
-describe("KokonutUI Obsidian Pack (6 new components)", () => {
+describe("KokonutUI Obsidian Pack (8 components)", () => {
   beforeEach(() => {
     vi.useRealTimers();
   });
@@ -219,5 +221,66 @@ describe("KokonutUI Obsidian Pack (6 new components)", () => {
     expect(rafSpy).toHaveBeenCalled();
     expect(card.style.getPropertyValue("--spot-x")).toBe("100px");
     expect(card.style.getPropertyValue("--spot-y")).toBe("50px");
+  });
+
+  it("AnimatedCounter formats integer, decimal, currency, percentage, and fallback values cleanly", () => {
+    const { rerender } = render(<AnimatedCounter value={1420} format="integer" />);
+    expect(screen.getByLabelText("1,420").textContent).toBe("1,420");
+
+    rerender(<AnimatedCounter value={0.0425} format="currency" />);
+    expect(screen.getByLabelText("$0.0425").textContent).toBe("$0.0425");
+
+    rerender(<AnimatedCounter value={89} format="percent" />);
+    expect(screen.getByLabelText("89%").textContent).toBe("89%");
+
+    rerender(<AnimatedCounter value={12.345} format="decimal" decimals={2} />);
+    expect(screen.getByLabelText("12.35").textContent).toBe("12.35");
+
+    rerender(<AnimatedCounter value={null} format="currency" fallback="N/A" />);
+    expect(screen.getByLabelText("N/A").textContent).toBe("N/A");
+  });
+
+  it("AiPrompt submits typed prompts via button/Enter and dispatches suggestion chip clicks", () => {
+    const onSubmit = vi.fn();
+
+    function ControlledPrompt() {
+      const [val, setVal] = useState("");
+      return (
+        <AiPrompt
+          value={val}
+          onChange={setVal}
+          onSubmit={(q) => {
+            onSubmit(q);
+            setVal("");
+          }}
+          placeholder="Ask about pricing or performance..."
+          submitAriaLabel="Send follow-up question"
+          suggestions={["Compare free tier limits", "Which has lower latency?"]}
+          suggestionsLabel="Suggested follow-ups"
+          footerNote="AI-generated from cited sources"
+        />
+      );
+    }
+
+    render(<ControlledPrompt />);
+
+    // Clicking a suggestion chip triggers onSubmit directly
+    const chip = screen.getByRole("button", { name: /Compare free tier limits/i });
+    fireEvent.click(chip);
+    expect(onSubmit).toHaveBeenCalledWith("Compare free tier limits");
+
+    // Typing and clicking submit button triggers onSubmit
+    const textarea = screen.getByPlaceholderText("Ask about pricing or performance...");
+    fireEvent.change(textarea, { target: { value: "What about enterprise SSO?" } });
+
+    const submitBtn = screen.getByRole("button", { name: "Send follow-up question" });
+    fireEvent.click(submitBtn);
+    expect(onSubmit).toHaveBeenCalledWith("What about enterprise SSO?");
+
+    // Typing and pressing Enter (without Shift) triggers onSubmit
+    fireEvent.change(textarea, { target: { value: "Does it support self-hosting?" } });
+    fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
+    expect(onSubmit).toHaveBeenCalledWith("Does it support self-hosting?");
+    expect(onSubmit).toHaveBeenCalledTimes(3);
   });
 });

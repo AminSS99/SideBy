@@ -10,6 +10,7 @@ import { GlowCard } from "@/components/GlowCard";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { formatDate, useI18n } from "@/i18n";
+import { localizeServerMessage } from "@/i18n/serverMessages";
 
 const ProjectsPage = () => {
   const { t, lang } = useI18n();
@@ -58,7 +59,7 @@ const ProjectsPage = () => {
       toast.error(t("wsp.projects.createFail"), {
         description:
           creationError instanceof Error
-            ? creationError.message
+            ? localizeServerMessage(t, creationError.message)
             : t("wsp.projects.createFailDesc"),
       });
     } finally {
@@ -148,7 +149,7 @@ const ProjectsPage = () => {
 
               {error && (
                 <p className="mt-4 border-l-2 border-amber-500 bg-amber-500/10 p-3 text-xs text-amber-400">
-                  {error}
+                  {localizeServerMessage(t, error)}
                 </p>
               )}
             </div>

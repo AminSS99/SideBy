@@ -6,6 +6,7 @@ import { useGSAP } from "@gsap/react";
 import { Layers3, Settings2, LoaderCircle, AlertCircle } from "@/components/icons";
 import { GlowCard } from "@/components/GlowCard";
 import { formatDate, useI18n } from "@/i18n";
+import { localizeServerMessage } from "@/i18n/serverMessages";
 
 const WorkspacesPage = () => {
   const { t, lang } = useI18n();
@@ -45,7 +46,7 @@ const WorkspacesPage = () => {
         <div className="ws-card rounded-sm border border-amber-500/30 bg-amber-500/10 p-6 text-sm text-amber-500 flex items-start gap-4">
           <AlertCircle className="h-5 w-5 shrink-0" />
           <div>
-            <p>{error}</p>
+            <p>{localizeServerMessage(t, error)}</p>
             <button
               className="mt-4 rounded-sm border border-amber-500/40 px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors hover:bg-amber-500/20"
               onClick={() => void refresh()}

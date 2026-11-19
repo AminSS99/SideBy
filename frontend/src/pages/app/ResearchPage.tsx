@@ -17,6 +17,7 @@ import { buildApiUrl } from "@/config/env";
 import { ApiError, apiFetch, describeApiFailure } from "@/lib/api";
 import { safeHref } from "@/lib/safe-url";
 import { useT, type MessageKey } from "@/i18n";
+import { localizeServerMessage } from "@/i18n/serverMessages";
 
 interface WebResult {
   title: string;
@@ -92,7 +93,8 @@ const ResearchPage = () => {
         setLimitReached(true);
         setRemaining(0);
       } else {
-        toast.error(describeApiFailure(error));
+        const rawMsg = error instanceof ApiError ? error.message : describeApiFailure(error);
+        toast.error(localizeServerMessage(t, rawMsg));
       }
     } finally {
       setLoading(false);

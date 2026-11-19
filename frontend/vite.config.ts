@@ -64,6 +64,7 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
+          if (id.includes("@clerk/localizations")) return undefined;
           if (id.includes("@clerk")) return "vendor-auth";
           if (id.includes("gsap") || id.includes("framer-motion")) return "vendor-animation";
           if (id.includes("@phosphor-icons") || id.includes("/src/components/icons/")) return "vendor-icons";

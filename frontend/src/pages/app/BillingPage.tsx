@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import { KeyboardSpacer } from "@/components/KeyboardSpacer";
 
 import { AlertCircle, CheckCircle2, Zap, GitCompareArrows, MessageSquare, RefreshCw, Download, ExternalLink, Globe } from "@/components/icons";
@@ -10,6 +10,7 @@ import { brand } from "@/config/brand";
 import { toast } from "sonner";
 import LiquidGauge from "@/components/kokonutui/liquid-gauge";
 import { useT, type MessageKey } from "@/i18n";
+import { localizeServerMessage } from "@/i18n/serverMessages";
 
 type UsageStatus = {
   plan: string;
@@ -121,23 +122,24 @@ const BillingPage = () => {
       .from(".bill-sidebar", { x: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.6");
   }, { scope: containerRef });
 
-  const loadUsage = async () => {
+  const loadUsage = useCallback(async () => {
     try {
       setIsLoading(true);
+      setError(null);
       const res = await apiFetch(buildApiUrl("/api/usage"));
       if (!res.ok) throw new Error(t("billing.error.loadUsage"));
       const data = (await res.json()) as UsageStatus;
       setUsage(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("billing.error.failedUsage"));
+      setError(e instanceof Error ? localizeServerMessage(t, e.message) : t("billing.error.failedUsage"));
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     void loadUsage();
-  }, []);
+  }, [loadUsage]);
 
   const usageItems = [
     { key: "comparison", label: t("billing.usage.comparisons"), icon: GitCompareArrows, color: "text-orange-400" },
@@ -160,7 +162,7 @@ const BillingPage = () => {
       });
       if (!response.ok) {
         const errorData = (await response.json()) as { error?: string };
-        throw new Error(errorData.error || t("billing.portal.unableToOpen"));
+        throw new Error(errorData.error ? localizeServerMessage(t, errorData.error) : t("billing.portal.unableToOpen"));
       }
       const data = (await response.json()) as { url?: string | null };
       if (!data.url) {
@@ -169,7 +171,7 @@ const BillingPage = () => {
       window.location.href = data.url;
     } catch (e) {
       toast.error(t("billing.portal.loadFailed"), {
-        description: e instanceof Error ? e.message : t("billing.portal.envCheck"),
+        description: e instanceof Error ? localizeServerMessage(t, e.message) : t("billing.portal.envCheck"),
       });
     } finally {
       setPortalLoading(false);

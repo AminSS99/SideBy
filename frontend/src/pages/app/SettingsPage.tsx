@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import type { WorkspaceRecord } from "@/contexts/WorkspaceContext";
 import { GlowCard } from "@/components/GlowCard";
+import { HoldButton } from "@/components/kokonutui/hold-button";
 import { copyText } from "@/lib/clipboard";
 import { NotificationsSettings } from "@/components/settings/NotificationsSettings";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -607,10 +608,13 @@ const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
                   >
                     <Copy className="h-4 w-4" aria-hidden="true" />
                   </button>
-                  <button
-                    type="button"
+                  <HoldButton
+                    variant="destructive"
+                    holdDuration={900}
                     aria-label={`${t("dw.watch.remove")} ${key.name}`}
-                    onClick={() => {
+                    title={`${t("dw.watch.remove")} ${key.name}`}
+                    className="min-h-11 min-w-11 rounded-sm px-2.5"
+                    onConfirm={() => {
                       apiFetch(buildApiUrl(`/api/api-keys/${key.id}`), {
                         method: "DELETE",
                       })
@@ -624,10 +628,9 @@ const ApiKeysSettings = ({ workspaceId }: { workspaceId?: string }) => {
                           });
                         });
                     }}
-                    className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 text-[#fdfbf7]/40 hover:text-red-400 transition-colors rounded-sm hover:bg-red-500/10"
                   >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </button>
+                    <span className="sr-only">{t("dw.watch.remove")}</span>
+                  </HoldButton>
                 </div>
               </div>
             </div>
@@ -915,14 +918,16 @@ const WebhooksSettings = ({ workspaceId }: { workspaceId?: string }) => {
                 </div>
 
                 <div className="flex items-center gap-2 self-end md:self-center">
-                  <button
-                    type="button"
+                  <HoldButton
+                    variant="destructive"
+                    holdDuration={900}
                     aria-label={`${t("dw.watch.remove")} ${sub.url}`}
-                    onClick={() => deleteSub(sub.id)}
-                    className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 text-[#fdfbf7]/40 hover:text-red-400 transition-colors rounded-sm hover:bg-red-500/10"
+                    title={`${t("dw.watch.remove")} ${sub.url}`}
+                    className="min-h-11 min-w-11 rounded-sm px-2.5"
+                    onConfirm={() => void deleteSub(sub.id)}
                   >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </button>
+                    <span className="sr-only">{t("dw.watch.remove")}</span>
+                  </HoldButton>
                 </div>
               </div>
             ))

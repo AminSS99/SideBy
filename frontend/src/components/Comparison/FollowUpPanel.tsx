@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Send, Sparkles, Bot, User, Loader2, ArrowRight, AlertCircle } from "@/components/icons";
+import { Sparkles, Bot, User, Loader2, AlertCircle } from "@/components/icons";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { buildApiUrl } from "@/config/env";
 import { toast } from "sonner";
 import { KeyboardSpacer } from "@/components/KeyboardSpacer";
+import { AiPrompt } from "@/components/kokonutui/ai-prompt";
 import type { FollowUpEvidence } from "./types";
 import { safeHref } from "@/lib/safe-url";
 import { useT, type MessageKey } from "@/i18n";
@@ -138,11 +139,6 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    void handleAsk(input);
-  };
-
   return (
     <div ref={containerRef} className="mt-12 rounded-sm border border-[#2a2a2a] bg-[#111] p-6 sm:p-8">
       <div className="fu-header mb-8 flex items-center justify-between border-b border-[#2a2a2a] pb-6">
@@ -162,25 +158,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
         </div>
       </div>
 
-      {messages.length === 0 ? (
-        <div className="mb-8 space-y-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#fdfbf7]/40">
-            {t("fu.suggested")}
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {suggestedQuestions.map((q, idx) => (
-              <button
-                key={idx}
-                onClick={() => void handleAsk(q)}
-                className="fu-suggestion flex items-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] px-4 py-2 text-sm text-[#fdfbf7]/70 transition-colors hover:border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-400"
-              >
-                {q}
-                <ArrowRight className="h-3 w-3 opacity-50" />
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : (
+      {messages.length > 0 && (
         <div className="mb-8 max-h-[400px] space-y-6 overflow-y-auto pr-2 scroll-smooth">
           {messages.map((msg) => (
             <div
@@ -301,36 +279,24 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
 
       <KeyboardSpacer />
 
-      <form onSubmit={handleSubmit} className="fu-input relative">
-        <div className="flex items-end gap-3 rounded-sm border border-[#333] bg-[#0c0b0a] p-2 transition-colors focus-within:border-orange-500/50 focus-within:ring-1 focus-within:ring-orange-500/50">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void handleAsk(input);
-              }
-            }}
-            placeholder={t("fu.placeholder")}
-            className="max-h-32 min-h-[44px] w-full resize-none bg-transparent px-3 py-3 text-sm text-[#fdfbf7] placeholder:text-[#fdfbf7]/30 outline-none font-serif"
-            rows={1}
-            disabled={isTyping}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isTyping}
-            aria-label={t("fu.sendAria")}
-            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-sm bg-[#fdfbf7] text-black transition-colors hover:bg-[#e0e0e0] disabled:opacity-50 disabled:hover:bg-white"
-          >
-            <Send className="h-4 w-4" />
-          </button>
-        </div>
-        <p className="mt-3 text-center text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
-          {t("fu.disclaimer")}
-          {quota ? ` ${t("fu.quota", { remaining: quota.remaining, limit: quota.limit })}` : ""}
-        </p>
-      </form>
+      <AiPrompt
+        className="fu-input"
+        value={input}
+        onChange={setInput}
+        onSubmit={(question) => void handleAsk(question)}
+        placeholder={t("fu.placeholder")}
+        submitAriaLabel={t("fu.sendAria")}
+        suggestions={messages.length === 0 ? suggestedQuestions : undefined}
+        suggestionsLabel={t("fu.suggested")}
+        suggestionClassName="fu-suggestion"
+        isLoading={isTyping}
+        footerNote={
+          <>
+            {t("fu.disclaimer")}
+            {quota ? ` ${t("fu.quota", { remaining: quota.remaining, limit: quota.limit })}` : ""}
+          </>
+        }
+      />
     </div>
   );
 };
