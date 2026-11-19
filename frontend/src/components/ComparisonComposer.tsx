@@ -177,8 +177,13 @@ function localizeIntentMessage(
   return msg;
 }
 
-function localizeSuggestionLabel(t: TFunction, suggestion: string): string {
-  if (suggestion === "Try a source-backed product, software, place, education, career, finance concept, fitness concept, or method comparison.") {
+function localizeSuggestionLabel(t: TFunction, suggestion: string, reasonCode?: string): string {
+  if (
+    suggestion === "Try a source-backed product, software, place, education, career, finance concept, fitness concept, or method comparison." ||
+    reasonCode === "people" ||
+    reasonCode === "personal" ||
+    /for a buying, work, study, or planning decision$/i.test(suggestion)
+  ) {
     return t("validation.suggestion.default");
   }
   const match = suggestion.match(/^(.+) vs another option for your use case$/);
@@ -591,7 +596,13 @@ export function ComparisonComposer({
                 {queryIntent.policyNote === "Duplicate entity"
                   ? t("composer.distinct")
                   : t("composer.suggested")}
-                {localizeSuggestionLabel(t, queryIntent.suggestion)}
+                {localizeSuggestionLabel(
+                  t,
+                  queryIntent.suggestion,
+                  ("reasonCode" in queryIntent && typeof queryIntent.reasonCode === "string"
+                    ? queryIntent.reasonCode
+                    : undefined) || queryIntent.policyNote,
+                )}
               </button>
             )}
           </div>

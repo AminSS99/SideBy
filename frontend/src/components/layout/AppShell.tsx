@@ -257,7 +257,7 @@ const AppShell = () => {
       </AnimatePresence>
 
       <div className="shell-header sticky top-0 z-50 border-b border-white/[0.08] bg-[#070605]/80 backdrop-blur-2xl pt-[env(safe-area-inset-top,0px)]">
-        <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+        <div className="mx-auto flex min-h-[72px] max-w-[1600px] 2xl:max-w-[1760px] items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -317,7 +317,7 @@ const AppShell = () => {
         </div>
       </div>
 
-      <div className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 items-start gap-4 px-3 py-4 pb-[calc(var(--bottom-nav-height)+var(--sideby-toast-offset,0px)+env(safe-area-inset-bottom,0px)+2rem)] sm:px-6 sm:py-8 lg:grid-cols-[232px_1fr] lg:gap-7 lg:pb-8">
+      <div className="relative z-10 mx-auto grid w-full max-w-[1600px] 2xl:max-w-[1760px] flex-1 items-start gap-4 px-3 py-4 pb-[calc(var(--bottom-nav-height)+var(--sideby-toast-offset,0px)+env(safe-area-inset-bottom,0px)+2rem)] sm:px-6 sm:py-8 lg:grid-cols-[232px_minmax(0,1fr)] lg:gap-7 lg:pb-8">
         {/* Desktop Sidebar */}
         <aside className="shell-sidebar sticky top-24 hidden h-[calc(100vh-7rem)] flex-col rounded-2xl border border-white/[0.09] bg-white/[0.025] p-3 shadow-[0_24px_80px_rgba(0,0,0,.35)] backdrop-blur-xl lg:flex">
           <nav className="flex flex-col space-y-1 overflow-y-auto no-scrollbar flex-1">

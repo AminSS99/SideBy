@@ -28,10 +28,46 @@ const detectProvider = (): LLMProvider | null => {
   return null;
 };
 
-const callOpenAI = async (messages: LLMMessage[]): Promise<string> => {
+const isProviderConfigured = (provider: LLMProvider): boolean => {
+  if (provider === "azure") return isAzureOpenAIConfigured();
+  if (provider === "openai") return isKeyConfigured(process.env.OPENAI_API_KEY);
+  if (provider === "anthropic") return isKeyConfigured(process.env.ANTHROPIC_API_KEY);
+  if (provider === "gemini") return isKeyConfigured(process.env.GEMINI_API_KEY);
+  if (provider === "deepseek") return isKeyConfigured(process.env.DEEPSEEK_API_KEY);
+  return false;
+};
+
+const resolveProviderAndModel = (
+  modelId?: string,
+): { provider: LLMProvider; modelOverride?: string } | null => {
+  if (modelId && modelId !== "auto") {
+    const colonIdx = modelId.indexOf(":");
+    if (colonIdx > 0) {
+      const requestedProvider = modelId.slice(0, colonIdx).trim().toLowerCase() as LLMProvider;
+      const requestedModel = modelId.slice(colonIdx + 1).trim();
+      if (
+        (requestedProvider === "openai" ||
+          requestedProvider === "azure" ||
+          requestedProvider === "anthropic" ||
+          requestedProvider === "gemini" ||
+          requestedProvider === "deepseek") &&
+        isProviderConfigured(requestedProvider)
+      ) {
+        return {
+          provider: requestedProvider,
+          modelOverride: requestedModel || undefined,
+        };
+      }
+    }
+  }
+  const fallback = detectProvider();
+  return fallback ? { provider: fallback } : null;
+};
+
+const callOpenAI = async (messages: LLMMessage[], modelOverride?: string): Promise<string> => {
   const key = process.env.OPENAI_API_KEY!;
   const url = process.env.OPENAI_API_URL || "https://api.openai.com/v1/chat/completions";
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const model = modelOverride || process.env.OPENAI_MODEL || "gpt-4o-mini";
 
   const response = await fetch(url, {
     method: "POST",
@@ -58,10 +94,10 @@ const callOpenAI = async (messages: LLMMessage[]): Promise<string> => {
   return data.choices[0].message.content;
 };
 
-const callAzureOpenAI = async (messages: LLMMessage[]): Promise<string> => {
+const callAzureOpenAI = async (messages: LLMMessage[], modelOverride?: string): Promise<string> => {
   const key = process.env.AZURE_OPENAI_API_KEY!.trim();
   const endpoint = process.env.AZURE_OPENAI_ENDPOINT!.trim();
-  const model = (process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini").trim();
+  const model = (modelOverride || process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini").trim();
   const url = buildAzureChatCompletionsUrl(endpoint, model);
 
   const response = await fetch(url, {
@@ -90,10 +126,10 @@ const callAzureOpenAI = async (messages: LLMMessage[]): Promise<string> => {
   return data.choices[0]?.message?.content || "";
 };
 
-const callAnthropic = async (messages: LLMMessage[]): Promise<string> => {
+const callAnthropic = async (messages: LLMMessage[], modelOverride?: string): Promise<string> => {
   const key = process.env.ANTHROPIC_API_KEY!;
   const url = process.env.ANTHROPIC_API_URL || "https://api.anthropic.com/v1/messages";
-  const model = process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest";
+  const model = modelOverride || process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest";
 
   const systemMsg = messages.find((m) => m.role === "system");
   const userMsgs = messages.filter((m) => m.role !== "system");
@@ -124,9 +160,9 @@ const callAnthropic = async (messages: LLMMessage[]): Promise<string> => {
   return data.content.find((c) => c.type === "text")?.text || "";
 };
 
-const callGemini = async (messages: LLMMessage[]): Promise<string> => {
+const callGemini = async (messages: LLMMessage[], modelOverride?: string): Promise<string> => {
   const key = process.env.GEMINI_API_KEY!;
-  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  const model = modelOverride || process.env.GEMINI_MODEL || "gemini-2.0-flash";
   const url =
     process.env.GEMINI_API_URL ||
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
@@ -157,10 +193,10 @@ const callGemini = async (messages: LLMMessage[]): Promise<string> => {
   return data.candidates[0]?.content?.parts[0]?.text || "";
 };
 
-const callDeepSeek = async (messages: LLMMessage[]): Promise<string> => {
+const callDeepSeek = async (messages: LLMMessage[], modelOverride?: string): Promise<string> => {
   const key = process.env.DEEPSEEK_API_KEY!;
   const url = process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/v1/chat/completions";
-  const model = process.env.DEEPSEEK_MODEL || "deepseek-chat";
+  const model = modelOverride || process.env.DEEPSEEK_MODEL || "deepseek-chat";
 
   const response = await fetch(url, {
     method: "POST",
@@ -187,12 +223,15 @@ const callDeepSeek = async (messages: LLMMessage[]): Promise<string> => {
   return data.choices[0].message.content;
 };
 
-const openAiCompatibleConfig = (provider: Extract<LLMProvider, "openai" | "azure" | "deepseek">) => {
+const openAiCompatibleConfig = (
+  provider: Extract<LLMProvider, "openai" | "azure" | "deepseek">,
+  modelOverride?: string,
+) => {
   if (provider === "openai") {
     return {
       key: process.env.OPENAI_API_KEY!,
       url: process.env.OPENAI_API_URL || "https://api.openai.com/v1/chat/completions",
-      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      model: modelOverride || process.env.OPENAI_MODEL || "gpt-4o-mini",
       extraHeaders: {} as Record<string, string>,
     };
   }
@@ -200,7 +239,7 @@ const openAiCompatibleConfig = (provider: Extract<LLMProvider, "openai" | "azure
   if (provider === "azure") {
     const key = process.env.AZURE_OPENAI_API_KEY!.trim();
     const endpoint = process.env.AZURE_OPENAI_ENDPOINT!.trim();
-    const model = (process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini").trim();
+    const model = (modelOverride || process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini").trim();
     return {
       key,
       url: buildAzureChatCompletionsUrl(endpoint, model),
@@ -212,7 +251,7 @@ const openAiCompatibleConfig = (provider: Extract<LLMProvider, "openai" | "azure
   return {
     key: process.env.DEEPSEEK_API_KEY!,
     url: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/v1/chat/completions",
-    model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+    model: modelOverride || process.env.DEEPSEEK_MODEL || "deepseek-chat",
     extraHeaders: {} as Record<string, string>,
   };
 };
@@ -221,8 +260,9 @@ const callOpenAICompatibleStream = async (
   provider: Extract<LLMProvider, "openai" | "azure" | "deepseek">,
   messages: LLMMessage[],
   onToken: (token: string) => void,
+  modelOverride?: string,
 ): Promise<string> => {
-  const config = openAiCompatibleConfig(provider);
+  const config = openAiCompatibleConfig(provider, modelOverride);
   const response = await fetch(config.url, {
     method: "POST",
     headers: {
@@ -281,7 +321,7 @@ const callOpenAICompatibleStream = async (
 
 const providers: Record<
   LLMProvider,
-  (messages: LLMMessage[]) => Promise<string>
+  (messages: LLMMessage[], modelOverride?: string) => Promise<string>
 > = {
   openai: callOpenAI,
   azure: callAzureOpenAI,
@@ -290,22 +330,26 @@ const providers: Record<
   deepseek: callDeepSeek,
 };
 
-export const llmChat = async (messages: LLMMessage[]): Promise<LLMResponse> => {
-  const provider = detectProvider();
-  if (!provider) {
+export const llmChat = async (
+  messages: LLMMessage[],
+  opts?: { modelId?: string },
+): Promise<LLMResponse> => {
+  const resolved = resolveProviderAndModel(opts?.modelId);
+  if (!resolved) {
     throw new Error(
       "No LLM provider configured. Set OPENAI_API_KEY, AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT, ANTHROPIC_API_KEY, GEMINI_API_KEY, or DEEPSEEK_API_KEY.",
     );
   }
 
-  const content = await providers[provider](messages);
+  const { provider, modelOverride } = resolved;
+  const content = await providers[provider](messages, modelOverride);
 
   const models: Record<LLMProvider, string> = {
-    openai: process.env.OPENAI_MODEL || "gpt-4o-mini",
-    azure: process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini",
-    anthropic: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
-    gemini: process.env.GEMINI_MODEL || "gemini-2.0-flash",
-    deepseek: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+    openai: modelOverride || process.env.OPENAI_MODEL || "gpt-4o-mini",
+    azure: modelOverride || process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini",
+    anthropic: modelOverride || process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
+    gemini: modelOverride || process.env.GEMINI_MODEL || "gemini-2.0-flash",
+    deepseek: modelOverride || process.env.DEEPSEEK_MODEL || "deepseek-chat",
   };
 
   return { content, model: models[provider], provider };
@@ -314,28 +358,30 @@ export const llmChat = async (messages: LLMMessage[]): Promise<LLMResponse> => {
 export const llmChatStream = async (
   messages: LLMMessage[],
   onToken: (token: string) => void,
+  opts?: { modelId?: string },
 ): Promise<LLMResponse> => {
-  const provider = detectProvider();
-  if (!provider) {
+  const resolved = resolveProviderAndModel(opts?.modelId);
+  if (!resolved) {
     throw new Error(
       "No LLM provider configured. Set OPENAI_API_KEY, AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT, ANTHROPIC_API_KEY, GEMINI_API_KEY, or DEEPSEEK_API_KEY.",
     );
   }
 
+  const { provider, modelOverride } = resolved;
   const models: Record<LLMProvider, string> = {
-    openai: process.env.OPENAI_MODEL || "gpt-4o-mini",
-    azure: process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini",
-    anthropic: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
-    gemini: process.env.GEMINI_MODEL || "gemini-2.0-flash",
-    deepseek: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+    openai: modelOverride || process.env.OPENAI_MODEL || "gpt-4o-mini",
+    azure: modelOverride || process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini",
+    anthropic: modelOverride || process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
+    gemini: modelOverride || process.env.GEMINI_MODEL || "gemini-2.0-flash",
+    deepseek: modelOverride || process.env.DEEPSEEK_MODEL || "deepseek-chat",
   };
 
   if (provider === "openai" || provider === "azure" || provider === "deepseek") {
-    const content = await callOpenAICompatibleStream(provider, messages, onToken);
+    const content = await callOpenAICompatibleStream(provider, messages, onToken, modelOverride);
     return { content, model: models[provider], provider };
   }
 
-  const result = await llmChat(messages);
+  const result = await llmChat(messages, opts);
   if (result.content) onToken(result.content);
   return result;
 };

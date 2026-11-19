@@ -12,7 +12,7 @@ import {
   comparisonQuestions,
 } from "../../src/db/schema.js";
 import { canAccessComparison } from "./db-auth.js";
-import { getPrimaryProvider } from "./providers/index.js";
+import { getPrimaryProvider, resolveProviderForModelId } from "./providers/index.js";
 import { logger } from "./log.js";
 import { embedText, toVectorLiteral } from "./embeddings.js";
 import { sanitizeLlmStringArray, sanitizeLlmText } from "./sanitize.js";
@@ -122,6 +122,7 @@ export async function answerFollowUp(
   userId: string,
   question: string,
   requiredWorkspaceId: string | null = null,
+  modelId?: string,
 ) {
   const db = createDbClient();
 
@@ -254,9 +255,10 @@ Return valid JSON only with this structure:
     },
   ];
 
-  // Step 5: Generate answer
-  const provider = getPrimaryProvider();
-  const result = await provider.generateObject(messages, FollowUpSchema, {
+  // Step 5: Generate answer (supports optional second-opinion modelId selection)
+  const resolved = modelId ? resolveProviderForModelId(modelId) : { provider: getPrimaryProvider() };
+  const result = await resolved.provider.generateObject(messages, FollowUpSchema, {
+    model: resolved.model,
     maxTokens: 2000,
     temperature: 0.2,
   });
@@ -300,6 +302,8 @@ Return valid JSON only with this structure:
     citations: result.data.citations,
     confidence: result.data.confidence,
     type: result.data.type,
+    model: result.model,
+    provider: result.provider,
     factsUsed: topFacts.length,
     evidence: evidenceFacts.map((item) => {
       const source = item.fact.sourceId

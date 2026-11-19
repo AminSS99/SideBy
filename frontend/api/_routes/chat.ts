@@ -1,6 +1,7 @@
 import { sendJson } from "../_lib/sideby.js";
 import { isAuthEnabled, requireAuth } from "../_lib/auth.js";
 import { llmChat, llmChatStream, type LLMMessage } from "../_lib/llm.js";
+import { listSelectableModels } from "../_lib/providers/index.js";
 import { logger } from "../_lib/log.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createDbClient } from "../../src/db/index.js";
@@ -32,6 +33,7 @@ const ChatBodySchema = z.object({
   projectId: z.string().uuid().nullable().optional(),
   documentIds: z.array(z.string().uuid()).max(25).optional(),
   stream: z.boolean().optional(),
+  modelId: z.string().trim().max(120).optional(),
 });
 
 function wantsStream(request: VercelRequest, body: z.infer<typeof ChatBodySchema>) {
@@ -61,6 +63,10 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ) {
+  if (request.method === "GET") {
+    return sendJson(response, { models: listSelectableModels() }, 200);
+  }
+
   if (request.method !== "POST") {
     return sendJson(response, { error: "Method not allowed" }, 405);
   }
@@ -151,9 +157,13 @@ export default async function handler(
         });
         writeSse(response, "meta", { retrievalCount });
 
-        const result = await llmChatStream(messagesToRun, (token) => {
-          writeSse(response, "token", { token: sanitizeLlmText(token, 1000) });
-        });
+        const result = await llmChatStream(
+          messagesToRun,
+          (token) => {
+            writeSse(response, "token", { token: sanitizeLlmText(token, 1000) });
+          },
+          { modelId: body.modelId },
+        );
         writeSse(response, "final", {
           answer: extractAnswerContent(result.content),
           retrievalCount,
@@ -164,10 +174,15 @@ export default async function handler(
         return;
       }
 
-      const result = await llmChat(messagesToRun);
+      const result = await llmChat(messagesToRun, { modelId: body.modelId });
       const answerContent = extractAnswerContent(result.content);
 
-      return sendJson(response, { answer: answerContent, retrievalCount });
+      return sendJson(response, {
+        answer: answerContent,
+        retrievalCount,
+        model: result.model,
+        provider: result.provider,
+      });
     } catch (error) {
       logger.error("Chat API error", error instanceof Error ? error : undefined);
       if (response.headersSent) {

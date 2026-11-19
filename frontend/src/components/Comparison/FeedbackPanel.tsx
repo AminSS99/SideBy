@@ -1,15 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import { ThumbsUp, ThumbsDown, CheckCircle2 } from "@/components/icons";
-import { panelClass } from './constants';
-import { useT } from "@/i18n";
+import { panelClass } from "./constants";
+import { useI18n } from "@/i18n";
+import { apiFetch } from "@/lib/api";
+import { buildApiUrl } from "@/config/env";
+import { captureEvent } from "@/lib/posthog";
 
 export const FeedbackPanel = () => {
-  const t = useT();
+  const { t, lang } = useI18n();
   const [submitted, setSubmitted] = useState(false);
 
-  const handleFeedback = () => {
+  const handleFeedback = (helpful: boolean) => {
     setSubmitted(true);
-    // Real implementation would fire an API call here
+    const rating = helpful ? 5 : 1;
+    captureEvent("feedback_panel_submitted", { helpful, rating, language: lang });
+    void apiFetch(buildApiUrl("/api/feedback"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "general_feedback",
+        rating,
+        reasons: [helpful ? "helpful_yes" : "helpful_no"],
+        pageUrl: typeof window !== "undefined" ? window.location.pathname : undefined,
+        language: lang,
+      }),
+    }).catch(() => undefined);
   };
 
   return (
@@ -26,16 +41,18 @@ export const FeedbackPanel = () => {
             {t("res.feedback.question")}
           </p>
           <div className="flex items-center justify-center gap-3">
-            <button 
-              onClick={handleFeedback}
-              className="flex items-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] px-4 py-2 hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-400 transition-colors text-[#fdfbf7]/60"
+            <button
+              type="button"
+              onClick={() => handleFeedback(true)}
+              className="flex min-h-11 items-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] px-4 py-2 hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-400 transition-colors text-[#fdfbf7]/65"
             >
               <ThumbsUp className="h-3.5 w-3.5" />
               <span className="text-xs font-bold">{t("res.feedback.yes")}</span>
             </button>
-            <button 
-              onClick={handleFeedback}
-              className="flex items-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] px-4 py-2 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 transition-colors text-[#fdfbf7]/60"
+            <button
+              type="button"
+              onClick={() => handleFeedback(false)}
+              className="flex min-h-11 items-center gap-2 rounded-sm border border-[#333] bg-[#0c0b0a] px-4 py-2 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 transition-colors text-[#fdfbf7]/65"
             >
               <ThumbsDown className="h-3.5 w-3.5" />
               <span className="text-xs font-bold">{t("res.feedback.no")}</span>

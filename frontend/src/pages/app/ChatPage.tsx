@@ -16,7 +16,19 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  model?: string;
 }
+
+interface SelectableModelOption {
+  id: string;
+  label: string;
+  provider?: string;
+  badge?: string;
+}
+
+const DEFAULT_MODEL_OPTIONS: SelectableModelOption[] = [
+  { id: "auto", label: "Auto (Best Available)" },
+];
 
 interface KnowledgeDocument {
   id: string;
@@ -45,6 +57,8 @@ const ChatPage = () => {
     },
   ]);
   const [input, setInput] = useState("");
+  const [selectedModelId, setSelectedModelId] = useState("auto");
+  const [modelOptions, setModelOptions] = useState<SelectableModelOption[]>(DEFAULT_MODEL_OPTIONS);
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeFiles, setActiveFiles] = useState<ActiveKnowledgeFile[]>([]);
@@ -128,6 +142,25 @@ const ChatPage = () => {
   useEffect(() => {
     void loadKnowledgeFiles();
   }, [loadKnowledgeFiles]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const res = await apiFetch(buildApiUrl("/api/chat?models=1"));
+        if (!res.ok || !active) return;
+        const data = (await res.json()) as { models?: SelectableModelOption[] };
+        if (active && Array.isArray(data.models) && data.models.length > 0) {
+          setModelOptions(data.models);
+        }
+      } catch {
+        // Keep default Auto option when model catalog is unavailable.
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Abort any active stream and reset conversation when workspace or project changes.
   useEffect(() => {
@@ -218,6 +251,7 @@ const ChatPage = () => {
           projectId: activeProject?.id ?? null,
           documentIds: selectedDocumentIds,
           stream: true,
+          ...(selectedModelId && selectedModelId !== "auto" ? { modelId: selectedModelId } : {}),
         }),
       });
 
@@ -266,6 +300,7 @@ const ChatPage = () => {
         const payload = JSON.parse(dataLine.slice("data:".length).trim()) as {
           token?: string;
           answer?: string;
+          model?: string;
         };
 
         if (event === "token" && payload.token) {
@@ -273,8 +308,17 @@ const ChatPage = () => {
           applyAssistantContent(payload.token, true);
           setIsLoading(false);
         }
-        if (event === "final" && payload.answer && streamedContent.trim().length === 0) {
-          applyAssistantContent(payload.answer);
+        if (event === "final") {
+          if (payload.answer && streamedContent.trim().length === 0) {
+            applyAssistantContent(payload.answer);
+          }
+          if (typeof payload.model === "string" && payload.model.trim()) {
+            setMessages((prev) =>
+              prev.map((message) =>
+                message.id === assistantId ? { ...message, model: payload.model } : message,
+              ),
+            );
+          }
         }
       };
 
@@ -331,7 +375,7 @@ const ChatPage = () => {
   return (
     <div ref={containerRef} className="flex h-full flex-col space-y-6">
       <div className="chat-header border-b border-white/5 pb-4">
-        <div className="flex items-end justify-between">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-400">
               {t("ins.chat.kicker")}
@@ -340,13 +384,28 @@ const ChatPage = () => {
               {t("app.nav.chat")}
             </h1>
           </div>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-xl hover:bg-orange-500/20 transition-all shadow-[0_0_15px_-3px_rgba(249,115,22,0.15)] active:scale-[0.98]"
-          >
-            <Database className="h-4 w-4" />
-            <span>{t("ins.chat.contextButton", { count: activeContextCount })}</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={selectedModelId}
+              onChange={(e) => setSelectedModelId(e.target.value)}
+              disabled={isLoading || isStreaming}
+              aria-label="AI Model"
+              className="min-h-10 max-w-full rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] px-3 py-1.5 text-xs text-[#fdfbf7] focus:border-orange-500 focus:outline-none sm:w-56"
+            >
+              {modelOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-xl hover:bg-orange-500/20 transition-all shadow-[0_0_15px_-3px_rgba(249,115,22,0.15)] active:scale-[0.98]"
+            >
+              <Database className="h-4 w-4" />
+              <span>{t("ins.chat.contextButton", { count: activeContextCount })}</span>
+            </button>
+          </div>
         </div>
         <p className="mt-3 text-sm text-[#fdfbf7]/55 leading-relaxed max-w-3xl">
           {t("ins.chat.subtitle")}
@@ -388,6 +447,13 @@ const ChatPage = () => {
                   }`}
                 >
                   <p className="text-sm leading-relaxed font-serif">{msg.content}</p>
+                  {msg.role === "assistant" && msg.model && (
+                    <div className="mt-3 flex justify-end">
+                      <span className="rounded-sm border border-[#2a2a2a] bg-[#161513] px-1.5 py-0.5 font-mono text-[9px] text-[#fdfbf7]/45">
+                        {msg.model}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

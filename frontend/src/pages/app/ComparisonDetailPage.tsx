@@ -452,8 +452,8 @@ const ComparisonDetailPage = () => {
 
         {/* Desktop Grid Layout — mounted exclusively at >= 1024px to prevent duplicate API calls and #id collisions */}
         {isDesktop ? (
-        <div className="grid grid-cols-12 gap-8 items-start wb-grid">
-          <div className="col-span-8 space-y-10">
+        <div className="grid grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_400px] gap-6 xl:gap-8 items-start wb-grid">
+          <div className="min-w-0 space-y-10">
             <ComparisonHeader
               result={resultData}
               onRefresh={() => void refresh()}
@@ -492,7 +492,7 @@ const ComparisonDetailPage = () => {
             </div>
           </div>
           
-          <aside className="col-span-4 space-y-6 sticky top-28 self-start pb-8 h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar">
+          <aside className="min-w-0 space-y-6 sticky top-28 self-start pb-8 h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar">
             <TableOfContents result={resultData} />
             <VerdictPanel result={resultData} />
             <DecisionReceiptPanel
@@ -886,7 +886,7 @@ const ComparisonDetailPage = () => {
       )}
 
       {id && result && job?.status === "completed" && (
-        <section className="dark mx-auto mt-10 flex w-full max-w-sm justify-center px-4 pb-4" aria-label={t("det.rate.aria")}>
+        <section className="dark mx-auto mt-10 flex w-full max-w-sm justify-center px-4 pb-28 sm:pb-32" aria-label={t("det.rate.aria")}>
           <HelpfulRating
             question={t("det.rate.question")}
             onSubmit={({ rating, reasons, note }) => {
@@ -896,6 +896,18 @@ const ComparisonDetailPage = () => {
                 reasons,
                 has_note: note.trim().length > 0,
               });
+              void apiFetch(buildApiUrl("/api/feedback"), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type: "comparison_rating",
+                  comparisonId: id,
+                  rating,
+                  reasons,
+                  message: note.trim() || undefined,
+                  pageUrl: typeof window !== "undefined" ? window.location.pathname : undefined,
+                }),
+              }).catch(() => undefined);
               toast.success(t("det.rate.thanks"));
             }}
           />

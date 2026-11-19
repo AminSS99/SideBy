@@ -44,6 +44,7 @@ import consentHandler from "./_routes/consent.js";
 import csrfHandler from "./_routes/csrf.js";
 import decisionMatricesHandler from "./_routes/decision-matrices.js";
 import ecosystemSessionHandler from "./_routes/ecosystem-session.js";
+import feedbackHandler from "./_routes/feedback.js";
 import healthHandler from "./_routes/health.js";
 import healthDbHandler from "./_routes/health/db.js";
 import integrationsSlack from "./_routes/integrations/slack.js";
@@ -231,6 +232,7 @@ async function routeRequest(
     consent: consentHandler,
     csrf: csrfHandler,
     "decision-matrices": decisionMatricesHandler,
+    feedback: feedbackHandler,
     health: healthHandler,
     knowledge: async (req, res) => {
       const knowledgeHandler = await loadKnowledgeHandler();

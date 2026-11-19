@@ -26,6 +26,7 @@ const ActionBodySchema = z.object({
   action: z.enum(["export", "follow-up"]).default("export"),
   format: z.enum(["markdown", "json"]).default("markdown"),
   question: z.string().trim().min(1).max(1200).optional(),
+  modelId: z.string().trim().max(120).optional(),
 });
 
 export default async function handler(
@@ -56,10 +57,11 @@ export default async function handler(
       assertNoLikelySecrets(question);
 
       return await withRateLimit(request, response, "followUp", async () => {
-        const result = await answerFollowUp(id, auth.userId, question);
+        const result = await answerFollowUp(id, auth.userId, question, null, body.modelId);
         captureServerEvent(auth.userId, "follow_up_asked", {
           comparison_id: id,
           question_length: question.length,
+          model_id: body.modelId || "auto",
         });
         return sendJson(response, result);
       });

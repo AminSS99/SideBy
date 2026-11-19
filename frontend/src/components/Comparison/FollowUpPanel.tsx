@@ -20,7 +20,19 @@ interface Message {
   confidence?: number;
   type?: "grounded" | "inference" | "insufficient";
   evidence?: FollowUpEvidence[];
+  model?: string;
 }
+
+interface SelectableModelOption {
+  id: string;
+  label: string;
+  provider?: string;
+  badge?: string;
+}
+
+const DEFAULT_MODEL_OPTIONS: SelectableModelOption[] = [
+  { id: "auto", label: "Auto (Best Available)" },
+];
 
 const suggestedQuestionKeys: MessageKey[] = ["fu.q1", "fu.q2", "fu.q3"];
 
@@ -33,8 +45,27 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
   const suggestedQuestions = suggestedQuestionKeys.map((key) => t(key));
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [selectedModelId, setSelectedModelId] = useState("auto");
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const modelsQuery = useQuery({
+    queryKey: ["ai-selectable-models"],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      try {
+        const res = await apiFetch(buildApiUrl("/api/chat?models=1"));
+        if (!res.ok) return DEFAULT_MODEL_OPTIONS;
+        const data = (await res.json()) as { models?: SelectableModelOption[] };
+        return Array.isArray(data.models) && data.models.length > 0
+          ? data.models
+          : DEFAULT_MODEL_OPTIONS;
+      } catch {
+        return DEFAULT_MODEL_OPTIONS;
+      }
+    },
+  });
+  const modelOptions = modelsQuery.data ?? DEFAULT_MODEL_OPTIONS;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -94,7 +125,11 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
       const res = await apiFetch(buildApiUrl(`/api/comparisons/${comparisonId}/actions`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "follow-up", question }),
+        body: JSON.stringify({
+          action: "follow-up",
+          question,
+          ...(selectedModelId && selectedModelId !== "auto" ? { modelId: selectedModelId } : {}),
+        }),
       });
 
       const data: unknown = await res.json();
@@ -112,6 +147,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
         confidence?: unknown;
         type?: unknown;
         evidence?: unknown;
+        model?: unknown;
       };
 
       const assistantMessage: Message = {
@@ -127,6 +163,7 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
             ? answer.type
             : undefined,
         evidence: Array.isArray(answer.evidence) ? (answer.evidence as FollowUpEvidence[]) : undefined,
+        model: typeof answer.model === "string" ? answer.model : undefined,
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
@@ -141,8 +178,8 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
 
   return (
     <div ref={containerRef} className="mt-12 rounded-sm border border-[#2a2a2a] bg-[#111] p-6 sm:p-8">
-      <div className="fu-header mb-8 flex items-center justify-between border-b border-[#2a2a2a] pb-6">
-        <div>
+      <div className="fu-header mb-8 flex flex-wrap items-start justify-between gap-4 border-b border-[#2a2a2a] pb-6">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-orange-500" />
             <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">
@@ -155,6 +192,29 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
           <p className="mt-2 text-sm text-[#fdfbf7]/50">
             {t("fu.lede")}
           </p>
+        </div>
+
+        <div className="flex w-full shrink-0 flex-col gap-1 sm:w-auto">
+          <label
+            htmlFor={`followup-model-${comparisonId}`}
+            className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40"
+          >
+            AI Model
+          </label>
+          <select
+            id={`followup-model-${comparisonId}`}
+            value={selectedModelId}
+            onChange={(e) => setSelectedModelId(e.target.value)}
+            disabled={isTyping}
+            aria-label="AI Model"
+            className="min-h-10 w-full max-w-full rounded-sm border border-[#2a2a2a] bg-[#0c0b0a] px-3 py-1.5 text-xs text-[#fdfbf7] focus:border-orange-500 focus:outline-none sm:w-56"
+          >
+            {modelOptions.map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -208,6 +268,11 @@ export const FollowUpPanel = ({ comparisonId }: FollowUpPanelProps) => {
                       {msg.citations && msg.citations.length > 0 && (
                         <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30">
                           Citations: {msg.citations.join(", ")}
+                        </span>
+                      )}
+                      {msg.model && (
+                        <span className="rounded-sm border border-[#2a2a2a] bg-[#161513] px-1.5 py-0.5 font-mono text-[9px] text-[#fdfbf7]/45">
+                          {msg.model}
                         </span>
                       )}
                     </div>

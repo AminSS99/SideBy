@@ -159,20 +159,20 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
       </div>
       
       {/* Desktop Table */}
-      <div className="hidden md:block overflow-x-auto no-scrollbar relative">
-        <div className="min-w-[700px]">
+      <div className="hidden md:block overflow-x-auto relative">
+        <div className="min-w-[640px]">
           {/* Sticky Header */}
-          <div className="grid grid-cols-[1.2fr_1fr_1fr] bg-[#0c0b0a] border-b border-[#2a2a2a] sticky top-0 z-30">
-            <div className="p-6 font-bold uppercase tracking-widest text-[10px] text-[#fdfbf7]/40 self-end sticky left-0 z-40 bg-[#0c0b0a] border-r border-[#2a2a2a]">
+          <div className="grid grid-cols-[minmax(140px,0.75fr)_minmax(0,1fr)_minmax(0,1fr)] bg-[#0c0b0a] border-b border-[#2a2a2a] sticky top-0 z-30">
+            <div className="p-5 font-bold uppercase tracking-widest text-[10px] text-[#fdfbf7]/40 self-end bg-[#0c0b0a] border-r border-[#2a2a2a]">
               {t("dm.feature.criteria")}
             </div>
-            <div className="p-6 border-l border-[#2a2a2a] bg-[#111]/50 backdrop-blur-md">
+            <div className="min-w-0 p-5 border-l border-[#2a2a2a] bg-[#111]/50 backdrop-blur-md">
               <span className="text-[10px] font-bold uppercase tracking-widest block mb-1 opacity-50" style={{ color: result.entities.a.hex }}>{t("dm.feature.entityA")}</span>
-              <span className="font-serif text-xl text-[#fdfbf7]">{result.entities.a.name}</span>
+              <span className="font-serif text-xl text-[#fdfbf7] break-words">{result.entities.a.name}</span>
             </div>
-            <div className="p-6 border-l border-[#2a2a2a] bg-[#111]/50 backdrop-blur-md">
+            <div className="min-w-0 p-5 border-l border-[#2a2a2a] bg-[#111]/50 backdrop-blur-md">
               <span className="text-[10px] font-bold uppercase tracking-widest block mb-1 opacity-50" style={{ color: result.entities.b.hex }}>{t("dm.feature.entityB")}</span>
-              <span className="font-serif text-xl text-[#fdfbf7]">{result.entities.b.name}</span>
+              <span className="font-serif text-xl text-[#fdfbf7] break-words">{result.entities.b.name}</span>
             </div>
           </div>
 
@@ -214,19 +214,19 @@ export const FeatureMatrixPanel = ({ result }: { result: ComparisonData }) => {
                       }}
                       role="button"
                       tabIndex={0}
-                      className="matrix-row grid grid-cols-[1.2fr_1fr_1fr] border-b border-[#2a2a2a] hover:bg-[#151515] transition-colors group relative cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
+                      className="matrix-row grid grid-cols-[minmax(140px,0.75fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-[#2a2a2a] hover:bg-[#151515] transition-colors group relative cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
                     >
-                      <div className="p-5 pl-6 text-sm text-[#fdfbf7]/90 font-medium sticky left-0 z-10 bg-[#0c0b0a] group-hover:bg-[#151515] border-r border-[#2a2a2a] transition-colors">
+                      <div className="min-w-0 break-words p-5 text-sm text-[#fdfbf7]/90 font-medium bg-[#0c0b0a] group-hover:bg-[#151515] border-r border-[#2a2a2a] transition-colors">
                         {row.label}
                       </div>
                       <div className={cn(
-                        "p-5 border-l border-[#2a2a2a] text-sm text-[#fdfbf7]/60 group-hover:text-[#fdfbf7]/90 transition-colors leading-relaxed relative",
+                        "min-w-0 break-words p-5 border-l border-[#2a2a2a] text-sm text-[#fdfbf7]/65 group-hover:text-[#fdfbf7]/90 transition-colors leading-relaxed relative",
                         isAWinner && "bg-white/[0.02]"
                       )}>
                         {row.factA?.value || <span className="text-[#fdfbf7]/20 italic">{t("dm.feature.notSpecified")}</span>}
                       </div>
                       <div className={cn(
-                        "p-5 border-l border-[#2a2a2a] text-sm text-[#fdfbf7]/60 group-hover:text-[#fdfbf7]/90 transition-colors leading-relaxed relative",
+                        "min-w-0 break-words p-5 border-l border-[#2a2a2a] text-sm text-[#fdfbf7]/65 group-hover:text-[#fdfbf7]/90 transition-colors leading-relaxed relative",
                         isBWinner && "bg-white/[0.02]"
                       )}>
                         {row.factB?.value || <span className="text-[#fdfbf7]/20 italic">{t("dm.feature.notSpecified")}</span>}

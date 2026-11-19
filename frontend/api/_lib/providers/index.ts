@@ -141,4 +141,94 @@ export function listAvailableProviders(): string[] {
   return getOrderedConfiguredProviders().map((p) => p.name);
 }
 
+export type SelectableModel = {
+  id: string;
+  label: string;
+  provider: string;
+  model: string;
+  badge?: string;
+};
+
+export function listSelectableModels(): SelectableModel[] {
+  const models: SelectableModel[] = [
+    { id: "auto", label: "Auto (Best Available)", provider: "auto", model: "auto" },
+  ];
+
+  if (isKeyPresent(process.env.DEEPSEEK_API_KEY)) {
+    models.push({
+      id: "deepseek:deepseek-chat",
+      label: "DeepSeek V3",
+      provider: "deepseek",
+      model: process.env.DEEPSEEK_MODEL?.trim() || "deepseek-chat",
+      badge: "Fast",
+    });
+  }
+
+  if (isAzureOpenAIConfigured()) {
+    const endpoint = process.env.AZURE_OPENAI_ENDPOINT?.trim() || "";
+    const defaultDeployment = process.env.AZURE_OPENAI_DEPLOYMENT?.trim() || "gpt-4o-mini";
+    const seenAzure = new Set<string>();
+    const addAzure = (deployment: string, label: string, badge?: string) => {
+      if (seenAzure.has(deployment)) return;
+      seenAzure.add(deployment);
+      models.push({ id: `azure:${deployment}`, label, provider: "azure", model: deployment, badge });
+    };
+
+    addAzure(defaultDeployment, defaultDeployment, "Azure");
+    if (endpoint.includes("/openai/v1")) {
+      addAzure("Llama-3.3-70B-Instruct", "Llama 3.3 70B", "Azure");
+      addAzure("Kimi-K2.5", "Kimi K2.5", "Azure");
+      addAzure("Kimi-K2.6", "Kimi K2.6", "Azure");
+    }
+  }
+
+  if (isKeyPresent(process.env.OPENAI_API_KEY)) {
+    const m = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+    models.push({ id: `openai:${m}`, label: m, provider: "openai", model: m });
+  }
+
+  if (isKeyPresent(process.env.ANTHROPIC_API_KEY)) {
+    const m = process.env.ANTHROPIC_MODEL?.trim() || "claude-3-5-haiku-latest";
+    models.push({ id: `anthropic:${m}`, label: "Claude Haiku", provider: "anthropic", model: m });
+  }
+
+  if (isKeyPresent(process.env.GEMINI_API_KEY)) {
+    const m = process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
+    models.push({ id: `gemini:${m}`, label: "Gemini Flash", provider: "gemini", model: m });
+  }
+
+  if (isKeyPresent(process.env.OPENROUTER_API_KEY)) {
+    const m = process.env.OPENROUTER_MODEL?.trim() || "deepseek/deepseek-chat";
+    models.push({ id: `openrouter:${m}`, label: "OpenRouter", provider: "openrouter", model: m });
+  }
+
+  return models;
+}
+
+export function resolveProviderForModelId(modelId?: string): { provider: AIProvider; model?: string } {
+  const trimmed = modelId?.trim();
+  if (!trimmed || trimmed === "auto") {
+    return { provider: getPrimaryProvider() };
+  }
+  const sep = trimmed.indexOf(":");
+  if (sep <= 0) {
+    return { provider: getPrimaryProvider() };
+  }
+  const providerName = trimmed.slice(0, sep);
+  const modelName = trimmed.slice(sep + 1).trim();
+  if (!modelName) {
+    return { provider: getPrimaryProvider() };
+  }
+  if (providerName === "deepseek" && isKeyPresent(process.env.DEEPSEEK_API_KEY)) {
+    return { provider: deepseek, model: modelName };
+  }
+  if (providerName === "azure" && isAzureOpenAIConfigured()) {
+    return { provider: azure, model: modelName };
+  }
+  if (providerName === "openrouter" && isKeyPresent(process.env.OPENROUTER_API_KEY)) {
+    return { provider: openrouter, model: modelName };
+  }
+  return { provider: getPrimaryProvider() };
+}
+
 export { deepseek, azure, openrouter };

@@ -224,13 +224,13 @@ export const DecisionIntelligencePanel = ({
     <div className="space-y-10">
       <ExecutiveBriefPanel result={result} />
       <DecisionWeightsPanel result={result} />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         <ChangeTimelinePanel result={result} />
         <ConfidenceHeatmapPanel result={result} />
       </div>
       <EvidenceGraphPanel result={result} />
       <ResearchReplayPanel result={result} activity={activity} />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         <SourceQualityPanel result={result} />
         <DecisionBoardPanel result={result} comparisonId={comparisonId} />
       </div>
@@ -249,21 +249,21 @@ const SectionHeader = ({
   title: string;
   right?: React.ReactNode;
 }) => (
-  <div className="mb-6 flex flex-col gap-4 border-b border-[#2a2a2a] pb-5 sm:flex-row sm:items-center sm:justify-between">
-    <div className="flex items-center gap-4">
+  <div className="mb-6 flex flex-wrap items-start justify-between gap-3 border-b border-[#2a2a2a] pb-5">
+    <div className="flex min-w-0 flex-1 items-center gap-3.5">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-[#333] bg-[#111] text-orange-400">
         <Icon className="h-5 w-5" />
       </div>
-      <div>
+      <div className="min-w-0">
         <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500/60">
           {eyebrow}
         </p>
-        <h3 className="mt-1 font-serif text-2xl tracking-tight text-[#fdfbf7]">
+        <h3 className="mt-1 font-serif text-xl sm:text-2xl tracking-tight text-[#fdfbf7] break-words">
           {title}
         </h3>
       </div>
     </div>
-    {right}
+    {right ? <div className="shrink-0 max-w-full">{right}</div> : null}
   </div>
 );
 
@@ -798,70 +798,74 @@ const EvidenceGraphPanel = ({ result }: { result: ComparisonData }) => {
         <SectionHeader icon={Network} eyebrow={t("di.graph.eyebrow")} title={t("di.graph.title")} />
       </div>
 
-      <div className="grid gap-0 border-t border-[#2a2a2a] xl:grid-cols-[1fr_300px]">
-        <div className="relative min-h-[640px] overflow-hidden bg-[#080807] md:min-h-[540px]">
-          <svg className="absolute inset-0 h-full w-full" role="presentation">
-            {graph.edges.map((edge, index) => {
-              const from = nodeMap.get(edge.from);
-              const to = nodeMap.get(edge.to);
-              if (!from || !to) return null;
-
-              const isActiveEdge = edge.from === selectedId || edge.to === selectedId;
-              const isDimmedEdge = selectedId && !isActiveEdge;
-
-              return (
-                <line
-                  key={`${edge.from}-${edge.to}-${index}`}
-                  x1={`${from.x}%`}
-                  y1={`${from.y}%`}
-                  x2={`${to.x}%`}
-                  y2={`${to.y}%`}
-                  stroke={isActiveEdge ? "#ea580c" : edge.color}
-                  strokeOpacity={isActiveEdge ? "0.9" : isDimmedEdge ? "0.08" : "0.28"}
-                  strokeWidth={isActiveEdge ? "1.5" : "1"}
-                  strokeDasharray={isActiveEdge ? "5 5" : undefined}
-                  className={cn(
-                    "transition-all duration-300",
-                    isActiveEdge && "graph-active-line"
-                  )}
-                />
-              );
-            })}
-          </svg>
-
-          {graph.nodes.map((node) => {
-            const isDimmed = selectedId && !relatedNodeIds.has(node.id);
+      <div className="grid gap-0 border-t border-[#2a2a2a] xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 bg-[#080807] p-4 sm:p-6 space-y-5">
+          {(["verdict", "entity", "dimension", "fact", "source"] as const).map((tierType) => {
+            const tierNodes = graph.nodes.filter((n) => n.type === tierType);
+            if (tierNodes.length === 0) return null;
             return (
-              <button
-                key={node.id}
-                type="button"
-                onClick={() => setSelectedId(node.id)}
-                className={cn(
-                  "absolute max-w-[104px] -translate-x-1/2 -translate-y-1/2 rounded-sm border bg-[#111]/95 px-2 py-1.5 text-left sm:max-w-[170px] sm:px-3 sm:py-2 shadow-2xl transition-colors hover:z-20 hover:border-orange-500/50 graph-node-btn",
-                  selectedId === node.id ? "z-20 border-orange-500/60 scale-105" : "z-10 border-[#333]",
-                  isDimmed ? "opacity-35 hover:opacity-85 scale-95" : "opacity-100"
-                )}
-                style={{ left: `${node.x}%`, top: `${node.y}%` }}
-              >
-                <span className="block text-[8px] font-bold uppercase tracking-widest" style={{ color: node.color }}>
-                  {t(GRAPH_NODE_TYPE_KEYS[node.type])}
-                </span>
-                <span className="mt-1 block line-clamp-2 break-words text-[11px] font-medium leading-tight text-[#fdfbf7] sm:truncate sm:text-xs">
-                  {node.label}
-                </span>
-              </button>
+              <div key={tierType} className="space-y-2">
+                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#fdfbf7]/35">
+                  {t(GRAPH_NODE_TYPE_KEYS[tierType])}
+                </p>
+                <div
+                  className={cn(
+                    "grid gap-2",
+                    tierType === "verdict" && "grid-cols-1",
+                    tierType === "entity" && "grid-cols-2",
+                    tierType === "dimension" && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+                    tierType === "fact" && "grid-cols-1 sm:grid-cols-2",
+                    tierType === "source" && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+                  )}
+                >
+                  {tierNodes.map((node) => {
+                    const isSelected = selectedId === node.id;
+                    const isRelated = relatedNodeIds.has(node.id);
+                    const isDimmed = Boolean(selectedId) && !isRelated;
+                    return (
+                      <button
+                        key={node.id}
+                        type="button"
+                        onClick={() => setSelectedId(node.id)}
+                        className={cn(
+                          "graph-node-btn min-w-0 rounded-lg border bg-[#111]/95 px-3 py-2.5 text-left transition-colors hover:border-orange-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400",
+                          isSelected
+                            ? "border-orange-500/70 bg-orange-500/10 ring-1 ring-orange-500/30"
+                            : isRelated
+                              ? "border-white/20 bg-white/[0.04]"
+                              : "border-[#262626]",
+                          isDimmed ? "opacity-40 hover:opacity-90" : "opacity-100",
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="h-1.5 w-1.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: node.color }}
+                          />
+                          <span className="truncate text-[9px] font-bold uppercase tracking-widest" style={{ color: node.color }}>
+                            {t(GRAPH_NODE_TYPE_KEYS[node.type])}
+                          </span>
+                        </div>
+                        <span className="mt-1 block truncate text-xs font-medium text-[#fdfbf7]" title={node.label}>
+                          {node.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>
 
-        <aside className="border-t border-[#2a2a2a] bg-[#0c0b0a] p-6 xl:border-l xl:border-t-0">
+        <aside className="min-w-0 border-t border-[#2a2a2a] bg-[#0c0b0a] p-5 sm:p-6 xl:border-l xl:border-t-0">
           {selected ? (
             <>
               <p className="text-[10px] font-bold uppercase tracking-widest text-orange-400">
                 {t(GRAPH_NODE_TYPE_KEYS[selected.type])}
               </p>
-              <h4 className="mt-2 font-serif text-2xl text-[#fdfbf7]">{selected.label}</h4>
-              <p className="mt-4 text-sm leading-relaxed text-[#fdfbf7]/60">{selected.detail}</p>
+              <h4 className="mt-2 font-serif text-xl sm:text-2xl text-[#fdfbf7] break-words">{selected.label}</h4>
+              <p className="mt-3 text-sm leading-relaxed text-[#fdfbf7]/65 break-words">{selected.detail}</p>
             </>
           ) : null}
         </aside>
@@ -989,6 +993,16 @@ const buildGraph = (result: ComparisonData, facts: FactWithCategory[], compact: 
   return { nodes, edges };
 };
 
+const localizeReplayStep = (t: TFunction, raw: string | null | undefined): string => {
+  const key = (raw || "").trim().toLowerCase();
+  if (key.includes("parse")) return t("di.replay.step.parse");
+  if (key.includes("search")) return t("di.replay.step.search");
+  if (key.includes("extract") || key.includes("fact")) return t("di.replay.step.extract");
+  if (key.includes("score")) return t("di.replay.step.score");
+  if (key.includes("reason") || key.includes("verdict") || key.includes("dimension")) return t("di.replay.step.verdict");
+  return raw || t("di.replay.step.parse");
+};
+
 const ResearchReplayPanel = ({
   result,
   activity,
@@ -1026,13 +1040,15 @@ const ResearchReplayPanel = ({
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[0.7fr_1.3fr]">
-        <div className="rounded-sm border border-[#2a2a2a] bg-[#111] p-5">
+      <div className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
+        <div className="min-w-0 rounded-sm border border-[#2a2a2a] bg-[#111] p-5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-orange-400">
-            {active.task}
+            {localizeReplayStep(t, active.task)}
           </p>
-          <h4 className="mt-2 font-serif text-3xl text-[#fdfbf7]">{active.stepName}</h4>
-          <p className="mt-4 text-sm leading-relaxed text-[#fdfbf7]/60">
+          <h4 className="mt-2 font-serif text-2xl sm:text-3xl text-[#fdfbf7] break-words">
+            {localizeReplayStep(t, active.stepName)}
+          </h4>
+          <p className="mt-4 text-sm leading-relaxed text-[#fdfbf7]/65 break-words">
             {active.outputSummary || active.inputSummary || active.error || t("di.replay.collecting")}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
@@ -1050,7 +1066,7 @@ const ResearchReplayPanel = ({
           </div>
         </div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <input
             type="range"
             min="0"
@@ -1059,24 +1075,37 @@ const ResearchReplayPanel = ({
             onChange={(event) => setIndex(Number(event.target.value))}
             className="w-full accent-orange-500"
           />
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
             {replaySteps.map((step, stepIndex) => (
               <button
                 key={step.id}
                 type="button"
                 onClick={() => setIndex(stepIndex)}
                 className={cn(
-                  "min-h-24 rounded-sm border p-3 text-left transition-colors",
+                  "min-w-0 rounded-lg border p-3 text-left transition-colors",
                   stepIndex === index
                     ? "border-orange-500/50 bg-orange-500/10"
                     : "border-[#2a2a2a] bg-[#111] hover:border-[#444]",
                 )}
               >
-                <p className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">
-                  {String(stepIndex + 1).padStart(2, "0")}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">
+                    {String(stepIndex + 1).padStart(2, "0")}
+                  </span>
+                  <span
+                    className={cn(
+                      "h-1.5 w-1.5 shrink-0 rounded-full",
+                      step.status === "completed" ? "bg-emerald-400" : step.status === "failed" ? "bg-red-400" : "bg-orange-400",
+                    )}
+                    aria-hidden="true"
+                  />
+                </div>
+                <p className="mt-2 line-clamp-2 text-xs sm:text-sm font-serif text-[#fdfbf7]">
+                  {localizeReplayStep(t, step.stepName)}
                 </p>
-                <p className="mt-2 truncate text-sm font-serif text-[#fdfbf7]">{step.stepName}</p>
-                <p className="mt-1 truncate text-[10px] uppercase tracking-widest text-[#fdfbf7]/30">{statusLabel(t, step.status)}</p>
+                <p className="mt-1 text-[9px] font-semibold uppercase tracking-wider text-[#fdfbf7]/45 break-words">
+                  {statusLabel(t, step.status)}
+                </p>
               </button>
             ))}
           </div>
@@ -1189,24 +1218,24 @@ const SourceQualityPanel = ({ result }: { result: ComparisonData }) => {
           { label: t("di.sources.metric.official"), value: `${quality.official}%` },
           { label: t("di.sources.metric.fresh"), value: `${quality.recent}%` },
         ].map((metric) => (
-          <div key={metric.label} className="rounded-sm border border-[#2a2a2a] bg-[#111] p-3">
-            <p className="text-[8px] font-bold uppercase tracking-widest text-[#fdfbf7]/35">{metric.label}</p>
-            <p className="mt-1 text-sm font-semibold text-[#fdfbf7]">{metric.value}</p>
+          <div key={metric.label} className="min-w-0 rounded-sm border border-[#2a2a2a] bg-[#111] p-2.5 sm:p-3">
+            <p className="truncate text-[8px] font-bold uppercase tracking-wider text-[#fdfbf7]/40" title={metric.label}>{metric.label}</p>
+            <p className="mt-1 text-sm font-semibold tabular-nums text-[#fdfbf7]">{metric.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
+      <div className="mb-5 flex flex-wrap gap-1.5">
         {(["balanced", "official", "recent", "community", "contradictions"] as const).map((item) => (
           <button
             key={item}
             type="button"
             onClick={() => setMode(item)}
             className={cn(
-              "rounded-sm border px-3 py-2 text-[9px] font-bold uppercase tracking-widest transition-colors",
+              "rounded-md border px-2.5 py-2 text-[9px] font-bold uppercase tracking-wider transition-colors whitespace-nowrap",
               mode === item
                 ? "border-orange-500/50 bg-orange-500/10 text-orange-300"
-                : "border-[#333] bg-[#111] text-[#fdfbf7]/45 hover:border-[#555]",
+                : "border-[#333] bg-[#111] text-[#fdfbf7]/50 hover:border-[#555]",
             )}
           >
             {t(SOURCE_MODE_KEYS[item])}
@@ -1240,7 +1269,11 @@ const SourceQualityPanel = ({ result }: { result: ComparisonData }) => {
                     ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
                     : "border-amber-500/20 bg-amber-500/10 text-amber-300",
                 )}>
-                  {source.reliability}
+                  {source.reliability === "Official"
+                    ? t("di.sources.mode.official")
+                    : source.reliability === "Community"
+                      ? t("di.sources.mode.community")
+                      : source.reliability}
                 </span>
               </div>
               <p className="mt-2 truncate text-[10px] uppercase tracking-widest text-[#fdfbf7]/30">

@@ -149,7 +149,7 @@ export const FactCard = ({ fact, entity, index, className = "" }: FactCardProps)
         )}
         <span className="inline-flex items-center gap-1.5 border border-[#333] bg-[#0c0b0a] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/50">
           <FreshnessDot freshness={fact.freshness} />
-          {fact.freshness}
+          {fact.freshness === "Fresh" ? t("di.sources.mode.recent") : fact.freshness}
         </span>
         {fact.changed && (
           <span className="inline-flex items-center gap-1.5 border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-orange-400">

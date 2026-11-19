@@ -333,29 +333,29 @@ export const DecisionMatrixPanel = ({
             </h4>
 
             {/* Score Boards */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {/* Entity A */}
-              <div className="group relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 text-center sm:p-5">
+              <div className="group relative min-w-0 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.025] p-3.5 text-center sm:p-4">
                 <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: result.entities.a.hex }} />
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/45 block mb-1 truncate">
                   {result.entities.a.name}
                 </span>
-                <span className="mt-2 block font-serif text-3xl font-semibold text-[#fdfbf7] sm:text-4xl">
+                <span className="mt-1.5 block font-serif text-2xl font-semibold tabular-nums leading-none text-[#fdfbf7] sm:text-3xl">
                   {scores.scoreA}
                 </span>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 block mt-1">{t("dm.weightedIndex")}</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/35 block mt-1.5">{t("dm.weightedIndex")}</span>
               </div>
 
               {/* Entity B */}
-              <div className="group relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 text-center sm:p-5">
+              <div className="group relative min-w-0 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.025] p-3.5 text-center sm:p-4">
                 <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: result.entities.b.hex }} />
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block mb-1">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/45 block mb-1 truncate">
                   {result.entities.b.name}
                 </span>
-                <span className="mt-2 block font-serif text-3xl font-semibold text-[#fdfbf7] sm:text-4xl">
+                <span className="mt-1.5 block font-serif text-2xl font-semibold tabular-nums leading-none text-[#fdfbf7] sm:text-3xl">
                   {scores.scoreB}
                 </span>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/30 block mt-1">{t("dm.weightedIndex")}</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/35 block mt-1.5">{t("dm.weightedIndex")}</span>
               </div>
             </div>
 
@@ -398,23 +398,23 @@ export const DecisionMatrixPanel = ({
           {/* Save Form */}
           <form onSubmit={handleSaveMatrix} className="mt-8 border-t border-[#1f1f1f] pt-6 space-y-3">
             <label className="text-[9px] font-bold uppercase tracking-widest text-[#fdfbf7]/40 block">{t("dm.saveLabel")}</label>
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col gap-2">
               <input 
                 type="text"
                 placeholder={t("dm.savePlaceholder")}
                 value={matrixName}
                 onChange={(e) => setMatrixName(e.target.value)}
-                className="h-11 sm:h-9 flex-1 rounded-sm border border-[#333] bg-black px-3 text-base sm:text-xs text-[#fdfbf7] outline-none transition-colors placeholder:text-[#fdfbf7]/30 focus:border-orange-500"
+                className="h-11 w-full min-w-0 rounded-sm border border-[#333] bg-black px-3 text-base sm:text-xs text-[#fdfbf7] outline-none transition-colors placeholder:text-[#fdfbf7]/30 focus:border-orange-500"
               />
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <motion.button 
                   whileHover={!isSaving ? { scale: 1.02 } : undefined}
                   whileTap={!isSaving ? { scale: 0.96 } : undefined}
                   type="submit" 
                   disabled={isSaving}
-                  className="h-11 sm:h-9 px-4 flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-sm bg-orange-600 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700 disabled:opacity-50 shrink-0"
+                  className="h-10 px-4 flex-1 flex items-center justify-center gap-1.5 rounded-sm bg-orange-600 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-orange-700 disabled:opacity-50 whitespace-nowrap"
                 >
-                  <Save className="h-3.5 w-3.5" />
+                  <Save className="h-3.5 w-3.5 shrink-0" />
                   {isSaving ? t("dm.saving") : t("dm.save")}
                 </motion.button>
                 <motion.button 
@@ -423,7 +423,7 @@ export const DecisionMatrixPanel = ({
                   type="button" 
                   onClick={() => void handleSaveDefaultProfile()} 
                   disabled={isSaving} 
-                  className="h-11 sm:h-9 rounded-sm border border-orange-500/40 px-3 text-[9px] font-bold uppercase tracking-widest text-orange-300 transition-colors hover:bg-orange-500/10 disabled:opacity-50"
+                  className="h-10 rounded-sm border border-orange-500/40 px-3 text-[9px] font-bold uppercase tracking-widest text-orange-300 transition-colors hover:bg-orange-500/10 disabled:opacity-50 whitespace-nowrap"
                 >
                   {t("dm.default")}
                 </motion.button>
