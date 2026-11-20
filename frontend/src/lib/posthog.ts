@@ -4,14 +4,14 @@ const POSTHOG_KEY =
   import.meta.env.VITE_POSTHOG_KEY || import.meta.env.NEXT_PUBLIC_POSTHOG_KEY;
 const POSTHOG_HOST =
   import.meta.env.VITE_POSTHOG_HOST ||
-  import.meta.env.NEXT_PUBLIC_POSTHOG_HOST ||
-  "https://us.i.posthog.com";
+  import.meta.env.NEXT_PUBLIC_POSTHOG_HOST;
 
 let initialized = false;
 let pendingIdentity: { userId: string; traits?: Record<string, unknown> } | null = null;
 
 export function initPostHog() {
-  if (!POSTHOG_KEY) {
+  if (!POSTHOG_KEY || !POSTHOG_HOST || !import.meta.env.PROD ||
+      !["sideby.ink", "www.sideby.ink"].includes(window.location.hostname)) {
     return;
   }
 

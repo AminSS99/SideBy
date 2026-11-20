@@ -5,10 +5,11 @@ import { serverEnv as env } from "./env.js";
 let posthog: PostHog | null = null;
 
 function getPostHog(): PostHog | null {
-  if (!env.posthogKey) return null;
+  if (!env.posthogKey || !env.posthogHost || process.env.NODE_ENV !== "production" ||
+      process.env.VERCEL_ENV !== "production") return null;
   if (!posthog) {
     posthog = new PostHog(env.posthogKey, {
-      host: env.posthogHost || "https://us.i.posthog.com",
+      host: env.posthogHost,
       // Serverless: send immediately instead of batching in a process that may freeze.
       flushAt: 1,
       flushInterval: 0,
