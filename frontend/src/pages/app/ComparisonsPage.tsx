@@ -535,7 +535,7 @@ const ComparisonsPage = () => {
         </section>
       )}
 
-      <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+      <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300">
             {t("cmp.kicker")}

@@ -660,37 +660,58 @@ const ComparisonDetailPage = () => {
       </div>
 
       {translation.supported && job?.status === "completed" && job.result && !viewedHistoricalResult && (
-        <div role="status" aria-live="polite" className="flex flex-col gap-3 rounded-2xl border border-sky-400/20 bg-sky-400/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <Globe2 className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" aria-hidden="true" />
-            <p className="min-w-0 text-xs leading-5 text-white/65">
-              {translation.status === "loading"
-                ? t("tr.loading")
-                : translation.status === "error"
-                  ? t("tr.error")
-                  : translation.status === "limit"
-                    ? t("tr.limit")
-                    : translation.isTranslated
-                      ? t("tr.showing")
-                      : t("tr.note")}
-            </p>
-          </div>
-          {translation.status === "loading" ? (
-            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-sky-300" aria-hidden="true" />
-          ) : translation.isTranslated ? (
-            <button type="button" onClick={translation.disable} className="min-h-11 shrink-0 rounded-xl border border-white/10 px-4 text-[10px] font-bold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.06]">
-              {t("tr.original")}
-            </button>
-          ) : translation.status === "error" || translation.status === "limit" ? (
-            <button type="button" onClick={translation.retry} className="min-h-11 shrink-0 rounded-xl border border-white/10 px-4 text-[10px] font-bold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.06]">
-              {t("tr.retry")}
-            </button>
-          ) : (
-            <button type="button" onClick={translation.enable} className="min-h-11 shrink-0 rounded-xl border border-sky-300/30 bg-sky-400/10 px-4 text-[10px] font-bold uppercase tracking-wider text-sky-200 transition-colors hover:bg-sky-400/20">
-              {t("tr.show", { language: LANGS.find((item) => item.code === translation.lang)?.label ?? translation.lang })}
-            </button>
+        <>
+          {translation.status === "loading" && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="pointer-events-none fixed inset-x-4 top-20 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-sky-400/30 bg-[#0d1117]/95 px-4 py-3 shadow-[0_18px_50px_rgba(0,0,0,0.65)] backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10">
+                <Loader2 className="h-4 w-4 animate-spin text-sky-300" aria-hidden="true" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-[#fdfbf7]">
+                  {t("tr.loading")}
+                </p>
+                <p className="mt-0.5 text-[11px] text-sky-200/70">
+                  {LANGS.find((item) => item.code === translation.lang)?.label ?? translation.lang}
+                </p>
+              </div>
+            </div>
           )}
-        </div>
+          <div role="status" aria-live="polite" className="flex flex-col gap-3 rounded-2xl border border-sky-400/20 bg-sky-400/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <Globe2 className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" aria-hidden="true" />
+              <p className="min-w-0 text-xs leading-5 text-white/65">
+                {translation.status === "loading"
+                  ? t("tr.loading")
+                  : translation.status === "error"
+                    ? t("tr.error")
+                    : translation.status === "limit"
+                      ? t("tr.limit")
+                      : translation.isTranslated
+                        ? t("tr.showing")
+                        : t("tr.note")}
+              </p>
+            </div>
+            {translation.status === "loading" ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-sky-300" aria-hidden="true" />
+            ) : translation.isTranslated ? (
+              <button type="button" onClick={translation.disable} className="min-h-11 shrink-0 rounded-xl border border-white/10 px-4 text-[10px] font-bold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.06]">
+                {t("tr.original")}
+              </button>
+            ) : translation.status === "error" || translation.status === "limit" ? (
+              <button type="button" onClick={translation.retry} className="min-h-11 shrink-0 rounded-xl border border-white/10 px-4 text-[10px] font-bold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.06]">
+                {t("tr.retry")}
+              </button>
+            ) : (
+              <button type="button" onClick={translation.enable} className="min-h-11 shrink-0 rounded-xl border border-sky-300/30 bg-sky-400/10 px-4 text-[10px] font-bold uppercase tracking-wider text-sky-200 transition-colors hover:bg-sky-400/20">
+                {t("tr.show", { language: LANGS.find((item) => item.code === translation.lang)?.label ?? translation.lang })}
+              </button>
+            )}
+          </div>
+        </>
       )}
 
       {viewedHistoricalResult && viewedHistoricalVersionNumber && (

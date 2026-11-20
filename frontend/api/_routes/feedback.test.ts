@@ -158,7 +158,7 @@ describe("Multi-Model AI catalog & routing", () => {
     const ids = models.map((m) => m.id);
 
     expect(ids).toContain("auto");
-    expect(ids).toContain("deepseek:deepseek-chat");
+    expect(ids).toContain("deepseek:deepseek-flash");
     expect(ids).toContain("azure:Llama-3.3-70B-Instruct");
     expect(ids).toContain("azure:Kimi-K2.5");
     expect(ids).toContain("azure:Kimi-K2.6");

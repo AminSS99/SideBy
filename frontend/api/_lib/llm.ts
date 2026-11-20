@@ -196,7 +196,7 @@ const callGemini = async (messages: LLMMessage[], modelOverride?: string): Promi
 const callDeepSeek = async (messages: LLMMessage[], modelOverride?: string): Promise<string> => {
   const key = process.env.DEEPSEEK_API_KEY!;
   const url = process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/v1/chat/completions";
-  const model = modelOverride || process.env.DEEPSEEK_MODEL || "deepseek-chat";
+  const model = modelOverride || process.env.DEEPSEEK_MODEL || "deepseek-flash";
 
   const response = await fetch(url, {
     method: "POST",
@@ -251,7 +251,7 @@ const openAiCompatibleConfig = (
   return {
     key: process.env.DEEPSEEK_API_KEY!,
     url: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/v1/chat/completions",
-    model: modelOverride || process.env.DEEPSEEK_MODEL || "deepseek-chat",
+    model: modelOverride || process.env.DEEPSEEK_MODEL || "deepseek-flash",
     extraHeaders: {} as Record<string, string>,
   };
 };
@@ -349,7 +349,7 @@ export const llmChat = async (
     azure: modelOverride || process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini",
     anthropic: modelOverride || process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
     gemini: modelOverride || process.env.GEMINI_MODEL || "gemini-2.0-flash",
-    deepseek: modelOverride || process.env.DEEPSEEK_MODEL || "deepseek-chat",
+    deepseek: modelOverride || process.env.DEEPSEEK_MODEL || "deepseek-flash",
   };
 
   return { content, model: models[provider], provider };
@@ -373,7 +373,7 @@ export const llmChatStream = async (
     azure: modelOverride || process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini",
     anthropic: modelOverride || process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
     gemini: modelOverride || process.env.GEMINI_MODEL || "gemini-2.0-flash",
-    deepseek: modelOverride || process.env.DEEPSEEK_MODEL || "deepseek-chat",
+    deepseek: modelOverride || process.env.DEEPSEEK_MODEL || "deepseek-flash",
   };
 
   if (provider === "openai" || provider === "azure" || provider === "deepseek") {

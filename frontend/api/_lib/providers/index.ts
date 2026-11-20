@@ -155,11 +155,12 @@ export function listSelectableModels(): SelectableModel[] {
   ];
 
   if (isKeyPresent(process.env.DEEPSEEK_API_KEY)) {
+    const dsModel = process.env.DEEPSEEK_MODEL?.trim() || "deepseek-flash";
     models.push({
-      id: "deepseek:deepseek-chat",
-      label: "DeepSeek V3",
+      id: `deepseek:${dsModel}`,
+      label: dsModel === "deepseek-flash" ? "DeepSeek 4.1 Flash (1017)" : `DeepSeek (${dsModel})`,
       provider: "deepseek",
-      model: process.env.DEEPSEEK_MODEL?.trim() || "deepseek-chat",
+      model: dsModel,
       badge: "Fast",
     });
   }

@@ -46,7 +46,7 @@ export function StickyDecisionBar({
       exit={{ y: 40, opacity: 0 }}
       transition={{ type: "spring", stiffness: 380, damping: 28 }}
       aria-label={t("res.bar.aria")}
-      className="fixed bottom-[calc(var(--sideby-toast-offset,var(--bottom-overlay-clearance,1rem))+0.5rem)] left-3 right-3 z-40 flex items-center justify-between gap-2 rounded-2xl border border-orange-500/25 bg-[#0b0908]/95 p-2.5 shadow-[0_20px_55px_rgba(0,0,0,.75)] backdrop-blur-2xl lg:bottom-6 sm:left-1/2 sm:right-auto sm:w-[min(700px,calc(100vw-2rem))] sm:max-w-3xl sm:-translate-x-1/2 sm:p-3.5 sm:px-5 md:z-[60]"
+      className="fixed bottom-[calc(var(--sideby-toast-offset,var(--bottom-overlay-clearance,1rem))+0.5rem)] inset-x-3 mx-auto z-40 flex items-center justify-between gap-2 rounded-2xl border border-orange-500/25 bg-[#0b0908]/95 p-2.5 shadow-[0_20px_55px_rgba(0,0,0,.75)] backdrop-blur-2xl lg:bottom-6 sm:inset-x-4 sm:w-[min(700px,calc(100vw-2rem))] sm:max-w-3xl sm:p-3.5 sm:px-5 md:z-[60]"
     >
       {/* Metrics Section */}
       <div className="flex min-w-0 items-center gap-x-4 text-left">

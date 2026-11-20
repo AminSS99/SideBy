@@ -7,7 +7,7 @@ import { estimateCost, estimateTokens, validateWithRepair, withOutputContract } 
 
 const DEEPSEEK_API_URL = process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/v1/chat/completions";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const DEFAULT_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
+const DEFAULT_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-flash";
 
 export class DeepSeekAdapter implements AIProvider {
   name = "deepseek";
