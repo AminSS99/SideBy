@@ -126,7 +126,7 @@ const VideoPlayer = React.forwardRef<HTMLVideoElement, VideoPlayerProps>(functio
       <div className={cn("absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent px-3 pb-2 pt-8 text-white transition-opacity motion-reduce:transition-none sm:px-4", visible || !playing ? "opacity-100" : "pointer-events-none opacity-0")}>
         <div className="flex items-center gap-3 text-[11px] tabular-nums">
           <span>{formatTime(current)}</span>
-          <input aria-label="Seek video" className={cn(rangeClass, "flex-1")} type="range" min={0} max={duration || 0} step={0.1} value={Math.min(current, duration)} disabled={!duration} onChange={(event) => seek(Number(event.target.value))}/>
+          <input aria-label="Seek video" className={cn(rangeClass, "flex-1 disabled:cursor-not-allowed")} type="range" min={0} max={duration || 0} step={0.1} value={Math.min(current, duration)} disabled={!duration} onChange={(event) => seek(Number(event.target.value))}/>
           <span>{formatTime(duration)}</span>
         </div>
         <div className="flex items-center justify-between gap-1">

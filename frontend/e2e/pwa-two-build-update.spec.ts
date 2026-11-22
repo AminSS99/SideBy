@@ -191,12 +191,12 @@ test("real two-build update preserves unsaved input and activates the new build"
   // 1. Load build A and confirm it is worker-controlled.
   await page.goto(`${BASE}/`);
   await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 30_000 });
-  await expect(page.getByLabel("First option")).toBeVisible();
+  await expect(page.getByLabel("First option", { exact: true })).toBeVisible();
   expect(await buildId()).toBe("build-a");
 
   // 2. Type unsaved input and confirm real dirty state (store seam, not a simulation).
-  await page.getByLabel("First option").fill("Next.js App Router");
-  await page.getByLabel("Second option").fill("Remix Vite");
+  await page.getByLabel("First option", { exact: true }).fill("Next.js App Router");
+  await page.getByLabel("Second option", { exact: true }).fill("Remix Vite");
   const isDirty = await page.evaluate(() => {
     const store = (window as unknown as { __pwaUpdates?: { isDirty: () => boolean } }).__pwaUpdates;
     return store?.isDirty() ?? false;
@@ -228,8 +228,8 @@ test("real two-build update preserves unsaved input and activates the new build"
   // 6. Activation reloads into build B: prove it via the live DOM marker
   //    (not via any test-triggered reload), plus draft restoration.
   await expect.poll(async () => buildId(), { timeout: 60_000 }).toBe("build-b");
-  await expect(page.getByLabel("First option")).toHaveValue("Next.js App Router");
-  await expect(page.getByLabel("Second option")).toHaveValue("Remix Vite");
+  await expect(page.getByLabel("First option", { exact: true })).toHaveValue("Next.js App Router");
+  await expect(page.getByLabel("Second option", { exact: true })).toHaveValue("Remix Vite");
   await expect(page.getByText("Restored your unsaved comparison draft.")).toBeVisible();
   expect(await page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
 });

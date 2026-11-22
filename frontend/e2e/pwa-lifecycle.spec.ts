@@ -73,7 +73,7 @@ test.describe("SideBy production worker lifecycle", () => {
     try {
       await page.reload({ waitUntil: "load" });
       await expect(page.locator("#root")).toBeAttached();
-      await expect(page.getByLabel("First option")).toBeVisible({ timeout: 15000 });
+      await expect(page.getByLabel("First option", { exact: true })).toBeVisible({ timeout: 15000 });
 
       const apiOutcome = await page.evaluate(async () => {
         try {
@@ -94,7 +94,7 @@ test.describe("SideBy production worker lifecycle", () => {
 
   test("restores a scope-matched draft in the real composer after reload", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByLabel("First option")).toBeVisible();
+    await expect(page.getByLabel("First option", { exact: true })).toBeVisible();
 
     await page.evaluate(() => {
       const envelope = {
@@ -108,14 +108,14 @@ test.describe("SideBy production worker lifecycle", () => {
     });
 
     await page.reload();
-    await expect(page.getByLabel("First option")).toHaveValue("Supabase");
-    await expect(page.getByLabel("Second option")).toHaveValue("Firebase");
+    await expect(page.getByLabel("First option", { exact: true })).toHaveValue("Supabase");
+    await expect(page.getByLabel("Second option", { exact: true })).toHaveValue("Firebase");
     await expect(page.getByText("Restored your unsaved comparison draft.")).toBeVisible();
   });
 
   test("ignores drafts scoped to another account and discards legacy records", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByLabel("First option")).toBeVisible();
+    await expect(page.getByLabel("First option", { exact: true })).toBeVisible();
 
     await page.evaluate(() => {
       const foreign = {
@@ -129,7 +129,7 @@ test.describe("SideBy production worker lifecycle", () => {
     });
 
     await page.reload();
-    await expect(page.getByLabel("First option")).toHaveValue("");
+    await expect(page.getByLabel("First option", { exact: true })).toHaveValue("");
     await expect(page.getByText("Restored your unsaved comparison draft.")).toHaveCount(0);
 
     // Legacy unscoped records cannot prove ownership: discarded, never restored.
@@ -140,7 +140,7 @@ test.describe("SideBy production worker lifecycle", () => {
       );
     });
     await page.reload();
-    await expect(page.getByLabel("First option")).toHaveValue("");
+    await expect(page.getByLabel("First option", { exact: true })).toHaveValue("");
     await expect(page.getByText("Restored your unsaved comparison draft.")).toHaveCount(0);
   });
 

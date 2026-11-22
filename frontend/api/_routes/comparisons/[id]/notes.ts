@@ -79,7 +79,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
       {
         error: error instanceof z.ZodError
           ? error.errors[0]?.message || "Invalid note."
-          : error instanceof Error ? error.message : "Unable to manage notes.",
+          : status < 500 && error instanceof Error ? error.message : "Unable to manage notes.",
       },
       status,
     );

@@ -57,7 +57,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
     return sendJson(response, {
       error: error instanceof z.ZodError
         ? error.errors[0]?.message || "Invalid request."
-        : error instanceof Error ? error.message : "Unable to create session.",
+        : status < 500 && error instanceof Error ? error.message : "Unable to create session.",
     }, status);
   }
 }

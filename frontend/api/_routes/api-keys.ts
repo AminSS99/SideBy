@@ -1,7 +1,7 @@
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../_lib/auth.js";
-import { canAccessWorkspace } from "../_lib/db-auth.js";
+import { canAccessWorkspace, canAdminWorkspace } from "../_lib/db-auth.js";
 import { createApiKeySecret } from "../_lib/api-key-auth.js";
 import { sendJson } from "../_lib/sideby.js";
 import { createDbClient } from "../../src/db/index.js";
@@ -20,10 +20,17 @@ export const config = {
 
 const MAX_ACTIVE_API_KEYS = 20;
 
+const ALLOWED_API_KEY_SCOPES = [
+  "comparisons:read",
+  "comparisons:write",
+  "comparisons:export",
+  "comparisons:followups",
+] as const;
+
 const CreateApiKeySchema = z.object({
   name: z.string().trim().min(1).max(120),
   workspaceId: z.string().uuid().optional(),
-  scopes: z.array(z.string().trim().min(1).max(80)).max(20).default([
+  scopes: z.array(z.enum(ALLOWED_API_KEY_SCOPES)).min(1).max(ALLOWED_API_KEY_SCOPES.length).default([
     "comparisons:read",
     "comparisons:write",
     "comparisons:export",
@@ -87,6 +94,19 @@ export default async function handler(
           .limit(1);
         // Never leak a personal workspace API key into an active org scope.
         orgId = workspace?.ownerType === "org" ? workspace.ownerId : null;
+        if (workspace?.ownerType === "org") {
+          const isAdmin = await canAdminWorkspace(db, auth.userId, body.workspaceId, auth.orgId, auth.orgRole);
+          if (!isAdmin) {
+            return sendJson(
+              response,
+              { error: "Only workspace admins can create organization API keys." },
+              403,
+            );
+          }
+        }
+      } else if (orgId && !["org:admin", "admin", "owner"].includes(auth.orgRole ?? "")) {
+        // Non-admin org members default to personal keys, not org-wide keys.
+        orgId = null;
       }
 
       const activeKeys = await db
@@ -141,7 +161,7 @@ export default async function handler(
       {
         error: error instanceof z.ZodError
           ? error.errors[0]?.message || "Invalid request body."
-          : error instanceof Error ? error.message : "Unable to manage API keys.",
+          : status < 500 && error instanceof Error ? error.message : "Unable to manage API keys.",
       },
       status,
     );

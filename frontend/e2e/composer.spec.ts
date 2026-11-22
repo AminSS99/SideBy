@@ -47,7 +47,7 @@ test.describe("SideBy Comparison Composer E2E", () => {
 
     // Verify validation preflight badge
     await expect(page.getByText(/Brief ready —/)).toBeVisible();
-    await expect(page.getByText("Developer Tools")).toBeVisible();
+    await expect(page.getByText("Developer Tools", { exact: true })).toBeVisible();
   });
 
   test("should handle suggestions chip clicks", async ({ page }) => {

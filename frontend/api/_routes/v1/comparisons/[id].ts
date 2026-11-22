@@ -35,7 +35,7 @@ export default async function handler(
     }
     return sendJson(
       response,
-      { error: error instanceof Error ? error.message : "Unable to load comparison." },
+      { error: status < 500 && error instanceof Error ? error.message : "Unable to load comparison." },
       status,
     );
   }

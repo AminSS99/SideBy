@@ -1,7 +1,7 @@
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../../_lib/auth.js";
-import { canAccessWorkspace } from "../../_lib/db-auth.js";
+import { canAccessWorkspace, canAdminWorkspace } from "../../_lib/db-auth.js";
 import { sendJson } from "../../_lib/sideby.js";
 import { assertSafeWebhookUrl } from "../../_lib/webhook-url.js";
 import { createDbClient } from "../../../src/db/index.js";
@@ -83,6 +83,19 @@ export default async function handler(
           .limit(1);
         // Never leak a personal workspace webhook into an active org scope.
         orgId = workspace?.ownerType === "org" ? workspace.ownerId : null;
+        if (workspace?.ownerType === "org") {
+          const isAdmin = await canAdminWorkspace(db, auth.userId, body.workspaceId, auth.orgId, auth.orgRole);
+          if (!isAdmin) {
+            return sendJson(
+              response,
+              { error: "Only workspace admins can create organization webhooks." },
+              403,
+            );
+          }
+        }
+      } else if (orgId && !["org:admin", "admin", "owner"].includes(auth.orgRole ?? "")) {
+        // Non-admin org members default to personal webhooks, not org-wide webhooks.
+        orgId = null;
       }
 
       const existingSubs = await db
@@ -135,7 +148,7 @@ export default async function handler(
       {
         error: error instanceof z.ZodError
           ? error.errors[0]?.message || "Invalid request body."
-          : error instanceof Error ? error.message : "Unable to manage webhook subscriptions.",
+          : status < 500 && error instanceof Error ? error.message : "Unable to manage webhook subscriptions.",
       },
       status,
     );

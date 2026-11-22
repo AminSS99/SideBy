@@ -114,7 +114,9 @@ const Pricing = () => {
                   </span>
                 </div>
                 <div className="mt-6">
-                  <h2 className="font-serif text-3xl capitalize text-white">{tier.id}</h2>
+                  <h2 className="font-serif text-3xl text-white">
+                    {tier.id.charAt(0).toUpperCase() + tier.id.slice(1)}
+                  </h2>
                   <p className="mt-2 min-h-12 text-sm leading-6 text-white/45">{t(key(tier.id, "desc"))}</p>
                 </div>
                 <div className="mt-6 flex items-end gap-1.5">
