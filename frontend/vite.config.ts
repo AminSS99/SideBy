@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => ({
         },
   },
   plugins: [
-    dyadComponentTagger(),
+    ...(mode === "development" ? [dyadComponentTagger()] : []),
     react(),
     VitePWA({
       // injectManifest: our own typed service worker (src/sw.ts) so push and
@@ -60,6 +60,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks(id) {

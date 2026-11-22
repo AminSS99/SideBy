@@ -67,7 +67,7 @@ export default async function handler(
       {
         error: error instanceof z.ZodError
           ? error.errors[0]?.message || "Invalid request body."
-          : error instanceof Error ? error.message : "Unable to save source feedback.",
+          : status < 500 && error instanceof Error ? error.message : "Unable to save source feedback.",
       },
       status,
     );

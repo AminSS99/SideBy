@@ -72,10 +72,10 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ) {
-  // CORS Headers for public embeddable widget
+  // CORS Headers for public embeddable widget (never allow Authorization on wildcard CORS)
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-  response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (request.method === "OPTIONS") {
     response.status(200).end();
@@ -183,7 +183,7 @@ export default async function handler(
         id: d.id,
         status: "completed",
         progress: 100,
-        activeStep: d.activeStep,
+        activeStep: null,
         query: d.query,
         result,
         error: null,
@@ -232,7 +232,7 @@ export default async function handler(
     logger.error("by-slug error", error instanceof Error ? error : undefined);
     return sendJson(
       response,
-      { error: error instanceof Error ? error.message : "Unable to load comparison." },
+      { error: "Unable to load comparison." },
       500,
     );
   }

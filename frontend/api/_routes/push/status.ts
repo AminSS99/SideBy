@@ -52,7 +52,7 @@ export default async function handler(
         : 500;
     return sendJson(
       response,
-      { error: error instanceof Error ? error.message : "Unable to load push status." },
+      { error: status < 500 && error instanceof Error ? error.message : "Unable to load push status." },
       status,
     );
   }

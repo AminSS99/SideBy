@@ -78,7 +78,7 @@ export default async function handler(
           : 500;
       return sendJson(
         response,
-        { error: error instanceof Error ? error.message : "Unable to load comparisons." },
+        { error: status < 500 && error instanceof Error ? error.message : "Unable to load comparisons." },
         status,
       );
     }

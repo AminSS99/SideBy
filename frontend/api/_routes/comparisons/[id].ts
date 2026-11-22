@@ -80,7 +80,7 @@ export default async function handler(
           : 500;
       return sendJson(
         response,
-        { error: error instanceof Error ? error.message : "Unable to load comparison." },
+        { error: status < 500 && error instanceof Error ? error.message : "Unable to load comparison." },
         status,
       );
     }
@@ -127,7 +127,7 @@ export default async function handler(
         {
           error: error instanceof z.ZodError
             ? error.errors[0]?.message || "Invalid request body."
-            : error instanceof Error ? error.message : "Unable to submit feedback.",
+            : status < 500 && error instanceof Error ? error.message : "Unable to submit feedback.",
         },
         status,
       );

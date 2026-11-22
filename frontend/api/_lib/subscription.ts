@@ -294,5 +294,12 @@ export async function resolveSubscriptionState(args: {
   });
   if (snapsolveState) return snapsolveState;
 
+  // Fail closed when SnapSolve Core billing is configured: never grant paid
+  // access from legacy local subscription rows if central entitlements did not
+  // authorize the account.
+  if (isBillingConfigured().billingConfigured) {
+    return buildState({ plan: "free", source: "free_fallback", status: "unknown" });
+  }
+
   return resolveLocalState(args.userId, args.orgId ?? null);
 }

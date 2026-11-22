@@ -59,7 +59,7 @@ export default async function handler(
       {
         error: error instanceof z.ZodError
           ? error.errors[0]?.message || "Invalid checkout request."
-          : error instanceof Error ? error.message : "Unable to create checkout.",
+          : status < 500 && error instanceof Error ? error.message : "Unable to create checkout.",
       },
       status,
     );

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { createDbClient } from "../../src/db/index.js";
 import { usageEvents } from "../../src/db/schema.js";
 import { authenticateRequest, requireAuth } from "../_lib/auth.js";
+import { assertCsrfForRequest } from "../_lib/csrf.js";
 import { sendJson } from "../_lib/sideby.js";
 import { captureServerEvent } from "../_lib/analytics.js";
 import { logger } from "../_lib/log.js";
@@ -75,6 +76,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
   }
 
   try {
+    assertCsrfForRequest(request);
     const auth = await authenticateRequest(request);
     const clientIp = extractClientIp(request);
     const rate = await checkRateLimit(
@@ -128,6 +130,13 @@ export default async function handler(request: VercelRequest, response: VercelRe
   } catch (error) {
     if (error instanceof z.ZodError) {
       return sendJson(response, { error: error.errors[0]?.message || "Invalid feedback payload." }, 400);
+    }
+    const status =
+      error instanceof Error && "statusCode" in error
+        ? (error as Error & { statusCode: number }).statusCode
+        : 500;
+    if (status < 500) {
+      return sendJson(response, { error: error instanceof Error ? error.message : "Forbidden." }, status);
     }
     logger.error("Feedback handler error", error instanceof Error ? error : undefined);
     return sendJson(response, { error: "Unable to save feedback." }, 500);

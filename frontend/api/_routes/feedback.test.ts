@@ -22,6 +22,10 @@ vi.mock("../_lib/auth.js", () => ({
   requireAuth: vi.fn(),
 }));
 
+vi.mock("../_lib/csrf.js", () => ({
+  assertCsrfForRequest: vi.fn(),
+}));
+
 vi.mock("../_lib/rate-limit.js", () => ({
   checkRateLimit: (...args: unknown[]) => checkRateLimitMock(...args),
 }));

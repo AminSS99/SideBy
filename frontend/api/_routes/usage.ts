@@ -463,6 +463,11 @@ export default async function handler(
     const status = await getUsageStatus("user", auth.userId, subscription.plan);
     const monthly = await getMonthlyUsageStatus(auth.userId, subscription.plan);
 
+    const publicSource =
+      subscription.source === "snapsolve_entitlement" || subscription.source === "snapsolve_workspace"
+        ? "snapsolve"
+        : "standard";
+
     return sendJson(response, {
       plan: subscription.plan,
       limits: subscription.limits,
@@ -470,11 +475,15 @@ export default async function handler(
       monthly,
       billingConfigured: subscription.billingConfigured,
       subscription: {
-        source: subscription.source,
+        source: publicSource,
         status: subscription.status,
         billingProvider: subscription.billingProvider,
-        entitlement: subscription.entitlement,
-        snapsolveWorkspace: subscription.snapsolveWorkspace,
+        snapsolveWorkspace: subscription.snapsolveWorkspace
+          ? {
+              name: subscription.snapsolveWorkspace.name,
+              plan: subscription.snapsolveWorkspace.plan,
+            }
+          : null,
       },
       message: subscription.message,
     });
@@ -485,7 +494,7 @@ export default async function handler(
         : 500;
     return sendJson(
       response,
-      { error: error instanceof Error ? error.message : "Unable to load usage." },
+      { error: status < 500 && error instanceof Error ? error.message : "Unable to load usage." },
       status,
     );
   }

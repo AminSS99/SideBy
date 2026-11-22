@@ -63,11 +63,7 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ) {
-  if (request.method === "GET") {
-    return sendJson(response, { models: listSelectableModels() }, 200);
-  }
-
-  if (request.method !== "POST") {
+  if (request.method !== "GET" && request.method !== "POST") {
     return sendJson(response, { error: "Method not allowed" }, 405);
   }
 
@@ -82,10 +78,24 @@ export default async function handler(
           : 401;
       return sendJson(
         response,
-        { error: error instanceof Error ? error.message : "Authentication required." },
+        { error: status < 500 && error instanceof Error ? error.message : "Authentication required." },
         status,
       );
     }
+  }
+
+  if (request.method === "GET") {
+    return sendJson(
+      response,
+      {
+        models: listSelectableModels().map(({ id, label, badge }) => ({
+          id,
+          label,
+          ...(badge ? { badge } : {}),
+        })),
+      },
+      200,
+    );
   }
 
   return withRateLimit(request, response, "chat", async () => {
