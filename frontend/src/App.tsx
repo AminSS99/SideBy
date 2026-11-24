@@ -20,7 +20,8 @@ import { BottomNoticeStack } from "@/components/layout/BottomNoticeStack";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
-import Loader from "@/components/kokonutui/loader";
+import { LumaSpin } from "@/components/ui/luma-spin";
+import { SideByLaunchLoader } from "@/components/ui/SideByLaunchLoader";
 import Index from "./pages/Index";
 import { useT } from "@/i18n";
 
@@ -95,9 +96,12 @@ const queryClient = new QueryClient({
 const LazyFallback = () => {
   const t = useT();
   return (
-  <div className="dark flex min-h-screen items-center justify-center bg-[#030303] text-white" role="status" aria-live="polite">
-    <Loader size="sm" title={t("app.loadingSideby")} subtitle="" />
-  </div>
+    <div className="dark flex min-h-screen flex-col items-center justify-center gap-5 bg-[#060504] text-[#fffaf1]" role="status" aria-live="polite">
+      <LumaSpin size="sm" tone="brand" />
+      <p className="text-xs font-medium tracking-[0.18em] uppercase text-white/55">
+        {t("app.loadingSideby")}
+      </p>
+    </div>
   );
 };
 
@@ -114,6 +118,7 @@ const App = ({ clerkUnavailable = false }: { clerkUnavailable?: boolean }) => {
           <WorkspaceProvider>
             <ProjectsProvider>
               <TooltipProvider>
+                <SideByLaunchLoader />
                 <Toaster />
                 <Sonner />
                 <ScrollToTop />
