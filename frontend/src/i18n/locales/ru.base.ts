@@ -816,4 +816,6 @@ export const ruBase: Partial<Record<MessageKey, string>> = {
   "radar.badge": "Радар возможностей",
   "radar.title": "Стратегическая карта",
   "radar.body": "Многомерная визуализация сравнения {a} и {b} по ключевым инженерным и бизнес-направлениям.",
+  "app.nav.pinSidebar": "Закрепить меню",
+  "app.nav.unpinSidebar": "Свернуть меню",
 };

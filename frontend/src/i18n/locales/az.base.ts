@@ -816,4 +816,6 @@ export const azBase: Partial<Record<MessageKey, string>> = {
   "radar.badge": "İmkanlar radarı",
   "radar.title": "Strateji xəritə",
   "radar.body": "{a} və {b} əsas mühəndislik və biznes istiqamətləri üzrə necə müqayisə olunur — çoxölçülü təsvir.",
+  "app.nav.pinSidebar": "Menyunu açıq saxla",
+  "app.nav.unpinSidebar": "Menyunu yığ",
 };

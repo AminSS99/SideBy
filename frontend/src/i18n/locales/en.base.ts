@@ -830,5 +830,7 @@ export const enBase = {
   "radar.badge": "Capabilities Radar",
   "radar.title": "Strategic Mapping",
   "radar.body": "A multidimensional visualization of how {a} and {b} compare across core engineering and business vectors.",
+  "app.nav.pinSidebar": "Keep menu open",
+  "app.nav.unpinSidebar": "Collapse menu",
 } as const;
 

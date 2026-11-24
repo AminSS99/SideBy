@@ -18,6 +18,7 @@ import { BrandFooter } from "@/components/brand/BrandFooter";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { readOnboardingAttribution } from "@/lib/onboardingAttribution";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ExpandableSidebar, SidebarNavLink, SidebarSection, SIDEBAR_COLLAPSED, SIDEBAR_EXPANDED } from "@/components/ui/expandable-sidebar";
 import { useT, type MessageKey } from "@/i18n";
 
 type NavItem = {
@@ -71,6 +72,21 @@ const AppShell = () => {
   const [commandOpen, setCommandOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [sidebarPinned, setSidebarPinnedState] = useState(() => {
+    try {
+      return window.localStorage.getItem("sideby.sidebar.pinned") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const setSidebarPinned = (pinned: boolean) => {
+    setSidebarPinnedState(pinned);
+    try {
+      window.localStorage.setItem("sideby.sidebar.pinned", pinned ? "1" : "0");
+    } catch {
+      /* the pin is a convenience only */
+    }
+  };
   const prefersReducedMotion = useReducedMotion() ?? false;
 
   // Close mobile menu on route change & manage keyboard/scroll locking
@@ -317,94 +333,25 @@ const AppShell = () => {
         </div>
       </div>
 
-      <div className="relative z-10 mx-auto grid w-full max-w-[1600px] 2xl:max-w-[1760px] flex-1 items-start gap-4 px-3 py-4 pb-[calc(var(--bottom-nav-height)+var(--sideby-toast-offset,0px)+env(safe-area-inset-bottom,0px)+2rem)] sm:px-6 sm:py-8 lg:grid-cols-[232px_minmax(0,1fr)] lg:gap-7 lg:pb-8">
-        {/* Desktop Sidebar */}
-        <aside className="shell-sidebar sticky top-24 hidden h-[calc(100vh-7rem)] flex-col rounded-2xl border border-white/[0.09] bg-white/[0.025] p-3 shadow-[0_24px_80px_rgba(0,0,0,.35)] backdrop-blur-xl lg:flex">
-          <nav className="flex flex-col space-y-1 overflow-y-auto no-scrollbar flex-1">
-            {primaryNavItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  [
-                    "group relative flex min-h-11 shrink-0 items-center gap-3 overflow-hidden rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400",
-                    isActive
-                      ? "text-orange-300"
-                      : "text-white/70 hover:text-white",
-                  ].join(" ")
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    {isActive && (
-                      <div className="absolute inset-0 z-0 rounded-xl border border-orange-400/15 bg-gradient-to-r from-orange-400/[0.12] to-rose-400/[0.06]" />
-                    )}
-                    <div className="absolute inset-0 bg-white/[0.05] translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out z-0" />
-                    <item.icon className="relative z-10 h-4 w-4 shrink-0" />
-                    <span className="relative z-10">{t(item.label)}</span>
-                  </>
-                )}
-              </NavLink>
-            ))}
-
-            <div className="pt-4 mt-2">
-              <button
-                onClick={() => setAdvancedOpen(!advancedOpen)}
-                aria-expanded={advancedOpen}
-                className="flex min-h-11 w-full items-center justify-between rounded-lg px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-white/65 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
-              >
-                <span>{t("app.nav.advanced")}</span>
-                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              <AnimatePresence>
-                {advancedOpen && (
-                  <motion.div
-                    initial={prefersReducedMotion ? false : { height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={prefersReducedMotion ? undefined : { height: 0, opacity: 0 }}
-                    transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-1 space-y-1">
-                      {advancedNavItems.map((item) => (
-                        <NavLink
-                          key={item.to}
-                          to={item.to}
-                          end={item.end}
-                          className={({ isActive }) =>
-                            [
-                              "relative flex min-h-11 shrink-0 items-center gap-3 rounded-lg px-4 py-2 text-xs uppercase tracking-widest font-bold transition-all group overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400",
-                              isActive
-                                ? "text-orange-300"
-                                : "text-white/65 hover:text-white",
-                            ].join(" ")
-                          }
-                        >
-                          {({ isActive }) => (
-                            <>
-                              {isActive && (
-                                <div className="absolute inset-0 bg-orange-500/10 border border-orange-500/20 rounded-lg z-0" />
-                              )}
-                              <div className="absolute inset-0 bg-white/[0.03] translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out z-0" />
-                              <item.icon className="relative z-10 h-3.5 w-3.5 shrink-0" />
-                              <span className="relative z-10">{t(item.label)}</span>
-                            </>
-                          )}
-                        </NavLink>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </nav>
-
-          <div className="pt-6 mt-6 border-t border-white/10 px-2">
-            <BrandFooter />
-          </div>
-        </aside>
+      <div style={{ "--sidebar-w": `${sidebarPinned ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED}px` } as React.CSSProperties} className="relative z-10 mx-auto grid w-full max-w-[1600px] 2xl:max-w-[1760px] flex-1 items-start gap-4 px-3 py-4 pb-[calc(var(--bottom-nav-height)+var(--sideby-toast-offset,0px)+env(safe-area-inset-bottom,0px)+2rem)] sm:px-6 sm:py-8 lg:grid-cols-[var(--sidebar-w)_minmax(0,1fr)] lg:gap-7 lg:transition-[grid-template-columns] lg:duration-300 lg:pb-8">
+        {/* Desktop rail: 72px icons, opens as an overlay on hover/focus, pin keeps it open */}
+        <ExpandableSidebar
+          pinned={sidebarPinned}
+          onPinnedChange={setSidebarPinned}
+          navLabel={t("app.nav.appNav")}
+          pinLabel={t("app.nav.pinSidebar")}
+          unpinLabel={t("app.nav.unpinSidebar")}
+          className="shell-sidebar sticky top-24 hidden h-[calc(100vh-7rem)] lg:block"
+          footer={<BrandFooter />}
+        >
+          {primaryNavItems.map((item) => (
+            <SidebarNavLink key={item.to} to={item.to} end={item.end} icon={item.icon} label={t(item.label)} />
+          ))}
+          <SidebarSection label={t("app.nav.advanced")} />
+          {advancedNavItems.map((item) => (
+            <SidebarNavLink key={item.to} to={item.to} end={item.end} icon={item.icon} label={t(item.label)} />
+          ))}
+        </ExpandableSidebar>
 
         <main className="shell-main flex min-w-0 w-full flex-1 flex-col rounded-2xl border border-white/[0.09] bg-[#0b0a09]/80 p-4 sm:p-8 md:p-10 lg:pb-10 shadow-[0_30px_100px_rgba(0,0,0,.35)] backdrop-blur-xl">
           {workspaceError && (
