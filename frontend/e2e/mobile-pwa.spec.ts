@@ -59,14 +59,20 @@ test.describe("SideBy Mobile & PWA Specifications", () => {
     await expect(menuBtn).toBeVisible();
     await menuBtn.click();
 
-    const drawer = page.locator('aside[role="dialog"]');
+    const drawer = page.getByRole("dialog", { name: /navigation drawer/i });
     await expect(drawer).toBeVisible();
     expect(await drawer.getAttribute("aria-modal")).toBe("true");
-    expect(await drawer.getAttribute("aria-label")).toContain("navigation drawer");
+    await expect(drawer.getByRole("button", { name: "Close navigation" })).toBeFocused();
+
+    // Shift+Tab from the first control wraps within the drawer.
+    await page.keyboard.press("Shift+Tab");
+    expect(await drawer.evaluate((element) => element.contains(document.activeElement))).toBe(true);
 
     // Test Escape key dismissal
     await page.keyboard.press("Escape");
     await expect(drawer).not.toBeVisible();
+
+    await expect(menuBtn).toBeFocused();
 
     // Re-open and test close button
     await menuBtn.click();

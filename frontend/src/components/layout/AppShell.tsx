@@ -2,7 +2,8 @@ import React, { useRef, useState, useEffect } from "react";
 import { Link, NavLink, Outlet, useNavigate, useLocation, Navigate } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   GitCompareArrows, Layers3, FolderKanban, Settings,
   LogOut, MessageSquare, Microscope, Database, Activity, CreditCard,
@@ -87,26 +88,19 @@ const AppShell = () => {
       /* the pin is a convenience only */
     }
   };
-  const prefersReducedMotion = useReducedMotion() ?? false;
 
-  // Close mobile menu on route change & manage keyboard/scroll locking
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!mobileMenuOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileMenuOpen(false);
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setMobileMenuOpen(false);
     };
-    window.addEventListener("keydown", handleKeyDown);
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [mobileMenuOpen]);
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
 
   useGSAP(() => {
     const mm = gsap.matchMedia();
@@ -155,41 +149,24 @@ const AppShell = () => {
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(249,115,22,.10),transparent_28%),radial-gradient(circle_at_90%_85%,rgba(217,70,239,.055),transparent_32%)]" />
       <CommandMenu open={commandOpen} setOpen={setCommandOpen} />
 
-      {/* Mobile Navigation Drawer */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <>
-            <motion.div
-              initial={prefersReducedMotion ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={prefersReducedMotion ? undefined : { opacity: 0 }}
-              transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-              onClick={() => setMobileMenuOpen(false)}
-              className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm lg:hidden"
-            />
-            <motion.aside
-              role="dialog"
-              aria-modal="true"
-              aria-label={t("app.nav.drawer")}
-              initial={prefersReducedMotion ? false : { x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={prefersReducedMotion ? undefined : { x: "-100%" }}
-              transition={prefersReducedMotion ? { duration: 0 } : { type: "spring", bounce: 0, duration: 0.35 }}
-              className="fixed inset-y-0 left-0 z-[70] flex w-[min(88vw,330px)] flex-col border-r border-white/10 bg-[#0d0b0a]/98 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] shadow-2xl backdrop-blur-2xl lg:hidden"
-            >
+      <Dialog.Root open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 motion-reduce:animate-none lg:hidden" />
+          <Dialog.Content asChild aria-describedby={undefined} aria-modal="true">
+            <aside className="fixed inset-y-0 left-0 z-[70] flex w-[min(88vw,330px)] flex-col overflow-y-auto overscroll-contain border-r border-white/10 bg-[#0d0b0a] pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left motion-reduce:animate-none lg:hidden">
+              <Dialog.Title className="sr-only">{t("app.nav.drawer")}</Dialog.Title>
               <div className="p-4 flex items-center justify-between border-b border-[#2a2a2a]">
                 <div className="flex items-center gap-3">
                   <img src="/sideby.ico?v=20260728-real" alt="SideBy" className="h-8 w-8 rounded-lg object-contain" />
                   <span className="font-serif text-base tracking-tight text-white">{brand.productName}</span>
                 </div>
-                <button
+                <Dialog.Close
                   type="button"
                   aria-label={t("app.nav.close")}
-                  onClick={() => setMobileMenuOpen(false)}
                   className="grid h-11 w-11 place-items-center rounded-xl text-white/70 hover:bg-white/[0.06] hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
                 >
-                  <X className="h-5 w-5" />
-                </button>
+                  <X className="h-5 w-5" aria-hidden="true" />
+                </Dialog.Close>
               </div>
 
               <div className="p-4 border-b border-[#2a2a2a] bg-[#111]/50">
@@ -201,14 +178,14 @@ const AppShell = () => {
                 </p>
               </div>
 
-              <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+              <nav aria-label={t("app.nav.appNav")} className="flex-1 py-3 px-3 space-y-1">
                 {primaryNavItems.map((item) => (
                   <NavLink
                     key={item.to}
                     to={item.to}
                     end={item.end}
                     className={({ isActive }) =>
-                      `flex min-h-11 items-center gap-3 rounded-lg px-4 py-2.5 text-xs uppercase tracking-widest font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
+                      `flex min-h-11 items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
                         isActive
                           ? "bg-orange-500/10 text-orange-300 border border-orange-500/25"
                           : "text-white/75 hover:bg-[#1a1a1a] hover:text-white border border-transparent"
@@ -238,7 +215,7 @@ const AppShell = () => {
                           to={item.to}
                           end={item.end}
                           className={({ isActive }) =>
-                            `flex min-h-11 items-center gap-3 rounded-lg px-4 py-2.5 text-xs uppercase tracking-widest font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
+                            `flex min-h-11 items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
                               isActive
                                 ? "bg-orange-500/10 text-orange-300 border border-orange-500/25"
                                 : "text-white/65 hover:bg-[#1a1a1a] hover:text-white border border-transparent"
@@ -267,73 +244,72 @@ const AppShell = () => {
                 </Button>
                 <BrandFooter className="justify-center" />
               </div>
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+            </aside>
+          </Dialog.Content>
+        </Dialog.Portal>
 
-      <div className="shell-header sticky top-0 z-50 border-b border-white/[0.08] bg-[#070605]/80 backdrop-blur-2xl pt-[env(safe-area-inset-top,0px)]">
-        <div className="mx-auto flex min-h-[72px] max-w-[1600px] 2xl:max-w-[1760px] items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              aria-label={t("app.nav.openNav")}
-              aria-expanded={mobileMenuOpen}
-              className="-ml-2 grid h-11 w-11 place-items-center rounded-xl text-white/75 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 lg:hidden"
-              onClick={() => setMobileMenuOpen(true)}
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-            <Link to="/" className="flex min-h-11 items-center gap-4 rounded-xl group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400">
-              <span className="grid h-10 w-10 place-items-center rounded-xl border border-orange-300/15 bg-orange-400/[0.07]"><img src="/sideby.ico?v=20260728-real" alt="SideBy" className="h-8 w-8 rounded-lg object-contain transition-transform duration-300 group-hover:scale-105" /></span>
-              <div className="hidden sm:block">
-                <span className="font-serif text-lg tracking-tight text-white group-hover:text-orange-50 transition-colors">
-                  {brand.productName}
-                </span>
-                <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.24em] text-white/65">
-                  Operated by {brand.companyName}
+        <div className="shell-header sticky top-0 z-50 border-b border-white/[0.08] bg-[#070605]/80 backdrop-blur-2xl pt-[env(safe-area-inset-top,0px)]">
+          <div className="mx-auto flex min-h-[72px] max-w-[1600px] 2xl:max-w-[1760px] items-center justify-between px-4 py-3 sm:px-6">
+            <div className="flex items-center gap-4">
+              <Dialog.Trigger
+                type="button"
+                aria-label={t("app.nav.openNav")}
+                className="-ml-2 grid h-11 w-11 place-items-center rounded-xl text-white/75 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 lg:hidden"
+              >
+                <Menu className="h-6 w-6" aria-hidden="true" />
+              </Dialog.Trigger>
+              <Link to="/" className="flex min-h-11 items-center gap-4 rounded-xl group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400">
+                <span className="grid h-10 w-10 place-items-center rounded-xl border border-orange-300/15 bg-orange-400/[0.07]"><img src="/sideby.ico?v=20260728-real" alt="SideBy" className="h-8 w-8 rounded-lg object-contain transition-transform duration-300 group-hover:scale-105" /></span>
+                <div className="hidden sm:block">
+                  <span className="font-serif text-lg tracking-tight text-white group-hover:text-orange-50 transition-colors">
+                    {brand.productName}
+                  </span>
+                  <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.24em] text-white/65">
+                    Operated by {brand.companyName}
+                  </p>
+                </div>
+              </Link>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <LanguageSwitcher className="hidden sm:block" />
+              <button
+                onClick={() => setCommandOpen(true)}
+                aria-label={t("app.nav.openSearch")}
+                className="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-xs text-white/70 transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 sm:mr-4"
+              >
+                <Search className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{t("app.nav.search")}</span>
+                <kbd className="pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[10px] font-medium text-white/60 ml-2">
+                  <span className="text-xs">⌘</span>K
+                </kbd>
+              </button>
+
+              <div className="min-w-0 text-right border-l border-white/10 pl-6 hidden lg:block">
+                <p className="text-sm font-semibold text-white">
+                  {user?.email ?? t("app.shell.guest")}
+                </p>
+                <p className="truncate text-xs text-white/65">
+                  {workspaceLoading
+                    ? t("app.shell.loadingWorkspace")
+                    : activeWorkspace?.name || brand.operatedByLine}
                 </p>
               </div>
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher className="hidden sm:block" />
-            <button
-              onClick={() => setCommandOpen(true)}
-              aria-label={t("app.nav.openSearch")}
-              className="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-xs text-white/70 transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 sm:mr-4"
-            >
-              <Search className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{t("app.nav.search")}</span>
-              <kbd className="pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[10px] font-medium text-white/60 ml-2">
-                <span className="text-xs">⌘</span>K
-              </kbd>
-            </button>
-
-            <div className="min-w-0 text-right border-l border-white/10 pl-6 hidden lg:block">
-              <p className="text-sm font-semibold text-white">
-                {user?.email ?? t("app.shell.guest")}
-              </p>
-              <p className="truncate text-xs text-white/65">
-                {workspaceLoading
-                  ? t("app.shell.loadingWorkspace")
-                  : activeWorkspace?.name || brand.operatedByLine}
-              </p>
+              <Button
+                variant="ghost"
+                className="min-h-11 rounded-lg border border-transparent text-white/75 hover:bg-white/10 hover:border-white/10 hover:text-white transition-all hidden sm:flex"
+                onClick={handleSignOut}
+              >
+                <LogOut className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{t("app.nav.signOut")}</span>
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              className="min-h-11 rounded-lg border border-transparent text-white/75 hover:bg-white/10 hover:border-white/10 hover:text-white transition-all hidden sm:flex"
-              onClick={handleSignOut}
-            >
-              <LogOut className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">{t("app.nav.signOut")}</span>
-            </Button>
           </div>
         </div>
-      </div>
 
-      <div style={{ "--sidebar-w": `${sidebarPinned ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED}px` } as React.CSSProperties} className="relative z-10 mx-auto grid w-full max-w-[1600px] 2xl:max-w-[1760px] flex-1 items-start gap-4 px-3 py-4 pb-[calc(var(--bottom-nav-height)+var(--sideby-toast-offset,0px)+env(safe-area-inset-bottom,0px)+2rem)] sm:px-6 sm:py-8 lg:grid-cols-[var(--sidebar-w)_minmax(0,1fr)] lg:gap-7 lg:transition-[grid-template-columns] lg:duration-300 lg:pb-8">
+      </Dialog.Root>
+
+      <div style={{ "--sidebar-w": `${sidebarPinned ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED}px` } as React.CSSProperties} className="relative z-10 mx-auto grid w-full max-w-[1600px] 2xl:max-w-[1760px] flex-1 items-start gap-4 px-3 py-4 pb-[calc(var(--bottom-nav-height)+var(--sideby-toast-offset,0px)+env(safe-area-inset-bottom,0px)+2rem)] sm:px-6 sm:py-8 lg:grid-cols-[var(--sidebar-w)_minmax(0,1fr)] lg:gap-7 lg:transition-[grid-template-columns] lg:duration-300 motion-reduce:transition-none lg:pb-8">
         {/* Desktop rail: 72px icons, opens as an overlay on hover/focus, pin keeps it open */}
         <ExpandableSidebar
           pinned={sidebarPinned}
@@ -341,7 +317,7 @@ const AppShell = () => {
           navLabel={t("app.nav.appNav")}
           pinLabel={t("app.nav.pinSidebar")}
           unpinLabel={t("app.nav.unpinSidebar")}
-          className="shell-sidebar sticky top-24 hidden h-[calc(100vh-7rem)] lg:block"
+          className="shell-sidebar sticky top-24 z-20 hidden h-[calc(100vh-7rem)] lg:block"
           footer={<BrandFooter />}
         >
           {primaryNavItems.map((item) => (
